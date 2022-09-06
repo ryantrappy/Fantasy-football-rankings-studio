@@ -3,6 +3,7 @@ import { ChakraProvider } from "@chakra-ui/react";
 import "./App.css";
 import { Home } from "./components/Home";
 import { Auth0Provider } from "@auth0/auth0-react";
+import { theme } from "./Theme";
 
 function App() {
   return (
@@ -13,7 +14,7 @@ function App() {
       audience="https://dev-voqmvc1s.us.auth0.com/api/v2/"
       scope="read:current_user update:current_user_metadata"
     >
-      <ChakraProvider>
+      <ChakraProvider theme={theme}>
         <Home />
       </ChakraProvider>
     </Auth0Provider>

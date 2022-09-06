@@ -10,7 +10,6 @@ import {
   Thead,
   Box,
   TableCaption,
-  Text,
   VStack,
 } from "@chakra-ui/react";
 import { TeamRanking } from "../../Types/TeamRanking";
@@ -228,7 +227,16 @@ const Styles = styled.div`
   }
 `;
 
-export const DisplayTable = ({ data }) => {
+export interface DisplayTableProps {
+  data: any;
+  leagueRankings: LeagueConfig[];
+  currentLeague: string;
+  currentWeek: string;
+  leagueConfig: LeagueConfig;
+}
+
+export const DisplayTable = (props: DisplayTableProps) => {
+  const { leagueRankings };
   const [records, setRecords] = React.useState(data);
 
   let currentWeekRanking = [
@@ -354,10 +362,17 @@ export const DisplayTable = ({ data }) => {
     // );
     // storageService.setLeagueConfigs(configsArray);
   };
-  const getPreviousWeekPosition = (managerName: string) => {
+  const getPreviousWeekPosition = (id: number) => {
+    // tslint:disable-next-line:triple-equals
+    const previousWeek = leagues[currentLeague].find(
+      (cur) => cur.year == currentYear && cur.week === currentWeek - 1
+    );
+    if (!previousWeek) {
+      return undefined;
+    }
     return (
-      previousWeekRanking.findIndex((element) => {
-        return element.managerName === managerName;
+      previousWeek.teams.findIndex((element) => {
+        return element.teamId === id;
       }) + 1
     );
   };
@@ -366,7 +381,8 @@ export const DisplayTable = ({ data }) => {
     return lastWeeksRanking ? "Last Week: " + lastWeeksRanking : "";
   };
 
-  const getDeltaSymbolClass = (delta) => {
+  const getDeltaSymbolClass = (rankingObject: TeamRanking, i: number) => {
+    const delta = getDelta(rankingObject, i);
     if (delta < 0) {
       return "up";
     } else if (delta > 0) {
@@ -375,8 +391,20 @@ export const DisplayTable = ({ data }) => {
       return "no-change";
     }
   };
+  const getDelta = (rankingObject: TeamRanking, i: number): number => {
+    let delta = 0;
+    i++;
+    const prev = getPreviousWeekPosition(rankingObject.teamId);
+    if (prev === undefined) {
+      delta = 0;
+    } else {
+      delta = i - getPreviousWeekPosition(rankingObject.teamId);
+    }
+    return delta;
+  };
 
-  const getDeltaClass = (delta) => {
+  const getDeltaClass = (rankingObject: TeamRanking, i: number) => {
+    const delta = getDelta(rankingObject, i);
     if (delta < 0) {
       return "delta-up";
     } else if (delta > 0) {
@@ -386,7 +414,8 @@ export const DisplayTable = ({ data }) => {
     }
   };
 
-  const getDeltaString = (delta) => {
+  const getDeltaString = (rankingObject: TeamRanking, i: number) => {
+    const delta = getDelta(rankingObject, i);
     if (delta === 0) {
       return "---";
     } else if (delta < 0) {
@@ -453,99 +482,98 @@ export const DisplayTable = ({ data }) => {
 
   return (
     <>
-      {/*<Styles>*/}
-      {/*<div className="split right1">*/}
-      {/*  <div id="powerRanking1">*/}
-      <VStack>
-        <Box>
-          <h3 id="rankingTitle1">{leagueConfig.rankingsTitle}</h3>
-        </Box>
-        <TableContainer>
-          <Table id="powerRankingTable1" variant={"striped"}>
-            <TableCaption placement={"top"}>
-              {leagueConfig.introduction}
-            </TableCaption>
-            <Thead>
-              <Tr>
-                <Td className="center">
-                  <b>Rank</b>
-                </Td>
-                <Td colSpan={2} className="center">
-                  <b>Team / Record</b>
-                </Td>
-                <Td className="center">
-                  <b>Trending</b>
-                </Td>
-                <Td className="center">
-                  <b>Comments</b>
-                </Td>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {/**ngFor="let rankingObject of currentWeekRanking; index as i ">*/}
-              {currentWeekRanking.map((rankingObject, i) => (
-                <Tr className="rank1" key={rankingObject.teamName}>
-                  <Td>
-                    <div className="ranking1">{i + 1}</div>
+      <Styles>
+        <VStack>
+          <TableContainer>
+            <Box
+              className="center"
+              backgroundColor="espn.200"
+              color={"white"}
+              width={"100%"}
+            >
+              <h3 id="rankingTitle1">{leagueConfig.rankingsTitle}</h3>
+            </Box>
+            <Table id="powerRankingTable1" variant={"striped"}>
+              <TableCaption placement={"top"}>
+                {leagueConfig.introduction}
+              </TableCaption>
+              <Thead>
+                <Tr>
+                  <Td className="center">
+                    <b>Rank</b>
                   </Td>
-                  <Td
-                    className="teamPicture1"
-                    // style={{ width: "25px" }}
-                  ></Td>
-                  <Td>
-                    <div className="manager-name1">
-                      {rankingObject.teamName}
-                    </div>
-                    <div className="team-record1">
-                      {rankingObject.managerName}
-                      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                      {getRecord(rankingObject)}
-                    </div>
+                  <Td colSpan={2} className="center">
+                    <b>Team / Record</b>
                   </Td>
                   <Td className="center">
-                    <div>
-                      <div className="delta-div1">
-                        <div
-                          className={getDeltaSymbolClass(
-                            getPreviousWeekPosition(rankingObject.managerName)
-                              ? i -
-                                  getPreviousWeekPosition(
-                                    rankingObject.managerName
-                                  )
-                              : 0
-                          )}
-                        ></div>
-                        <div
-                          className={getDeltaClass(
-                            getPreviousWeekPosition(rankingObject.managerName)
-                              ? i -
-                                  getPreviousWeekPosition(
-                                    rankingObject.managerName
-                                  )
-                              : 0
-                          )}
-                        ></div>
-                      </div>
-                      <div className="last-weeks-position">
-                        {getLastWeekPositionString(rankingObject.managerName)}{" "}
-                      </div>
-                    </div>
+                    <b>Trending</b>
                   </Td>
-                  <Td
-                    className="center"
-                    // style={{ width: "50%" }}
-                  >
-                    {rankingObject.description}
+                  <Td className="center">
+                    <b>Comments</b>
                   </Td>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </TableContainer>
-      </VStack>
-      {/*  </div>*/}
-      {/*</div>*/}
-      {/*</Styles>*/}
+              </Thead>
+              <Tbody>
+                {/**ngFor="let rankingObject of currentWeekRanking; index as i ">*/}
+                {currentWeekRanking.map((rankingObject, i) => (
+                  <Tr className="rank1" key={rankingObject.teamName}>
+                    <Td>
+                      <div className="ranking1">{i + 1}</div>
+                    </Td>
+                    <Td
+                      className="teamPicture1"
+                      // style={{ width: "25px" }}
+                    ></Td>
+                    <Td>
+                      <div className="manager-name1">
+                        {rankingObject.teamName}
+                      </div>
+                      <div className="team-record1">
+                        {rankingObject.managerName}
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        {getRecord(rankingObject)}
+                      </div>
+                    </Td>
+                    <Td className="center">
+                      <div>
+                        <div className="delta-div1">
+                          <div
+                            className={getDeltaSymbolClass(rankingObject, i)}
+                          ></div>
+                          <div className={getDeltaClass(rankingObject, i)}>
+                            {getDeltaString(rankingObject, i)}
+                          </div>
+                          {/*  <div*/}
+                          {/*  className={getDeltaClass(*/}
+                          {/*    getPreviousWeekPosition(rankingObject.managerName)*/}
+                          {/*      ? i -*/}
+                          {/*          getPreviousWeekPosition(*/}
+                          {/*            rankingObject.managerName*/}
+                          {/*          )*/}
+                          {/*      : 0*/}
+                          {/*  )}*/}
+                          {/*></div>*/}
+                        </div>
+                        <div className="last-weeks-position">
+                          {getLastWeekPositionString(rankingObject.managerName)}{" "}
+                        </div>
+                      </div>
+                    </Td>
+                    <Td
+                      className="center"
+                      // style={{ width: "50%" }}
+                    >
+                      {rankingObject.description}
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </TableContainer>
+        </VStack>
+        {/*  </div>*/}
+        {/*</div>*/}
+      </Styles>
     </>
   );
 };

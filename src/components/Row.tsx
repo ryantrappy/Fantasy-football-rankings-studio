@@ -61,13 +61,13 @@ export const Row = ({ row, index, moveRow }) => {
   const opacity = isDragging ? 0 : 1;
   preview(drop(dropRef));
   drag(dragRef);
-  
+
   return (
     <tr ref={dropRef} style={{ opacity }}>
       <td ref={dragRef}>
         <Icon as={DragHandleIcon} />
       </td>
-      {row.cells.map((cell, index) => {
+      {row.cells.map((cell) => {
         return <td {...cell.getCellProps()}>{cell.render("Cell")}</td>;
       })}
     </tr>

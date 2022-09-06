@@ -14,7 +14,6 @@ import {
 } from "@chakra-ui/react";
 import { TeamRanking } from "../../Types/TeamRanking";
 import { LeagueConfig } from "../../Types/LeagueConfig";
-import * as LeagueConfigData from "../../api/leagueConfig.json";
 
 const Styles = styled.div`
   /* Split the screen in half */
@@ -236,8 +235,11 @@ export interface DisplayTableProps {
 }
 
 export const DisplayTable = (props: DisplayTableProps) => {
-  const { leagueRankings };
+  const { leagueRankings, data, currentLeague, currentWeek, leagueConfig } =
+    props;
   const [records, setRecords] = React.useState(data);
+
+  const currentYear = new Date().getFullYear();
 
   let currentWeekRanking = [
     {
@@ -338,33 +340,33 @@ export const DisplayTable = (props: DisplayTableProps) => {
   ];
   let currentWeekRankingForm: Array<TeamRanking> = currentWeekRanking;
   let previousWeekRankingForm: Array<TeamRanking> = previousWeekRanking;
-  let leagueConfig: LeagueConfig = LeagueConfigData;
+  // let leagueConfig: LeagueConfig = LeagueConfigData;
   let leagueConfigForm: LeagueConfig;
   let configsArray: Array<LeagueConfig> = [];
 
   // ngOnInit(): void {
   //   getRankingImage();
   // }
-  const regenerateRankings = () => {
-    // Deep clone both arrays so that mutations don't affect table
-    currentWeekRanking = [...currentWeekRankingForm].map((i) => ({ ...i }));
-    previousWeekRanking = [...previousWeekRankingForm].map((i) => ({ ...i }));
-    // Clone league config
-    leagueConfig = Object.assign({}, leagueConfigForm);
-    configsArray[0] = leagueConfig;
-    // storageService.setCurrentWeekFromStorage(
-    //   currentWeekRankingForm,
-    //   leagueConfig.leagueName
-    // );
-    // storageService.setPreviousWeekFromStorage(
-    //   previousWeekRankingForm,
-    //   leagueConfig.leagueName
-    // );
-    // storageService.setLeagueConfigs(configsArray);
-  };
+  // const regenerateRankings = () => {
+  //   // Deep clone both arrays so that mutations don't affect table
+  //   currentWeekRanking = [...currentWeekRankingForm].map((i) => ({ ...i }));
+  //   previousWeekRanking = [...previousWeekRankingForm].map((i) => ({ ...i }));
+  //   // Clone league config
+  //   leagueConfigLocal = Object.assign({}, leagueConfigForm);
+  //   configsArray[0] = leagueConfig;
+  //   // storageService.setCurrentWeekFromStorage(
+  //   //   currentWeekRankingForm,
+  //   //   leagueConfig.leagueName
+  //   // );
+  //   // storageService.setPreviousWeekFromStorage(
+  //   //   previousWeekRankingForm,
+  //   //   leagueConfig.leagueName
+  //   // );
+  //   // storageService.setLeagueConfigs(configsArray);
+  // };
   const getPreviousWeekPosition = (id: number) => {
     // tslint:disable-next-line:triple-equals
-    const previousWeek = leagues[currentLeague].find(
+    const previousWeek = leagueRankings.find(
       (cur) => cur.year == currentYear && cur.week === currentWeek - 1
     );
     if (!previousWeek) {

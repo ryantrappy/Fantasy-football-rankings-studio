@@ -8,7 +8,11 @@ export const Profile: React.FunctionComponent = () => {
   const [userMetadata, setUserMetadata] = useState(null);
 
   useEffect(() => {
-    getUserMetadata(getAccessTokenSilently, user);
+    getUserMetadata(getAccessTokenSilently, user).then(
+      (data)=>{
+        setUserMetadata(data);
+      }
+    );
   }, [getAccessTokenSilently, user?.sub]);
 
   if (isLoading) {

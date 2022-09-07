@@ -23,10 +23,10 @@ export const getRankingByLeagueId = async (
   leagueId
 ) => {
   const accessToken = await getUserToken(getAccessTokenSilently, user);
-
+  console.log(`${domain}}/rankings/leagues/${leagueId}`);
   const options = {
     method: "GET",
-    url: `https://${domain}}/rankings/leagues/${leagueId}`,
+    url: `${domain}/rankings/leagues/${leagueId}`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },
@@ -43,7 +43,7 @@ export const createNewRanking = async (
 
   const options = {
     method: "GET",
-    url: `https://${domain}/ranking`,
+    url: `${domain}/ranking`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },
@@ -61,7 +61,7 @@ export const updateRanking = async (
 
   const options = {
     method: "GET",
-    url: `https://${domain}/ranking/${rankingObject._id}`,
+    url: `${domain}/ranking/${rankingObject._id}`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },

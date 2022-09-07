@@ -3,15 +3,21 @@ import axios from "axios";
 export const updateUserMetadata = async (
   getAccessTokenSilently,
   user,
-  leaguesString
+  leaguesObject
 ) => {
   const domain = "dev-voqmvc1s.us.auth0.com";
-  const leaguesObject = JSON.parse(leaguesString);
 
   try {
     const accessToken = await getAccessTokenSilently({
       audience: `https://${domain}/api/v2/`,
       scope: "read:current_user",
+    });
+    console.log("updating", leaguesObject, {
+      data: {
+        user_metadata: {
+          leagues: leaguesObject,
+        },
+      },
     });
     const options = {
       method: "PATCH",

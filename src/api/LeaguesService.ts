@@ -1,5 +1,7 @@
 import getUserToken from "./GetUserToken";
 import axios from "axios";
+import { League } from "../Types/League";
+import { getRankingByLeagueId } from "./RankingsService";
 
 const domain = "http://localhost:3000";
 
@@ -32,7 +34,7 @@ export const getLeagueTeams = async (
 
   const options = {
     method: "GET",
-    url: `https://${domain}/leagues/${leagueId}/seasons/${season}/weeks/${scoringPeriodId}/teams`,
+    url: `${domain}/leagues/${leagueId}/seasons/${season}/weeks/${scoringPeriodId}/teams`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },
@@ -48,12 +50,33 @@ export const createNewLeague = async (
   const accessToken = await getUserToken(getAccessTokenSilently, user);
 
   const options = {
-    method: "GET",
-    url: `https://${domain}/leagues`,
+    method: "POST",
+    url: `${domain}/leagues`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },
     data: leagueObject,
   };
   return await axios.request(options);
+};
+
+export const populateLeagues = async (
+  getAccessTokenSilently,
+  user,
+  leagues: string[]
+) => {
+  const populatedResult = [];
+
+  for (const league of leagues) {
+    const result = await getLeagueInfo(
+      getAccessTokenSilently,
+      user,
+      league,
+      "2022"
+    );
+    console.log(result);
+    populatedResult.push(result.data.data);
+  }
+
+  return populatedResult;
 };

@@ -231,147 +231,13 @@ export interface DisplayTableProps {
   data: any;
   leagueRankings: WeeklyRanking[];
   currentRanking: WeeklyRanking;
-  currentLeague: string;
   currentWeek: number;
-  leagueConfig: League;
 }
 
 export const DisplayTable = (props: DisplayTableProps) => {
-  const {
-    leagueRankings,
-    data,
-    currentLeague,
-    currentWeek,
-    leagueConfig,
-    currentRanking,
-  } = props;
-  const [records, setRecords] = React.useState(data);
+  const { leagueRankings, data, currentWeek, currentRanking } = props;
 
   const currentYear = new Date().getFullYear();
-
-  let currentWeekRanking = [
-    {
-      teamName: "Test Winner",
-      description:
-        "They did their best this week but sometimes that just is good enough.",
-      wins: 1,
-      loss: 0,
-      ties: 0,
-      managerName: "Joe Winner",
-    },
-    {
-      teamName: "Test Loser",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser",
-    },
-    {
-      teamName: "Test Loser1",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser1",
-    },
-    {
-      teamName: "Test Loser2",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser2",
-    },
-  ];
-
-  // constructor(private storageService: StorageService) {
-  //   configsArray = storageService.getLeagueConfigs();
-  //   if(!configsArray || configsArray.length === 0) {
-  //     configsArray = [
-  //       {
-  //         "rankingsTitle": "Rankings Title",
-  //         "introduction": "This is introduction text if the user wants to preface the rankings with some text. The text can be an introduction to the year or anything else.",
-  //         "leagueName": "test"
-  //       }
-  //     ]
-  //   }
-  //   else {
-  //     currentWeekRanking = storageService.getCurrentWeekFromStorage(configsArray[0].leagueName);
-  //     previousWeekRanking = storageService.getPreviousWeekFromStorage(configsArray[0].leagueName);
-  //     currentWeekRankingForm = storageService.getCurrentWeekFromStorage(configsArray[0].leagueName);
-  //     previousWeekRankingForm = storageService.getPreviousWeekFromStorage(configsArray[0].leagueName);
-  //   }
-  //   leagueConfig = configsArray[0];
-  //   leagueConfigForm = Object.assign({}, leagueConfig)
-  // }
-  let previousWeekRanking: Array<TeamRanking> = [
-    {
-      teamName: "Test Winner",
-      description:
-        "They did their best this week but sometimes that just is good enough.",
-      wins: 1,
-      loss: 0,
-      ties: 0,
-      managerName: "Joe Winner",
-    },
-    {
-      teamName: "Test Loser",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser2",
-    },
-    {
-      teamName: "Test Loser1",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser",
-    },
-    {
-      teamName: "Test Loser2",
-      description:
-        "They did their best this week but sometimes that just is not good enough.",
-      wins: 0,
-      loss: 1,
-      ties: 0,
-      managerName: "Joe Loser1",
-    },
-  ];
-  let currentWeekRankingForm: Array<TeamRanking> = currentWeekRanking;
-  let previousWeekRankingForm: Array<TeamRanking> = previousWeekRanking;
-  // let leagueConfig: LeagueConfig = LeagueConfigData;
-  let leagueConfigForm: League;
-  let configsArray: Array<League> = [];
-
-  // ngOnInit(): void {
-  //   getRankingImage();
-  // }
-  // const regenerateRankings = () => {
-  //   // Deep clone both arrays so that mutations don't affect table
-  //   currentWeekRanking = [...currentWeekRankingForm].map((i) => ({ ...i }));
-  //   previousWeekRanking = [...previousWeekRankingForm].map((i) => ({ ...i }));
-  //   // Clone league config
-  //   leagueConfigLocal = Object.assign({}, leagueConfigForm);
-  //   configsArray[0] = leagueConfig;
-  //   // storageService.setCurrentWeekFromStorage(
-  //   //   currentWeekRankingForm,
-  //   //   leagueConfig.leagueName
-  //   // );
-  //   // storageService.setPreviousWeekFromStorage(
-  //   //   previousWeekRankingForm,
-  //   //   leagueConfig.leagueName
-  //   // );
-  //   // storageService.setLeagueConfigs(configsArray);
-  // };
   const getPreviousWeekPosition = (id: number) => {
     // tslint:disable-next-line:triple-equals
     const previousWeek = leagueRankings.find(
@@ -438,10 +304,10 @@ export const DisplayTable = (props: DisplayTableProps) => {
   const getRankingImage = () => {
     let circleWidth = 60;
     let circleCount = 0;
-    let circleMid = currentWeekRanking.length / 2;
+    let circleMid = currentRanking.teams.length / 2;
     let circleChild = 4;
     let resultString = "";
-    currentWeekRanking.forEach((ranking) => {
+    currentRanking.teams.forEach((ranking) => {
       console.log(circleMid, circleCount, circleChild, circleWidth);
       let backgroundColor = circleCount < circleMid ? "#1D7225;" : "firebrick;";
       resultString =
@@ -488,7 +354,6 @@ export const DisplayTable = (props: DisplayTableProps) => {
       rankingObject.wins + "-" + rankingObject.loss + "-" + rankingObject.ties
     );
   };
-  console.log(currentWeekRanking);
 
   return (
     <>
@@ -524,8 +389,8 @@ export const DisplayTable = (props: DisplayTableProps) => {
                 </Tr>
               </Thead>
               <Tbody>
-                {/**ngFor="let rankingObject of currentWeekRanking; index as i ">*/}
-                {currentWeekRanking.map((rankingObject: TeamRanking, i) => (
+                {/**ngFor="let rankingObject of currentRanking.teams; index as i ">*/}
+                {currentRanking.teams.map((rankingObject: TeamRanking, i) => (
                   <Tr className="rank1" key={rankingObject.teamName}>
                     <Td>
                       <div className="ranking1">{i + 1}</div>
@@ -618,8 +483,8 @@ export const DisplayTable = (props: DisplayTableProps) => {
 //             </Tr>
 //           </Thead>
 //           <Tbody>
-//             {/**ngFor="let rankingObject of currentWeekRanking; index as i ">*/}
-//             {currentWeekRanking.map((rankingObject, i) => (
+//             {/**ngFor="let rankingObject of currentRanking.teams; index as i ">*/}
+//             {currentRanking.teams.map((rankingObject, i) => (
 //               <Tr className="rank" key={rankingObject.teamName}>
 //                 <Td>
 //                   <div className="ranking">{i + 1}</div>
@@ -697,10 +562,10 @@ export const DisplayTable = (props: DisplayTableProps) => {
 //                       <Td>Team Name</Td>
 //                       <Td>Comments</Td>
 //                       <ng-container/>
-//                       *ngFor="let rankingObject of currentWeekRankingForm; index as i ">
+//                       *ngFor="let rankingObject of currentRanking.teamsForm; index as i ">
 //                       <Tr>
-//                           <Td><input id="teamName" type="text"/> [(ngModel)]="currentWeekRankingForm[i].teamName"></Td>
-//                           <Td><input id="description" type="text"/> [(ngModel)]="currentWeekRankingForm[i].description">
+//                           <Td><input id="teamName" type="text"/> [(ngModel)]="currentRanking.teamsForm[i].teamName"></Td>
+//                           <Td><input id="description" type="text"/> [(ngModel)]="currentRanking.teamsForm[i].description">
 //                           </Td>
 //                       </Tr>
 //                   </ng-container>

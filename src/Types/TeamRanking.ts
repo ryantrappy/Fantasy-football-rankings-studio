@@ -49,3 +49,16 @@ export class TeamRanking {
   teamId?: number;
   position?: number;
 }
+export interface Team {
+  leagueId: string;
+  seasonId: string; // Season year
+  teamId: string;
+  abbreviation: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  roster: string[];
+  wins: number;
+  losses: number;
+  ties: number;
+}

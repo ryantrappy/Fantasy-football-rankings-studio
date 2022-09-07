@@ -1,55 +1,116 @@
-import React, { useEffect } from "react";
-import { Box, Button, HStack, Spacer } from "@chakra-ui/react";
-import { Header } from "./Header";
-import { RankingsDisplay } from "./RankingsDisplay";
+import React, { useEffect, useState } from "react";
+import { Box, HStack, Stack } from "@chakra-ui/react";
+import { MenuHeader } from "./MenuHeader";
 import { RankingsBuilder } from "./RankingsBuilder";
 import { DisplayTable } from "./downloadArea/DisplayTable";
 import * as testData from "../api/testRankings.json";
 import * as previousRanking from "../api/testPreviousWeek.json";
 import { WeeklyRanking } from "../Types/WeeklyRanking";
-import { getLeagueInfo } from "../api/LeaguesService";
+import { getLeagueTeams, populateLeagues } from "../api/LeaguesService";
 import { useAuth0 } from "@auth0/auth0-react";
+import { LeagueSelector } from "./LeagueSelector";
+import { League } from "../Types/League";
+import getUserMetadata from "../api/GetUserMetadata";
+import { Team, TeamRanking } from "../Types/TeamRanking";
 
 export const Home: React.FunctionComponent<any> = (props) => {
-  // cookie: any;
-  // user: IUser;
-  let leagueConfig;
-
-  const { user, isAuthenticated, getAccessTokenSilently } = useAuth0();
-  const currentLeague = "";
-  const currentYear = 2022;
-  const weeks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+  const { user, isAuthenticated, isLoading, getAccessTokenSilently } =
+    useAuth0();
+  const [userMetadata, setUserMetadata] = useState(null);
+  const [leagues, setLeagues] = useState([]);
+  const [selectedLeague, setSelectedLeague] = useState<League>();
+  const [currentRanking, setCurrentRanking] = useState<WeeklyRanking>();
+  const [teams, setTeams] = useState<Team[]>([]);
   let currentWeek = 2;
-  let newLeagueConfig: WeeklyRanking = new WeeklyRanking();
-  let leagueConfigForm: WeeklyRanking = new WeeklyRanking();
   let rankings: Array<WeeklyRanking> = [];
   rankings.push(previousRanking);
   rankings.push(testData);
-  //getLeagueInfo
 
   useEffect(() => {
-    getLeagueInfo(
+    if (isAuthenticated && !isLoading) {
+      getUserMetadata(getAccessTokenSilently, user).then((data) => {
+        setUserMetadata(data);
+        if (data) {
+          console.log(data);
+        }
+        populateLeagues(getAccessTokenSilently, user, data["leagues"]).then(
+          (result) => {
+            console.log("populate", result);
+            setLeagues(result);
+          }
+        );
+      });
+    }
+  }, [getAccessTokenSilently, user?.sub]);
+
+  useEffect(() => {
+    generateRanking();
+  }, [teams]);
+
+  const generateRanking = (): void => {
+    if (selectedLeague === undefined) return;
+    const ranking = new WeeklyRanking();
+    ranking.leagueId = selectedLeague.leagueId;
+    ranking.week = currentWeek;
+    ranking.year = new Date().getFullYear();
+
+    for (let i = 0; i < teams.length; i++) {
+      const cur = new TeamRanking(teams[i]);
+      ranking.teams.push(cur);
+    }
+    ranking.teams.sort((a, b) => {
+      return a.position - b.position;
+    });
+    console.log(ranking);
+    setCurrentRanking(ranking);
+  };
+
+  const leagueChange = (league: League) => {
+    console.log(league);
+    setSelectedLeague(league);
+    getLeagueTeams(
       getAccessTokenSilently,
       user,
-      "788542563794681856",
-      2022
-    ).then((r) => (leagueConfig = r.data.data));
-  }, []);
+      league.leagueId,
+      "2022",
+      0
+    ).then((result) => {
+      console.log("result", result.data.data);
+      setTeams(result.data.data);
+    });
+  };
+
+  const updateCurrentRanking = (rankingObject) => {
+    const rankingCopy = rankingObject;
+    setCurrentRanking(rankingObject);
+  };
 
   return (
     <Box>
-      <Header />
+      <MenuHeader />
       <HStack width={"100%"} height={"100%"}>
-        <RankingsBuilder />
-        {/*<RankingsDisplay />*/}
-        <DisplayTable
-          data={testData}
-          currentLeague={currentLeague}
-          currentWeek={currentWeek}
-          leagueConfig={leagueConfig}
-          leagueRankings={rankings}
-          currentRanking={testData}
-        ></DisplayTable>
+        <Stack>
+          {leagues && (
+            <LeagueSelector
+              onChange={leagueChange}
+              leagues={leagues}
+            ></LeagueSelector>
+          )}
+          {currentRanking && (
+            <RankingsBuilder
+              ranking={currentRanking}
+              updateRankingsObject={updateCurrentRanking}
+            />
+          )}
+        </Stack>
+        {currentRanking && (
+          <DisplayTable
+            data={testData}
+            currentWeek={currentWeek}
+            leagueRankings={[currentRanking]}
+            currentRanking={currentRanking}
+          ></DisplayTable>
+        )}
       </HStack>
     </Box>
   );

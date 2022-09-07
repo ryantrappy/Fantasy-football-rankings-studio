@@ -5,6 +5,6 @@ export enum LeagueType {
 export interface League {
   _id?: string;
   leagueId: string;
-  leagueName: string;
+  leagueName?: string;
   leagueType: LeagueType;
 }

@@ -1,17 +1,19 @@
-import React from "react";
-import styled from "styled-components";
+import React, { useEffect } from "react";
 import { useTable } from "react-table";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import update from "immutability-helper";
 import { Row } from "./Row";
-
-export const Table = ({ columns, data }) => {
+export const Table = ({ columns, data, updateTeams }) => {
   const [records, setRecords] = React.useState(data);
 
   const getRowId = React.useCallback((row) => {
-    return row.id;
+    return row.teamId;
   }, []);
+  useEffect(() => {
+    console.log(records);
+    updateTeams(records);
+  }, [records]);
 
   const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
     useTable({

@@ -1,8 +1,8 @@
 import React from "react";
 import styled from "styled-components";
 import { Table } from "./Table";
-import { Box, Button, HStack, Spacer } from "@chakra-ui/react";
-import makeData from "../api/makeData";
+import { WeeklyRanking } from "../Types/WeeklyRanking";
+import { League } from "../Types/League";
 
 const Styles = styled.div`
   padding: 1rem;
@@ -33,12 +33,15 @@ const Styles = styled.div`
   }
 `;
 
-export const RankingsBuilder: React.FunctionComponent<any> = (props) => {
-  // Ranking
-  // Team name
-  // Record
-  // Change from last week
-  // Notes
+export interface RankingsBuilderProps {
+  ranking: WeeklyRanking;
+  updateRankingsObject: (weeklyRanking: WeeklyRanking) => void;
+}
+
+export const RankingsBuilder: React.FunctionComponent<any> = (
+  props: RankingsBuilderProps
+) => {
+  const rankings = props.ranking;
   const columns = React.useMemo(
     () => [
       {
@@ -47,38 +50,28 @@ export const RankingsBuilder: React.FunctionComponent<any> = (props) => {
         accessor: (_row: any, i: number) => i + 1,
       },
       {
-        Header: "Name",
-        accessor: "name",
+        Header: "Team Name",
+        accessor: "teamName",
       },
       {
-        Header: "Change",
-        id: "change",
-        accessor: (_row: any, i: number) => i - _row.ranking,
-        // Cell: (row, i: number) => {
-        //   return (
-        //     <div>
-        //       {row.row.id} {i}
-        //     </div>
-        //   );
-        // },
-      },
-      {
-        Header: "Notes",
-        accessor: "notes",
+        Header: "Description",
+        accessor: "description",
       },
     ],
     []
   );
 
-  const data = React.useMemo(() => makeData(8), []);
+  const updateTeams = (teamsArray) => {
+    rankings.teams = teamsArray;
+    props.updateRankingsObject(rankings);
+  };
+
+  const data = props.ranking.teams;
+  console.log(props.ranking.teams);
 
   return (
     <Styles>
-      {/*<Button onClick={generateScreenshot}>Download Rankings Image</Button>*/}
-      <Table columns={columns} data={data} />
-      {/*<Box id="powerRanking" backgroundColor={"white"}>*/}
-      {/*  Test rankings*/}
-      {/*</Box>*/}
+      <Table columns={columns} data={data} updateTeams={updateTeams} />
     </Styles>
   );
 };

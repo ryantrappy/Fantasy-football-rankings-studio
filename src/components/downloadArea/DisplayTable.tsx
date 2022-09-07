@@ -13,7 +13,8 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { TeamRanking } from "../../Types/TeamRanking";
-import { LeagueConfig } from "../../Types/LeagueConfig";
+import { WeeklyRanking } from "../../Types/WeeklyRanking";
+import { League } from "../../Types/League";
 
 const Styles = styled.div`
   /* Split the screen in half */
@@ -228,15 +229,22 @@ const Styles = styled.div`
 
 export interface DisplayTableProps {
   data: any;
-  leagueRankings: LeagueConfig[];
+  leagueRankings: WeeklyRanking[];
+  currentRanking: WeeklyRanking;
   currentLeague: string;
-  currentWeek: string;
-  leagueConfig: LeagueConfig;
+  currentWeek: number;
+  leagueConfig: League;
 }
 
 export const DisplayTable = (props: DisplayTableProps) => {
-  const { leagueRankings, data, currentLeague, currentWeek, leagueConfig } =
-    props;
+  const {
+    leagueRankings,
+    data,
+    currentLeague,
+    currentWeek,
+    leagueConfig,
+    currentRanking,
+  } = props;
   const [records, setRecords] = React.useState(data);
 
   const currentYear = new Date().getFullYear();
@@ -341,8 +349,8 @@ export const DisplayTable = (props: DisplayTableProps) => {
   let currentWeekRankingForm: Array<TeamRanking> = currentWeekRanking;
   let previousWeekRankingForm: Array<TeamRanking> = previousWeekRanking;
   // let leagueConfig: LeagueConfig = LeagueConfigData;
-  let leagueConfigForm: LeagueConfig;
-  let configsArray: Array<LeagueConfig> = [];
+  let leagueConfigForm: League;
+  let configsArray: Array<League> = [];
 
   // ngOnInit(): void {
   //   getRankingImage();
@@ -378,8 +386,8 @@ export const DisplayTable = (props: DisplayTableProps) => {
       }) + 1
     );
   };
-  const getLastWeekPositionString = (managerName: string) => {
-    const lastWeeksRanking = getPreviousWeekPosition(managerName);
+  const getLastWeekPositionString = (id: number) => {
+    const lastWeeksRanking = getPreviousWeekPosition(id);
     return lastWeeksRanking ? "Last Week: " + lastWeeksRanking : "";
   };
 
@@ -493,11 +501,11 @@ export const DisplayTable = (props: DisplayTableProps) => {
               color={"white"}
               width={"100%"}
             >
-              <h3 id="rankingTitle1">{leagueConfig.rankingsTitle}</h3>
+              <h3 id="rankingTitle1">{currentRanking.rankingsTitle}</h3>
             </Box>
             <Table id="powerRankingTable1" variant={"striped"}>
               <TableCaption placement={"top"}>
-                {leagueConfig.introduction}
+                {currentRanking.introduction}
               </TableCaption>
               <Thead>
                 <Tr>
@@ -517,7 +525,7 @@ export const DisplayTable = (props: DisplayTableProps) => {
               </Thead>
               <Tbody>
                 {/**ngFor="let rankingObject of currentWeekRanking; index as i ">*/}
-                {currentWeekRanking.map((rankingObject, i) => (
+                {currentWeekRanking.map((rankingObject: TeamRanking, i) => (
                   <Tr className="rank1" key={rankingObject.teamName}>
                     <Td>
                       <div className="ranking1">{i + 1}</div>
@@ -557,7 +565,7 @@ export const DisplayTable = (props: DisplayTableProps) => {
                           {/*></div>*/}
                         </div>
                         <div className="last-weeks-position">
-                          {getLastWeekPositionString(rankingObject.managerName)}{" "}
+                          {getLastWeekPositionString(rankingObject.teamId)}{" "}
                         </div>
                       </div>
                     </Td>

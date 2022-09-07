@@ -31,10 +31,11 @@ export const Header: React.FunctionComponent<any> = (props) => {
   const handleInputChange = (e) => setInput(e.target.value);
 
   useEffect(() => {
-    getUserMetadata(getAccessTokenSilently, user).then((data) => {
-      setUserMetadata(data);
-      setInput(JSON.stringify(data["leagues"]));
-    });
+    if (isAuthenticated)
+      getUserMetadata(getAccessTokenSilently, user).then((data) => {
+        setUserMetadata(data);
+        setInput(JSON.stringify(data["leagues"]));
+      });
   }, [isAuthenticated, user?.sub]);
 
   const updateUserMetadataSubmit = () => {

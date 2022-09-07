@@ -1,6 +1,6 @@
 import { TeamRanking } from "./TeamRanking";
 
-export class LeagueConfig {
+export class WeeklyRanking {
   constructor(props?) {
     if (!props) {
       this.leagueName = "Test name hold";

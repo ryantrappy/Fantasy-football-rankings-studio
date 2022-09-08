@@ -389,9 +389,8 @@ export const DisplayTable = (props: DisplayTableProps) => {
                 </Tr>
               </Thead>
               <Tbody>
-                {/**ngFor="let rankingObject of currentRanking.teams; index as i ">*/}
                 {currentRanking.teams.map((rankingObject: TeamRanking, i) => (
-                  <Tr className="rank1" key={rankingObject.teamName}>
+                  <Tr className="rank1" key={rankingObject.id}>
                     <Td>
                       <div className="ranking1">{i + 1}</div>
                     </Td>

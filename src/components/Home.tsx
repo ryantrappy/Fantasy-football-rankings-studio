@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Box, HStack, Stack } from "@chakra-ui/react";
 import { MenuHeader } from "./MenuHeader";
 import { RankingsBuilder } from "./RankingsBuilder";
@@ -12,6 +12,7 @@ import { LeagueSelector } from "./LeagueSelector";
 import { League } from "../Types/League";
 import getUserMetadata from "../api/GetUserMetadata";
 import { Team, TeamRanking } from "../Types/TeamRanking";
+import { createNewRanking, updateRanking } from "../api/RankingsService";
 
 export const Home: React.FunctionComponent<any> = (props) => {
   const { user, isAuthenticated, isLoading, getAccessTokenSilently } =
@@ -21,6 +22,7 @@ export const Home: React.FunctionComponent<any> = (props) => {
   const [selectedLeague, setSelectedLeague] = useState<League>();
   const [currentRanking, setCurrentRanking] = useState<WeeklyRanking>();
   const [teams, setTeams] = useState<Team[]>([]);
+  const throttling = useRef(false);
   let currentWeek = 2;
   let rankings: Array<WeeklyRanking> = [];
   rankings.push(previousRanking);
@@ -47,8 +49,35 @@ export const Home: React.FunctionComponent<any> = (props) => {
     generateRanking();
   }, [teams]);
 
+  const handleDebounceCall = () => {
+    //Clear the previous timeout.
+    // if (throttling.current) {
+    //   throttling.current;
+    //   return;
+    // }
+    throttling.current = true;
+
+    // If there is no search term, do not make API call
+    if (currentRanking === undefined) {
+      return;
+    }
+    throttling.current = true;
+    setTimeout(() => {
+      throttling.current = false;
+      console.log("did save", currentRanking);
+      updateRanking(getAccessTokenSilently, user, currentRanking).then((r) =>
+        console.log(r)
+      );
+    }, 2000);
+  };
+
+  useEffect(() => {
+    console.log("would save");
+    handleDebounceCall();
+  }, [currentRanking]);
+
   const generateRanking = (): void => {
-    if (selectedLeague === undefined) return;
+    if (selectedLeague === undefined || currentRanking !== undefined) return;
     const ranking = new WeeklyRanking();
     ranking.leagueId = selectedLeague.leagueId;
     ranking.week = currentWeek;
@@ -61,12 +90,15 @@ export const Home: React.FunctionComponent<any> = (props) => {
     ranking.teams.sort((a, b) => {
       return a.position - b.position;
     });
-    console.log(ranking);
-    setCurrentRanking(ranking);
+    createNewRanking(getAccessTokenSilently, user, ranking).then(
+      (createResponse) => {
+        ranking._id = createResponse.data._id;
+        setCurrentRanking(ranking);
+      }
+    );
   };
 
   const leagueChange = (league: League) => {
-    console.log(league);
     setSelectedLeague(league);
     getLeagueTeams(
       getAccessTokenSilently,
@@ -75,14 +107,13 @@ export const Home: React.FunctionComponent<any> = (props) => {
       "2022",
       0
     ).then((result) => {
-      console.log("result", result.data.data);
       setTeams(result.data.data);
     });
   };
 
-  const updateCurrentRanking = (rankingObject) => {
-    const rankingCopy = rankingObject;
-    setCurrentRanking(rankingObject);
+  const updateCurrentRanking = (rankingObject: WeeklyRanking) => {
+    const rankingCopy = Object.assign({}, rankingObject);
+    setCurrentRanking(rankingCopy);
   };
 
   return (

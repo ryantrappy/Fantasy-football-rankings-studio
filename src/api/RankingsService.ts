@@ -42,8 +42,8 @@ export const createNewRanking = async (
   const accessToken = await getUserToken(getAccessTokenSilently, user);
 
   const options = {
-    method: "GET",
-    url: `${domain}/ranking`,
+    method: "POST",
+    url: `${domain}/rankings`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },
@@ -60,8 +60,8 @@ export const updateRanking = async (
   const accessToken = await getUserToken(getAccessTokenSilently, user);
 
   const options = {
-    method: "GET",
-    url: `${domain}/ranking/${rankingObject._id}`,
+    method: "PUT",
+    url: `${domain}/rankings/${rankingObject._id}`,
     headers: {
       authorization: `Bearer ${accessToken}`,
     },

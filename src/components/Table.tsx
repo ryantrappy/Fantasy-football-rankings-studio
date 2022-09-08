@@ -4,7 +4,13 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import update from "immutability-helper";
 import { Row } from "./Row";
-export const Table = ({ columns, data, updateTeams }) => {
+export const Table = ({
+  columns,
+  data,
+  updateTeams,
+  updateDescription,
+  skipPageReset,
+}) => {
   const [records, setRecords] = React.useState(data);
 
   const getRowId = React.useCallback((row) => {
@@ -20,6 +26,8 @@ export const Table = ({ columns, data, updateTeams }) => {
       data: records,
       columns,
       getRowId,
+      autoResetPage: !skipPageReset,
+      updateDescription,
     });
 
   const moveRow = (dragIndex, hoverIndex) => {

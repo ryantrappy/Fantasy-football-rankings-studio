@@ -2,30 +2,39 @@
   "name": "fantasy_power_rankings",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@auth0/auth0-react": "^1.7.0",
-    "@chakra-ui/icons": "^2.0.9",
-    "@chakra-ui/react": "^2.2.9",
-    "@emotion/react": "^11.4.1",
-    "@emotion/styled": "^11.3.0",
-    "axios": "^0.27.2",
-    "framer-motion": "^4.1.17",
-    "html-to-image": "^1.7.0",
-    "immutability-helper": "^3.1.1",
-    "react": "^18.0.0",
-    "react-dnd": "^16.0.1",
-    "react-dnd-html5-backend": "^16.0.1",
-    "react-dom": "^18.0.0",
-    "react-scripts": "^5.0.1",
-    "react-table": "^7.8.0",
-    "styled-components": "^5.3.5",
-    "web-vitals": "^1.1.2"
-  },
+  "type": "module",
   "scripts": {
-    "start": "PORT=3001 react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "vite --port 3001",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "lint": "oxlint --deny-warnings .",
+    "lint:fix": "oxlint --fix .",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auth0/auth0-react": "^2.24.1",
+    "html-to-image": "^1.11.13",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.4.1",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^28.0.0",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
+    "vitest": "^4.0.18"
   },
   "browserslist": {
     "production": [
@@ -39,20 +48,7 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "@testing-library/jest-dom": "^5.14.1",
-    "@testing-library/react": "^11.2.7",
-    "@testing-library/user-event": "^12.8.3",
-    "@types/jest": "^26.0.24",
-    "@types/node": "^12.20.24",
-    "@types/react": "^18.0.0",
-    "@types/react-dom": "^18.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.36.2",
-    "@typescript-eslint/parser": "^5.36.2",
-    "eslint": "^8.22.0",
-    "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-react": "^7.31.6",
-    "prettier": "2.7.1",
-    "typescript": "^4.8.2"
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

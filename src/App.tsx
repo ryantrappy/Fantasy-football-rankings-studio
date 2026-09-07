@@ -10,9 +10,11 @@ function App() {
     <Auth0Provider
       domain="dev-voqmvc1s.us.auth0.com"
       clientId="E8azhNaQOAsuhzGeTruCcDaqtdDTQYcW"
-      redirectUri={window.location.origin}
-      audience="https://dev-voqmvc1s.us.auth0.com/api/v2/"
-      scope="read:current_user update:current_user_metadata"
+      authorizationParams={{
+        redirect_uri: window.location.origin,
+        audience: "https://dev-voqmvc1s.us.auth0.com/api/v2/",
+        scope: "read:current_user update:current_user_metadata",
+      }}
     >
       <ChakraProvider theme={theme}>
         <Home />

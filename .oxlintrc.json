@@ -4,7 +4,15 @@
   "categories": {
     "correctness": "error"
   },
-  "ignorePatterns": ["node_modules", "dist", "build", "coverage"],
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".output",
+    ".tanstack",
+    "src/routeTree.gen.ts"
+  ],
   "env": {
     "node": true,
     "browser": true

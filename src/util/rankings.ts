@@ -5,7 +5,11 @@ export function defaultSeason(now = new Date()): number {
 }
 
 export function orderTeams(teams: TeamRanking[]): TeamRanking[] {
-  return teams.map((team, index) => ({ ...team, teamId: String(team.teamId), position: index + 1 }));
+  return teams.map((team, index) => ({
+    ...team,
+    teamId: String(team.teamId),
+    position: index + 1,
+  }));
 }
 
 export function moveTeam(teams: TeamRanking[], from: number, to: number): TeamRanking[] {
@@ -15,7 +19,12 @@ export function moveTeam(teams: TeamRanking[], from: number, to: number): TeamRa
   return orderTeams(next);
 }
 
-export function newRanking(league: League, year: number, week: number, teams: Team[]): WeeklyRanking {
+export function newRanking(
+  league: League,
+  year: number,
+  week: number,
+  teams: Team[],
+): WeeklyRanking {
   return {
     leagueId: league.leagueId,
     leagueName: league.leagueName,
@@ -23,12 +32,26 @@ export function newRanking(league: League, year: number, week: number, teams: Te
     week,
     rankingsTitle: `Week ${week} power rankings`,
     introduction: '',
-    teams: teams.map((team, index) => ({ ...team, teamId: String(team.teamId), description: '', position: index + 1 })),
+    teams: teams.map((team, index) => ({
+      ...team,
+      teamId: String(team.teamId),
+      description: '',
+      position: index + 1,
+    })),
   };
 }
 
-export function previousPosition(history: WeeklyRanking[], ranking: WeeklyRanking, teamId: string): number | undefined {
-  const previous = history.find((entry) => entry.leagueId === ranking.leagueId && entry.year === ranking.year && entry.week === ranking.week - 1);
+export function previousPosition(
+  history: WeeklyRanking[],
+  ranking: WeeklyRanking,
+  teamId: string,
+): number | undefined {
+  const previous = history.find(
+    (entry) =>
+      entry.leagueId === ranking.leagueId &&
+      entry.year === ranking.year &&
+      entry.week === ranking.week - 1,
+  );
   const index = previous?.teams.findIndex((team) => String(team.teamId) === String(teamId));
   return index === undefined || index < 0 ? undefined : index + 1;
 }

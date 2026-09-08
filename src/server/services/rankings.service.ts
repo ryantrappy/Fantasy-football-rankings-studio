@@ -1,0 +1,106 @@
+import { isValidObjectId } from 'mongoose';
+import { WeeklyRanking } from '../interfaces/weeklyRanking.interface';
+import HttpException from '../exceptions/HttpException';
+import weeklyRankingModel from '../models/weeklyRanking.model';
+import LeaguesService from './leagues.service';
+
+class RankingsService {
+  public weeklyRankings = weeklyRankingModel;
+  public leagueService = new LeaguesService();
+
+  private normalize(ranking: WeeklyRanking): WeeklyRanking {
+    if (!ranking?.teams?.length) throw new HttpException(400, 'Add at least one team.');
+    if (!ranking.rankingsTitle?.trim()) throw new HttpException(400, 'Enter a rankings title.');
+    const teamIds = ranking.teams.map((team) => String(team.teamId));
+    if (new Set(teamIds).size !== teamIds.length)
+      throw new HttpException(400, 'Each team may appear only once.');
+    return {
+      rankingsTitle: ranking.rankingsTitle.trim(),
+      introduction: ranking.introduction,
+      leagueId: ranking.leagueId,
+      week: ranking.week,
+      year: ranking.year,
+      teams: ranking.teams.map((team, index) => ({
+        ...team,
+        teamId: String(team.teamId),
+        position: index + 1,
+      })),
+    };
+  }
+
+  public async createNewRanking(
+    input: WeeklyRanking,
+    ownerSubject: string,
+  ): Promise<WeeklyRanking> {
+    const ranking = this.normalize(input);
+    await this.leagueService.getLeagueById(ranking.leagueId, ownerSubject);
+    const existing = await this.weeklyRankings.exists({
+      leagueId: ranking.leagueId,
+      week: ranking.week,
+      year: ranking.year,
+    });
+    if (existing)
+      throw new HttpException(
+        409,
+        'Rankings already exist for this league, season, and week. Open them to edit.',
+      );
+    return this.weeklyRankings.create(ranking) as unknown as Promise<WeeklyRanking>;
+  }
+
+  public async updateRanking(
+    rankingId: string,
+    input: WeeklyRanking,
+    ownerSubject: string,
+  ): Promise<WeeklyRanking> {
+    const current = await this.getRankingById(rankingId, ownerSubject);
+    if (
+      input.leagueId !== current.leagueId ||
+      input.week !== current.week ||
+      input.year !== current.year
+    )
+      throw new HttpException(400, 'A ranking cannot be moved to another league, season, or week.');
+    const ranking = this.normalize(input);
+    const result = await this.weeklyRankings.findByIdAndUpdate(
+      rankingId,
+      { $set: ranking },
+      { returnDocument: 'after', runValidators: true },
+    );
+    if (!result) throw new HttpException(404, 'Ranking not found.');
+    return result as unknown as WeeklyRanking;
+  }
+
+  public async updateRankingByWeek(
+    leagueId: string,
+    week: number,
+    year: number,
+    input: WeeklyRanking,
+    ownerSubject: string,
+  ): Promise<WeeklyRanking> {
+    await this.leagueService.getLeagueById(leagueId, ownerSubject);
+    if (input.leagueId !== leagueId || input.week !== week || input.year !== year)
+      throw new HttpException(400, 'Ranking details must match the URL.');
+    const result = await this.weeklyRankings.findOneAndUpdate(
+      { leagueId, week, year },
+      { $set: this.normalize(input) },
+      { returnDocument: 'after', runValidators: true },
+    );
+    if (!result) throw new HttpException(404, 'Ranking not found. Create it before updating.');
+    return result as unknown as WeeklyRanking;
+  }
+
+  public async getRankingById(rankingId: string, ownerSubject: string): Promise<WeeklyRanking> {
+    if (!isValidObjectId(rankingId)) throw new HttpException(400, 'Invalid ranking ID.');
+    const result = await this.weeklyRankings.findById(rankingId);
+    if (!result) throw new HttpException(404, 'Ranking not found.');
+    await this.leagueService.getLeagueById(result.leagueId, ownerSubject);
+    return result as unknown as WeeklyRanking;
+  }
+
+  public async getByLeagueId(leagueId: string, ownerSubject: string): Promise<WeeklyRanking[]> {
+    await this.leagueService.getLeagueById(leagueId, ownerSubject);
+    return this.weeklyRankings
+      .find({ leagueId })
+      .sort({ year: -1, week: -1 }) as unknown as Promise<WeeklyRanking[]>;
+  }
+}
+export default RankingsService;

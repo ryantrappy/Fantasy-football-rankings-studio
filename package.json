@@ -4,20 +4,40 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "vite --port 3001",
-    "build": "tsc --noEmit && vite build",
-    "test": "vitest run",
+    "start": "PORT=${PORT:-3001} node --env-file-if-exists=.env --env-file-if-exists=.env.local .output/server/index.mjs",
+    "build": "vite build && tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts",
     "lint": "oxlint --deny-warnings .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "vite dev --port 3001",
+    "check:local": "npm run build && node scripts/check-local.mjs"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.24.1",
+    "@tanstack/charts": "^0.16.0",
+    "@tanstack/db": "^0.8.7",
+    "@tanstack/markdown": "^0.0.13",
+    "@tanstack/query-core": "^5.102.8",
+    "@tanstack/query-db-collection": "^1.2.12",
+    "@tanstack/react-db": "^0.3.7",
+    "@tanstack/react-form": "^1.33.5",
+    "@tanstack/react-form-start": "^1.33.5",
+    "@tanstack/react-router": "^1.170.33",
+    "@tanstack/react-start": "^1.168.50",
+    "@tanstack/react-store": "^0.11.1",
+    "@tanstack/react-table": "^9.2.4",
+    "axios": "^1.20.0",
+    "dotenv": "^17.4.2",
     "html-to-image": "^1.11.13",
+    "jose": "^6.2.12",
+    "mongoose": "^9.9.5",
+    "nitro": "^3.0.260903-beta",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
@@ -32,6 +52,7 @@
     "jsdom": "^28.0.0",
     "oxfmt": "^0.66.0",
     "oxlint": "^1.81.0",
+    "seroval": "^1.6.5",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
     "vitest": "^4.0.18"

@@ -1,5 +1,14 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "singleQuote": true,
-  "ignorePatterns": ["node_modules", "dist", "build", "coverage", "package-lock.json"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    "package-lock.json",
+    ".output",
+    ".tanstack",
+    "src/routeTree.gen.ts"
+  ]
 }

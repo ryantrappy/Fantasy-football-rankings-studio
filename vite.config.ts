@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     'AUTH0_MANAGEMENT_CLIENT_ID',
     'AUTH0_MANAGEMENT_CLIENT_SECRET',
   ]) {
-    process.env[key] ??= env[key];
+    if (env[key] !== undefined) process.env[key] ??= env[key];
   }
   return {
     plugins: [

@@ -296,3 +296,7 @@ per server process. Codex uses read-only sandboxing and ignores user configurati
 Claude runs with no tools or MCP servers. The host must have a compatible CLI
 version and available account quota. Tests mock CLI execution; no live generation
 is part of the test suite. Factual context works with AI disabled.
+
+Local development loads only defined server settings from Vite's environment files.
+Existing shell values take precedence; missing settings remain unset so optional
+features stay disabled and required-service validation can report missing configuration.

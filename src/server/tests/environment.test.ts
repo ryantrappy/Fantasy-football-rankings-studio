@@ -19,3 +19,22 @@ it('loads the server encryption key and preserves shell overrides without exposi
   await config({ command: 'serve', mode: 'development' });
   expect(process.env.ESPN_CREDENTIALS_KEY).toBe('b'.repeat(64));
 });
+it('leaves missing optional and required server settings absent', async () => {
+  const keys = [
+    'AUTH0_ISSUER_BASE_URL',
+    'AUTH0_MANAGEMENT_CLIENT_SECRET',
+    'ESPN_CREDENTIALS_KEY',
+    'ESPN_S2',
+    'SWID',
+    'WRITING_AI_PROVIDERS',
+    'WRITING_AI_USERS',
+  ];
+  for (const key of keys) vi.stubEnv(key, undefined);
+  loadEnv.mockReturnValue({});
+  if (typeof config !== 'function') throw new Error('Expected config factory');
+  await config({ command: 'serve', mode: 'development' });
+  for (const key of keys) {
+    expect(process.env[key]).toBeUndefined();
+    expect(Object.hasOwn(process.env, key)).toBe(false);
+  }
+});

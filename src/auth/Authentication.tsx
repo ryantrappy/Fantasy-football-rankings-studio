@@ -151,6 +151,9 @@ function Session({ children }: { children: ReactNode }) {
       <ApiContext.Provider value={api}>
         <Box textAlign="right" className="session-actions">
           <Button asChild variant="plain">
+            <Link to="/profile">Your profile</Link>
+          </Button>
+          <Button asChild variant="plain">
             <Link to="/espn">ESPN settings</Link>
           </Button>
           <Button

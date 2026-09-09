@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.espn'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
 import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
@@ -53,6 +54,11 @@ const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedLeaguesNewRoute = AuthenticatedLeaguesNewRouteImport.update({
   id: '/leagues/new',
   path: '/leagues/new',
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/profile': typeof AuthenticatedProfileRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/_authenticated/espn': typeof AuthenticatedEspnRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/_public/shared/history': typeof PublicSharedHistoryRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/profile'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/profile'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/espn'
     | '/_authenticated/history'
     | '/_authenticated/insights'
+    | '/_authenticated/profile'
     | '/_authenticated/'
     | '/_authenticated/leagues/new'
     | '/_public/shared/history'
@@ -194,6 +206,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInsightsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/leagues/new': {
       id: '/_authenticated/leagues/new'
       path: '/leagues/new'
@@ -222,6 +241,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEspnRoute: typeof AuthenticatedEspnRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedLeaguesNewRoute: typeof AuthenticatedLeaguesNewRoute
 }
@@ -230,6 +250,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEspnRoute: AuthenticatedEspnRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedLeaguesNewRoute: AuthenticatedLeaguesNewRoute,
 }

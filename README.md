@@ -190,3 +190,33 @@ obsolete cookie variables from your deployment after updating. A user without sa
 cookies can access only ESPN leagues that ESPN makes public. The live `check:local`
 script uses a disposable database with no saved cookies, so its ESPN fixture must be
 public. Existing `.env` files are not modified by this change.
+
+## User profile
+
+Open **Your profile** (`/profile`) after signing in to view your account ID, email,
+and email verification status, and edit your Auth0 name and nickname. Save failures
+retain your draft; reload the page to read the latest saved Auth0 profile. Existing
+ID-token claims elsewhere may retain the previous name until the next sign-in.
+Email, passwords, roles, and metadata are not editable on this page.
+
+Configure a server-only Auth0 Machine-to-Machine application authorized for the
+Auth0 Management API with only `read:users` and `update:users`. Set
+`AUTH0_MANAGEMENT_DOMAIN` (canonical tenant hostname), `AUTH0_MANAGEMENT_CLIENT_ID`,
+and `AUTH0_MANAGEMENT_CLIENT_SECRET` on the server; use the same tenant as login.
+These settings are optional for the rest of the app. If missing, the profile page
+shows a configuration error. Never expose the M2M secret through `VITE_*`.
+The server validates the application access token and derives the target account
+from its subject; clients cannot choose another user or update privileged fields.
+Management tokens are cached in server memory until shortly before expiry.
+
+For social/enterprise connections, configure profile synchronization to update
+attributes only on account creation if edited names should persist across logins.
+See [Auth0 user management](https://auth0.com/docs/manage-users/user-accounts/manage-users-using-the-management-api)
+and [production Management API tokens](https://auth0.com/docs/secure/tokens/access-tokens/management-api-access-tokens/get-management-api-access-tokens-for-production).
+
+### Calculation reference
+
+Open **How are these numbers calculated?** in either season or history summaries
+for formulas and a worked schedule-luck example. The [calculation reference](docs/calculations.md)
+explains every scoring and move-quality denominator, missing-data rules,
+leader thresholds, and weighting across seasons.

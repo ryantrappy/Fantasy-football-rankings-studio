@@ -82,3 +82,16 @@ it.each(['/insights', '/history'] as const)(
     expect(url.searchParams.get('years')).toBe('[2025,2024]');
   },
 );
+
+it('makes calculation explanations expandable in season and historical summaries', async () => {
+  const { LeagueSummary } = await import('./LeagueSummary');
+  const view = render(wrap(<LeagueSummary records={[]} />));
+  const summary = screen.getByText('How are these numbers calculated?');
+  const details = summary.closest('details')!;
+  expect(details.open).toBe(false);
+  fireEvent.click(summary);
+  expect(details.open).toBe(true);
+  expect(screen.getByText(/Example: in a four-team league/)).toBeVisible();
+  view.rerender(wrap(<LeagueSummary records={[]} historical />));
+  expect(screen.getByText('How are these numbers calculated?')).toBeInTheDocument();
+});

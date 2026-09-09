@@ -2,6 +2,7 @@ import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
 import { QueryClient } from '@tanstack/query-core';
 import * as functions from '../functions/rankings.functions';
+import * as profile from '../functions/profile.functions';
 import type { League, LeagueApi, WeeklyRanking } from '../types';
 
 export class ApiError extends Error {
@@ -92,6 +93,9 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   };
   return {
     ...api,
+    getProfile: async () => unwrap(await profile.getProfile({ headers: await headers() })),
+    updateProfile: async (data: import('../profile').ProfileUpdate) =>
+      unwrap(await profile.updateProfile({ data, headers: await headers() })),
     getEspnCredentialStatus: async () =>
       unwrap(await functions.getEspnCredentialStatus({ headers: await headers() })),
     saveEspnCredentials: async (data: import('../espn-credentials').EspnCredentials) => {

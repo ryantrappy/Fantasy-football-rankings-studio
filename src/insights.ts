@@ -3,6 +3,7 @@ export interface ScoreWeek {
   week: number;
   actual: number;
   projected: number | null;
+  opponentTeamId?: string | null;
   lineupAvailable?: boolean;
   starters: { playerId: string; points: number }[];
   players?: { playerId: string; points: number }[];

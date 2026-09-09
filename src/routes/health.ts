@@ -1,3 +1,4 @@
+import { logServerError } from '../server/logging.server';
 import { createFileRoute } from '@tanstack/react-router';
 import { connectDatabase } from '../server/database.server';
 export const Route = createFileRoute('/health')({
@@ -7,7 +8,8 @@ export const Route = createFileRoute('/health')({
         try {
           await connectDatabase();
           return Response.json({ status: 'ok' }, { headers: { 'Cache-Control': 'no-store' } });
-        } catch {
+        } catch (error) {
+          logServerError('health', error, 503);
           return Response.json({ status: 'unavailable' }, { status: 503 });
         }
       },

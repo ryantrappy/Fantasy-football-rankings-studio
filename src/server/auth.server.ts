@@ -22,7 +22,7 @@ export async function verifyAuthorization(header: string | undefined) {
     });
     if (!payload.sub) throw new Error('Missing subject');
     return payload.sub;
-  } catch {
-    throw new HttpException(401, 'Your session could not be verified. Sign in again.');
+  } catch (cause) {
+    throw new HttpException(401, 'Your session could not be verified. Sign in again.', { cause });
   }
 }

@@ -3,7 +3,7 @@ import axios from 'axios';
 import type { InsightsSource, PlayerMove, ScoreWeek } from '../../insights';
 import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
-import EspnProvider from '../providers/espn.provider';
+import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
 import { calculateInsights } from './calculate';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
@@ -39,6 +39,7 @@ async function sleeperNames() {
   return namesCache;
 }
 interface SleeperScore {
+  matchup_id?: number | null;
   roster_id: number;
   points: number;
   custom_points?: number | null;
@@ -93,6 +94,15 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   const scores: ScoreWeek[] = weekly.flatMap(({ week, rows }) =>
     rows.map((r) => ({
       teamId: String(r.roster_id),
+      opponentTeamId:
+        (!season.settings?.playoff_week_start || week < season.settings.playoff_week_start) &&
+        r.matchup_id != null &&
+        rows.filter((p) => p.matchup_id === r.matchup_id).length === 2
+          ? String(
+              rows.find((p) => p.matchup_id === r.matchup_id && p.roster_id !== r.roster_id)!
+                .roster_id,
+            )
+          : null,
       week,
       actual: r.custom_points ?? r.points,
       projected: null,
@@ -200,11 +210,11 @@ interface EspnTransaction {
 interface EspnSnapshot {
   id: number;
   status?: { latestScoringPeriod: number; finalScoringPeriod: number };
-  schedule?: { home?: EspnSide; away?: EspnSide }[];
+  schedule?: { home?: EspnSide; away?: EspnSide; playoffTierType?: string }[];
   transactions?: EspnTransaction[];
 }
-async function loadEspn(league: League, year: number): Promise<InsightsSource> {
-  const provider = new EspnProvider();
+async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
+  const provider = new EspnProvider(access);
   const [meta, teams] = await Promise.all([
     provider.get<EspnSnapshot>(league.leagueId, year, ['mSettings']),
     provider.getTeams(league, year, 1),
@@ -232,6 +242,18 @@ async function loadEspn(league: League, year: number): Promise<InsightsSource> {
   const playerPositions: Record<string, string> = {};
   const scores: ScoreWeek[] = [];
   for (const { week, data } of weekly) {
+    const opponents = new Map<number, string>();
+    for (const matchup of data.schedule || []) {
+      const { home, away } = matchup;
+      if (
+        matchup.playoffTierType === 'NONE' &&
+        home?.pointsByScoringPeriod?.[week] != null &&
+        away?.pointsByScoringPeriod?.[week] != null
+      ) {
+        opponents.set(home.teamId, String(away.teamId));
+        opponents.set(away.teamId, String(home.teamId));
+      }
+    }
     const sides = new Map<number, EspnSide>();
     for (const matchup of data.schedule || [])
       for (const side of [matchup.home, matchup.away])
@@ -258,6 +280,7 @@ async function loadEspn(league: League, year: number): Promise<InsightsSource> {
       const projections = lineup.map((e) => stat(e, 1));
       scores.push({
         teamId: String(side.teamId),
+        opponentTeamId: opponents.get(side.teamId) ?? null,
         week,
         actual: side.pointsByScoringPeriod![week],
         lineupAvailable:
@@ -319,8 +342,12 @@ async function loadEspn(league: League, year: number): Promise<InsightsSource> {
     ],
   };
 }
-export async function loadInsights(league: League, year: number) {
+export async function loadInsights(
+  league: League,
+  year: number,
+  access: EspnAccess = 'environment',
+) {
   return calculateInsights(
-    await (league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year)),
+    await (league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access)),
   );
 }

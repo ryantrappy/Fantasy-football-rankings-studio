@@ -1,3 +1,4 @@
+import { Box, Button, Field, Flex, Grid, Heading, Input, Text, chakra } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
 import type { League, LeagueApi } from '../types';
@@ -46,17 +47,40 @@ export function CreateLeague({
   const busy = useStore(form.store, (state) => state.isSubmitting);
 
   return (
-    <div className="create-page">
-      <button className="text-button" onClick={onCancel} disabled={busy}>
+    <Box className="create-page">
+      <Button variant="plain" type="button" onClick={onCancel} disabled={busy}>
         ← Back to rankings
-      </button>
-      <div className="page-heading">
-        <p className="eyebrow">A new season of opinions</p>
-        <h1>Create a league.</h1>
-        <p>Bring your league into the studio. We’ll take care of the teams.</p>
-      </div>
-      <div className="create-layout">
-        <form
+      </Button>
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={4}
+        flexWrap="wrap"
+        mt={4}
+        mb={6}
+        className="page-heading"
+      >
+        <Text mb={4} className="eyebrow">
+          A new season of opinions
+        </Text>
+        <Heading as="h1" size="3xl" mb={4}>
+          Create a league.
+        </Heading>
+        <Text mb={4}>Bring your league into the studio. We’ll take care of the teams.</Text>
+      </Flex>
+      <Grid
+        templateColumns={{ base: '1fr', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }}
+        gap={8}
+        alignItems="start"
+        className="create-layout"
+      >
+        <chakra.form
+          bg="bg"
+          borderWidth="1px"
+          borderStyle="solid"
+          borderColor="border"
+          rounded="lg"
+          p={{ base: 4, md: 6 }}
           className="panel league-form"
           onSubmit={(event) => {
             event.preventDefault();
@@ -67,14 +91,18 @@ export function CreateLeague({
             <legend>
               01 <span>Choose your platform</span>
             </legend>
-            <div className="provider-options">
+            <Flex gap={4} flexWrap={{ base: 'wrap', md: 'nowrap' }} className="provider-options">
               <label
+                htmlFor="provider-sleeper"
                 aria-label="Sleeper"
                 className={`provider-option ${provider === 0 ? 'selected' : ''}`}
               >
-                <input
+                <chakra.input
+                  accentColor="green.700"
+                  width="auto"
                   type="radio"
                   name="provider"
+                  id="provider-sleeper"
                   value="0"
                   checked={provider === 0}
                   onChange={() => form.setFieldValue('leagueType', 0)}
@@ -85,12 +113,16 @@ export function CreateLeague({
                 </span>
               </label>
               <label
+                htmlFor="provider-espn"
                 aria-label="ESPN"
                 className={`provider-option ${provider === 1 ? 'selected' : ''}`}
               >
-                <input
+                <chakra.input
+                  accentColor="green.700"
+                  width="auto"
                   type="radio"
                   name="provider"
+                  id="provider-espn"
                   value="1"
                   checked={provider === 1}
                   onChange={() => form.setFieldValue('leagueType', 1)}
@@ -100,17 +132,17 @@ export function CreateLeague({
                   <small>Connect an ESPN league</small>
                 </span>
               </label>
-            </div>
+            </Flex>
           </fieldset>
           <fieldset disabled={busy}>
             <legend>
               02 <span>Make it yours</span>
             </legend>
-            <div className="field">
-              <label htmlFor="league-id">
+            <Field.Root mb={5} gap={2} className="field">
+              <Field.Label htmlFor="league-id">
                 League ID <span className="required">Required</span>
-              </label>
-              <input
+              </Field.Label>
+              <Input
                 id="league-id"
                 name="leagueId"
                 inputMode="numeric"
@@ -129,12 +161,12 @@ export function CreateLeague({
                 Copy the numeric ID from your league’s URL. Keep the full ID, including any leading
                 zeros.
               </small>
-            </div>
-            <div className="field">
-              <label htmlFor="league-name">
+            </Field.Root>
+            <Field.Root mb={5} gap={2} className="field">
+              <Field.Label htmlFor="league-name">
                 Display name <span>Optional</span>
-              </label>
-              <input
+              </Field.Label>
+              <Input
                 id="league-name"
                 name="leagueName"
                 maxLength={120}
@@ -142,10 +174,10 @@ export function CreateLeague({
                 onChange={(event) => form.setFieldValue('leagueName', event.target.value)}
                 placeholder="Use the name from your platform"
               />
-            </div>
-            <div className="field">
-              <label htmlFor="league-season">Season</label>
-              <input
+            </Field.Root>
+            <Field.Root mb={5} gap={2} className="field">
+              <Field.Label htmlFor="league-season">Season</Field.Label>
+              <Input
                 className="season-field"
                 id="league-season"
                 name="season"
@@ -156,31 +188,40 @@ export function CreateLeague({
                 value={season}
                 onChange={(event) => form.setFieldValue('seasonId', Number(event.target.value))}
               />
-            </div>
+            </Field.Root>
           </fieldset>
           {error && (
-            <div className="notice error" role="alert">
+            <Box className="notice error" role="alert">
               {error}
-            </div>
+            </Box>
           )}
-          <div className="form-footer">
-            <p>Your league is checked before it’s added.</p>
-            <button className="button primary" type="submit" disabled={busy}>
+          <Flex
+            align="center"
+            justify="space-between"
+            gap={4}
+            flexWrap="wrap"
+            mb={6}
+            className="form-footer"
+          >
+            <Text mb={4}>Your league is checked before it’s added.</Text>
+            <Button colorPalette="green" variant="solid" type="submit" disabled={busy}>
               {busy ? 'Connecting league…' : 'Create league'}
               {!busy && <Icon name="arrow" />}
-            </button>
-          </div>
-        </form>
-        <aside className="creation-guide">
+            </Button>
+          </Flex>
+        </chakra.form>
+        <Box as="aside" className="creation-guide">
           <span className="guide-mark">
             <Icon name="ball" size={30} />
           </span>
-          <h2>
+          <Heading as="h2" size="xl" mb={4}>
             Your league.
             <br />
             Your point of view.
-          </h2>
-          <p>This creates a rankings workspace for a league you already run on Sleeper or ESPN.</p>
+          </Heading>
+          <Text mb={4}>
+            This creates a rankings workspace for a league you already run on Sleeper or ESPN.
+          </Text>
           <ol>
             <li>
               <strong>Find your league ID</strong>
@@ -198,11 +239,11 @@ export function CreateLeague({
               <span>Reorder the field, add your commentary, and export the finished rankings.</span>
             </li>
           </ol>
-          <p className="guide-footnote">
+          <Text mb={4} className="guide-footnote">
             Private ESPN leagues need server access configured by your administrator.
-          </p>
-        </aside>
-      </div>
-    </div>
+          </Text>
+        </Box>
+      </Grid>
+    </Box>
   );
 }

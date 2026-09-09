@@ -1,0 +1,138 @@
+/* Download contract: fixed geometry, original type and colors. Keep independent of Chakra. */
+/* Fixed export geometry keeps the PNG identical on desktop and mobile. */
+.preview-panel {
+  min-width: 0;
+}
+.preview-scroll {
+  overflow-x: auto;
+}
+.export-canvas {
+  width: 1304px;
+}
+.ranking-preview {
+  width: 1304px;
+  padding: 0;
+  border: 2px solid white;
+  background: #f8f8f2;
+  color: #000;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.export-title {
+  margin: 0;
+  padding: 5px 12px;
+  background: #1e7326;
+  color: white;
+  text-align: center;
+  font:
+    700 32px/1.15 Arial,
+    Helvetica,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.export-introduction {
+  margin: 0;
+  padding: 5px 24px;
+  font-size: 27px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.export-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.export-rank-column {
+  width: 16%;
+}
+.export-team-column {
+  width: 29%;
+}
+.export-trend-column {
+  width: 14%;
+}
+.export-comments-column {
+  width: 41%;
+}
+.export-table th {
+  background: #6bb975;
+  padding: 5px 8px;
+  font-size: 27px;
+  line-height: 1;
+  text-align: center;
+}
+.export-table th:first-child {
+  text-align: left;
+  padding-left: 30px;
+}
+.export-table tbody tr {
+  height: 120px;
+}
+.export-table tbody tr:nth-child(even) {
+  background: #f1f2e8;
+}
+.export-table td {
+  padding: 6px 12px;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.export-table .export-rank {
+  padding-left: 6px;
+}
+.export-rank-circle {
+  display: flex;
+  width: 110px;
+  height: 110px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-size: 42px;
+  font-weight: 400;
+}
+.export-rank-circle.top-half {
+  background: #1e7326;
+}
+.export-rank-circle.bottom-half {
+  background: #ba2025;
+}
+.export-team-name {
+  font-size: 28px;
+  line-height: 1.25;
+  margin-bottom: 12px;
+}
+.export-team-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 36px;
+  color: #898989;
+  font-size: 26px;
+  line-height: 1.25;
+}
+.export-trend {
+  text-align: center;
+}
+.export-movement {
+  font-size: 36px;
+  line-height: 1.3;
+}
+.export-movement.up {
+  color: #008900;
+}
+.export-movement.down {
+  color: #ff0909;
+}
+.export-last-week {
+  margin-top: 8px;
+  color: #898989;
+  font-size: 22px;
+  white-space: nowrap;
+}
+.export-comments {
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.17;
+  white-space: pre-wrap;
+}

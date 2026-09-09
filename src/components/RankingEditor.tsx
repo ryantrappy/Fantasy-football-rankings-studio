@@ -1,4 +1,16 @@
-/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions -- Drop targets have equivalent labeled up/down buttons for keyboard use. */
+import {
+  Box,
+  Button,
+  Field,
+  Flex,
+  Grid,
+  Heading,
+  IconButton,
+  Input,
+  Text,
+  Textarea,
+  chakra,
+} from '@chakra-ui/react';
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
 import type { League, LeagueApi, WeeklyRanking } from '../types';
 import { useRankingEditor } from '../hooks/useRankingEditor';
@@ -6,6 +18,7 @@ import { moveTeam } from '../util/rankings';
 import { errorMessage } from '../api/client';
 import { RankingPreview } from './RankingPreview';
 import { Icon } from './Icon';
+import { SortableRankingList } from './SortableRankingList';
 
 export interface EditorHandle {
   flush: () => Promise<void>;
@@ -33,7 +46,6 @@ export const RankingEditor = forwardRef<
     observer.observe(viewport);
     return () => observer.disconnect();
   }, [editor.loading, editor.loadError, tab]);
-  const dragged = useRef<number>(undefined);
   const { flush } = editor;
   useImperativeHandle(ref, () => ({ flush: () => flush() }), [flush]);
 
@@ -48,10 +60,24 @@ export const RankingEditor = forwardRef<
     if (!preview.current || exporting) return;
     setExporting(true);
     setExportError('');
+    const exportHost = document.createElement('div');
+    exportHost.setAttribute('aria-hidden', 'true');
+    exportHost.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none';
     try {
       await document.fonts.ready;
       const { toPng } = await import('html-to-image');
-      const image = await toPng(preview.current, {
+      // Measure at the original size before html-to-image copies computed styles.
+      // Resetting zoom only in toPng is too late: scaled table geometry is rounded.
+      const canvas = preview.current.cloneNode(true) as HTMLDivElement;
+      canvas.style.zoom = '1';
+      // Export header labels without the interactive preview's sorting controls.
+      canvas.querySelectorAll('.table-sort-indicator').forEach((indicator) => indicator.remove());
+      canvas.querySelectorAll('.table-sort-button').forEach((button) => {
+        button.replaceWith(document.createTextNode(button.textContent || ''));
+      });
+      exportHost.appendChild(canvas);
+      document.body.appendChild(exportHost);
+      const image = await toPng(canvas, {
         pixelRatio: 1,
         backgroundColor: '#f8f8f2',
         style: { zoom: '1' },
@@ -65,54 +91,106 @@ export const RankingEditor = forwardRef<
     } catch (error) {
       setExportError(`Image export failed: ${errorMessage(error)}`);
     } finally {
+      exportHost.remove();
       setExporting(false);
     }
   }
 
   if (editor.loading)
     return (
-      <output className="panel loading-state">
+      <chakra.output
+        bg="bg"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        rounded="lg"
+        p={{ base: 4, md: 6 }}
+        className="panel loading-state"
+      >
         <span className="loading-bar" />
-        <h2>Getting the field ready…</h2>
-        <p>Loading your saved rankings and league teams.</p>
-      </output>
+        <Heading as="h2" size="xl" mb={4}>
+          Getting the field ready…
+        </Heading>
+        <Text mb={4}>Loading your saved rankings and league teams.</Text>
+      </chakra.output>
     );
   if (editor.loadError)
     return (
-      <div className="panel empty-state">
-        <h2>We couldn’t load this week.</h2>
-        <p role="alert">{editor.loadError}</p>
-        <button className="button primary" onClick={editor.reload}>
+      <Box
+        bg="bg"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        rounded="lg"
+        p={{ base: 4, md: 6 }}
+        className="panel empty-state"
+      >
+        <Heading as="h2" size="xl" mb={4}>
+          We couldn’t load this week.
+        </Heading>
+        <Text mb={4} role="alert">
+          {editor.loadError}
+        </Text>
+        <Button colorPalette="green" variant="solid" type="button" onClick={editor.reload}>
           Try again
-        </button>
-      </div>
+        </Button>
+      </Box>
     );
   const ranking = editor.ranking;
   if (!ranking) return null;
   if (!ranking.teams.length)
     return (
-      <div className="panel empty-state">
-        <h2>No teams on the field yet.</h2>
-        <p>Check that your league has teams for the selected season, then refresh.</p>
-        <button className="button secondary" onClick={editor.reload}>
+      <Box
+        bg="bg"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        rounded="lg"
+        p={{ base: 4, md: 6 }}
+        className="panel empty-state"
+      >
+        <Heading as="h2" size="xl" mb={4}>
+          No teams on the field yet.
+        </Heading>
+        <Text mb={4}>Check that your league has teams for the selected season, then refresh.</Text>
+        <Button variant="outline" type="button" onClick={editor.reload}>
           Refresh teams
-        </button>
-      </div>
+        </Button>
+      </Box>
     );
   const comments = ranking.teams.filter((team) => team.description.trim()).length;
 
   return (
     <>
-      <div className="editor-topline">
-        <div className="view-switch" aria-label="Ranking view">
-          <button aria-pressed={tab === 'edit'} onClick={() => setTab('edit')}>
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={4}
+        flexWrap="wrap"
+        mb={6}
+        className="editor-topline"
+      >
+        <Box className="view-switch" aria-label="Ranking view">
+          <Button
+            variant={tab === 'edit' ? 'solid' : 'outline'}
+            colorPalette="green"
+            type="button"
+            aria-pressed={tab === 'edit'}
+            onClick={() => setTab('edit')}
+          >
             Edit rankings
-          </button>
-          <button aria-pressed={tab === 'preview'} onClick={() => setTab('preview')}>
+          </Button>
+          <Button
+            variant={tab === 'preview' ? 'solid' : 'outline'}
+            colorPalette="green"
+            type="button"
+            aria-pressed={tab === 'preview'}
+            onClick={() => setTab('preview')}
+          >
             Preview & export
-          </button>
-        </div>
-        <output className={`save-status ${editor.saveError ? 'failed' : ''}`}>
+          </Button>
+        </Box>
+        <chakra.output className={`save-status ${editor.saveError ? 'failed' : ''}`}>
           {editor.saving
             ? 'Saving changes…'
             : editor.saveError
@@ -123,32 +201,53 @@ export const RankingEditor = forwardRef<
                   ? 'All changes saved'
                   : 'New draft · save when ready'}
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
-        </output>
-      </div>
+        </chakra.output>
+      </Flex>
       {editor.saveError && (
-        <div className="notice error" role="alert">
-          <div>
+        <Box className="notice error" role="alert">
+          <Box>
             <strong>Your changes are still here.</strong>
-            <p>{editor.saveError}</p>
-          </div>
-          <button className="button secondary" onClick={() => void editor.flush().catch(() => {})}>
+            <Text mb={4}>{editor.saveError}</Text>
+          </Box>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => void editor.flush().catch(() => {})}
+          >
             Retry save
-          </button>
-        </div>
+          </Button>
+        </Box>
       )}
-      <div className={`editor-layout showing-${tab}`}>
-        <section className="editor-panel panel" aria-label="Ranking editor">
-          <div className="section-heading">
-            <div>
+      <Grid
+        templateColumns={{ base: '1fr', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }}
+        gap={8}
+        alignItems="start"
+        className={`editor-layout showing-${tab}`}
+      >
+        <Box
+          as="section"
+          bg="bg"
+          borderWidth="1px"
+          borderStyle="solid"
+          borderColor="border"
+          rounded="lg"
+          p={{ base: 4, md: 6 }}
+          className="editor-panel panel"
+          aria-label="Ranking editor"
+        >
+          <Flex align="center" justify="space-between" gap={4} mb={6} className="section-heading">
+            <Box>
               <span className="eyebrow">The weekly edition</span>
-              <h2>Make your case.</h2>
-            </div>
+              <Heading as="h2" size="xl" mb={4}>
+                Make your case.
+              </Heading>
+            </Box>
             <span className="week-stamp">W{String(week).padStart(2, '0')}</span>
-          </div>
-          <div className="editor-fields">
-            <div className="field">
-              <label htmlFor="ranking-title">Edition title</label>
-              <input
+          </Flex>
+          <Box className="editor-fields">
+            <Field.Root mb={5} gap={2} className="field">
+              <Field.Label htmlFor="ranking-title">Edition title</Field.Label>
+              <Input
                 id="ranking-title"
                 name="rankingsTitle"
                 maxLength={200}
@@ -157,12 +256,12 @@ export const RankingEditor = forwardRef<
                   editor.update((current) => ({ ...current, rankingsTitle: event.target.value }))
                 }
               />
-            </div>
-            <div className="field">
-              <label htmlFor="ranking-intro">
+            </Field.Root>
+            <Field.Root mb={5} gap={2} className="field">
+              <Field.Label htmlFor="ranking-intro">
                 Opening take <span>Optional</span>
-              </label>
-              <textarea
+              </Field.Label>
+              <Textarea
                 id="ranking-intro"
                 name="introduction"
                 rows={3}
@@ -173,15 +272,26 @@ export const RankingEditor = forwardRef<
                   editor.update((current) => ({ ...current, introduction: event.target.value }))
                 }
               />
-            </div>
-          </div>
-          <div className="teams-heading">
-            <div>
-              <h3>Set the order</h3>
-              <p>Drag a team or use the arrows. Add a take below.</p>
-            </div>
-            <button
-              className="text-button"
+            </Field.Root>
+          </Box>
+          <Flex
+            align="center"
+            justify="space-between"
+            gap={4}
+            flexWrap="wrap"
+            mb={6}
+            className="teams-heading"
+          >
+            <Box>
+              <Heading as="h3" size="lg" mb={4}>
+                Set the order
+              </Heading>
+              <Text mb={4}>Drag a team or use the arrows. Add a take below.</Text>
+            </Box>
+            <Button
+              variant="plain"
+              type="button"
+
               disabled={!undo}
               onClick={() => {
                 if (undo) {
@@ -192,23 +302,16 @@ export const RankingEditor = forwardRef<
               }}
             >
               Undo move
-            </button>
-          </div>
-          <ol className="team-editor-list">
-            {ranking.teams.map((team, index) => (
-              <li
-                className="team-editor"
-                key={team.teamId}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  if (dragged.current !== undefined) reorder(dragged.current, index);
-                  dragged.current = undefined;
-                }}
-              >
-                <div className="team-editor-heading">
+            </Button>
+          </Flex>
+          <SortableRankingList
+            teams={ranking.teams}
+            onReorder={reorder}
+            renderItem={(team, index, handle) => (
+              <>
+                <Flex gap={3} align="center" mb={3} className="team-editor-heading">
                   <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="team-identity">
+                  <Box className="team-identity">
                     <strong>{team.teamName}</strong>
                     <small>
                       {team.managerName || 'Unassigned manager'}{' '}
@@ -217,42 +320,40 @@ export const RankingEditor = forwardRef<
                         {team.ties ? `–${team.ties}` : ''}
                       </span>
                     </small>
-                  </div>
-                  <div className="reorder-controls">
-                    <button
+                  </Box>
+                  <Flex gap={1} className="reorder-controls">
+                    <IconButton
+                      variant="outline"
+                      type="button"
                       title="Drag to reorder"
-                      className="drag-handle"
-                      draggable
-                      onDragStart={(event) => {
-                        dragged.current = index;
-                        event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('text/plain', team.teamId);
-                      }}
-                      onDragEnd={() => {
-                        dragged.current = undefined;
-                      }}
+
+                      {...handle}
+                      className="ranking-drag-handle"
                       aria-label={`Drag ${team.teamName} to reorder`}
-                      tabIndex={-1}
                     >
                       ⠿
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton
+                      variant="outline"
+                      type="button"
                       disabled={index === 0}
                       onClick={() => reorder(index, index - 1)}
                       aria-label={`Move ${team.teamName} up`}
                     >
                       <Icon name="up" size={16} />
-                    </button>
-                    <button
+                    </IconButton>
+                    <IconButton
+                      variant="outline"
+                      type="button"
                       disabled={index === ranking.teams.length - 1}
                       onClick={() => reorder(index, index + 1)}
                       aria-label={`Move ${team.teamName} down`}
                     >
                       <Icon name="down" size={16} />
-                    </button>
-                  </div>
-                </div>
-                <textarea
+                    </IconButton>
+                  </Flex>
+                </Flex>
+                <Textarea
                   aria-label={`Commentary for ${team.teamName}`}
                   name={`comment-${team.teamId}`}
                   rows={2}
@@ -270,50 +371,67 @@ export const RankingEditor = forwardRef<
                     }))
                   }
                 />
-              </li>
-            ))}
-          </ol>
-          <div className="editor-footer">
+              </>
+            )}
+          />
+          <Flex
+            align="center"
+            justify="space-between"
+            gap={4}
+            flexWrap="wrap"
+            mb={6}
+            className="editor-footer"
+          >
             <span>
               {comments} of {ranking.teams.length} takes written
             </span>
-            <button
-              className="button primary"
+            <Button
+              colorPalette="green"
+              variant="solid"
+              type="button"
+
               disabled={editor.saving || (!editor.dirty && !!ranking._id)}
               onClick={() => void editor.flush(true).catch(() => {})}
             >
               {editor.saving ? 'Saving…' : 'Save rankings'}
               <Icon name="check" size={17} />
-            </button>
-          </div>
-        </section>
-        <section className="preview-panel" aria-label="Live ranking preview">
-          <div className="preview-toolbar">
-            <div>
+            </Button>
+          </Flex>
+        </Box>
+        <Box as="section" className="preview-panel" aria-label="Live ranking preview">
+          <Flex
+            align="center"
+            justify="space-between"
+            gap={4}
+            flexWrap="wrap"
+            mb={6}
+            className="preview-toolbar"
+          >
+            <Box>
               <span className="live-dot" /> Live preview
-            </div>
-            <button className="text-button" onClick={download} disabled={exporting}>
+            </Box>
+            <Button variant="plain" type="button" onClick={download} disabled={exporting}>
               <Icon name="download" size={16} />
               {exporting ? 'Exporting…' : 'Download PNG'}
-            </button>
-          </div>
+            </Button>
+          </Flex>
           {exportError && (
-            <div className="notice error" role="alert">
+            <Box className="notice error" role="alert">
               {exportError}
-            </div>
+            </Box>
           )}
-          <div className="preview-scroll" ref={previewViewport}>
+          <Box className="preview-scroll" ref={previewViewport}>
             <div ref={preview} className="export-canvas" style={{ zoom: previewScale }}>
               <RankingPreview ranking={ranking} history={editor.history} league={league} />
             </div>
-          </div>
-          <p className="preview-note">
+          </Box>
+          <Text mb={4} className="preview-note">
             Your changes appear here as you type. Movement compares with the previous week’s saved
             rankings.
-          </p>
-        </section>
-      </div>
-      <output className="sr-only">{announcement}</output>
+          </Text>
+        </Box>
+      </Grid>
+      <chakra.output className="sr-only">{announcement}</chakra.output>
     </>
   );
 });

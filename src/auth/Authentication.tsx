@@ -1,47 +1,79 @@
-import { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react';
+import { InsightsAccess } from './InsightsAccess';
+import { Box, Button, Heading, Text, chakra } from '@chakra-ui/react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { ClientOnly, useRouter } from '@tanstack/react-router';
-import { createApi, errorMessage } from '../api/client';
-
-const ApiContext = createContext<ReturnType<typeof createApi> | null>(null);
-
-export function useApi() {
-  const api = useContext(ApiContext);
-  if (!api) throw new Error('The league API requires an authenticated session.');
-  return api;
-}
+import { errorMessage, createApi } from '../api/client';
+import { ApiContext, SessionContext } from './session';
 
 function LoadingSession() {
   return (
-    <section className="panel">
-      <h1>Your league. Your rankings.</h1>
-      <output>Loading your session…</output>
-    </section>
+    <Box
+      as="section"
+      bg="bg"
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor="border"
+      rounded="lg"
+      p={{ base: 4, md: 6 }}
+      className="panel"
+    >
+      <Heading as="h1" size="3xl" mb={4}>
+        Your league. Your rankings.
+      </Heading>
+      <chakra.output>Loading your session…</chakra.output>
+    </Box>
   );
 }
 
-export function Authentication({ children }: { children: ReactNode }) {
+export function Authentication({
+  children,
+  optional = false,
+}: {
+  children: ReactNode;
+  optional?: boolean;
+}) {
   return (
-    <ClientOnly fallback={<LoadingSession />}>
-      <BrowserAuthentication>{children}</BrowserAuthentication>
+    <ClientOnly
+      fallback={optional ? <chakra.output>Loading report…</chakra.output> : <LoadingSession />}
+    >
+      <BrowserAuthentication optional={optional}>{children}</BrowserAuthentication>
     </ClientOnly>
   );
 }
 
-function BrowserAuthentication({ children }: { children: ReactNode }) {
+function BrowserAuthentication({ children, optional }: { children: ReactNode; optional: boolean }) {
   const router = useRouter();
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
   if (!domain || !clientId || !audience) {
+    if (optional)
+      return (
+        <SessionContext.Provider value={{ isAuthenticated: false }}>
+          <InsightsAccess>{children}</InsightsAccess>
+        </SessionContext.Provider>
+      );
     return (
-      <section className="panel" role="alert">
-        <h1>Sign-in is not configured.</h1>
-        <p>
+      <Box
+        as="section"
+        bg="bg"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        rounded="lg"
+        p={{ base: 4, md: 6 }}
+        className="panel"
+        role="alert"
+      >
+        <Heading as="h1" size="3xl" mb={4}>
+          Sign-in is not configured.
+        </Heading>
+        <Text mb={4}>
           Set VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, and VITE_AUTH0_AUDIENCE in the application
           environment.
-        </p>
-      </section>
+        </Text>
+      </Box>
     );
   }
   return (
@@ -63,12 +95,12 @@ function BrowserAuthentication({ children }: { children: ReactNode }) {
         });
       }}
     >
-      <Session>{children}</Session>
+      <Session optional={optional}>{children}</Session>
     </Auth0Provider>
   );
 }
 
-function Session({ children }: { children: ReactNode }) {
+function Session({ children, optional }: { children: ReactNode; optional: boolean }) {
   const {
     isLoading,
     isAuthenticated,
@@ -89,15 +121,41 @@ function Session({ children }: { children: ReactNode }) {
     },
     [api],
   );
+  if (optional)
+    return (
+      <SessionContext.Provider value={{ isAuthenticated: !!isAuthenticated && !error }}>
+        <InsightsAccess privateApi={isAuthenticated && !error ? api : undefined}>
+          {children}
+        </InsightsAccess>
+      </SessionContext.Provider>
+    );
   if (isLoading) return <LoadingSession />;
   if (!isAuthenticated || error)
     return (
-      <section className="panel">
-        <h1>Your league. Your rankings.</h1>
-        <p>Sign in to manage leagues and publish your weekly takes.</p>
-        {(error || loginError) && <p role="alert">{error?.message || loginError}</p>}
-        <button
-          className="button primary"
+      <Box
+        as="section"
+        bg="bg"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor="border"
+        rounded="lg"
+        p={{ base: 4, md: 6 }}
+        className="panel"
+      >
+        <Heading as="h1" size="3xl" mb={4}>
+          Your league. Your rankings.
+        </Heading>
+        <Text mb={4}>Sign in to manage leagues and publish your weekly takes.</Text>
+        {(error || loginError) && (
+          <Text mb={4} role="alert">
+            {error?.message || loginError}
+          </Text>
+        )}
+        <Button
+          colorPalette="green"
+          variant="solid"
+          type="button"
+
           onClick={() =>
             void loginWithRedirect({
               appState: { returnTo: window.location.pathname + window.location.search },
@@ -105,20 +163,24 @@ function Session({ children }: { children: ReactNode }) {
           }
         >
           Sign in
-        </button>
-      </section>
+        </Button>
+      </Box>
     );
   return (
-    <ApiContext.Provider value={api}>
-      <div className="session-actions">
-        <button
-          className="text-button"
-          onClick={() => void logout({ logoutParams: { returnTo: window.location.origin } })}
-        >
-          Sign out
-        </button>
-      </div>
-      {children}
-    </ApiContext.Provider>
+    <SessionContext.Provider value={{ isAuthenticated: true }}>
+      <ApiContext.Provider value={api}>
+        <Box textAlign="right" className="session-actions">
+          <Button
+            variant="plain"
+            type="button"
+
+            onClick={() => void logout({ logoutParams: { returnTo: window.location.origin } })}
+          >
+            Sign out
+          </Button>
+        </Box>
+        {children}
+      </ApiContext.Provider>
+    </SessionContext.Provider>
   );
 }

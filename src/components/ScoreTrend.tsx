@@ -16,7 +16,7 @@ export function ScoreTrend({ scores }: { scores: ScoreWeek[] }) {
           lineY(scores, {
             x: 'week',
             y: 'projected',
-            stroke: '#a76625',
+            stroke: '#8a531d',
             strokeWidth: 2,
             strokeDasharray: '5 4',
           }),

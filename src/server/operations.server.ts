@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
+import { logServerError } from './logging.server';
 import { discoverSeasons } from './insights/seasons.server';
 import { loadInsights } from './insights/load.server';
 import { z } from 'zod';
@@ -57,11 +58,21 @@ export type OperationResult<T> =
 export async function execute<T>(
   authorization: string | undefined,
   action: (owner: string) => Promise<T>,
+  operation = 'private.serverCall',
 ): Promise<OperationResult<T>> {
-  try {
+  return executePublic(async () => {
     const owner = await verifyAuthorization(authorization);
     await connectDatabase();
-    return { ok: true, data: await action(owner) };
+    return action(owner);
+  }, operation);
+}
+// Shared error envelope; only explicitly public read operations use this without auth.
+export async function executePublic<T>(
+  action: () => Promise<T>,
+  operation = 'public.serverCall',
+): Promise<OperationResult<T>> {
+  try {
+    return { ok: true, data: await action() };
   } catch (error) {
     let status = 500,
       message = 'The server could not complete this request. Please try again.';
@@ -79,6 +90,7 @@ export async function execute<T>(
       status = 409;
       message = 'This league or weekly ranking already exists.';
     }
+    logServerError(operation, error, status);
     return { ok: false, error: { status, message } };
   }
 }

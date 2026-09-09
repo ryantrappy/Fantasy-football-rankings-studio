@@ -7,50 +7,54 @@ import {
 import { execute, operations } from '../server/operations.server';
 import type { League, WeeklyRanking } from '../types';
 
-async function run<T>(action: (owner: string) => Promise<T>) {
+async function run<T>(operation: string, action: (owner: string) => Promise<T>) {
   setResponseHeader('Cache-Control', 'no-store');
-  const result = await execute(getRequestHeader('Authorization'), action);
+  const result = await execute(getRequestHeader('Authorization'), action, operation);
   if (!result.ok) setResponseStatus(result.error.status);
   return result;
 }
 // The input validator preserves type inference; runtime schemas run after authentication in operations.
 export const listLeagues = createServerFn({ method: 'GET' }).handler(() =>
-  run(operations.listLeagues),
+  run('listLeagues', operations.listLeagues),
 );
 export const createLeague = createServerFn({ method: 'POST' })
   .validator((data: Omit<League, '_id'>) => data)
-  .handler(({ data }) => run((owner) => operations.createLeague(owner, data)));
+  .handler(({ data }) => run('createLeague', (owner) => operations.createLeague(owner, data)));
 export const getLeague = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string }) => data)
-  .handler(({ data }) => run((owner) => operations.getLeague(owner, data)));
+  .handler(({ data }) => run('getLeague', (owner) => operations.getLeague(owner, data)));
 export const getLeagueInfo = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string; year: number }) => data)
-  .handler(({ data }) => run((owner) => operations.getLeagueInfo(owner, data)));
+  .handler(({ data }) => run('getLeagueInfo', (owner) => operations.getLeagueInfo(owner, data)));
 export const getTeams = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string; year: number; week: number }) => data)
-  .handler(({ data }) => run((owner) => operations.getTeams(owner, data)));
+  .handler(({ data }) => run('getTeams', (owner) => operations.getTeams(owner, data)));
 export const getMatchups = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string; year: number; week: number }) => data)
-  .handler(({ data }) => run((owner) => operations.getMatchups(owner, data)));
+  .handler(({ data }) => run('getMatchups', (owner) => operations.getMatchups(owner, data)));
 export const getRankings = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string }) => data)
-  .handler(({ data }) => run((owner) => operations.getRankings(owner, data)));
+  .handler(({ data }) => run('getRankings', (owner) => operations.getRankings(owner, data)));
 export const getRanking = createServerFn({ method: 'GET' })
   .validator((data: { id: string }) => data)
-  .handler(({ data }) => run((owner) => operations.getRanking(owner, data)));
+  .handler(({ data }) => run('getRanking', (owner) => operations.getRanking(owner, data)));
 export const saveRanking = createServerFn({ method: 'POST' })
   .validator((data: WeeklyRanking) => data)
-  .handler(({ data }) => run((owner) => operations.saveRanking(owner, data)));
+  .handler(({ data }) => run('saveRanking', (owner) => operations.saveRanking(owner, data)));
 export const updateRankingByWeek = createServerFn({ method: 'POST' })
   .validator(
     (data: { leagueId: string; year: number; week: number; ranking: WeeklyRanking }) => data,
   )
-  .handler(({ data }) => run((owner) => operations.updateRankingByWeek(owner, data)));
+  .handler(({ data }) =>
+    run('updateRankingByWeek', (owner) => operations.updateRankingByWeek(owner, data)),
+  );
 
 export const getInsights = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string; year: number }) => data)
-  .handler(({ data }) => run((owner) => operations.getInsights(owner, data)));
+  .handler(({ data }) => run('getInsights', (owner) => operations.getInsights(owner, data)));
 
 export const getLeagueSeasons = createServerFn({ method: 'GET' })
   .validator((data: { leagueId: string }) => data)
-  .handler(({ data }) => run((owner) => operations.getLeagueSeasons(owner, data)));
+  .handler(({ data }) =>
+    run('getLeagueSeasons', (owner) => operations.getLeagueSeasons(owner, data)),
+  );

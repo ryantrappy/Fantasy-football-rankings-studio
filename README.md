@@ -1,6 +1,6 @@
 # Fantasy Power Rankings
 
-One React 19 / TanStack Start application serves the UI, authenticated server functions,
+One React 19 / TanStack Start application serves the UI, public reports, authenticated server functions,
 Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 
 ## Run locally
@@ -75,10 +75,19 @@ provider credentials, and cross-provider ID collisions are not part of this migr
 ## Season insights
 
 Open `/insights` from the main navigation. League and season selections are encoded
-in the URL. The authenticated Start function reads only leagues owned by the current
-account; TanStack Query caches results per session for five minutes, with a manual
-refresh. TanStack Charts renders weekly actuals and available projections, with
-exact values in an accessible table.
+in the URL. `/insights?leagueId=123&year=2025` and `/history?leagueId=123` are
+public read-only reports for registered leagues; no Auth0 session is required.
+Use **Copy share link** on either page. History links also include the selected seasons.
+Signed-in users retain their own league picker. Public reads return report data and
+selected league metadata, without owner subjects or internal database IDs; there is
+no public league directory. Shared ESPN reports never attach the server's `ESPN_S2`
+or `SWID` credentials; the league must be accessible through ESPN's public API.
+Authenticated owner-only endpoints retain credentialed ESPN access. League creation, ranking reads, and ranking changes remain
+protected by authentication and ownership checks.
+
+TanStack Query caches reports in the browser for five minutes, with a manual refresh.
+TanStack Charts renders weekly actuals and available projections, with exact values
+in an accessible sortable table.
 
 The page includes scoring averages, best weeks, weeks above the league median,
 actual-vs-projected trends, individual trade assessments, and normalized pickup rankings.
@@ -109,3 +118,41 @@ state. Partial lineup coverage is disclosed rather than counted as zero.
 
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
+
+### Season summaries and League History
+
+Season Insights summarizes trade quality, waiver quality, median scoring, and schedule luck. League History discovers linked provider seasons, defaults to the three most recent prior seasons, and aggregates managers by provider account ID. Select more seasons or inspect individual manager years. Failed seasons are reported and excluded.
+
+Former managers are hidden initially in summaries and history; “Include former managers” restores them. Active membership uses the newest linked season. Historical league baselines always include all teams. Changed owners/co-owner groups form separate records.
+
+Schedule luck is actual regular-season wins (ties count half) minus expected wins based on each weekly score’s all-play win rate. The index is 100 times extra wins divided by measured games. Positive values indicate favorable scheduling. Byes, playoffs, missing opponents, and incomplete league score sets are excluded; history weights games equally. This does not estimate injury luck.
+
+Trading leaders require three graded trades; waiver leaders require five rated pickups. Quality averages use the existing four-week, position-adjusted move assessments, with coverage shown alongside results.
+
+### Chakra UI and export checks
+
+The app uses Chakra UI v3 with the provider in `src/components/ui/provider.tsx`
+and the theme in `src/theme.ts`. TanStack still supplies routing, forms, data,
+and charts. The theme disables the document-wide reset and resets only form
+controls, keeping the download markup independent of Chakra.
+
+`src/components/RankingPreview.tsx` and `src/export.css` define the fixed 1304px
+PNG design. Export captures an offscreen, unscaled copy so preview zoom and
+responsive layout cannot round the downloaded table's geometry.
+
+Run `npm run test:ui` with Google Chrome installed to check editing, keyboard
+reorder, undo, save, league creation, chart rendering, and PNG downloads at desktop
+and mobile widths. These tests use local fixtures and do not access league data.
+The PNG baseline was captured with the original pre-migration stylesheet and
+markup in standards mode at full size on macOS Chrome; image comparisons require
+the same fonts/platform. Do not update the baseline to accept an unintended export
+redesign. Unit tests, type checking, and lint remain `npm test`, `npm run typecheck`,
+and `npm run lint`.
+
+The app palette is fixed to cream/white surfaces with dark green foregrounds.
+`tests/ui/contrast.spec.ts` audits rendered UI text with axe under both system
+color preferences and checks primary actions (including links styled as buttons),
+hover/focus states, placeholders, control borders, and keyboard focus against the
+dark header. Keep link defaults in the `legacy` CSS layer so they cannot override
+Chakra button foregrounds. The download canvas is excluded from the UI color audit
+because its original artwork is protected separately by exact PNG comparisons.

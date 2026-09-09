@@ -1,6 +1,17 @@
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  NativeSelect,
+  Text,
+  chakra,
+  Field,
+  Link as ChakraLink,
+} from '@chakra-ui/react';
 import { createFileRoute, Link, useBlocker } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import { useApi } from '../auth/Authentication';
+import { useApi } from '../auth/session';
 import { errorMessage } from '../api/client';
 import { RankingEditor, type EditorHandle } from '../components/RankingEditor';
 import { useLiveQuery } from '@tanstack/react-db';
@@ -70,20 +81,34 @@ function RankingsPage() {
   const league = leagues.find((entry) => entry.leagueId === selected);
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">The weekly edition</p>
-          <h1>Power rankings studio</h1>
-        </div>
-        <Link className="button primary" to="/leagues/new">
-          Create league
-        </Link>
-      </div>
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={4}
+        flexWrap="wrap"
+        mt={4}
+        mb={6}
+        className="page-heading"
+      >
+        <Box>
+          <Text mb={4} className="eyebrow">
+            The weekly edition
+          </Text>
+          <Heading as="h1" size="3xl" mb={4}>
+            Power rankings studio
+          </Heading>
+        </Box>
+        <Button asChild colorPalette="green">
+          <Link to="/leagues/new">Create league</Link>
+        </Button>
+      </Flex>
       {error && (
-        <div className="notice error" role="alert">
+        <Box className="notice error" role="alert">
           {error}
           {!leagues.length && (
-            <button
+            <Button
+              variant="outline"
+              type="button"
               onClick={() => {
                 setLoading(true);
                 setError('');
@@ -91,65 +116,74 @@ function RankingsPage() {
               }}
             >
               Try again
-            </button>
+            </Button>
           )}
-        </div>
+        </Box>
       )}
       {loading ? (
-        <output>Loading leagues…</output>
+        <chakra.output>Loading leagues…</chakra.output>
       ) : league ? (
         <>
           <fieldset className="selection-bar" disabled={switching}>
             <legend className="sr-only">Choose rankings</legend>
-            <label>
-              League
-              <select
-                value={selected}
-                onChange={(event) => {
-                  const id = event.target.value;
-                  void changeSelection(() => {
-                    setSelected(id);
-                    setYear(
-                      leagues.find((entry) => entry.leagueId === id)?.seasonId || defaultSeason(),
-                    );
-                  });
-                }}
-              >
-                {leagues.map((entry) => (
-                  <option key={entry.leagueId} value={entry.leagueId}>
-                    {entry.leagueName || entry.leagueId}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Season
-              <select
-                value={year}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  void changeSelection(() => setYear(value));
-                }}
-              >
-                {Array.from({ length: 101 }, (_, index) => 2100 - index).map((season) => (
-                  <option key={season}>{season}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Week
-              <select
-                value={week}
-                onChange={(event) => {
-                  const value = Number(event.target.value);
-                  void changeSelection(() => setWeek(value));
-                }}
-              >
-                {Array.from({ length: 18 }, (_, index) => index + 1).map((value) => (
-                  <option key={value}>{value}</option>
-                ))}
-              </select>
-            </label>
+            <Field.Root width="auto" minW="120px" gap={2}>
+              <Field.Label>League</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={selected}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    void changeSelection(() => {
+                      setSelected(id);
+                      setYear(
+                        leagues.find((entry) => entry.leagueId === id)?.seasonId || defaultSeason(),
+                      );
+                    });
+                  }}
+                >
+                  {leagues.map((entry) => (
+                    <option key={entry.leagueId} value={entry.leagueId}>
+                      {entry.leagueName || entry.leagueId}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <Field.Root width="auto" minW="120px" gap={2}>
+              <Field.Label>Season</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={year}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    void changeSelection(() => setYear(value));
+                  }}
+                >
+                  {Array.from({ length: 101 }, (_, index) => 2100 - index).map((season) => (
+                    <option key={season}>{season}</option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <Field.Root width="auto" minW="120px" gap={2}>
+              <Field.Label>Week</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={week}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    void changeSelection(() => setWeek(value));
+                  }}
+                >
+                  {Array.from({ length: 18 }, (_, index) => index + 1).map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
           </fieldset>
           <RankingEditor
             key={`${selected}-${year}-${week}`}
@@ -162,11 +196,24 @@ function RankingsPage() {
         </>
       ) : (
         !error && (
-          <section className="panel">
-            <h2>Create your first league</h2>
-            <p>Connect a Sleeper or ESPN league to start ranking your teams.</p>
-            <Link to="/leagues/new">Create league</Link>
-          </section>
+          <Box
+            as="section"
+            bg="bg"
+            borderWidth="1px"
+            borderStyle="solid"
+            borderColor="border"
+            rounded="lg"
+            p={{ base: 4, md: 6 }}
+            className="panel"
+          >
+            <Heading as="h2" size="xl" mb={4}>
+              Create your first league
+            </Heading>
+            <Text mb={4}>Connect a Sleeper or ESPN league to start ranking your teams.</Text>
+            <ChakraLink asChild>
+              <Link to="/leagues/new">Create league</Link>
+            </ChakraLink>
+          </Box>
         )
       )}
     </>

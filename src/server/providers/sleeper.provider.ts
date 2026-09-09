@@ -10,7 +10,7 @@ interface SleeperLeagueData {
   season: string;
   previous_league_id?: string;
   total_rosters: number;
-  settings?: { last_scored_leg?: number; start_week?: number };
+  settings?: { last_scored_leg?: number; playoff_week_start?: number; start_week?: number };
 }
 interface Roster {
   roster_id: number;

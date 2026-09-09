@@ -18,6 +18,20 @@ class LeaguesService {
     return league as unknown as League;
   }
 
+  public async getPublicLeagueById(id: string): Promise<League> {
+    const league = await this.leagues
+      .findOne({ leagueId: id })
+      .select({ _id: 0, leagueId: 1, leagueName: 1, leagueType: 1, seasonId: 1 })
+      .lean();
+    if (!league) throw new HttpException(404, 'League not found.');
+    return {
+      leagueId: league.leagueId,
+      leagueName: league.leagueName,
+      leagueType: league.leagueType,
+      seasonId: league.seasonId,
+    };
+  }
+
   public async listLeagues(ownerSubject: string) {
     return this.leagues.find({ ownerSubject }).sort({ leagueName: 1 }).lean();
   }

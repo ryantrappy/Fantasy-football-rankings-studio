@@ -25,7 +25,11 @@ interface EspnData {
   }[];
 }
 
+export type EspnAccess = 'public' | 'environment';
+
 export default class EspnProvider implements LeagueProvider {
+  constructor(private readonly access: EspnAccess = 'environment') {}
+
   async get<T extends { id: number } = EspnData>(
     leagueId: string,
     seasonId: number,
@@ -36,7 +40,7 @@ export default class EspnProvider implements LeagueProvider {
     views.forEach((view) => params.append('view', view));
     if (week) params.set('scoringPeriodId', String(week));
     const headers: Record<string, string> = {};
-    if (process.env.ESPN_S2 && process.env.SWID) {
+    if (this.access === 'environment' && process.env.ESPN_S2 && process.env.SWID) {
       headers.Cookie = `espn_s2=${process.env.ESPN_S2}; SWID=${process.env.SWID}`;
     }
     const { data } = await axios.get<T>(

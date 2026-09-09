@@ -106,7 +106,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
           ),
       }),
     getInsights: async (leagueId: string, year: number, refresh = false) => {
-      const queryKey = [subject, 'insights-v3', leagueId, year];
+      const queryKey = [subject, 'insights-v4', leagueId, year];
       if (refresh) await queryClient.invalidateQueries({ queryKey });
       return queryClient.fetchQuery({
         queryKey,

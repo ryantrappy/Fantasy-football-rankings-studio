@@ -17,6 +17,12 @@ const auth = vi.hoisted(() => ({
   getAccessTokenSilently: vi.fn().mockResolvedValue('test-token'),
 }));
 vi.mock('./functions/rankings.functions', () => ({
+  getEspnCredentialStatus: vi
+    .fn()
+    .mockResolvedValue({ ok: true, data: { configured: false, onboardingComplete: true } }),
+  skipEspnSetup: vi
+    .fn()
+    .mockResolvedValue({ ok: true, data: { configured: false, onboardingComplete: true } }),
   listLeagues: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   getLeagueSeasons: vi.fn().mockResolvedValue({
     ok: true,
@@ -141,6 +147,7 @@ test('shared season insights load anonymously without requesting an access token
   );
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
   expect(privateFunctions.listLeagues).not.toHaveBeenCalled();
+  expect(privateFunctions.getEspnCredentialStatus).not.toHaveBeenCalled();
   expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
 });
 test('shared history loads the selected seasons and preserves them in a copied link', async () => {
@@ -265,6 +272,24 @@ test('a signed-in ESPN owner stays public while navigating shared reports', asyn
   expect(screen.queryByRole('link', { name: 'Rankings studio' })).not.toBeInTheDocument();
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
   expect(privateFunctions.listLeagues).not.toHaveBeenCalled();
+  expect(privateFunctions.getEspnCredentialStatus).not.toHaveBeenCalled();
   expect(privateFunctions.getInsights).not.toHaveBeenCalled();
   expect(publicFunctions.getPublicInsights).toHaveBeenCalled();
+});
+
+test('first-login ESPN setup returns to the requested internal route after skipping', async () => {
+  auth.isAuthenticated = true;
+  vi.mocked(privateFunctions.getEspnCredentialStatus).mockResolvedValueOnce({
+    ok: true,
+    data: { configured: false, onboardingComplete: false },
+  });
+  const router = await openPage('/leagues/new');
+  await screen.findByRole('heading', { name: 'Connect your ESPN account' });
+  expect(screen.queryByRole('heading', { name: 'Create a league.' })).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
+  await screen.findByRole('heading', { name: 'Create a league.' });
+  expect(router.state.location.pathname).toBe('/leagues/new');
+  expect(privateFunctions.skipEspnSetup).toHaveBeenCalledWith({
+    headers: { Authorization: 'Bearer test-token' },
+  });
 });

@@ -4,6 +4,11 @@ import * as functions from '../functions/rankings.functions';
 import type { League, WeeklyRanking } from '../types';
 
 vi.mock('../functions/rankings.functions', () => ({
+  getEspnCredentialStatus: vi.fn(),
+  saveEspnCredentials: vi.fn(),
+  removeEspnCredentials: vi.fn(),
+  skipEspnSetup: vi.fn(),
+  getLeagueSeasons: vi.fn(),
   listLeagues: vi.fn(),
   createLeague: vi.fn(),
   getRankings: vi.fn(),
@@ -76,4 +81,37 @@ describe('Start-backed collections', () => {
     expect(await other.listLeagues()).toEqual([]);
     expect(owner.leagueCollection.toArray).toMatchObject([league]);
   });
+});
+
+it('authenticates credential writes and discards reports cached with old credentials', async () => {
+  const api = session('owner');
+  const credentials = { espnS2: 'cookie', swid: 'swid' };
+  vi.mocked(functions.getLeagueSeasons).mockResolvedValue({
+    ok: true,
+    data: { years: [2025], activeSeason: 2025, activeManagerKeys: [] },
+  });
+  vi.mocked(functions.saveEspnCredentials).mockResolvedValue({
+    ok: true,
+    data: { configured: true, onboardingComplete: true },
+  });
+  vi.mocked(functions.removeEspnCredentials).mockResolvedValue({
+    ok: true,
+    data: { configured: false, onboardingComplete: true },
+  });
+  await api.getLeagueSeasons('123');
+  await api.getLeagueSeasons('123');
+  expect(functions.getLeagueSeasons).toHaveBeenCalledTimes(1);
+  await api.saveEspnCredentials(credentials);
+  expect(functions.saveEspnCredentials).toHaveBeenCalledWith({
+    data: credentials,
+    headers: { Authorization: 'Bearer owner-token' },
+  });
+  await api.getLeagueSeasons('123');
+  expect(functions.getLeagueSeasons).toHaveBeenCalledTimes(2);
+  await api.removeEspnCredentials();
+  expect(functions.removeEspnCredentials).toHaveBeenCalledWith({
+    headers: { Authorization: 'Bearer owner-token' },
+  });
+  await api.getLeagueSeasons('123');
+  expect(functions.getLeagueSeasons).toHaveBeenCalledTimes(3);
 });

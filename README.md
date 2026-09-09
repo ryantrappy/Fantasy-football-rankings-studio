@@ -8,7 +8,7 @@ Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 ```sh
 npm ci
 test -f .env || cp .env.example .env
-# Fill in Auth0 settings, MongoDB URI and private ESPN cookies in .env.
+# Fill in Auth0 settings, MongoDB URI and ESPN_CREDENTIALS_KEY in .env.
 npm run dev
 ```
 
@@ -68,9 +68,8 @@ Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON`, `TEST_SLEEPER_LEAGUE_ID`
 `TEST_ESPN_LEAGUE_ID` to change the provider fixtures.
 
 Provider records are season-to-date, not reconstructed historical weekly records.
-Weeks currently use 1–18. ESPN private cookies are deployment-wide. The existing
-ownership model allows one account per external league ID; sharing, per-user
-provider credentials, and cross-provider ID collisions are not part of this migration.
+Weeks currently use 1–18. The existing ownership model allows one account per
+external league ID; cross-provider ID collisions are not supported.
 
 ## Season insights
 
@@ -84,9 +83,8 @@ the same report components, but always show only season insights and league hist
 They do not initialize Auth0, and remain public even when the viewer is signed in.
 Public reads return report data and
 selected league metadata, without owner subjects or internal database IDs; there is
-no public league directory. Shared ESPN reports never attach the server's `ESPN_S2`
-or `SWID` credentials; the league must be accessible through ESPN's public API.
-Authenticated owner-only endpoints retain credentialed ESPN access. League creation, ranking reads, and ranking changes remain
+no public league directory. Shared ESPN reports never load or attach any saved user credentials; the league must be accessible through ESPN's public API.
+Authenticated owner-only endpoints use the signed-in owner’s saved ESPN credentials. League creation, ranking reads, and ranking changes remain
 protected by authentication and ownership checks.
 
 TanStack Query caches reports in the browser for five minutes, with a manual refresh.
@@ -160,3 +158,35 @@ hover/focus states, placeholders, control borders, and keyboard focus against th
 dark header. Keep link defaults in the `legacy` CSS layer so they cannot override
 Chakra button foregrounds. The download canvas is excluded from the UI color audit
 because its original artwork is protected separately by exact PNG comparisons.
+
+## Per-user ESPN credentials
+
+After the first sign-in (including after Auth0 signup), the app offers optional ESPN
+setup. Save both `espn_s2` and `SWID` cookie values, or choose **Skip for now** for
+Sleeper/public ESPN leagues. The requested page opens after setup. Existing users
+see this once too. **ESPN settings** (`/espn`) allows later replacement or removal;
+saved values are never displayed or returned by the API. Saving does not test cookie
+validity: ESPN validates them on the next league request.
+
+Credentials are stored in MongoDB's `espncredentials` collection under the verified
+Auth0 subject, encrypted with AES-256-GCM and a fresh nonce. Encryption authenticates
+the subject as well as the payload. No ESPN cookies are stored in Auth0 metadata,
+tokens, browser storage, or public reports. All authenticated ESPN paths—including
+league creation, team/matchup reads and historical reports—resolve only that owner’s
+cookies. Sleeper and public reports never look up saved credentials.
+
+Set the server-only `ESPN_CREDENTIALS_KEY` to 32 random bytes encoded as **64 hex
+characters** before accepting private ESPN credentials. Generate it privately with
+`openssl rand -hex 32`, then place it in your deployment secret configuration. Never
+prefix it with `VITE_` or commit it. All app instances must use the same key; retain it
+securely with your backup recovery process. Losing or changing the key makes existing
+cookies unreadable; users must save them again. Skipping setup and removing cookies
+do not require the encryption key.
+
+Migration: `ESPN_S2` and `SWID` environment variables are no longer used, even as a
+fallback. Each existing ESPN owner must save their own cookies in ESPN settings.
+There is no automatic migration of deployment-wide cookies to user accounts. Remove
+obsolete cookie variables from your deployment after updating. A user without saved
+cookies can access only ESPN leagues that ESPN makes public. The live `check:local`
+script uses a disposable database with no saved cookies, so its ESPN fixture must be
+public. Existing `.env` files are not modified by this change.

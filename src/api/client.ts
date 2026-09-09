@@ -92,17 +92,24 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   };
   return {
     ...api,
-    getEspnCredentialStatus: async () => unwrap(await functions.getEspnCredentialStatus({ headers: await headers() })),
+    getEspnCredentialStatus: async () =>
+      unwrap(await functions.getEspnCredentialStatus({ headers: await headers() })),
     saveEspnCredentials: async (data: import('../espn-credentials').EspnCredentials) => {
-      const status = unwrap(await functions.saveEspnCredentials({ data, headers: await headers() }));
+      const status = unwrap(
+        await functions.saveEspnCredentials({ data, headers: await headers() }),
+      );
       await queryClient.cancelQueries();
-      queryClient.removeQueries({ predicate: q => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])) });
+      queryClient.removeQueries({
+        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
+      });
       return status;
     },
     removeEspnCredentials: async () => {
       const status = unwrap(await functions.removeEspnCredentials({ headers: await headers() }));
       await queryClient.cancelQueries();
-      queryClient.removeQueries({ predicate: q => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])) });
+      queryClient.removeQueries({
+        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
+      });
       return status;
     },
     skipEspnSetup: async () => unwrap(await functions.skipEspnSetup({ headers: await headers() })),

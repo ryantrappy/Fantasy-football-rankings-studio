@@ -25,7 +25,7 @@ const ids = Object.fromEntries(
     match[1],
   ]),
 );
-assert.equal(Object.keys(ids).length, 15, 'Build server functions before running this check');
+assert.equal(Object.keys(ids).length, 19, 'Build server functions before running this check');
 const { publicKey, privateKey } = await generateKeyPair('RS256');
 const jwk = { ...(await exportJWK(publicKey)), kid: 'local-check', alg: 'RS256', use: 'sig' };
 const issuerServer = createServer((_req, res) => {

@@ -16,7 +16,7 @@ class LeaguesService {
 
   public async espnAccess(league: League, ownerSubject: string) {
     return league.leagueType === LeagueType.Espn
-      ? (await getEspnCredentials(ownerSubject)) ?? 'public'
+      ? ((await getEspnCredentials(ownerSubject)) ?? 'public')
       : 'public';
   }
 
@@ -66,7 +66,9 @@ class LeaguesService {
       seasonId: input.seasonId,
       ownerSubject,
     };
-    const info = await (await this.providerFor(league, ownerSubject)).getLeague(league, league.seasonId);
+    const info = await (
+      await this.providerFor(league, ownerSubject)
+    ).getLeague(league, league.seasonId);
     return this.leagues.create({
       ...league,
       leagueName: info.leagueName,

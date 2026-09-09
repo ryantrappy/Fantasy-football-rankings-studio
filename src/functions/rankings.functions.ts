@@ -64,7 +64,9 @@ export const getEspnCredentialStatus = createServerFn({ method: 'GET' }).handler
 );
 export const saveEspnCredentials = createServerFn({ method: 'POST' })
   .validator((data: import('../espn-credentials').EspnCredentials) => data)
-  .handler(({ data }) => run('saveEspnCredentials', owner => operations.saveEspnCredentials(owner, data)));
+  .handler(({ data }) =>
+    run('saveEspnCredentials', (owner) => operations.saveEspnCredentials(owner, data)),
+  );
 export const removeEspnCredentials = createServerFn({ method: 'POST' }).handler(() =>
   run('removeEspnCredentials', operations.removeEspnCredentials),
 );

@@ -1,7 +1,11 @@
+vi.mock('@rolldown/plugin-babel', () => ({ default: () => ({ name: 'babel' }) }));
 // @vitest-environment node
 const loadEnv = vi.hoisted(() => vi.fn());
 vi.mock('vite', () => ({ defineConfig: (config: unknown) => config, loadEnv }));
-vi.mock('@vitejs/plugin-react', () => ({ default: () => ({ name: 'react' }) }));
+vi.mock('@vitejs/plugin-react', () => ({
+  default: () => ({ name: 'react' }),
+  reactCompilerPreset: () => ({}),
+}));
 vi.mock('@tanstack/react-start/plugin/vite', () => ({ tanstackStart: () => ({ name: 'start' }) }));
 vi.mock('nitro/vite', () => ({ nitro: () => ({ name: 'nitro' }) }));
 import config from '../../../vite.config';

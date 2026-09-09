@@ -300,3 +300,11 @@ is part of the test suite. Factual context works with AI disabled.
 Local development loads only defined server settings from Vite's environment files.
 Existing shell values take precedence; missing settings remain unset so optional
 features stay disabled and required-service validation can report missing configuration.
+
+React Compiler is enabled in Vite development/production and the browser-test
+fixture through `reactCompilerPreset` and `@rolldown/plugin-babel`, following the
+[official installation guide](https://react.dev/learn/react-compiler/installation).
+The latest stable compiler at installation is locked in package-lock.json. React
+19 supplies the compiler runtime. Existing manual memoization remains valid;
+compiler-ineligible functions safely retain their existing behavior. Verify the
+production output contains `react.memo_cache_sentinel` after `npm run build`.

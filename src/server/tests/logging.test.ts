@@ -111,3 +111,15 @@ test('successful server calls do not produce error logs', async () => {
   await executePublic(async () => 'ok', 'public.getInsights');
   expect(output).not.toHaveBeenCalled();
 });
+
+test('redacts the server-only Auth0 management secret', () => {
+  vi.stubEnv('AUTH0_MANAGEMENT_CLIENT_SECRET', 'm2m-private-secret');
+  logServerError('profile', new Error('failed m2m-private-secret'));
+  expect(output.mock.calls[0][0]).not.toContain('m2m-private-secret');
+});
+test('does not throw when even the fallback console sink fails', () => {
+  output.mockImplementation(() => {
+    throw new Error('Closed output');
+  });
+  expect(() => logServerError('runtime', new Error('Original error'))).not.toThrow();
+});

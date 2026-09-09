@@ -434,6 +434,36 @@ export function HistoryPage({
                             ),
                           },
                           {
+                            id: 'finish',
+                            header: 'Final finish',
+                            value: (r) => average(r.finishTotal, r.finishSeasons),
+                            cell: (r) => <>{n(average(r.finishTotal, r.finishSeasons))}</>,
+                          },
+                          {
+                            id: 'playoffs',
+                            header: 'Playoffs',
+                            value: (r) => (r.playoffSeasons ? r.playoffAppearances : null),
+                            cell: (r) => (
+                              <>{r.playoffSeasons ? (r.playoffAppearances ? 'Yes' : 'No') : '—'}</>
+                            ),
+                          },
+                          {
+                            id: 'title',
+                            header: 'Champion',
+                            value: (r) => (r.championshipSeasons ? r.championships : null),
+                            cell: (r) => (
+                              <>{r.championshipSeasons ? (r.championships ? 'Yes' : 'No') : '—'}</>
+                            ),
+                          },
+                          {
+                            id: 'last',
+                            header: 'Last place',
+                            value: (r) => (r.lastPlaceSeasons ? r.lastPlaces : null),
+                            cell: (r) => (
+                              <>{r.lastPlaceSeasons ? (r.lastPlaces ? 'Yes' : 'No') : '—'}</>
+                            ),
+                          },
+                          {
                             id: '2',
                             header: 'Avg. vs. median',
                             value: (r) => average(r.medianPercentTotal, r.medianWeeks),

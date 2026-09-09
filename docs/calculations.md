@@ -24,16 +24,16 @@ means an unavailable value, not zero. History sums credits and games first.
 
 ## Scoring
 
-| Display | Calculation / denominator |
-| --- | --- |
-| Avg. points | Total observed points / observed weeks |
-| Best week | Maximum observed points |
-| Above median | Count of weeks strictly above the weekly league median / observed weeks |
-| Avg. vs. median | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks |
-| Best week vs. median | Week with the highest relative median percentage, not necessarily the highest points |
-| All-play win rate | `100 × (wins + half ties) / comparisons` against every other observed team each week |
-| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections |
-| Beat projection | Strictly positive differences / projected weeks |
+| Display                          | Calculation / denominator                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| Avg. points                      | Total observed points / observed weeks                                               |
+| Best week                        | Maximum observed points                                                              |
+| Above median                     | Count of weeks strictly above the weekly league median / observed weeks              |
+| Avg. vs. median                  | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks  |
+| Best week vs. median             | Week with the highest relative median percentage, not necessarily the highest points |
+| All-play win rate                | `100 × (wins + half ties) / comparisons` against every other observed team each week |
+| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections                    |
+| Beat projection                  | Strictly positive differences / projected weeks                                      |
 
 The median is the middle sorted score, or the average of the two middle scores.
 The team's own score participates in the league median. Scoring includes all
@@ -90,3 +90,25 @@ Source of truth: `src/league-summary.ts`, `src/server/insights/calculate.ts`,
 `src/server/insights/normalize.ts`, and the provider mapping in
 `src/server/insights/load.server.ts`. Values are rounded for display; normalized
 move comparisons are rounded to two decimals before summary aggregation.
+
+## Playoffs and final finishes
+
+Playoff appearances, championships and last-place finishes count confirmed outcomes.
+Average finish = sum of known final placements / seasons with a known placement;
+1 is best. Each statistic shows its own coverage denominator. Unknown and unfinished
+outcomes are excluded, rather than counted as zero or last place.
+
+Sleeper uses championship-bracket participants after playoffs begin (including
+byes) and resolved placement matches once the season status is complete. For a
+consolation bracket, winner advancement orders the bottom bracket normally;
+loser advancement reverses placement for a toilet bowl. Ambiguous progression,
+unresolved games and missing brackets remain unknown. Teams outside a supported
+bracket may have no final placement. See [Sleeper brackets](https://docs.sleeper.com/#getting-the-playoff-bracket)
+and [consolation/toilet-bowl rules](https://support.sleeper.com/en/articles/2203534-consolation-bracket-vs-toilet-bowl).
+
+ESPN uses unique, valid `rankCalculatedFinal` values after the season ends
+(a prior fantasy season or a scoring period beyond the final one) and championship
+bracket participation when all playoff entrants are identifiable. Regular-season
+rank or seed is never substituted for a final placement. History weights known
+finishes equally per season; league size can differ, so interpret raw average
+placements alongside the selected seasons.

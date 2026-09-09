@@ -1,3 +1,4 @@
+import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
 import { QueryClient } from '@tanstack/query-core';
@@ -59,6 +60,14 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return collection;
   }
   const api: LeagueApi = {
+    writing: {
+      context: async (data) =>
+        unwrap(await writingFunctions.getContext({ data, headers: await headers() })),
+      providers: async () =>
+        unwrap(await writingFunctions.getProviders({ headers: await headers() })),
+      generate: async (data) =>
+        unwrap(await writingFunctions.generateSuggestions({ data, headers: await headers() })),
+    },
     listLeagues: async () => {
       await leagueCollection.preload();
       await leagueCollection.utils.refetch({ throwOnError: true });

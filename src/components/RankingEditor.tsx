@@ -1,3 +1,4 @@
+import { WritingSuggestions } from './WritingSuggestions';
 import { logClientError } from '../logging';
 import {
   Box,
@@ -306,6 +307,15 @@ export const RankingEditor = forwardRef<
               Undo move
             </Button>
           </Flex>
+          {api.writing && (
+            <WritingSuggestions
+              api={api.writing}
+              leagueId={league.leagueId}
+              year={year}
+              week={week}
+              teams={ranking.teams}
+            />
+          )}
           <SortableRankingList
             teams={ranking.teams}
             onReorder={reorder}

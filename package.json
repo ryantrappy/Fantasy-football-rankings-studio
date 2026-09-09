@@ -23,6 +23,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/react": "^11.14.0",
+    "@tanstack/ai": "^0.53.0",
     "@tanstack/charts": "^0.16.0",
     "@tanstack/db": "^0.8.7",
     "@tanstack/markdown": "^0.0.13",

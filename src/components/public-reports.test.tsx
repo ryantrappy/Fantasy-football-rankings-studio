@@ -95,3 +95,30 @@ it('makes calculation explanations expandable in season and historical summaries
   view.rerender(wrap(<LeagueSummary records={[]} historical />));
   expect(screen.getByText('How are these numbers calculated?')).toBeInTheDocument();
 });
+
+it('shows confirmed achievements with coverage and leaves unknown results empty', async () => {
+  const { LeagueSummary } = await import('./LeagueSummary');
+  const { calculateInsights } = await import('../server/insights/calculate');
+  const data = calculateInsights({
+    completedWeek: 0,
+    teams: [
+      { teamId: '1', managerKey: 'a', managerName: 'Winner', teamName: 'Team one' },
+      { teamId: '2', managerKey: 'b', managerName: 'Unknown', teamName: 'Team two' },
+    ],
+    scores: [],
+    moves: [],
+    playerNames: {},
+    notes: [],
+    draftPickTrades: 0,
+    results: [{ teamId: '1', playoff: true, champion: true, lastPlace: false, finish: 1 }],
+  });
+  render(wrap(<LeagueSummary records={[{ year: 2025, data }]} historical />));
+  const table = screen.getByRole('table', { name: 'Playoffs and final finishes' });
+  expect(table).toHaveTextContent('Playoff appearances');
+  expect(table).toHaveTextContent('Championships');
+  expect(table).toHaveTextContent('Last-place finishes');
+  expect(table).toHaveTextContent('Average finish');
+  expect(table).toHaveTextContent('1 / 1 seasons known');
+  expect(table).toHaveTextContent('0 / 1 seasons known');
+  expect(table).toHaveTextContent('1.0');
+});

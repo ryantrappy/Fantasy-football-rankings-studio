@@ -112,6 +112,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     };
   });
   return {
+    results: source.results,
     tradeComparisons: normalized.trades,
     completedWeek: source.completedWeek,
     generatedAt: new Date().toISOString(),

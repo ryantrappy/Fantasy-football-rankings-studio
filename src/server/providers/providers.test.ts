@@ -113,3 +113,26 @@ describe('Provider normalization', () => {
     expect(matchups[1].awayTeamId).toBeNull();
   });
 });
+
+it('keeps Sleeper co-owner identities stable across ordering and separates changed groups', async () => {
+  const read = async (co_owners: string[], name = 'Original') => {
+    get.mockResolvedValueOnce({ data: { league_id: '123', season: '2026' } });
+    get.mockResolvedValueOnce({ data: [{ roster_id: 1, owner_id: 'a', co_owners }] });
+    get.mockResolvedValueOnce({
+      data: [
+        { user_id: 'a', display_name: 'Alex', metadata: { team_name: name } },
+        { user_id: 'b', display_name: 'Blair' },
+        { user_id: 'c', display_name: 'Casey' },
+      ],
+    });
+    return (await new SleeperProvider().getTeams(league, 2026, 1))[0];
+  };
+  const first = await read(['c', 'b', 'a']);
+  const renamed = await read(['b', 'c'], 'Renamed');
+  const changed = await read(['b']);
+  expect(first.managerKey).toBe('sleeper:a,b,c');
+  expect(renamed.managerKey).toBe(first.managerKey);
+  expect(first.managerName).toBe('Alex, Blair, Casey');
+  expect(renamed.teamName).toBe('Renamed');
+  expect(changed.managerKey).toBe('sleeper:a,b');
+});

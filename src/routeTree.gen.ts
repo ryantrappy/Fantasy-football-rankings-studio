@@ -17,6 +17,7 @@ import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.e
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
 import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
@@ -59,6 +60,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const SharedKonzSuxRoute = SharedKonzSuxRouteImport.update({
+  id: '/shared/konz-sux',
+  path: '/shared/konz-sux',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedLeaguesNewRoute = AuthenticatedLeaguesNewRouteImport.update({
   id: '/leagues/new',
   path: '/leagues/new',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/_public/shared/history': typeof PublicSharedHistoryRoute
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/insights'
     | '/profile'
+    | '/shared/konz-sux'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/insights'
     | '/profile'
+    | '/shared/konz-sux'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -143,6 +154,7 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/insights'
     | '/_authenticated/profile'
+    | '/shared/konz-sux'
     | '/_authenticated/'
     | '/_authenticated/leagues/new'
     | '/_public/shared/history'
@@ -153,6 +165,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
   HealthRoute: typeof HealthRoute
+  SharedKonzSuxRoute: typeof SharedKonzSuxRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,6 +225,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/shared/konz-sux': {
+      id: '/shared/konz-sux'
+      path: '/shared/konz-sux'
+      fullPath: '/shared/konz-sux'
+      preLoaderRoute: typeof SharedKonzSuxRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/leagues/new': {
       id: '/_authenticated/leagues/new'
@@ -276,6 +296,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
   HealthRoute: HealthRoute,
+  SharedKonzSuxRoute: SharedKonzSuxRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

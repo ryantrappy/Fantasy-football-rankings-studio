@@ -10,11 +10,18 @@ interface SleeperLeagueData {
   season: string;
   previous_league_id?: string;
   total_rosters: number;
-  settings?: { last_scored_leg?: number; playoff_week_start?: number; start_week?: number };
+  status?: string;
+  settings?: {
+    last_scored_leg?: number;
+    playoff_teams?: number;
+    playoff_week_start?: number;
+    start_week?: number;
+  };
 }
 interface Roster {
   roster_id: number;
   owner_id?: string;
+  co_owners?: string[] | null;
   settings?: { wins?: number; losses?: number; ties?: number };
 }
 interface User {
@@ -74,11 +81,20 @@ export default class SleeperProvider implements LeagueProvider {
     ]);
     return rosters.map((roster) => {
       const user = users.find((candidate) => candidate.user_id === roster.owner_id);
+      const ownerIds = [
+        ...new Set(
+          [roster.owner_id, ...(roster.co_owners || [])].filter((id): id is string => !!id),
+        ),
+      ].sort();
       return {
         teamId: String(roster.roster_id),
         teamName: user?.metadata?.team_name || user?.display_name || `Team ${roster.roster_id}`,
-        managerName: user?.display_name || 'Unassigned manager',
-        managerKey: roster.owner_id ? `sleeper:${roster.owner_id}` : undefined,
+        managerName:
+          ownerIds
+            .map((id) => users.find((candidate) => candidate.user_id === id)?.display_name)
+            .filter(Boolean)
+            .join(', ') || 'Unassigned manager',
+        managerKey: ownerIds.length ? `sleeper:${ownerIds.join(',')}` : undefined,
         wins: roster.settings?.wins ?? 0,
         loss: roster.settings?.losses ?? 0,
         ties: roster.settings?.ties ?? 0,

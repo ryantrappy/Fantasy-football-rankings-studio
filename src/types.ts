@@ -32,6 +32,7 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  writing?: import('./writing').WritingApi;
   listLeagues(): Promise<League[]>;
   createLeague(league: Omit<League, '_id'>): Promise<League>;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;

@@ -220,3 +220,79 @@ Open **How are these numbers calculated?** in either season or history summaries
 for formulas and a worked schedule-luck example. The [calculation reference](docs/calculations.md)
 explains every scoring and move-quality denominator, missing-data rules,
 leader thresholds, and weighting across seasons.
+
+## Error logging and recovery
+
+Failed private/public server calls and health checks write structured errors to
+stderr while returning a safe error response. Recoverable season-discovery
+fallbacks are logged too. The Nitro runtime error hook captures request failures
+and uncaught exceptions/rejections using its built-in Node handlers. Browser
+catches, route boundaries, `error`, and `unhandledrejection` events write diagnostic
+entries to the browser console. Repeated propagation of the same browser Error
+object logs once. Logging avoids whole request/response objects and redacts known
+secret patterns; server logs also redact configured secrets. Sensitive credential
+storage failures intentionally retain only a sanitized error.
+
+Request failures remain contained, failed saves retain drafts, and page errors
+provide a retry action. Logging does not guarantee recovery from fatal process
+errors or exhausted memory. Run production under a supervisor on `trappserv.er`
+(e.g. systemd with `Restart=on-failure`) and monitor `/health`; do not depend on
+catching an exception to repair corrupted process state. No process-wide handlers
+are duplicated by the application. Framework/development diagnostics may additionally
+write their own console output.
+
+Season and history summaries also show **Playoffs and final finishes**: playoff
+appearances, championships, last-place finishes and average final placement.
+Each value includes known-season coverage. The year-by-year history table shows
+individual outcomes. Unfinished or unavailable results stay unknown; see the
+[finish calculation rules](docs/calculations.md#playoffs-and-final-finishes).
+
+## Direct-link manager report
+
+`/shared/konz-sux` is a standalone, anonymous Sleeper report for konz4 in league
+`1312529175982129152`, with no navigation entry and `noindex, nofollow` metadata.
+It follows up to six linked seasons, reuses scoring/trade/pickup assessments,
+and highlights measured negative outcomes with counts and coverage. Draft
+hindsight compares same-position players selected within the next 12 picks over
+at least four common observed weeks; it requires a gap above 2 points/week.
+It does not reconstruct unobserved free-agent scores or predict draft value.
+The page identifies its deliberately critical selection and still shows final
+finishes and any absence of qualifying negative evidence.
+
+The server reads only the fixed public Sleeper league/manager, with no MongoDB or
+Auth0 requirement. Successful reports are cached for 15 minutes, partial reports
+for one minute, and simultaneous requests share one in-flight load. Errors are
+logged and displayed without inventing missing statistics. Direct-link-only is
+not access control: anyone with the URL can read this public report.
+
+Sleeper manager identity includes the sorted, deduplicated primary/co-owner IDs.
+Reordering owners or renaming a team preserves history; changing the ownership
+group starts a separate record. Single-owner identities remain compatible.
+
+`npm run dev` loads `ESPN_CREDENTIALS_KEY` from Vite's environment files, including
+`.env.local`; a value already exported in the shell takes precedence. The key is
+part of the server allowlist and is never exposed as a `VITE_*` browser setting.
+
+### Ranking writing suggestions
+
+Expand **Talking points for your rankings** in the editor and select a team. The
+panel loads scoring trends, graded trades and pickups, and observed positional
+depth through the selected ranking week. Missing data is identified explicitly;
+observed players are not a complete current roster snapshot.
+
+AI suggestions use TanStack AI with a server-side Codex or Claude Code CLI.
+Install and authenticate the desired CLI on the application server, then set
+`WRITING_AI_PROVIDERS=codex,claude` (or just one provider) and
+`WRITING_AI_USERS` to a comma-separated allowlist of authorized Auth0 subject IDs.
+Both settings default to disabled. Discovery checks server PATH without running
+the CLI. This uses the server CLI account, not a browser user's subscription.
+The writer chooses a provider and optional model and must approve each generation
+before the displayed context is sent to that provider. Generated text stays in a
+separate editable field for review and copying into the ranking commentary.
+
+CLI requests run in a temporary directory with tools disabled, restricted inherited
+environment, bounded output, a 60-second timeout, and one active request per user
+per server process. Codex uses read-only sandboxing and ignores user configuration;
+Claude runs with no tools or MCP servers. The host must have a compatible CLI
+version and available account quota. Tests mock CLI execution; no live generation
+is part of the test suite. Factual context works with AI disabled.

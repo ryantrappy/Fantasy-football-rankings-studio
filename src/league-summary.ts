@@ -8,6 +8,14 @@ export interface ManagerSummary {
   managerName: string;
   teamName: string;
   seasons: number[];
+  playoffAppearances: number;
+  playoffSeasons: number;
+  championships: number;
+  championshipSeasons: number;
+  lastPlaces: number;
+  lastPlaceSeasons: number;
+  finishTotal: number;
+  finishSeasons: number;
   weeks: number;
   totalPoints: number;
   aboveMedian: number;
@@ -51,6 +59,14 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
           managerName: team.managerName,
           teamName: team.teamName,
           seasons: [],
+          playoffAppearances: 0,
+          playoffSeasons: 0,
+          championships: 0,
+          championshipSeasons: 0,
+          lastPlaces: 0,
+          lastPlaceSeasons: 0,
+          finishTotal: 0,
+          finishSeasons: 0,
           weeks: 0,
           totalPoints: 0,
           aboveMedian: 0,
@@ -79,6 +95,23 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
       row.managerName = team.managerName;
       row.teamName = team.teamName;
       if (!row.seasons.includes(year)) row.seasons.push(year);
+      const result = data.results?.find((r) => r.teamId === team.teamId);
+      if (result?.playoff != null) {
+        row.playoffSeasons++;
+        if (result.playoff) row.playoffAppearances++;
+      }
+      if (result?.champion != null) {
+        row.championshipSeasons++;
+        if (result.champion) row.championships++;
+      }
+      if (result?.lastPlace != null) {
+        row.lastPlaceSeasons++;
+        if (result.lastPlace) row.lastPlaces++;
+      }
+      if (result?.finish != null) {
+        row.finishSeasons++;
+        row.finishTotal += result.finish;
+      }
       for (const score of data.scores.filter(
         (s) => s.teamId === team.teamId && s.week <= data.completedWeek,
       )) {

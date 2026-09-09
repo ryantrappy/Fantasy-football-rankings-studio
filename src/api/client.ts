@@ -1,3 +1,4 @@
+import * as publishingFunctions from '../functions/publishing.functions';
 import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
@@ -61,6 +62,23 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   }
   const api: LeagueApi = {
     subject,
+    publishing: {
+      status: async (id) =>
+        unwrap(
+          await publishingFunctions.publicationStatus({ data: { id }, headers: await headers() }),
+        ),
+      publish: async (id, revision) =>
+        unwrap(
+          await publishingFunctions.publishEdition({
+            data: { id, revision },
+            headers: await headers(),
+          }),
+        ),
+      unpublish: async (id) =>
+        unwrap(
+          await publishingFunctions.unpublishEdition({ data: { id }, headers: await headers() }),
+        ),
+    },
     writing: {
       context: async (data) =>
         unwrap(await writingFunctions.getContext({ data, headers: await headers() })),

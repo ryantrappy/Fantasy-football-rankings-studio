@@ -21,6 +21,7 @@ import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
 import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
+import { Route as SharedRankingsPublicIdRouteImport } from './routes/shared.rankings.$publicId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -80,6 +81,11 @@ const PublicSharedInsightsRoute = PublicSharedInsightsRouteImport.update({
   path: '/shared/insights',
   getParentRoute: () => PublicRoute,
 } as any)
+const SharedRankingsPublicIdRoute = SharedRankingsPublicIdRouteImport.update({
+  id: '/shared/rankings/$publicId',
+  path: '/shared/rankings/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/_public/shared/history': typeof PublicSharedHistoryRoute
   '/_public/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
+    | '/shared/rankings/$publicId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
+    | '/shared/rankings/$publicId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leagues/new'
     | '/_public/shared/history'
     | '/_public/shared/insights'
+    | '/shared/rankings/$publicId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   PublicRoute: typeof PublicRouteWithChildren
   HealthRoute: typeof HealthRoute
   SharedKonzSuxRoute: typeof SharedKonzSuxRoute
+  SharedRankingsPublicIdRoute: typeof SharedRankingsPublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicSharedInsightsRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/shared/rankings/$publicId': {
+      id: '/shared/rankings/$publicId'
+      path: '/shared/rankings/$publicId'
+      fullPath: '/shared/rankings/$publicId'
+      preLoaderRoute: typeof SharedRankingsPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -297,6 +317,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublicRoute: PublicRouteWithChildren,
   HealthRoute: HealthRoute,
   SharedKonzSuxRoute: SharedKonzSuxRoute,
+  SharedRankingsPublicIdRoute: SharedRankingsPublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

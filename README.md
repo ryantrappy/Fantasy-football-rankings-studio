@@ -356,3 +356,14 @@ newer title, introduction and commentary; choose **Use saved version** or
 revision, so a third intervening save still causes a conflict. Legacy editions
 start at revision zero. Both update-by-ID and update-by-week enforce this rule;
 clients must carry the revision returned by reads/saves.
+
+### Publishing weekly editions
+
+Once an edition is saved, **Publish edition** creates a public snapshot at an
+opaque `/shared/rankings/...` URL. Anyone with that link can read its title,
+introduction, team names, records and commentary without signing in. Later saves
+remain private until **Publish saved revision** is selected. Publishing verifies
+the reviewed revision; a stale request must reload first. **Unpublish** requires
+confirmation and disables the link; publishing again after removal creates a new
+link. Existing downloaded copies cannot be recalled. Public reads use no-store
+responses and never read mutable drafts. The original PNG export is unchanged.

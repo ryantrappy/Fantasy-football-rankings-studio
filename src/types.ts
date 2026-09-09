@@ -33,6 +33,7 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  publishing?: import('./publishing').PublishingApi;
   subject?: string;
   writing?: import('./writing').WritingApi;
   listLeagues(): Promise<League[]>;

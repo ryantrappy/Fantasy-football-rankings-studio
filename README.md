@@ -308,3 +308,9 @@ The latest stable compiler at installation is locked in package-lock.json. React
 19 supplies the compiler runtime. Existing manual memoization remains valid;
 compiler-ineligible functions safely retain their existing behavior. Verify the
 production output contains `react.memo_cache_sentinel` after `npm run build`.
+
+The application theme uses navy, indigo and cool neutral surfaces with a warm
+header accent. Chakra semantic colors live in `src/theme.ts`; application details
+live in `src/index.css`. The fixed download theme remains in `src/export.css`.
+Desktop/mobile browser tests compare the exported ranking canvas to the original
+pixel snapshots and check application contrast for light and dark system preferences.

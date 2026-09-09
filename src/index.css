@@ -14,8 +14,8 @@ code {
 }
 
 :root {
-  color: #20352d;
-  background: #f5f3ec;
+  color: #17223b;
+  background: #f3f5fb;
   font-family: system-ui, sans-serif;
 }
 * {
@@ -25,7 +25,7 @@ body {
   font-family: inherit;
 }
 :focus-visible {
-  outline: 3px solid #805400;
+  outline: 3px solid #a64b12;
   outline-offset: 3px;
 }
 header :focus-visible {
@@ -78,7 +78,7 @@ header :focus-visible {
   .field label span,
   small {
     font-size: 0.8rem;
-    color: #58675d;
+    color: #526078;
   }
 
   textarea {
@@ -90,7 +90,7 @@ header :focus-visible {
     padding: 0;
   }
   .team-editor {
-    border-top: 1px solid #d7ddd5;
+    border-top: 1px solid #dce2ef;
     padding: 1rem 0;
   }
 
@@ -116,7 +116,7 @@ header :focus-visible {
   }
   .view-switch button[aria-pressed='true'] {
     font-weight: 700;
-    background: #244e3e;
+    background: #3949ab;
     color: white;
   }
   .notice {
@@ -145,7 +145,7 @@ header :focus-visible {
     display: flex;
     gap: 0.6rem;
     padding: 1rem;
-    border: 1px solid #6b776f;
+    border: 1px solid #71809a;
     border-radius: 6px;
     flex: 1;
   }
@@ -156,8 +156,8 @@ header :focus-visible {
     display: block;
   }
   .provider-option.selected {
-    border-color: #244e3e;
-    background: #edf4ed;
+    border-color: #3949ab;
+    background: #eef2ff;
   }
   .creation-guide {
     padding: 1.5rem;
@@ -203,7 +203,7 @@ header :focus-visible {
     text-decoration: none;
   }
   .app-nav a[data-status='active'] {
-    border-bottom: 3px solid #246747;
+    border-bottom: 3px solid #3949ab;
     font-weight: 700;
   }
   .insights-controls {
@@ -213,20 +213,20 @@ header :focus-visible {
     flex: 1;
   }
   .insights-meta {
-    color: #58675d;
+    color: #526078;
     font-size: 0.85rem;
   }
   .insights-notice {
-    background: #e8eee5;
+    background: #edf1ff;
   }
   .insight-cards article {
-    background: #244e3e;
-    color: #fffdf8;
+    background: #3949ab;
+    color: #ffffff;
     padding: 1.5rem;
     border-radius: 10px;
   }
   .insight-cards .eyebrow {
-    color: #d1dfc9;
+    color: #e0e7ff;
   }
   .insight-cards h2 {
     margin: 0.8rem 0;
@@ -251,11 +251,11 @@ header :focus-visible {
   .insight-table td {
     padding: 0.9rem 0.75rem;
     text-align: left;
-    border-bottom: 1px solid #e2e5dc;
+    border-bottom: 1px solid #dce2ef;
   }
   .insight-table thead {
-    color: #58675d;
-    background: #f5f6ef;
+    color: #526078;
+    background: #f1f4fb;
   }
   .insight-table td {
     font-variant-numeric: tabular-nums;
@@ -263,7 +263,7 @@ header :focus-visible {
   .insight-table th small {
     display: block;
     font-weight: 400;
-    color: #58675d;
+    color: #526078;
     margin-top: 0.25rem;
   }
   .insight-section details {
@@ -275,7 +275,7 @@ header :focus-visible {
     padding: 0.5rem 0;
   }
   .trade-detail {
-    border-top: 1px solid #d7ddd5;
+    border-top: 1px solid #dce2ef;
     padding: 0.7rem 0;
   }
   .chart-legend {
@@ -284,14 +284,14 @@ header :focus-visible {
     font-size: 0.85rem;
   }
   .chart-legend span:first-child {
-    color: #246747;
+    color: #3949ab;
   }
   .chart-legend span:last-child:not(:first-child) {
-    color: #8a531d;
+    color: #a64b12;
   }
   .insights-method {
     font-size: 0.85rem;
-    color: #58675d;
+    color: #526078;
     line-height: 1.6;
     margin: 2rem 0;
   }
@@ -310,12 +310,12 @@ header :focus-visible {
   }
 
   .insight-cards small {
-    color: #d1dfc9;
+    color: #e0e7ff;
   }
   .insight-table td small {
     display: block;
     margin-top: 0.25rem;
-    color: #58675d;
+    color: #526078;
   }
   .history-years {
     display: flex;
@@ -357,14 +357,14 @@ header :focus-visible {
 .team-editor {
   position: relative;
   padding: 1rem;
-  border: 1px solid #d7ddd5;
+  border: 1px solid #dce2ef;
   border-radius: 12px;
-  background: var(--chakra-colors-bg, #fffdf8);
+  background: var(--chakra-colors-bg, #ffffff);
 }
 .team-editor-placeholder {
-  background: #edf4ed;
+  background: #eef2ff;
   border-style: dashed;
-  border-color: #789887;
+  border-color: #6575b8;
 }
 .team-editor-placeholder > * {
   opacity: 0;
@@ -372,9 +372,9 @@ header :focus-visible {
 .team-editor-overlay {
   cursor: grabbing;
   box-shadow:
-    0 18px 44px -12px rgb(32 53 45 / 30%),
-    0 4px 12px rgb(32 53 45 / 12%);
-  border-color: #789887;
+    0 18px 44px -12px rgb(23 34 59 / 30%),
+    0 4px 12px rgb(23 34 59 / 12%);
+  border-color: #6575b8;
   animation: ranking-card-lift 180ms ease-out;
 }
 .ranking-drag-handle {
@@ -386,7 +386,7 @@ header :focus-visible {
 }
 @keyframes ranking-card-lift {
   from {
-    box-shadow: 0 2px 6px rgb(32 53 45 / 8%);
+    box-shadow: 0 2px 6px rgb(23 34 59 / 8%);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -426,4 +426,27 @@ header :focus-visible {
 
 .sortable-column-header {
   cursor: pointer;
+}
+
+/* Application-only details: export-canvas retains its independent download theme. */
+.site-header {
+  background: linear-gradient(115deg, #17223b, #293966);
+  border-bottom: 4px solid #e4a65a;
+}
+.panel {
+  box-shadow: 0 8px 28px -16px rgb(23 34 59 / 24%);
+}
+.app-nav a {
+  border-radius: 6px 6px 0 0;
+  transition: background-color 120ms ease;
+}
+.app-nav a:hover {
+  background: #e8edfc;
+}
+.team-editor .rank-number {
+  color: #3949ab;
+}
+.team-editor:focus-within {
+  border-color: #6575b8;
+  box-shadow: 0 0 0 1px #6575b8;
 }

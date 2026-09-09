@@ -169,7 +169,7 @@ export function HistoryPage({
             One good move is a moment. Find the managers who repeat it across seasons.
           </Text>
         </Box>
-        <Button asChild colorPalette="green">
+        <Button asChild colorPalette="indigo">
           <Link
             to={shared ? '/shared/insights' : '/insights'}
             search={{ leagueId, year: defaultSeason() }}

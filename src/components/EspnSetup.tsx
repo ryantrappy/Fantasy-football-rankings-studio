@@ -100,7 +100,7 @@ export function EspnCredentialForm({
               <Field.HelperText>Copy the full value, including braces if present.</Field.HelperText>
             </Field.Root>
             <Flex gap={3} direction={{ base: 'column', md: 'row' }}>
-              <Button type="submit" colorPalette="green" disabled={busy}>
+              <Button type="submit" colorPalette="indigo" disabled={busy}>
                 {busy ? 'Saving…' : 'Save ESPN credentials'}
               </Button>
               {onboarding && (

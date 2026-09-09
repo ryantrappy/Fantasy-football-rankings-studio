@@ -136,7 +136,7 @@ function Session({ children }: { children: ReactNode }) {
           </Text>
         )}
         <Button
-          colorPalette="green"
+          colorPalette="indigo"
           variant="solid"
           type="button"
 

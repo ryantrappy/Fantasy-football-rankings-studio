@@ -79,6 +79,7 @@ function Document({ children }: { children: ReactNode }) {
         <Provider>
           <Flex
             as="header"
+            className="site-header"
             justify="space-between"
             gap={4}
             py={6}

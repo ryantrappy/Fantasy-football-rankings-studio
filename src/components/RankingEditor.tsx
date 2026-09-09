@@ -134,7 +134,7 @@ export const RankingEditor = forwardRef<
         <Text mb={4} role="alert">
           {editor.loadError}
         </Text>
-        <Button colorPalette="green" variant="solid" type="button" onClick={editor.reload}>
+        <Button colorPalette="indigo" variant="solid" type="button" onClick={editor.reload}>
           Try again
         </Button>
       </Box>
@@ -176,7 +176,7 @@ export const RankingEditor = forwardRef<
         <Box className="view-switch" aria-label="Ranking view">
           <Button
             variant={tab === 'edit' ? 'solid' : 'outline'}
-            colorPalette="green"
+            colorPalette="indigo"
             type="button"
             aria-pressed={tab === 'edit'}
             onClick={() => setTab('edit')}
@@ -185,7 +185,7 @@ export const RankingEditor = forwardRef<
           </Button>
           <Button
             variant={tab === 'preview' ? 'solid' : 'outline'}
-            colorPalette="green"
+            colorPalette="indigo"
             type="button"
             aria-pressed={tab === 'preview'}
             onClick={() => setTab('preview')}
@@ -398,7 +398,7 @@ export const RankingEditor = forwardRef<
               {comments} of {ranking.teams.length} takes written
             </span>
             <Button
-              colorPalette="green"
+              colorPalette="indigo"
               variant="solid"
               type="button"
 

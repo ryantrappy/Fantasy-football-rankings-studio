@@ -7,13 +7,21 @@ import { api } from './fixture';
 export function PalettePreview() {
   return (
     <>
-      <Flex as="header" bg="fg" color="white" p={6} mb={6} justify="space-between">
+      <Flex
+        as="header"
+        className="site-header"
+        bg="fg"
+        color="white"
+        p={6}
+        mb={6}
+        justify="space-between"
+      >
         <Link href="#" color="white">
           POWER / RANK
         </Link>
         <Text>Fantasy Power Rankings</Text>
       </Flex>
-      <Button asChild colorPalette="green">
+      <Button asChild colorPalette="indigo">
         <a href="?mode=create">Create league</a>
       </Button>
       <CreateLeague api={api} onCreated={() => {}} onCancel={() => {}} />

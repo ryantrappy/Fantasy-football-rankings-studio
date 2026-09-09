@@ -204,7 +204,7 @@ function TeamSuggestions({
           </label>
           <Button
             disabled={busy || !ready || !approved}
-            colorPalette="green"
+            colorPalette="indigo"
             onClick={async () => {
               if (busy || !approved) return;
               setBusy(true);

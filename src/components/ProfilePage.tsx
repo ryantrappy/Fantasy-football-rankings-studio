@@ -128,7 +128,7 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
           </Field.Root>
           <Button
             type="submit"
-            colorPalette="green"
+            colorPalette="indigo"
             disabled={busy || !name.trim() || !nickname.trim()}
           >
             {busy ? 'Saving…' : 'Save profile'}

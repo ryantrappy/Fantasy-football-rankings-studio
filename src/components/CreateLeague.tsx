@@ -206,7 +206,7 @@ export function CreateLeague({
             className="form-footer"
           >
             <Text mb={4}>Your league is checked before it’s added.</Text>
-            <Button colorPalette="green" variant="solid" type="submit" disabled={busy}>
+            <Button colorPalette="indigo" variant="solid" type="submit" disabled={busy}>
               {busy ? 'Connecting league…' : 'Create league'}
               {!busy && <Icon name="arrow" />}
             </Button>

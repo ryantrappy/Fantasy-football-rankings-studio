@@ -58,3 +58,16 @@ export const getLeagueSeasons = createServerFn({ method: 'GET' })
   .handler(({ data }) =>
     run('getLeagueSeasons', (owner) => operations.getLeagueSeasons(owner, data)),
   );
+
+export const getEspnCredentialStatus = createServerFn({ method: 'GET' }).handler(() =>
+  run('getEspnCredentialStatus', operations.getEspnCredentialStatus),
+);
+export const saveEspnCredentials = createServerFn({ method: 'POST' })
+  .validator((data: import('../espn-credentials').EspnCredentials) => data)
+  .handler(({ data }) => run('saveEspnCredentials', owner => operations.saveEspnCredentials(owner, data)));
+export const removeEspnCredentials = createServerFn({ method: 'POST' }).handler(() =>
+  run('removeEspnCredentials', operations.removeEspnCredentials),
+);
+export const skipEspnSetup = createServerFn({ method: 'POST' }).handler(() =>
+  run('skipEspnSetup', operations.skipEspnSetup),
+);

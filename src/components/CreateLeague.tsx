@@ -240,7 +240,7 @@ export function CreateLeague({
             </li>
           </ol>
           <Text mb={4} className="guide-footnote">
-            Private ESPN leagues need server access configured by your administrator.
+            Private ESPN leagues use the cookies saved in your ESPN settings.
           </Text>
         </Box>
       </Grid>

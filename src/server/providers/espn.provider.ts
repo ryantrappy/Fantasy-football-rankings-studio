@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { EspnCredentials } from '../../espn-credentials';
 import HttpException from '../exceptions/HttpException';
 import { League, LeagueInfo } from '../interfaces/league.interface';
 import { Matchup, Team } from '../interfaces/teams.interface';
@@ -25,10 +26,10 @@ interface EspnData {
   }[];
 }
 
-export type EspnAccess = 'public' | 'environment';
+export type EspnAccess = 'public' | Readonly<EspnCredentials>;
 
 export default class EspnProvider implements LeagueProvider {
-  constructor(private readonly access: EspnAccess = 'environment') {}
+  constructor(private readonly access: EspnAccess = 'public') {}
 
   async get<T extends { id: number } = EspnData>(
     leagueId: string,
@@ -40,8 +41,8 @@ export default class EspnProvider implements LeagueProvider {
     views.forEach((view) => params.append('view', view));
     if (week) params.set('scoringPeriodId', String(week));
     const headers: Record<string, string> = {};
-    if (this.access === 'environment' && process.env.ESPN_S2 && process.env.SWID) {
-      headers.Cookie = `espn_s2=${process.env.ESPN_S2}; SWID=${process.env.SWID}`;
+    if (this.access !== 'public') {
+      headers.Cookie = `espn_s2=${this.access.espnS2}; SWID=${this.access.swid}`;
     }
     const { data } = await axios.get<T>(
       `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${seasonId}/segments/0/leagues/${leagueId}`,

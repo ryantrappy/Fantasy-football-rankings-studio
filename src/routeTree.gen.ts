@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
+import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.espn'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
@@ -35,6 +36,11 @@ const HealthRoute = HealthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedEspnRoute = AuthenticatedEspnRouteImport.update({
+  id: '/espn',
+  path: '/espn',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
@@ -66,6 +72,7 @@ const PublicSharedInsightsRoute = PublicSharedInsightsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
+  '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
+  '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
   '/health': typeof HealthRoute
+  '/_authenticated/espn': typeof AuthenticatedEspnRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/health'
+    | '/espn'
     | '/history'
     | '/insights'
     | '/leagues/new'
@@ -107,6 +117,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/health'
+    | '/espn'
     | '/history'
     | '/insights'
     | '/leagues/new'
@@ -117,6 +128,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_public'
     | '/health'
+    | '/_authenticated/espn'
     | '/_authenticated/history'
     | '/_authenticated/insights'
     | '/_authenticated/'
@@ -161,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/espn': {
+      id: '/_authenticated/espn'
+      path: '/espn'
+      fullPath: '/espn'
+      preLoaderRoute: typeof AuthenticatedEspnRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/history': {
       id: '/_authenticated/history'
       path: '/history'
@@ -200,6 +219,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedEspnRoute: typeof AuthenticatedEspnRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -207,6 +227,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedEspnRoute: AuthenticatedEspnRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,

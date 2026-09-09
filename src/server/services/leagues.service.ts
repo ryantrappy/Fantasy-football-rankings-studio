@@ -4,13 +4,21 @@ import HttpException from '../exceptions/HttpException';
 import { LeagueProvider } from '../providers/league-provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
+import { getEspnCredentials } from '../espn-credentials.server';
 
 class LeaguesService {
   public leagues = leagueModel;
-  public providers: Record<LeagueType, LeagueProvider> = {
-    [LeagueType.Sleeper]: new SleeperProvider(),
-    [LeagueType.Espn]: new EspnProvider(),
-  };
+  public async providerFor(league: League, ownerSubject: string): Promise<LeagueProvider> {
+    return league.leagueType === LeagueType.Espn
+      ? new EspnProvider(await this.espnAccess(league, ownerSubject))
+      : new SleeperProvider();
+  }
+
+  public async espnAccess(league: League, ownerSubject: string) {
+    return league.leagueType === LeagueType.Espn
+      ? (await getEspnCredentials(ownerSubject)) ?? 'public'
+      : 'public';
+  }
 
   public async getLeagueById(id: string, ownerSubject: string): Promise<League> {
     const league = await this.leagues.findOne({ leagueId: id, ownerSubject }).lean();
@@ -58,7 +66,7 @@ class LeaguesService {
       seasonId: input.seasonId,
       ownerSubject,
     };
-    const info = await this.providers[league.leagueType].getLeague(league, league.seasonId);
+    const info = await (await this.providerFor(league, ownerSubject)).getLeague(league, league.seasonId);
     return this.leagues.create({
       ...league,
       leagueName: info.leagueName,
@@ -67,17 +75,17 @@ class LeaguesService {
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getLeague(league, seasonId);
+    return (await this.providerFor(league, ownerSubject)).getLeague(league, seasonId);
   }
 
   public async getTeams(id: string, seasonId: number, week: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getTeams(league, seasonId, week);
+    return (await this.providerFor(league, ownerSubject)).getTeams(league, seasonId, week);
   }
 
   public async getMatchups(id: string, seasonId: number, week: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getMatchups(league, seasonId, week);
+    return (await this.providerFor(league, ownerSubject)).getMatchups(league, seasonId, week);
   }
 }
 export default LeaguesService;

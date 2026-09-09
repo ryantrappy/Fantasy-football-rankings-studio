@@ -345,7 +345,7 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
 export async function loadInsights(
   league: League,
   year: number,
-  access: EspnAccess = 'environment',
+  access: EspnAccess = 'public',
 ) {
   return calculateInsights(
     await (league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access)),

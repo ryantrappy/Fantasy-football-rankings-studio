@@ -1,3 +1,5 @@
+import { EspnSetup } from '../components/EspnSetup';
+import { Link } from '@tanstack/react-router';
 import { InsightsAccess } from './InsightsAccess';
 import { Box, Button, Heading, Text, chakra } from '@chakra-ui/react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
@@ -148,6 +150,7 @@ function Session({ children }: { children: ReactNode }) {
     <SessionContext.Provider value={{ isAuthenticated: true }}>
       <ApiContext.Provider value={api}>
         <Box textAlign="right" className="session-actions">
+          <Button asChild variant="plain"><Link to="/espn">ESPN settings</Link></Button>
           <Button
             variant="plain"
             type="button"
@@ -157,7 +160,7 @@ function Session({ children }: { children: ReactNode }) {
             Sign out
           </Button>
         </Box>
-        <InsightsAccess privateApi={api}>{children}</InsightsAccess>
+        <EspnSetup key={user?.sub} api={api}><InsightsAccess privateApi={api}>{children}</InsightsAccess></EspnSetup>
       </ApiContext.Provider>
     </SessionContext.Provider>
   );

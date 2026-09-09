@@ -43,7 +43,7 @@ async function seasonYears(league: League, access: EspnAccess): Promise<number[]
   return [...years].sort((a, b) => b - a);
 }
 
-export async function discoverSeasons(league: League, access: EspnAccess = 'environment') {
+export async function discoverSeasons(league: League, access: EspnAccess = 'public') {
   try {
     const years = await seasonYears(league, access);
     const activeSeason = years[0] ?? league.seasonId;

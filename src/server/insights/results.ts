@@ -110,7 +110,13 @@ export function sleeperResults(
 export interface EspnResultsData {
   teams?: { id: number; rankCalculatedFinal?: number }[];
   schedule?: { playoffTierType?: string; home?: { teamId: number }; away?: { teamId: number } }[];
-  settings?: { scheduleSettings?: { playoffTeamCount?: number } };
+  settings?: {
+    scheduleSettings?: {
+      playoffTeamCount?: number;
+      matchupPeriodCount?: number;
+      matchupPeriodLength?: number;
+    };
+  };
 }
 export function espnResults(
   teamIds: string[],

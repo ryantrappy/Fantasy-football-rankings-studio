@@ -112,3 +112,26 @@ bracket participation when all playoff entrants are identifiable. Regular-season
 rank or seed is never substituted for a final placement. History weights known
 finishes equally per season; league size can differ, so interpret raw average
 placements alongside the selected seasons.
+
+## Playoff scenario forecasts
+
+The season report offers 5,000 reproducible Monte Carlo trials using only scores
+through the selected cutoff, capped at the end of the regular season. At least
+three completed weeks and paired head-to-head results per team are required.
+A team's mean and variance are blended with league values using weight
+`completed samples / (completed samples + 3)`; variance has a one-point-squared
+floor. Independent normal score draws simulate each future week. Remaining
+opponents are randomly paired each week, so these are neutral-schedule scenarios,
+not provider schedule-aware odds. Completed wins and ties (half a win) are retained;
+seeding uses wins, points scored, then a random resolution of exact ties.
+
+The model supports 2, 4, 6 and 8 entrants in a fixed single-elimination bracket.
+Six entrants give the top two seeds first-round byes. All rounds last one week.
+Qualification and round advancement percentages use all trials as the denominator;
+byes count as advancement. Title probabilities sum to 100% before rounding. The
+maximum approximate 95% Monte Carlo sampling margin is 1.4 percentage points;
+this excludes uncertainty about the model itself. The model does not replicate
+divisions, median games, reseeding, custom tiebreaks, multiweek rounds, injuries or
+roster changes. Postseason reports label these as retrospective pre-playoff
+forecasts and exclude actual postseason scores. Missing settings produce an
+unavailable explanation. Forecasts do not change the exported ranking image.

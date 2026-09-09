@@ -192,6 +192,13 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   }
   const catalog = moves.length ? await sleeperNames() : { names: {}, positions: {} };
   return {
+    playoffSettings:
+      season.settings?.playoff_week_start && season.settings?.playoff_teams
+        ? {
+            regularSeasonEnd: season.settings.playoff_week_start - 1,
+            playoffTeams: season.settings.playoff_teams,
+          }
+        : undefined,
     completedWeek,
     teams,
     scores,
@@ -364,6 +371,15 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
       })),
   );
   return {
+    playoffSettings:
+      meta.settings?.scheduleSettings?.matchupPeriodCount &&
+      meta.settings.scheduleSettings.playoffTeamCount &&
+      meta.settings.scheduleSettings.matchupPeriodLength === 1
+        ? {
+            regularSeasonEnd: meta.settings.scheduleSettings.matchupPeriodCount,
+            playoffTeams: meta.settings.scheduleSettings.playoffTeamCount,
+          }
+        : undefined,
     completedWeek,
     teams,
     scores,
@@ -389,7 +405,8 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
   };
 }
 export async function loadInsights(league: League, year: number, access: EspnAccess = 'public') {
-  return calculateInsights(await loadInsightsSource(league, year, access));
+  const source = await loadInsightsSource(league, year, access);
+  return { ...calculateInsights(source), playoffSettings: source.playoffSettings };
 }
 export async function loadInsightsSource(
   league: League,

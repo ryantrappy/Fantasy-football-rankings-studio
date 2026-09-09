@@ -332,3 +332,10 @@ test database account from both signed-out and signed-in states, request its
 reset email on Auth0, follow the link, and sign in with the new password. Local
 tests mock the SDK redirect; tenant configuration and email delivery are not
 verified by this repository's test suite.
+
+Season insights include a playoff-outlook scenario with qualification, round
+advancement and championship probabilities. Select a completed regular-season
+cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
+remaining schedule, standard bracket, and no division/median-game rules. These
+are model estimates, not provider-exact clinching odds. See the playoff section
+in [calculation documentation](docs/calculations.md) for the sampling method.

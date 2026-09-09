@@ -25,6 +25,7 @@ export interface PlayerMove {
   to: string | null;
 }
 export interface InsightsSource {
+  playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   results?: SeasonResult[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
@@ -61,6 +62,7 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   results?: SeasonResult[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;

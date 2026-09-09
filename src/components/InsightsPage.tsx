@@ -1,3 +1,4 @@
+import { PlayoffForecast } from './PlayoffForecast';
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
@@ -291,6 +292,7 @@ export function InsightsPage({
             />{' '}
             Include former managers in summary
           </label>
+          <PlayoffForecast key={`${leagueId}:${year}`} data={data} />
           <LeagueSummary
             records={[{ year, data }]}
             activeManagerKeys={result?.activeManagerKeys || []}

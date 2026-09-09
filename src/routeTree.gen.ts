@@ -13,9 +13,11 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
-import { Route as PublicHistoryRouteImport } from './routes/_public.history'
-import { Route as PublicInsightsRouteImport } from './routes/_public.insights'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
+import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
+import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
+import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -35,60 +37,92 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const PublicHistoryRoute = PublicHistoryRouteImport.update({
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const PublicInsightsRoute = PublicInsightsRouteImport.update({
+const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedLeaguesNewRoute = AuthenticatedLeaguesNewRouteImport.update({
   id: '/leagues/new',
   path: '/leagues/new',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const PublicSharedHistoryRoute = PublicSharedHistoryRouteImport.update({
+  id: '/shared/history',
+  path: '/shared/history',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicSharedInsightsRoute = PublicSharedInsightsRouteImport.update({
+  id: '/shared/insights',
+  path: '/shared/insights',
+  getParentRoute: () => PublicRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
-  '/history': typeof PublicHistoryRoute
-  '/insights': typeof PublicInsightsRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/insights': typeof AuthenticatedInsightsRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/shared/history': typeof PublicSharedHistoryRoute
+  '/shared/insights': typeof PublicSharedInsightsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
-  '/history': typeof PublicHistoryRoute
-  '/insights': typeof PublicInsightsRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/insights': typeof AuthenticatedInsightsRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/shared/history': typeof PublicSharedHistoryRoute
+  '/shared/insights': typeof PublicSharedInsightsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
   '/health': typeof HealthRoute
-  '/_public/history': typeof PublicHistoryRoute
-  '/_public/insights': typeof PublicInsightsRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/_public/shared/history': typeof PublicSharedHistoryRoute
+  '/_public/shared/insights': typeof PublicSharedInsightsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/health' | '/history' | '/insights' | '/leagues/new'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/history'
+    | '/insights'
+    | '/leagues/new'
+    | '/shared/history'
+    | '/shared/insights'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health' | '/history' | '/insights' | '/leagues/new'
+  to:
+    | '/'
+    | '/health'
+    | '/history'
+    | '/insights'
+    | '/leagues/new'
+    | '/shared/history'
+    | '/shared/insights'
   id:
     | '__root__'
     | '/_authenticated'
     | '/_public'
     | '/health'
-    | '/_public/history'
-    | '/_public/insights'
+    | '/_authenticated/history'
+    | '/_authenticated/insights'
     | '/_authenticated/'
     | '/_authenticated/leagues/new'
+    | '/_public/shared/history'
+    | '/_public/shared/insights'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -127,19 +161,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_public/history': {
-      id: '/_public/history'
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
       path: '/history'
       fullPath: '/history'
-      preLoaderRoute: typeof PublicHistoryRouteImport
-      parentRoute: typeof PublicRoute
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_public/insights': {
-      id: '/_public/insights'
+    '/_authenticated/insights': {
+      id: '/_authenticated/insights'
       path: '/insights'
       fullPath: '/insights'
-      preLoaderRoute: typeof PublicInsightsRouteImport
-      parentRoute: typeof PublicRoute
+      preLoaderRoute: typeof AuthenticatedInsightsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/leagues/new': {
       id: '/_authenticated/leagues/new'
@@ -148,15 +182,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLeaguesNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_public/shared/history': {
+      id: '/_public/shared/history'
+      path: '/shared/history'
+      fullPath: '/shared/history'
+      preLoaderRoute: typeof PublicSharedHistoryRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/shared/insights': {
+      id: '/_public/shared/insights'
+      path: '/shared/insights'
+      fullPath: '/shared/insights'
+      preLoaderRoute: typeof PublicSharedInsightsRouteImport
+      parentRoute: typeof PublicRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedLeaguesNewRoute: typeof AuthenticatedLeaguesNewRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedLeaguesNewRoute: AuthenticatedLeaguesNewRoute,
 }
@@ -166,13 +218,13 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface PublicRouteChildren {
-  PublicHistoryRoute: typeof PublicHistoryRoute
-  PublicInsightsRoute: typeof PublicInsightsRoute
+  PublicSharedHistoryRoute: typeof PublicSharedHistoryRoute
+  PublicSharedInsightsRoute: typeof PublicSharedInsightsRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
-  PublicHistoryRoute: PublicHistoryRoute,
-  PublicInsightsRoute: PublicInsightsRoute,
+  PublicSharedHistoryRoute: PublicSharedHistoryRoute,
+  PublicSharedInsightsRoute: PublicSharedInsightsRoute,
 }
 
 const PublicRouteWithChildren =

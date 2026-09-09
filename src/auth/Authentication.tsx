@@ -26,34 +26,20 @@ function LoadingSession() {
   );
 }
 
-export function Authentication({
-  children,
-  optional = false,
-}: {
-  children: ReactNode;
-  optional?: boolean;
-}) {
+export function Authentication({ children }: { children: ReactNode }) {
   return (
-    <ClientOnly
-      fallback={optional ? <chakra.output>Loading report…</chakra.output> : <LoadingSession />}
-    >
-      <BrowserAuthentication optional={optional}>{children}</BrowserAuthentication>
+    <ClientOnly fallback={<LoadingSession />}>
+      <BrowserAuthentication>{children}</BrowserAuthentication>
     </ClientOnly>
   );
 }
 
-function BrowserAuthentication({ children, optional }: { children: ReactNode; optional: boolean }) {
+function BrowserAuthentication({ children }: { children: ReactNode }) {
   const router = useRouter();
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
   if (!domain || !clientId || !audience) {
-    if (optional)
-      return (
-        <SessionContext.Provider value={{ isAuthenticated: false }}>
-          <InsightsAccess>{children}</InsightsAccess>
-        </SessionContext.Provider>
-      );
     return (
       <Box
         as="section"
@@ -95,12 +81,12 @@ function BrowserAuthentication({ children, optional }: { children: ReactNode; op
         });
       }}
     >
-      <Session optional={optional}>{children}</Session>
+      <Session>{children}</Session>
     </Auth0Provider>
   );
 }
 
-function Session({ children, optional }: { children: ReactNode; optional: boolean }) {
+function Session({ children }: { children: ReactNode }) {
   const {
     isLoading,
     isAuthenticated,
@@ -121,14 +107,6 @@ function Session({ children, optional }: { children: ReactNode; optional: boolea
     },
     [api],
   );
-  if (optional)
-    return (
-      <SessionContext.Provider value={{ isAuthenticated: !!isAuthenticated && !error }}>
-        <InsightsAccess privateApi={isAuthenticated && !error ? api : undefined}>
-          {children}
-        </InsightsAccess>
-      </SessionContext.Provider>
-    );
   if (isLoading) return <LoadingSession />;
   if (!isAuthenticated || error)
     return (
@@ -179,7 +157,7 @@ function Session({ children, optional }: { children: ReactNode; optional: boolea
             Sign out
           </Button>
         </Box>
-        {children}
+        <InsightsAccess privateApi={api}>{children}</InsightsAccess>
       </ApiContext.Provider>
     </SessionContext.Provider>
   );

@@ -75,10 +75,14 @@ provider credentials, and cross-provider ID collisions are not part of this migr
 ## Season insights
 
 Open `/insights` from the main navigation. League and season selections are encoded
-in the URL. `/insights?leagueId=123&year=2025` and `/history?leagueId=123` are
+in the URL. These pages require sign-in. `/shared/insights?leagueId=123&year=2025` and
+`/shared/history?leagueId=123` are
 public read-only reports for registered leagues; no Auth0 session is required.
 Use **Copy share link** on either page. History links also include the selected seasons.
-Signed-in users retain their own league picker. Public reads return report data and
+Internal pages retain the owner league picker and rankings studio tab. Shared pages reuse
+the same report components, but always show only season insights and league history.
+They do not initialize Auth0, and remain public even when the viewer is signed in.
+Public reads return report data and
 selected league metadata, without owner subjects or internal database IDs; there is
 no public league directory. Shared ESPN reports never attach the server's `ESPN_S2`
 or `SWID` credentials; the league must be accessible through ESPN's public API.

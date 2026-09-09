@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
 import { DataTable } from '../components/DataTable';
@@ -57,6 +58,7 @@ export function InsightsPage({
     void (async () => {
       try {
         const entries = await api.listLeagues().catch((error): League[] => {
+          logClientError('InsightsPage', error);
           if (!leagueId) throw error;
           return [];
         });
@@ -92,6 +94,7 @@ export function InsightsPage({
           setAllPickups(false);
         }
       } catch (failure) {
+        logClientError('InsightsPage', failure);
         if (!cancelled) setResult({ api, key: requestKey, error: errorMessage(failure) });
       }
     })();

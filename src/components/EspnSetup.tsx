@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { Box, Button, Field, Flex, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { EspnCredentialsApi, EspnCredentialStatus } from '../espn-credentials';
@@ -30,6 +31,7 @@ export function EspnCredentialForm({
       setMessage(message);
       onSaved(next);
     } catch (failure) {
+      logClientError('EspnSetup', failure);
       setError(errorMessage(failure));
     } finally {
       setBusy(false);
@@ -158,6 +160,7 @@ export function EspnSetup({
         if (!cancelled) setResult({ api, status });
       },
       (error) => {
+        logClientError('EspnSetup.load', error);
         if (!cancelled) setResult({ api, error: errorMessage(error) });
       },
     );

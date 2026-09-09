@@ -6,7 +6,16 @@ import { nitro } from 'nitro/vite';
 export default defineConfig(({ mode }) => {
   // Vite exposes VITE_* to the browser; these keys stay in the server process only.
   const env = loadEnv(mode, process.cwd(), '');
-  for (const key of ['MONGODB_URI', 'AUTH0_ISSUER_BASE_URL', 'AUTH0_AUDIENCE', 'ESPN_S2', 'SWID']) {
+  for (const key of [
+    'MONGODB_URI',
+    'AUTH0_ISSUER_BASE_URL',
+    'AUTH0_AUDIENCE',
+    'ESPN_S2',
+    'SWID',
+    'AUTH0_MANAGEMENT_DOMAIN',
+    'AUTH0_MANAGEMENT_CLIENT_ID',
+    'AUTH0_MANAGEMENT_CLIENT_SECRET',
+  ]) {
     process.env[key] ??= env[key];
   }
   return {

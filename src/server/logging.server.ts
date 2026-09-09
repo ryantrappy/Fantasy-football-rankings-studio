@@ -3,7 +3,13 @@ import axios from 'axios';
 
 function redact(value: string): string {
   let text = value;
-  for (const key of ['MONGODB_URI', 'ESPN_CREDENTIALS_KEY', 'ESPN_S2', 'SWID']) {
+  for (const key of [
+    'MONGODB_URI',
+    'ESPN_CREDENTIALS_KEY',
+    'ESPN_S2',
+    'SWID',
+    'AUTH0_MANAGEMENT_CLIENT_SECRET',
+  ]) {
     const secret = process.env[key];
     if (secret) text = text.split(secret).join('[REDACTED]');
   }
@@ -55,6 +61,10 @@ export function logServerError(operation: string, error: unknown, status = 500) 
     );
   } catch {
     // An unusual thrown object must not prevent the original error response.
-    console.error('server_call_failed: error details could not be serialized');
+    try {
+      console.error('server_call_failed: error details could not be serialized');
+    } catch {
+      /* The output sink may also be unavailable. */
+    }
   }
 }

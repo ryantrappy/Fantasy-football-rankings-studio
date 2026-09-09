@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { Box, Button, Field, Flex, Grid, Heading, Input, Text, chakra } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
@@ -34,6 +35,7 @@ export function CreateLeague({
           }),
         );
       } catch (failure) {
+        logClientError('CreateLeague', failure);
         setError(errorMessage(failure));
       }
     },

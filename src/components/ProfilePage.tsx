@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { ProfileApi, UserProfile } from '../profile';
@@ -17,6 +18,7 @@ export function ProfilePage({ api }: { api: ProfileApi }) {
         if (!cancelled) setResult({ api, profile });
       },
       (error) => {
+        logClientError('ProfilePage.load', error);
         if (!cancelled) setResult({ api, error: errorMessage(error) });
       },
     );
@@ -90,6 +92,7 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
             setNickname(next.nickname);
             setSaved(true);
           } catch (failure) {
+            logClientError('ProfilePage', failure);
             setError(errorMessage(failure));
           } finally {
             setBusy(false);

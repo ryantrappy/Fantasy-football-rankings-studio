@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import {
   Box,
   Button,
@@ -89,6 +90,7 @@ export const RankingEditor = forwardRef<
       link.click();
       link.remove();
     } catch (error) {
+      logClientError('RankingEditor', error);
       setExportError(`Image export failed: ${errorMessage(error)}`);
     } finally {
       exportHost.remove();

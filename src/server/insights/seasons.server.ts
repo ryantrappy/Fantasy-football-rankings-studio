@@ -1,3 +1,4 @@
+import { logServerError } from '../logging.server';
 import '@tanstack/react-start/server-only';
 import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
@@ -56,6 +57,7 @@ export async function discoverSeasons(league: League, access: EspnAccess = 'publ
     };
   } catch (error) {
     if (access === 'public' && isPublicAccessDenied(error)) {
+      logServerError('discoverSeasons.publicFallback', error, 401);
       const fallbackSeason = league.seasonId;
       return {
         years: [fallbackSeason],

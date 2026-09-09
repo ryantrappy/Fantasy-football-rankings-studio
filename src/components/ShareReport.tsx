@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { Box, Button, Input, Text } from '@chakra-ui/react';
 import { defaultStringifySearch } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -24,7 +25,8 @@ export function ShareReport({
             await navigator.clipboard.writeText(url);
             setCopied(href);
             setFallback('');
-          } catch {
+          } catch (error) {
+            logClientError('share.copy', error);
             setFallback(url);
           }
         }}

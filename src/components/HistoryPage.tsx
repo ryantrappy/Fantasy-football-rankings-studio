@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
 import { DataTable } from '../components/DataTable';
@@ -73,6 +74,7 @@ export function HistoryPage({
     void (async () => {
       try {
         const leagues = await api.listLeagues().catch((error): League[] => {
+          logClientError('HistoryPage', error);
           if (!leagueId) throw error;
           return [];
         });
@@ -93,6 +95,7 @@ export function HistoryPage({
         if (cancelled) return;
         setCatalog({ api, leagueId, leagues, ...context });
       } catch (error) {
+        logClientError('HistoryPage', error);
         if (!cancelled)
           setCatalog({ api, leagueId, leagues: [], years: [], error: errorMessage(error) });
       }
@@ -114,6 +117,7 @@ export function HistoryPage({
           if (cancelled) return;
           records.push({ year, data });
         } catch (error) {
+          logClientError('HistoryPage', error);
           if (cancelled) return;
           errors.push({ year, message: errorMessage(error) });
         }

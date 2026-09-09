@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { League, LeagueApi, WeeklyRanking } from '../types';
 import { errorMessage } from '../api/client';
@@ -40,6 +41,7 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
       setRanking(current);
     })()
       .catch((error) => {
+        logClientError('useRankingEditor', error);
         if (!cancelled) setLoadError(errorMessage(error));
       })
       .finally(() => {
@@ -87,6 +89,7 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
       };
       inFlight.current = persist()
         .catch((error) => {
+          logClientError('useRankingEditor', error);
           if (alive.current) setSaveError(errorMessage(error));
           throw error;
         })

@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { EspnSetup } from '../components/EspnSetup';
 import { Link } from '@tanstack/react-router';
 import { InsightsAccess } from './InsightsAccess';
@@ -98,6 +99,9 @@ function Session({ children }: { children: ReactNode }) {
     getAccessTokenSilently,
     user,
   } = useAuth0();
+  useEffect(() => {
+    if (error) logClientError('auth.session', error);
+  }, [error]);
   const [loginError, setLoginError] = useState('');
   const api = useMemo(
     () => createApi(getAccessTokenSilently, user?.sub),
@@ -105,7 +109,7 @@ function Session({ children }: { children: ReactNode }) {
   );
   useEffect(
     () => () => {
-      void api.dispose();
+      void api.dispose().catch((error) => logClientError('session.dispose', error));
     },
     [api],
   );
@@ -139,7 +143,10 @@ function Session({ children }: { children: ReactNode }) {
           onClick={() =>
             void loginWithRedirect({
               appState: { returnTo: window.location.pathname + window.location.search },
-            }).catch((failure) => setLoginError(errorMessage(failure)))
+            }).catch((failure) => {
+              logClientError('auth.login', failure);
+              setLoginError(errorMessage(failure));
+            })
           }
         >
           Sign in
@@ -160,11 +167,19 @@ function Session({ children }: { children: ReactNode }) {
             variant="plain"
             type="button"
 
-            onClick={() => void logout({ logoutParams: { returnTo: window.location.origin } })}
+            onClick={() =>
+              void logout({ logoutParams: { returnTo: window.location.origin } }).catch(
+                (failure) => {
+                  logClientError('auth.logout', failure);
+                  setLoginError(errorMessage(failure));
+                },
+              )
+            }
           >
             Sign out
           </Button>
         </Box>
+        {loginError && <Text role="alert">{loginError}</Text>}
         <EspnSetup key={user?.sub} api={api}>
           <InsightsAccess privateApi={api}>{children}</InsightsAccess>
         </EspnSetup>

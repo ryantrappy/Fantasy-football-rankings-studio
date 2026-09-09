@@ -237,10 +237,50 @@ export const RankingEditor = forwardRef<
           <Button
             variant="outline"
             type="button"
+            disabled={editor.hasConflict}
             onClick={() => void editor.flush().catch(() => {})}
           >
             Retry save
           </Button>
+        </Box>
+      )}
+      {editor.hasConflict && (
+        <Box
+          as="section"
+          aria-label="Resolve save conflict"
+          p={4}
+          mb={4}
+          borderWidth="1px"
+          bg="bg.muted"
+        >
+          <Heading as="h2" size="md">
+            Review the newer saved edition
+          </Heading>
+          <Button onClick={() => void editor.inspectConflict()} my={3}>
+            Load saved version for comparison
+          </Button>
+          {editor.conflictVersion && (
+            <>
+              <Box maxH="400px" overflowY="auto" p={3} bg="bg" mb={3}>
+                <Text fontWeight="bold">{editor.conflictVersion.rankingsTitle}</Text>
+                <Text whiteSpace="pre-wrap">{editor.conflictVersion.introduction}</Text>
+                {editor.conflictVersion.teams.map((t) => (
+                  <Box key={t.teamId} mb={3}>
+                    <Text fontWeight="bold">
+                      {t.position}. {t.teamName}
+                    </Text>
+                    <Text whiteSpace="pre-wrap">{t.description}</Text>
+                  </Box>
+                ))}
+              </Box>
+              <Button mr={3} onClick={() => editor.resolveConflict(false)}>
+                Use saved version
+              </Button>
+              <Button variant="outline" onClick={() => editor.resolveConflict(true)}>
+                Replace with my local draft
+              </Button>
+            </>
+          )}
         </Box>
       )}
       <Grid

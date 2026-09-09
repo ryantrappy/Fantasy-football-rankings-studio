@@ -348,3 +348,11 @@ Storage failures show a warning without preventing editing. Browser backups are
 local convenience copies, not server backups: clearing site data removes them,
 and someone with access to the browser's storage can read them. They contain no
 authentication tokens or ESPN credentials.
+
+Ranking saves use server-managed revisions. A stale tab receives a conflict rather
+than overwriting newer work. **Load saved version for comparison** displays the
+newer title, introduction and commentary; choose **Use saved version** or
+**Replace with my local draft**. Replacement is checked again against the reviewed
+revision, so a third intervening save still causes a conflict. Legacy editions
+start at revision zero. Both update-by-ID and update-by-week enforce this rule;
+clients must carry the revision returned by reads/saves.

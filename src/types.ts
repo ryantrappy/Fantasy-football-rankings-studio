@@ -21,6 +21,7 @@ export interface TeamRanking extends Team {
 }
 
 export interface WeeklyRanking {
+  revision?: number;
   _id?: string;
   leagueId: string;
   leagueName?: string;

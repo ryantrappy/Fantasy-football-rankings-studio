@@ -57,6 +57,6 @@ export function previousPosition(
 }
 
 export function rankingSignature(ranking: WeeklyRanking): string {
-  const { _id: _ignored, ...content } = ranking;
+  const { _id: _ignored, revision: _revision, ...content } = ranking;
   return JSON.stringify(content);
 }

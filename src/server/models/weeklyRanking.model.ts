@@ -18,6 +18,7 @@ const teamRankingSchema = new mongoose.Schema(
 
 const weeklyRankingSchema = new mongoose.Schema(
   {
+    revision: { type: Number, default: 0, min: 0 },
     rankingsTitle: { type: String, required: true },
     introduction: { type: String, default: '' },
     leagueId: { type: String, required: true },

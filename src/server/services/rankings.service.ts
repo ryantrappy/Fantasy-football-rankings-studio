@@ -4,6 +4,13 @@ import HttpException from '../exceptions/HttpException';
 import weeklyRankingModel from '../models/weeklyRanking.model';
 import LeaguesService from './leagues.service';
 
+const revisionFilter = (revision = 0) =>
+  revision === 0 ? { $or: [{ revision: 0 }, { revision: { $exists: false } }] } : { revision };
+const conflict = () =>
+  new HttpException(
+    409,
+    'A newer edition was saved elsewhere. Review the saved version before resolving this conflict.',
+  );
 class RankingsService {
   public weeklyRankings = weeklyRankingModel;
   public leagueService = new LeaguesService();
@@ -60,12 +67,12 @@ class RankingsService {
     )
       throw new HttpException(400, 'A ranking cannot be moved to another league, season, or week.');
     const ranking = this.normalize(input);
-    const result = await this.weeklyRankings.findByIdAndUpdate(
-      rankingId,
-      { $set: ranking },
+    const result = await this.weeklyRankings.findOneAndUpdate(
+      { _id: rankingId, ...revisionFilter(input.revision) },
+      { $set: ranking, $inc: { revision: 1 } },
       { returnDocument: 'after', runValidators: true },
     );
-    if (!result) throw new HttpException(404, 'Ranking not found.');
+    if (!result) throw conflict();
     return result as unknown as WeeklyRanking;
   }
 
@@ -80,11 +87,11 @@ class RankingsService {
     if (input.leagueId !== leagueId || input.week !== week || input.year !== year)
       throw new HttpException(400, 'Ranking details must match the URL.');
     const result = await this.weeklyRankings.findOneAndUpdate(
-      { leagueId, week, year },
-      { $set: this.normalize(input) },
+      { leagueId, week, year, ...revisionFilter(input.revision) },
+      { $set: this.normalize(input), $inc: { revision: 1 } },
       { returnDocument: 'after', runValidators: true },
     );
-    if (!result) throw new HttpException(404, 'Ranking not found. Create it before updating.');
+    if (!result) throw conflict();
     return result as unknown as WeeklyRanking;
   }
 

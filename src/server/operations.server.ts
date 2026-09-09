@@ -35,6 +35,7 @@ function publicLeague(value: League): League {
 }
 function publicRanking(value: WeeklyRanking): WeeklyRanking {
   return {
+    revision: value.revision ?? 0,
     _id: String(value._id),
     leagueId: value.leagueId,
     rankingsTitle: value.rankingsTitle,

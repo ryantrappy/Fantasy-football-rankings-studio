@@ -261,3 +261,26 @@ it('discards a local draft without replacing the saved edition', async () => {
   expect(window.localStorage.length).toBe(0);
   next.unmount();
 });
+it('preserves a conflicting local draft until the saved version is reviewed and chosen', async () => {
+  const api = makeApi();
+  const newer = { ...existing, revision: 2, introduction: 'Remote version' };
+  api.saveRanking.mockRejectedValueOnce(Object.assign(new Error('Conflict'), { status: 409 }));
+  const editor = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => editor.result.current.update((r) => ({ ...r, introduction: 'Local version' })));
+  await act(async () => {
+    await editor.result.current.flush().catch(() => {});
+  });
+  expect(editor.result.current.hasConflict).toBe(true);
+  expect(editor.result.current.ranking?.introduction).toBe('Local version');
+  api.getRankings.mockResolvedValue([newer]);
+  await act(async () => editor.result.current.inspectConflict());
+  expect(editor.result.current.conflictVersion).toEqual(newer);
+  act(() => editor.result.current.resolveConflict(true));
+  await act(async () => editor.result.current.flush());
+  expect(api.saveRanking.mock.lastCall?.[0]).toMatchObject({
+    introduction: 'Local version',
+    revision: 2,
+  });
+  editor.unmount();
+});

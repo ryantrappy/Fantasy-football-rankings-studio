@@ -14,6 +14,8 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
   const [history, setHistory] = useState<WeeklyRanking[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [conflictVersion, setConflictVersion] = useState<WeeklyRanking>();
+  const [hasConflict, setHasConflict] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date>();
@@ -112,7 +114,11 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
             logClientError('draft.clear', error);
           }
           saved.current = signature;
-          latest.current = { ...latest.current, _id: result._id };
+          latest.current = {
+            ...latest.current,
+            _id: result._id,
+            ...(result.revision !== undefined ? { revision: result.revision } : {}),
+          };
           if (alive.current) {
             setSavedSignature(signature);
             setRanking(latest.current);
@@ -123,7 +129,11 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
       inFlight.current = persist()
         .catch((error) => {
           logClientError('useRankingEditor', error);
-          if (alive.current) setSaveError(errorMessage(error));
+          if (alive.current) {
+            setSaveError(errorMessage(error));
+            if (typeof error === 'object' && error && 'status' in error && error.status === 409)
+              setHasConflict(true);
+          }
           throw error;
         })
         .finally(() => {
@@ -136,12 +146,12 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
   );
 
   useEffect(() => {
-    if (!dirty || saveError) return;
+    if (!dirty || saveError || hasConflict) return;
     const timer = window.setTimeout(() => {
       void flush().catch(() => {});
     }, 1000);
     return () => window.clearTimeout(timer);
-  }, [ranking, dirty, flush, saveError]);
+  }, [ranking, dirty, flush, saveError, hasConflict]);
 
   useEffect(() => {
     const protectDraft = (event: BeforeUnloadEvent) => {
@@ -155,6 +165,38 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
   }, []);
 
   return {
+    hasConflict,
+    conflictVersion,
+    inspectConflict: async () => {
+      try {
+        const entries = await api.getRankings(league.leagueId);
+        const current = entries.find((r) => r.year === year && r.week === week);
+        if (!current) throw new Error('The saved edition is no longer available.');
+        setConflictVersion(current);
+      } catch (error) {
+        logClientError('ranking.conflict', error);
+        setSaveError(errorMessage(error));
+      }
+    },
+    resolveConflict: (useLocal: boolean) => {
+      if (!conflictVersion || !latest.current) return;
+      saved.current = rankingSignature(conflictVersion);
+      setSavedSignature(saved.current);
+      const next = useLocal
+        ? { ...latest.current, _id: conflictVersion._id, revision: conflictVersion.revision }
+        : conflictVersion;
+      update(() => next);
+      setHasConflict(false);
+      setConflictVersion(undefined);
+      setSaveError('');
+      if (!useLocal) {
+        try {
+          clearSavedDraft(storageKey, next);
+        } catch (error) {
+          logClientError('draft.clear', error);
+        }
+      }
+    },
     recovery,
     storageError,
     restoreDraft: () => {

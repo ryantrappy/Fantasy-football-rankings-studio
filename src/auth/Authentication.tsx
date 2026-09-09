@@ -1,3 +1,4 @@
+import { PasswordReset } from './PasswordReset';
 import { logClientError } from '../logging';
 import { EspnSetup } from '../components/EspnSetup';
 import { Link } from '@tanstack/react-router';
@@ -151,6 +152,7 @@ function Session({ children }: { children: ReactNode }) {
         >
           Sign in
         </Button>
+        <PasswordReset />
       </Box>
     );
   return (

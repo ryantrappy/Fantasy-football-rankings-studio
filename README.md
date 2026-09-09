@@ -314,3 +314,21 @@ header accent. Chakra semantic colors live in `src/theme.ts`; application detail
 live in `src/index.css`. The fixed download theme remains in `src/export.css`.
 Desktop/mobile browser tests compare the exported ranking canvas to the original
 pixel snapshots and check application contrast for light and dark system preferences.
+
+### Password recovery
+
+The signed-out screen and authenticated profile offer **Reset password through
+Auth0**. This opens Universal Login with `prompt=login` so an existing SSO session
+does not skip the login form. Choose **Forgot password?** (wording depends on the
+hosted login version), enter the account email, and follow the emailed link.
+Social and enterprise accounts reset passwords with their identity provider.
+See [Auth0's password reset documentation](https://auth0.com/docs/authenticate/database-connections/password-change).
+
+The Auth0 tenant must enable a database connection for this application, expose
+its password-recovery link in Universal Login, and configure working Change
+Password email delivery. The application collects no passwords and requires no
+additional Management API permission for recovery. To verify a deployment, use a
+test database account from both signed-out and signed-in states, request its
+reset email on Auth0, follow the link, and sign in with the new password. Local
+tests mock the SDK redirect; tenant configuration and email delivery are not
+verified by this repository's test suite.

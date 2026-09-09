@@ -206,6 +206,28 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      {editor.storageError && (
+        <Text role="alert" mb={4}>
+          {editor.storageError}
+        </Text>
+      )}
+      {editor.recovery && (
+        <Box as="section" aria-label="Recover unsaved ranking" className="notice" bg="bg.muted">
+          <Heading as="h2" size="md">
+            Unsaved work found on this browser
+          </Heading>
+          <Text mb={3}>
+            Restore “{editor.recovery.rankingsTitle}” for this edition, or discard it to keep the
+            saved version. Editing is paused until you choose.
+          </Text>
+          <Button onClick={editor.restoreDraft} mr={3}>
+            Restore draft
+          </Button>
+          <Button variant="outline" onClick={editor.discardDraft}>
+            Discard local draft
+          </Button>
+        </Box>
+      )}
       {editor.saveError && (
         <Box className="notice error" role="alert">
           <Box>

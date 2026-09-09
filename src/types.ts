@@ -32,6 +32,7 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  subject?: string;
   writing?: import('./writing').WritingApi;
   listLeagues(): Promise<League[]>;
   createLeague(league: Omit<League, '_id'>): Promise<League>;

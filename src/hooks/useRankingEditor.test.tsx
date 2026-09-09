@@ -199,3 +199,65 @@ describe('useRankingEditor', () => {
     expect(result.current.savedAt).toBeUndefined();
   });
 });
+
+function mockStorage() {
+  const data = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      data.set(key, value);
+    },
+    removeItem: (key: string) => {
+      data.delete(key);
+    },
+    clear: () => data.clear(),
+    get length() {
+      return data.size;
+    },
+  });
+}
+afterEach(() => vi.unstubAllGlobals());
+it('recovers all unsaved content only after explicit restore and isolates accounts', async () => {
+  mockStorage();
+  const api = { ...makeApi(), subject: 'owner-a' };
+  const first = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  const draft = {
+    ...existing,
+    rankingsTitle: 'Recovered title',
+    introduction: 'Offline intro',
+    teams: [{ ...existing.teams[0], description: 'Offline commentary' }],
+  };
+  act(() => first.result.current.update(() => draft));
+  first.unmount();
+  const otherApi = { ...api, subject: 'owner-b' };
+  const other = renderHook(() => useRankingEditor(otherApi, league, 2026, 2));
+  await act(async () => {});
+  expect(other.result.current.recovery).toBeUndefined();
+  other.unmount();
+  const second = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  expect(second.result.current.ranking).toEqual(existing);
+  expect(second.result.current.recovery).toEqual(draft);
+  expect(api.saveRanking).not.toHaveBeenCalled();
+  act(() => second.result.current.restoreDraft());
+  expect(second.result.current.ranking).toEqual(draft);
+  await act(async () => second.result.current.flush());
+  expect(window.localStorage.length).toBe(0);
+  second.unmount();
+});
+it('discards a local draft without replacing the saved edition', async () => {
+  mockStorage();
+  const api = { ...makeApi(), subject: 'owner' };
+  const first = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => first.result.current.update((r) => ({ ...r, introduction: 'Discard me' })));
+  first.unmount();
+  const next = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => next.result.current.discardDraft());
+  expect(next.result.current.ranking).toEqual(existing);
+  expect(next.result.current.recovery).toBeUndefined();
+  expect(window.localStorage.length).toBe(0);
+  next.unmount();
+});

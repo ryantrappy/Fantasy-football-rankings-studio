@@ -339,3 +339,12 @@ cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
 remaining schedule, standard bracket, and no division/median-game rules. These
 are model estimates, not provider-exact clinching odds. See the playoff section
 in [calculation documentation](docs/calculations.md) for the sampling method.
+
+Unsaved ranking edits are backed up in this browser as they are typed, scoped to
+the signed-in account, league, year and week. Reopening an edition offers
+**Restore draft** or **Discard local draft** before editing resumes. A restored
+draft follows normal autosave; a successful save removes its matching backup.
+Storage failures show a warning without preventing editing. Browser backups are
+local convenience copies, not server backups: clearing site data removes them,
+and someone with access to the browser's storage can read them. They contain no
+authentication tokens or ESPN credentials.

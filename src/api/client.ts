@@ -60,6 +60,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return collection;
   }
   const api: LeagueApi = {
+    subject,
     writing: {
       context: async (data) =>
         unwrap(await writingFunctions.getContext({ data, headers: await headers() })),

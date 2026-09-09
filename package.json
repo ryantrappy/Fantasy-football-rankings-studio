@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "dev": "vite dev --port 3001",
     "check:local": "npm run build && node scripts/check-local.mjs",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "backup:verify": "vitest run --config vitest.backup.config.ts"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.24.1",

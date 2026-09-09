@@ -367,3 +367,8 @@ the reviewed revision; a stale request must reload first. **Unpublish** requires
 confirmation and disables the link; publishing again after removal creates a new
 link. Existing downloaded copies cannot be recalled. Public reads use no-store
 responses and never read mutable drafts. The original PNG export is unchanged.
+
+Backup procedures, retention guidance, separately protected encryption keys and
+safe restore/cutover steps are in [Backup and recovery](docs/backup-recovery.md).
+Run `npm run backup:verify` for a synthetic dump/restore rehearsal using its own
+disposable MongoDB instance; MongoDB Server and Database Tools must be on PATH.

@@ -67,7 +67,7 @@ It uses a temporary local JWKS issuer; the real application retains Auth0 valida
 Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON`, `TEST_SLEEPER_LEAGUE_ID`, and
 `TEST_ESPN_LEAGUE_ID` to change the provider fixtures.
 
-Provider records are season-to-date, not reconstructed historical weekly records.
+New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
 Weeks currently use 1–18. The existing ownership model allows one account per
 external league ID; cross-provider ID collisions are not supported.
 

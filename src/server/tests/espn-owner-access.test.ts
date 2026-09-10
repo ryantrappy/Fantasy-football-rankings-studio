@@ -29,7 +29,18 @@ beforeEach(() => {
     swid: `${owner}-swid`,
   }));
   vi.mocked(leagueModel.findOne).mockImplementation(() => ({ lean: async () => league }) as never);
-  vi.mocked(axios.get).mockResolvedValue({ data: { id: 123, teams: [], schedule: [] } });
+  vi.mocked(axios.get).mockResolvedValue({
+    data: {
+      id: 123,
+      teams: [],
+      schedule: [],
+      status: { latestScoringPeriod: 1, finalScoringPeriod: 18 },
+      settings: {
+        scheduleSettings: { matchupPeriodCount: 14, matchupPeriodLength: 1 },
+        scoringSettings: { scoringType: 'H2H_POINTS' },
+      },
+    },
+  });
   vi.mocked(leagueModel.exists).mockResolvedValue(null);
   vi.mocked(leagueModel.create).mockImplementation(async (data) => data as never);
 });
@@ -46,7 +57,7 @@ it('isolates cookies for concurrent owners across metadata, teams, matchups and 
   ]);
   const cookies = vi.mocked(axios.get).mock.calls.map(([, options]) => options?.headers?.Cookie);
   expect(cookies.sort()).toEqual(
-    ['a', 'b', 'c', 'd'].map((id) => `espn_s2=owner-${id}-s2; SWID=owner-${id}-swid`),
+    ['a', 'b', 'b', 'c', 'd'].map((id) => `espn_s2=owner-${id}-s2; SWID=owner-${id}-swid`),
   );
 });
 it('loads credentials only after verifying league ownership', async () => {

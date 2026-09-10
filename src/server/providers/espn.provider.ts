@@ -1,3 +1,4 @@
+import { unavailableRecords, withHistoricalRecords, type RecordGame } from './historical-records';
 import axios from 'axios';
 import type { EspnCredentials } from '../../espn-credentials';
 import HttpException from '../exceptions/HttpException';
@@ -7,7 +8,17 @@ import { LeagueProvider } from './league-provider';
 
 interface EspnData {
   id: number;
-  settings?: { name?: string; size?: number };
+  settings?: {
+    name?: string;
+    size?: number;
+    scheduleSettings?: {
+      matchupPeriods?: Record<string, number[]>;
+      matchupPeriodCount?: number;
+      matchupPeriodLength?: number;
+    };
+    scoringSettings?: { scoringType?: string };
+  };
+  status?: { latestScoringPeriod?: number; finalScoringPeriod?: number };
   members?: { id: string; firstName?: string; lastName?: string; displayName?: string }[];
   teams?: {
     id: number;
@@ -21,6 +32,8 @@ interface EspnData {
   schedule?: {
     id: number;
     matchupPeriodId: number;
+    winner?: string;
+    playoffTierType?: string;
     home?: { teamId: number; totalPoints: number };
     away?: { teamId: number; totalPoints: number };
   }[];
@@ -99,6 +112,46 @@ export default class EspnProvider implements LeagueProvider {
         ties: team.record?.overall?.ties ?? 0,
       };
     });
+  }
+
+  async getHistoricalTeams(league: League, seasonId: number, week: number): Promise<Team[]> {
+    const data = await this.get(league.leagueId, seasonId, ['mSettings', 'mMatchup', 'mStatus']);
+    const teams = await this.getTeams(league, seasonId, week);
+    const settings = data.settings?.scheduleSettings;
+    const count = settings?.matchupPeriodCount;
+    const latest = data.status?.latestScoringPeriod;
+    const final = data.status?.finalScoringPeriod;
+    if (!count || !latest || !final || !Array.isArray(data.schedule)) unavailableRecords();
+    if (data.settings?.scoringSettings?.scoringType !== 'H2H_POINTS') unavailableRecords();
+    const cutoff = Math.min(week, latest - 1, final);
+    const games: RecordGame[] = [];
+    for (let period = 1; period <= count; period++) {
+      const weeks =
+        settings?.matchupPeriods?.[String(period)] ||
+        (settings?.matchupPeriodLength === 1 ? [period] : undefined);
+      if (!weeks?.length || weeks.some((w) => !Number.isInteger(w))) unavailableRecords();
+      if (Math.max(...weeks) > cutoff) continue;
+      const matches = data.schedule.filter(
+        (m) => m.matchupPeriodId === period && (!m.playoffTierType || m.playoffTierType === 'NONE'),
+      );
+      if (!matches.length) unavailableRecords();
+      const represented = new Set<string>();
+      for (const match of matches) {
+        if (match.home) represented.add(String(match.home.teamId));
+        if (match.away) represented.add(String(match.away.teamId));
+        if (!match.home || !match.away) continue;
+        if (!['HOME', 'AWAY', 'TIE'].includes(match.winner || '')) unavailableRecords();
+        games.push({
+          home: String(match.home.teamId),
+          away: String(match.away.teamId),
+          homeScore: match.home.totalPoints,
+          awayScore: match.away.totalPoints,
+          winner: match.winner as RecordGame['winner'],
+        });
+      }
+      if (teams.some((t) => !represented.has(t.teamId))) unavailableRecords();
+    }
+    return withHistoricalRecords(teams, games);
   }
 
   async getMatchups(league: League, seasonId: number, week: number): Promise<Matchup[]> {

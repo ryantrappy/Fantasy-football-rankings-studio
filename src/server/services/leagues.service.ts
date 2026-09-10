@@ -104,7 +104,11 @@ class LeaguesService {
 
   public async getTeams(id: string, seasonId: number, week: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return (await this.providerFor(league, ownerSubject)).getTeams(league, seasonId, week);
+    return (await this.providerFor(league, ownerSubject)).getHistoricalTeams(
+      league,
+      seasonId,
+      week,
+    );
   }
 
   public async getMatchups(id: string, seasonId: number, week: number, ownerSubject: string) {

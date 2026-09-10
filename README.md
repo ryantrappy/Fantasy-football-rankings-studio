@@ -393,3 +393,9 @@ Use **Manage leagues** in the studio to archive an old league or restore one fro
 retain their saved editions, revision history, credentials and sharing settings.
 Archiving is not a privacy control; disable report sharing or unpublish editions
 separately when public access should stop.
+
+**Copy from a previous edition** lets you select introduction, team commentary
+and/or ordering. Review the source and replacement warning, then confirm. Matching
+uses team IDs, preserves current names and records, and retains unmatched destination
+teams. Absent source teams are skipped with a count; the source edition is never edited.
+Copied content follows the destination's normal autosave and revision-history behavior.

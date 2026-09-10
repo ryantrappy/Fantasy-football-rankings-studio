@@ -1,3 +1,4 @@
+import { CopyEdition } from './CopyEdition';
 import { RevisionHistory } from './RevisionHistory';
 import { PublishEdition } from './PublishEdition';
 import { WritingSuggestions } from './WritingSuggestions';
@@ -208,6 +209,12 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      <CopyEdition
+        ranking={ranking}
+        history={editor.history}
+        disabled={editor.saving || !!editor.recovery || editor.hasConflict}
+        onCopy={(next) => editor.update(() => next)}
+      />
       {api.revisions && ranking._id && (
         <RevisionHistory
           key={ranking._id}

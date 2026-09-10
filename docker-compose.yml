@@ -1,12 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN}
-        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID}
-        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
+    image: ryantrappy/fantasy-football-rankings-builder:latest
     env_file:
       - .env
     environment:
@@ -24,7 +18,7 @@ services:
     image: mongo:8
     restart: unless-stopped
     volumes:
-      - mongo-data:/data/db
+      - ${MONGO_DATA_PATH:-./.docker/mongo-data}:/data/db
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\""]
       interval: 5s
@@ -32,9 +26,6 @@ services:
       retries: 12
     networks:
       - fantasy-internal
-
-volumes:
-  mongo-data:
 
 networks:
   fantasy-internal:

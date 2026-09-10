@@ -97,6 +97,22 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getRankingRevisions: async (owner: string, input: unknown) =>
+    (await rankings.getRevisions(objectIdSchema.parse(input).id, owner)).map((entry) => ({
+      savedAt: entry.savedAt,
+      ranking: publicRanking(entry.ranking),
+    })),
+  restoreRankingRevision: async (owner: string, input: unknown) => {
+    const data = objectIdSchema
+      .extend({
+        revision: z.number().int().nonnegative(),
+        expectedRevision: z.number().int().nonnegative(),
+      })
+      .parse(input);
+    return publicRanking(
+      await rankings.restoreRevision(data.id, data.revision, data.expectedRevision, owner),
+    );
+  },
   getEspnCredentialStatus: credentials.getEspnCredentialStatus,
   saveEspnCredentials: credentials.saveEspnCredentials,
   removeEspnCredentials: credentials.removeEspnCredentials,

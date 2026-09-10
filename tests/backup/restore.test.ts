@@ -108,15 +108,13 @@ it('restores editions, indexes, publications and owner-bound credentials into an
       encryptedCredentials: encrypted,
       onboardingComplete: true,
     });
-    await mongoose.connection
-      .db!.collection('publications')
-      .insertOne({
-        rankingId: String(saved._id),
-        publicId: 'synthetic-public-id',
-        ranking: { rankingsTitle: 'Published snapshot' },
-        revision: 6,
-        publishedAt: '2026-09-01',
-      });
+    await mongoose.connection.db!.collection('publications').insertOne({
+      rankingId: String(saved._id),
+      publicId: 'synthetic-public-id',
+      ranking: { rankingsTitle: 'Published snapshot' },
+      revision: 6,
+      publishedAt: '2026-09-01',
+    });
     await mongoose.connection
       .db!.collection('publications')
       .createIndex({ publicId: 1 }, { unique: true });
@@ -200,6 +198,20 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    const history = await rankings.getRevisions(String(saved._id), 'owner-a');
+    expect(history.map((entry) => entry.ranking.revision)).toEqual([8, 7]);
+    const restoredOld = await rankings.restoreRevision(String(saved._id), 7, 8, 'owner-a');
+    expect(restoredOld.revision).toBe(9);
+    expect(restoredOld.rankingsTitle).toBe('Backup edition');
+    expect(restoredOld.teams[0].description).toBe('Restored commentary');
+    expect(
+      (await rankings.getRevisions(String(saved._id), 'owner-a')).map(
+        (entry) => entry.ranking.revision,
+      ),
+    ).toEqual([9, 8, 7]);
+    await expect(rankings.getRevisions(String(saved._id), 'owner-b')).rejects.toMatchObject({
+      status: 404,
+    });
   } finally {
     vi.unstubAllEnvs();
     await mongoose.disconnect();

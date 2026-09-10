@@ -372,3 +372,11 @@ Backup procedures, retention guidance, separately protected encryption keys and
 safe restore/cutover steps are in [Backup and recovery](docs/backup-recovery.md).
 Run `npm run backup:verify` for a synthetic dump/restore rehearsal using its own
 disposable MongoDB instance; MongoDB Server and Database Tools must be on PATH.
+
+**View saved revisions** previews an edition's historical title, introduction,
+team order and commentary with saved timestamps. **Restore selected revision**
+creates a new current revision and leaves published snapshots unchanged. History
+starts when this feature is deployed; older overwritten content cannot be
+reconstructed. Previous snapshots are appended atomically with the revision-checked
+save. They count toward MongoDB's document-size limit; an oversized save fails
+without discarding existing history. Include rankings in regular database backups.

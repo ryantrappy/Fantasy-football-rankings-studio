@@ -1,3 +1,4 @@
+import { RevisionHistory } from './RevisionHistory';
 import { PublishEdition } from './PublishEdition';
 import { WritingSuggestions } from './WritingSuggestions';
 import { logClientError } from '../logging';
@@ -207,6 +208,15 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      {api.revisions && ranking._id && (
+        <RevisionHistory
+          key={ranking._id}
+          api={api.revisions}
+          ranking={ranking}
+          disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
+          onRestored={editor.reload}
+        />
+      )}
       {api.publishing && ranking._id && (
         <PublishEdition
           key={ranking._id}

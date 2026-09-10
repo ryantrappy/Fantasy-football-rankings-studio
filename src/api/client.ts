@@ -62,6 +62,17 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   }
   const api: LeagueApi = {
     subject,
+    revisions: {
+      list: async (id) =>
+        unwrap(await functions.getRankingRevisions({ data: { id }, headers: await headers() })),
+      restore: async (id, revision, expectedRevision) =>
+        unwrap(
+          await functions.restoreRankingRevision({
+            data: { id, revision, expectedRevision },
+            headers: await headers(),
+          }),
+        ),
+    },
     publishing: {
       status: async (id) =>
         unwrap(

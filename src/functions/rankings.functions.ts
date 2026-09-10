@@ -73,3 +73,14 @@ export const removeEspnCredentials = createServerFn({ method: 'POST' }).handler(
 export const skipEspnSetup = createServerFn({ method: 'POST' }).handler(() =>
   run('skipEspnSetup', operations.skipEspnSetup),
 );
+
+export const getRankingRevisions = createServerFn({ method: 'GET' })
+  .validator((data: { id: string }) => data)
+  .handler(({ data }) =>
+    run('getRankingRevisions', (owner) => operations.getRankingRevisions(owner, data)),
+  );
+export const restoreRankingRevision = createServerFn({ method: 'POST' })
+  .validator((data: { id: string; revision: number; expectedRevision: number }) => data)
+  .handler(({ data }) =>
+    run('restoreRankingRevision', (owner) => operations.restoreRankingRevision(owner, data)),
+  );

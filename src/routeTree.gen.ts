@@ -16,12 +16,14 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.espn'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
+import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
 import { Route as AuthenticatedLeaguesManageRouteImport } from './routes/_authenticated.leagues.manage'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
 import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
+import { Route as PublicSharedPlayoffsRouteImport } from './routes/_public.shared.playoffs'
 import { Route as SharedRankingsPublicIdRouteImport } from './routes/shared.rankings.$publicId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -57,6 +59,11 @@ const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPlayoffsRoute = AuthenticatedPlayoffsRouteImport.update({
+  id: '/playoffs',
+  path: '/playoffs',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -88,6 +95,11 @@ const PublicSharedInsightsRoute = PublicSharedInsightsRouteImport.update({
   path: '/shared/insights',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicSharedPlayoffsRoute = PublicSharedPlayoffsRouteImport.update({
+  id: '/shared/playoffs',
+  path: '/shared/playoffs',
+  getParentRoute: () => PublicRoute,
+} as any)
 const SharedRankingsPublicIdRoute = SharedRankingsPublicIdRouteImport.update({
   id: '/shared/rankings/$publicId',
   path: '/shared/rankings/$publicId',
@@ -100,12 +112,14 @@ export interface FileRoutesByFullPath {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesByTo {
@@ -114,12 +128,14 @@ export interface FileRoutesByTo {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesById {
@@ -130,6 +146,7 @@ export interface FileRoutesById {
   '/_authenticated/espn': typeof AuthenticatedEspnRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -137,6 +154,7 @@ export interface FileRoutesById {
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/_public/shared/history': typeof PublicSharedHistoryRoute
   '/_public/shared/insights': typeof PublicSharedInsightsRoute
+  '/_public/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRouteTypes {
@@ -147,12 +165,14 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
     | '/leagues/manage'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
+    | '/shared/playoffs'
     | '/shared/rankings/$publicId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -161,12 +181,14 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
     | '/leagues/manage'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
+    | '/shared/playoffs'
     | '/shared/rankings/$publicId'
   id:
     | '__root__'
@@ -176,6 +198,7 @@ export interface FileRouteTypes {
     | '/_authenticated/espn'
     | '/_authenticated/history'
     | '/_authenticated/insights'
+    | '/_authenticated/playoffs'
     | '/_authenticated/profile'
     | '/shared/konz-sux'
     | '/_authenticated/'
@@ -183,6 +206,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leagues/new'
     | '/_public/shared/history'
     | '/_public/shared/insights'
+    | '/_public/shared/playoffs'
     | '/shared/rankings/$publicId'
   fileRoutesById: FileRoutesById
 }
@@ -245,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInsightsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/playoffs': {
+      id: '/_authenticated/playoffs'
+      path: '/playoffs'
+      fullPath: '/playoffs'
+      preLoaderRoute: typeof AuthenticatedPlayoffsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/profile': {
       id: '/_authenticated/profile'
       path: '/profile'
@@ -287,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicSharedInsightsRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/shared/playoffs': {
+      id: '/_public/shared/playoffs'
+      path: '/shared/playoffs'
+      fullPath: '/shared/playoffs'
+      preLoaderRoute: typeof PublicSharedPlayoffsRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/shared/rankings/$publicId': {
       id: '/shared/rankings/$publicId'
       path: '/shared/rankings/$publicId'
@@ -301,6 +339,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEspnRoute: typeof AuthenticatedEspnRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedLeaguesManageRoute: typeof AuthenticatedLeaguesManageRoute
@@ -311,6 +350,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEspnRoute: AuthenticatedEspnRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedLeaguesManageRoute: AuthenticatedLeaguesManageRoute,
@@ -324,11 +364,13 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 interface PublicRouteChildren {
   PublicSharedHistoryRoute: typeof PublicSharedHistoryRoute
   PublicSharedInsightsRoute: typeof PublicSharedInsightsRoute
+  PublicSharedPlayoffsRoute: typeof PublicSharedPlayoffsRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
   PublicSharedHistoryRoute: PublicSharedHistoryRoute,
   PublicSharedInsightsRoute: PublicSharedInsightsRoute,
+  PublicSharedPlayoffsRoute: PublicSharedPlayoffsRoute,
 }
 
 const PublicRouteWithChildren =

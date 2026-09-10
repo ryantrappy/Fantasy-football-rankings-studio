@@ -9,7 +9,7 @@ export function ShareReport({
   path,
   search,
 }: {
-  path: '/insights' | '/history';
+  path: '/insights' | '/history' | '/playoffs';
   search: { leagueId: string; year?: number; years?: number[] };
 }) {
   const api = useContext(ApiContext);

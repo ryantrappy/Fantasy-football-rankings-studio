@@ -399,3 +399,5 @@ and/or ordering. Review the source and replacement warning, then confirm. Matchi
 uses team IDs, preserves current names and records, and retains unmatched destination
 teams. Absent source teams are skipped with a count; the source edition is never edited.
 Copied content follows the destination's normal autosave and revision-history behavior.
+
+Playoff forecasts live in the **Playoff simulation** navigation tab. Switching between Season insights and Playoff simulation keeps the selected league and season. Its share link opens the same simulation view at `/shared/playoffs`.

@@ -26,9 +26,18 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
         <Link
           to={shared ? '/shared/insights' : '/insights'}
           activeOptions={{ includeSearch: false }}
-          search={{ leagueId, year: defaultSeason() }}
+          search={{ leagueId, year: search.year || defaultSeason() }}
         >
           Season insights
+        </Link>
+      </ChakraLink>
+      <ChakraLink asChild>
+        <Link
+          to={shared ? '/shared/playoffs' : '/playoffs'}
+          activeOptions={{ includeSearch: false }}
+          search={{ leagueId, year: search.year || defaultSeason() }}
+        >
+          Playoff simulation
         </Link>
       </ChakraLink>
       <ChakraLink asChild>

@@ -199,3 +199,88 @@ describe('useRankingEditor', () => {
     expect(result.current.savedAt).toBeUndefined();
   });
 });
+
+function mockStorage() {
+  const data = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      data.set(key, value);
+    },
+    removeItem: (key: string) => {
+      data.delete(key);
+    },
+    clear: () => data.clear(),
+    get length() {
+      return data.size;
+    },
+  });
+}
+afterEach(() => vi.unstubAllGlobals());
+it('recovers all unsaved content only after explicit restore and isolates accounts', async () => {
+  mockStorage();
+  const api = { ...makeApi(), subject: 'owner-a' };
+  const first = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  const draft = {
+    ...existing,
+    rankingsTitle: 'Recovered title',
+    introduction: 'Offline intro',
+    teams: [{ ...existing.teams[0], description: 'Offline commentary' }],
+  };
+  act(() => first.result.current.update(() => draft));
+  first.unmount();
+  const otherApi = { ...api, subject: 'owner-b' };
+  const other = renderHook(() => useRankingEditor(otherApi, league, 2026, 2));
+  await act(async () => {});
+  expect(other.result.current.recovery).toBeUndefined();
+  other.unmount();
+  const second = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  expect(second.result.current.ranking).toEqual(existing);
+  expect(second.result.current.recovery).toEqual(draft);
+  expect(api.saveRanking).not.toHaveBeenCalled();
+  act(() => second.result.current.restoreDraft());
+  expect(second.result.current.ranking).toEqual(draft);
+  await act(async () => second.result.current.flush());
+  expect(window.localStorage.length).toBe(0);
+  second.unmount();
+});
+it('discards a local draft without replacing the saved edition', async () => {
+  mockStorage();
+  const api = { ...makeApi(), subject: 'owner' };
+  const first = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => first.result.current.update((r) => ({ ...r, introduction: 'Discard me' })));
+  first.unmount();
+  const next = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => next.result.current.discardDraft());
+  expect(next.result.current.ranking).toEqual(existing);
+  expect(next.result.current.recovery).toBeUndefined();
+  expect(window.localStorage.length).toBe(0);
+  next.unmount();
+});
+it('preserves a conflicting local draft until the saved version is reviewed and chosen', async () => {
+  const api = makeApi();
+  const newer = { ...existing, revision: 2, introduction: 'Remote version' };
+  api.saveRanking.mockRejectedValueOnce(Object.assign(new Error('Conflict'), { status: 409 }));
+  const editor = renderHook(() => useRankingEditor(api, league, 2026, 2));
+  await act(async () => {});
+  act(() => editor.result.current.update((r) => ({ ...r, introduction: 'Local version' })));
+  await act(async () => {
+    await editor.result.current.flush().catch(() => {});
+  });
+  expect(editor.result.current.hasConflict).toBe(true);
+  expect(editor.result.current.ranking?.introduction).toBe('Local version');
+  api.getRankings.mockResolvedValue([newer]);
+  await act(async () => editor.result.current.inspectConflict());
+  expect(editor.result.current.conflictVersion).toEqual(newer);
+  act(() => editor.result.current.resolveConflict(true));
+  await act(async () => editor.result.current.flush());
+  expect(api.saveRanking.mock.lastCall?.[0]).toMatchObject({
+    introduction: 'Local version',
+    revision: 2,
+  });
+  editor.unmount();
+});

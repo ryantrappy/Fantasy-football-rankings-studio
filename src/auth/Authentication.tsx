@@ -1,3 +1,7 @@
+import { PasswordReset } from './PasswordReset';
+import { logClientError } from '../logging';
+import { EspnSetup } from '../components/EspnSetup';
+import { Link } from '@tanstack/react-router';
 import { InsightsAccess } from './InsightsAccess';
 import { Box, Button, Heading, Text, chakra } from '@chakra-ui/react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
@@ -26,34 +30,20 @@ function LoadingSession() {
   );
 }
 
-export function Authentication({
-  children,
-  optional = false,
-}: {
-  children: ReactNode;
-  optional?: boolean;
-}) {
+export function Authentication({ children }: { children: ReactNode }) {
   return (
-    <ClientOnly
-      fallback={optional ? <chakra.output>Loading report…</chakra.output> : <LoadingSession />}
-    >
-      <BrowserAuthentication optional={optional}>{children}</BrowserAuthentication>
+    <ClientOnly fallback={<LoadingSession />}>
+      <BrowserAuthentication>{children}</BrowserAuthentication>
     </ClientOnly>
   );
 }
 
-function BrowserAuthentication({ children, optional }: { children: ReactNode; optional: boolean }) {
+function BrowserAuthentication({ children }: { children: ReactNode }) {
   const router = useRouter();
   const domain = import.meta.env.VITE_AUTH0_DOMAIN;
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
   if (!domain || !clientId || !audience) {
-    if (optional)
-      return (
-        <SessionContext.Provider value={{ isAuthenticated: false }}>
-          <InsightsAccess>{children}</InsightsAccess>
-        </SessionContext.Provider>
-      );
     return (
       <Box
         as="section"
@@ -95,12 +85,12 @@ function BrowserAuthentication({ children, optional }: { children: ReactNode; op
         });
       }}
     >
-      <Session optional={optional}>{children}</Session>
+      <Session>{children}</Session>
     </Auth0Provider>
   );
 }
 
-function Session({ children, optional }: { children: ReactNode; optional: boolean }) {
+function Session({ children }: { children: ReactNode }) {
   const {
     isLoading,
     isAuthenticated,
@@ -110,6 +100,9 @@ function Session({ children, optional }: { children: ReactNode; optional: boolea
     getAccessTokenSilently,
     user,
   } = useAuth0();
+  useEffect(() => {
+    if (error) logClientError('auth.session', error);
+  }, [error]);
   const [loginError, setLoginError] = useState('');
   const api = useMemo(
     () => createApi(getAccessTokenSilently, user?.sub),
@@ -117,18 +110,10 @@ function Session({ children, optional }: { children: ReactNode; optional: boolea
   );
   useEffect(
     () => () => {
-      void api.dispose();
+      void api.dispose().catch((error) => logClientError('session.dispose', error));
     },
     [api],
   );
-  if (optional)
-    return (
-      <SessionContext.Provider value={{ isAuthenticated: !!isAuthenticated && !error }}>
-        <InsightsAccess privateApi={isAuthenticated && !error ? api : undefined}>
-          {children}
-        </InsightsAccess>
-      </SessionContext.Provider>
-    );
   if (isLoading) return <LoadingSession />;
   if (!isAuthenticated || error)
     return (
@@ -152,34 +137,54 @@ function Session({ children, optional }: { children: ReactNode; optional: boolea
           </Text>
         )}
         <Button
-          colorPalette="green"
+          colorPalette="indigo"
           variant="solid"
           type="button"
 
           onClick={() =>
             void loginWithRedirect({
               appState: { returnTo: window.location.pathname + window.location.search },
-            }).catch((failure) => setLoginError(errorMessage(failure)))
+            }).catch((failure) => {
+              logClientError('auth.login', failure);
+              setLoginError(errorMessage(failure));
+            })
           }
         >
           Sign in
         </Button>
+        <PasswordReset />
       </Box>
     );
   return (
     <SessionContext.Provider value={{ isAuthenticated: true }}>
       <ApiContext.Provider value={api}>
         <Box textAlign="right" className="session-actions">
+          <Button asChild variant="plain">
+            <Link to="/profile">Your profile</Link>
+          </Button>
+          <Button asChild variant="plain">
+            <Link to="/espn">ESPN settings</Link>
+          </Button>
           <Button
             variant="plain"
             type="button"
 
-            onClick={() => void logout({ logoutParams: { returnTo: window.location.origin } })}
+            onClick={() =>
+              void logout({ logoutParams: { returnTo: window.location.origin } }).catch(
+                (failure) => {
+                  logClientError('auth.logout', failure);
+                  setLoginError(errorMessage(failure));
+                },
+              )
+            }
           >
             Sign out
           </Button>
         </Box>
-        {children}
+        {loginError && <Text role="alert">{loginError}</Text>}
+        <EspnSetup key={user?.sub} api={api}>
+          <InsightsAccess privateApi={api}>{children}</InsightsAccess>
+        </EspnSetup>
       </ApiContext.Provider>
     </SessionContext.Provider>
   );

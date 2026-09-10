@@ -1,6 +1,9 @@
 import { Team } from './teams.interface';
 
 export interface WeeklyRanking {
+  revision?: number;
+  updatedAt?: Date;
+  revisions?: { savedAt: string; ranking: WeeklyRanking }[];
   _id?: string;
   rankingsTitle: string;
   introduction: string;

@@ -1,5 +1,6 @@
 import { Box, Button, Container, Flex, Heading, Text, Link as ChakraLink } from '@chakra-ui/react';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { installBrowserErrorLogging, logClientError } from '../logging';
 import { createRootRoute, HeadContent, Link, Outlet, Scripts } from '@tanstack/react-router';
 import { Provider } from '../components/ui/provider';
 import styles from '../index.css?url';
@@ -21,6 +22,7 @@ export const Route = createRootRoute({
     ],
   }),
   shellComponent: Document,
+  onCatch: (error) => logClientError('route.error', error),
   component: Outlet,
   notFoundComponent: () => (
     <Box
@@ -67,6 +69,7 @@ export const Route = createRootRoute({
 });
 
 function Document({ children }: { children: ReactNode }) {
+  useEffect(() => installBrowserErrorLogging(window), []);
   return (
     <html lang="en">
       <head>
@@ -76,6 +79,7 @@ function Document({ children }: { children: ReactNode }) {
         <Provider>
           <Flex
             as="header"
+            className="site-header"
             justify="space-between"
             gap={4}
             py={6}

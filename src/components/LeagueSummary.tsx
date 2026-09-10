@@ -1,3 +1,5 @@
+import { SeasonAchievements } from './SeasonAchievements';
+import { CalculationGuide } from './CalculationGuide';
 import { DataTable } from './DataTable';
 import { Box, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react';
 import { useMemo } from 'react';
@@ -54,6 +56,8 @@ export function LeagueSummary({
         moves. Sample sizes stay visible; leaders require 3 graded trades, 5 rated pickups, or 4
         scored weeks.
       </Text>
+      <CalculationGuide />
+      <SeasonAchievements rows={rows} />
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} my={6} className="insight-cards">
         <Box as="article">
           <Text mb={4} className="eyebrow">

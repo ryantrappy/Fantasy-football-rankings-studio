@@ -1,0 +1,44 @@
+vi.mock('@rolldown/plugin-babel', () => ({ default: () => ({ name: 'babel' }) }));
+// @vitest-environment node
+const loadEnv = vi.hoisted(() => vi.fn());
+vi.mock('vite', () => ({ defineConfig: (config: unknown) => config, loadEnv }));
+vi.mock('@vitejs/plugin-react', () => ({
+  default: () => ({ name: 'react' }),
+  reactCompilerPreset: () => ({}),
+}));
+vi.mock('@tanstack/react-start/plugin/vite', () => ({ tanstackStart: () => ({ name: 'start' }) }));
+vi.mock('nitro/vite', () => ({ nitro: () => ({ name: 'nitro' }) }));
+import config from '../../../vite.config';
+afterEach(() => vi.unstubAllEnvs());
+it('loads the server encryption key and preserves shell overrides without exposing client definitions', async () => {
+  vi.stubEnv('ESPN_CREDENTIALS_KEY', undefined);
+  loadEnv.mockReturnValue({ ESPN_CREDENTIALS_KEY: 'a'.repeat(64) });
+  if (typeof config !== 'function') throw new Error('Expected config factory');
+  const settings = await config({ command: 'serve', mode: 'development' });
+  expect(process.env.ESPN_CREDENTIALS_KEY).toBe('a'.repeat(64));
+  expect(loadEnv).toHaveBeenCalledWith('development', process.cwd(), '');
+  expect(settings.define).toBeUndefined();
+  expect(settings.envPrefix).toBeUndefined();
+  vi.stubEnv('ESPN_CREDENTIALS_KEY', 'b'.repeat(64));
+  await config({ command: 'serve', mode: 'development' });
+  expect(process.env.ESPN_CREDENTIALS_KEY).toBe('b'.repeat(64));
+});
+it('leaves missing optional and required server settings absent', async () => {
+  const keys = [
+    'AUTH0_ISSUER_BASE_URL',
+    'AUTH0_MANAGEMENT_CLIENT_SECRET',
+    'ESPN_CREDENTIALS_KEY',
+    'ESPN_S2',
+    'SWID',
+    'WRITING_AI_PROVIDERS',
+    'WRITING_AI_USERS',
+  ];
+  for (const key of keys) vi.stubEnv(key, undefined);
+  loadEnv.mockReturnValue({});
+  if (typeof config !== 'function') throw new Error('Expected config factory');
+  await config({ command: 'serve', mode: 'development' });
+  for (const key of keys) {
+    expect(process.env[key]).toBeUndefined();
+    expect(Object.hasOwn(process.env, key)).toBe(false);
+  }
+});

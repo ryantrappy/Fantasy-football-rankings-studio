@@ -1,7 +1,10 @@
+import * as publishingFunctions from '../functions/publishing.functions';
+import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
 import { QueryClient } from '@tanstack/query-core';
 import * as functions from '../functions/rankings.functions';
+import * as profile from '../functions/profile.functions';
 import type { League, LeagueApi, WeeklyRanking } from '../types';
 
 export class ApiError extends Error {
@@ -58,6 +61,67 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return collection;
   }
   const api: LeagueApi = {
+    subject,
+    management: {
+      archived: async () =>
+        unwrap(await functions.listArchivedLeagues({ headers: await headers() })),
+      archive: async (leagueId, archived) => {
+        unwrap(
+          await functions.setLeagueArchived({
+            data: { leagueId, archived },
+            headers: await headers(),
+          }),
+        );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+      },
+    },
+    reportSharing: {
+      get: async (leagueId) =>
+        unwrap(await functions.getReportSharing({ data: { leagueId }, headers: await headers() })),
+      set: async (leagueId, enabled) =>
+        unwrap(
+          await functions.setReportSharing({
+            data: { leagueId, enabled },
+            headers: await headers(),
+          }),
+        ),
+    },
+    revisions: {
+      list: async (id) =>
+        unwrap(await functions.getRankingRevisions({ data: { id }, headers: await headers() })),
+      restore: async (id, revision, expectedRevision) =>
+        unwrap(
+          await functions.restoreRankingRevision({
+            data: { id, revision, expectedRevision },
+            headers: await headers(),
+          }),
+        ),
+    },
+    publishing: {
+      status: async (id) =>
+        unwrap(
+          await publishingFunctions.publicationStatus({ data: { id }, headers: await headers() }),
+        ),
+      publish: async (id, revision) =>
+        unwrap(
+          await publishingFunctions.publishEdition({
+            data: { id, revision },
+            headers: await headers(),
+          }),
+        ),
+      unpublish: async (id) =>
+        unwrap(
+          await publishingFunctions.unpublishEdition({ data: { id }, headers: await headers() }),
+        ),
+    },
+    writing: {
+      context: async (data) =>
+        unwrap(await writingFunctions.getContext({ data, headers: await headers() })),
+      providers: async () =>
+        unwrap(await writingFunctions.getProviders({ headers: await headers() })),
+      generate: async (data) =>
+        unwrap(await writingFunctions.generateSuggestions({ data, headers: await headers() })),
+    },
     listLeagues: async () => {
       await leagueCollection.preload();
       await leagueCollection.utils.refetch({ throwOnError: true });
@@ -92,6 +156,30 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   };
   return {
     ...api,
+    getProfile: async () => unwrap(await profile.getProfile({ headers: await headers() })),
+    updateProfile: async (data: import('../profile').ProfileUpdate) =>
+      unwrap(await profile.updateProfile({ data, headers: await headers() })),
+    getEspnCredentialStatus: async () =>
+      unwrap(await functions.getEspnCredentialStatus({ headers: await headers() })),
+    saveEspnCredentials: async (data: import('../espn-credentials').EspnCredentials) => {
+      const status = unwrap(
+        await functions.saveEspnCredentials({ data, headers: await headers() }),
+      );
+      await queryClient.cancelQueries();
+      queryClient.removeQueries({
+        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
+      });
+      return status;
+    },
+    removeEspnCredentials: async () => {
+      const status = unwrap(await functions.removeEspnCredentials({ headers: await headers() }));
+      await queryClient.cancelQueries();
+      queryClient.removeQueries({
+        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
+      });
+      return status;
+    },
+    skipEspnSetup: async () => unwrap(await functions.skipEspnSetup({ headers: await headers() })),
     getLeagueSeasons: async (leagueId: string) =>
       queryClient.fetchQuery({
         queryKey: [subject, 'league-seasons', leagueId],

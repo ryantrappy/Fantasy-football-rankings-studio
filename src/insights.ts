@@ -1,3 +1,10 @@
+export interface SeasonResult {
+  teamId: string;
+  playoff: boolean | null;
+  finish: number | null;
+  champion: boolean | null;
+  lastPlace: boolean | null;
+}
 export interface ScoreWeek {
   teamId: string;
   week: number;
@@ -18,6 +25,8 @@ export interface PlayerMove {
   to: string | null;
 }
 export interface InsightsSource {
+  playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  results?: SeasonResult[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
   scores: ScoreWeek[];
@@ -53,6 +62,8 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  results?: SeasonResult[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;
   generatedAt: string;

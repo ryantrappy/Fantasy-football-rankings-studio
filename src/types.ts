@@ -1,4 +1,5 @@
 export interface League {
+  providerLeagueId?: string;
   _id?: string;
   leagueId: string;
   leagueName: string;
@@ -21,6 +22,7 @@ export interface TeamRanking extends Team {
 }
 
 export interface WeeklyRanking {
+  revision?: number;
   _id?: string;
   leagueId: string;
   leagueName?: string;
@@ -32,6 +34,21 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  management?: {
+    archived(): Promise<League[]>;
+    archive(leagueId: string, archived: boolean): Promise<void>;
+  };
+  reportSharing?: {
+    get(leagueId: string): Promise<boolean>;
+    set(leagueId: string, enabled: boolean): Promise<boolean>;
+  };
+  revisions?: {
+    list(id: string): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
+    restore(id: string, revision: number, expectedRevision: number): Promise<WeeklyRanking>;
+  };
+  publishing?: import('./publishing').PublishingApi;
+  subject?: string;
+  writing?: import('./writing').WritingApi;
   listLeagues(): Promise<League[]>;
   createLeague(league: Omit<League, '_id'>): Promise<League>;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;

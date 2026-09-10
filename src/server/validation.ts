@@ -24,6 +24,7 @@ const teamSchema = z.object({
   delta: z.number().int().optional(),
 });
 export const rankingSchema = z.object({
+  revision: z.number().int().nonnegative().optional(),
   _id: z
     .string()
     .regex(/^[a-f\d]{24}$/i)

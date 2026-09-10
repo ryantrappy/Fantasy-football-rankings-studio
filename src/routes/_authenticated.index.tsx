@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import {
   Box,
   Button,
@@ -39,6 +40,7 @@ function RankingsPage() {
         await editor.current?.flush();
         return false;
       } catch (failure) {
+        logClientError('_authenticated.index', failure);
         setError(errorMessage(failure));
         return true;
       }
@@ -56,6 +58,7 @@ function RankingsPage() {
         setYear(entries[0]?.seasonId || defaultSeason());
       })
       .catch((failure) => {
+        logClientError('_authenticated.index', failure);
         if (!cancelled) setError(errorMessage(failure));
       })
       .finally(() => {
@@ -73,6 +76,7 @@ function RankingsPage() {
       setError('');
       change();
     } catch (failure) {
+      logClientError('_authenticated.index', failure);
       setError(errorMessage(failure));
     } finally {
       setSwitching(false);
@@ -98,7 +102,10 @@ function RankingsPage() {
             Power rankings studio
           </Heading>
         </Box>
-        <Button asChild colorPalette="green">
+        <Button asChild variant="outline">
+          <Link to="/leagues/manage">Manage leagues</Link>
+        </Button>
+        <Button asChild colorPalette="indigo">
           <Link to="/leagues/new">Create league</Link>
         </Button>
       </Flex>

@@ -1,3 +1,4 @@
+import { logClientError } from '../logging';
 import { Box, Button, Field, Flex, Grid, Heading, Input, Text, chakra } from '@chakra-ui/react';
 import { useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
@@ -34,6 +35,7 @@ export function CreateLeague({
           }),
         );
       } catch (failure) {
+        logClientError('CreateLeague', failure);
         setError(errorMessage(failure));
       }
     },
@@ -204,7 +206,7 @@ export function CreateLeague({
             className="form-footer"
           >
             <Text mb={4}>Your league is checked before it’s added.</Text>
-            <Button colorPalette="green" variant="solid" type="submit" disabled={busy}>
+            <Button colorPalette="indigo" variant="solid" type="submit" disabled={busy}>
               {busy ? 'Connecting league…' : 'Create league'}
               {!busy && <Icon name="arrow" />}
             </Button>
@@ -240,7 +242,7 @@ export function CreateLeague({
             </li>
           </ol>
           <Text mb={4} className="guide-footnote">
-            Private ESPN leagues need server access configured by your administrator.
+            Private ESPN leagues use the cookies saved in your ESPN settings.
           </Text>
         </Box>
       </Grid>

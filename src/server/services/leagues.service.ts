@@ -1,16 +1,25 @@
+import { randomBytes } from 'node:crypto';
 import leagueModel from '../models/league.model';
 import { League, LeagueType } from '../interfaces/league.interface';
 import HttpException from '../exceptions/HttpException';
 import { LeagueProvider } from '../providers/league-provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
+import { getEspnCredentials } from '../espn-credentials.server';
 
 class LeaguesService {
   public leagues = leagueModel;
-  public providers: Record<LeagueType, LeagueProvider> = {
-    [LeagueType.Sleeper]: new SleeperProvider(),
-    [LeagueType.Espn]: new EspnProvider(),
-  };
+  public async providerFor(league: League, ownerSubject: string): Promise<LeagueProvider> {
+    return league.leagueType === LeagueType.Espn
+      ? new EspnProvider(await this.espnAccess(league, ownerSubject))
+      : new SleeperProvider();
+  }
+
+  public async espnAccess(league: League, ownerSubject: string) {
+    return league.leagueType === LeagueType.Espn
+      ? ((await getEspnCredentials(ownerSubject)) ?? 'public')
+      : 'public';
+  }
 
   public async getLeagueById(id: string, ownerSubject: string): Promise<League> {
     const league = await this.leagues.findOne({ leagueId: id, ownerSubject }).lean();
@@ -20,20 +29,50 @@ class LeaguesService {
 
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
-      .findOne({ leagueId: id })
-      .select({ _id: 0, leagueId: 1, leagueName: 1, leagueType: 1, seasonId: 1 })
+      .findOne({ leagueId: id, publicReports: { $ne: false } })
+      .select({
+        _id: 0,
+        leagueId: 1,
+        leagueName: 1,
+        leagueType: 1,
+        seasonId: 1,
+        providerLeagueId: 1,
+      })
       .lean();
     if (!league) throw new HttpException(404, 'League not found.');
     return {
       leagueId: league.leagueId,
+      ...(league.providerLeagueId ? { providerLeagueId: league.providerLeagueId } : {}),
       leagueName: league.leagueName,
       leagueType: league.leagueType,
       seasonId: league.seasonId,
     };
   }
 
-  public async listLeagues(ownerSubject: string) {
-    return this.leagues.find({ ownerSubject }).sort({ leagueName: 1 }).lean();
+  public async setReportSharing(id: string, enabled: boolean, owner: string) {
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner },
+      { $set: { publicReports: enabled } },
+      { returnDocument: 'after' },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
+    return result.publicReports !== false;
+  }
+
+  public async listLeagues(ownerSubject: string, archived = false) {
+    return this.leagues
+      .find({ ownerSubject, archived: archived ? true : { $ne: true } })
+      .sort({ leagueName: 1 })
+      .lean();
+  }
+
+  public async setArchived(id: string, archived: boolean, owner: string) {
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner },
+      { $set: { archived } },
+      { returnDocument: 'after' },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
   }
 
   public async createNewLeague(input: League, ownerSubject: string): Promise<League> {
@@ -48,36 +87,61 @@ class LeaguesService {
       (typeof input.leagueName !== 'string' || input.leagueName.length > 120)
     )
       throw new HttpException(400, 'League name must be at most 120 characters.');
-    const leagueId = input.leagueId.replace(/^0+(?=\d)/, '');
-    if (await this.leagues.exists({ leagueId }))
+    const providerLeagueId = input.leagueId.replace(/^0+(?=\d)/, '');
+    if (
+      await this.leagues.exists({
+        ownerSubject,
+        leagueType: input.leagueType,
+        $or: [
+          { providerLeagueId },
+          { providerLeagueId: { $exists: false }, leagueId: providerLeagueId },
+        ],
+      })
+    )
       throw new HttpException(409, 'This league is already registered.');
     const league: League = {
-      leagueId,
+      leagueId: BigInt('0x' + randomBytes(12).toString('hex')).toString(),
+      providerLeagueId,
       leagueType: input.leagueType,
       leagueName: input.leagueName?.trim() || '',
       seasonId: input.seasonId,
       ownerSubject,
     };
-    const info = await this.providers[league.leagueType].getLeague(league, league.seasonId);
-    return this.leagues.create({
-      ...league,
-      leagueName: info.leagueName,
-    }) as unknown as Promise<League>;
+    const info = await (
+      await this.providerFor(league, ownerSubject)
+    ).getLeague(league, league.seasonId);
+    try {
+      return (await this.leagues.create({
+        ...league,
+        leagueName: info.leagueName,
+      })) as unknown as League;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000)
+        throw new HttpException(
+          409,
+          'This league is already registered or its workspace ID collided. Refresh and retry.',
+        );
+      throw error;
+    }
   }
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getLeague(league, seasonId);
+    return (await this.providerFor(league, ownerSubject)).getLeague(league, seasonId);
   }
 
   public async getTeams(id: string, seasonId: number, week: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getTeams(league, seasonId, week);
+    return (await this.providerFor(league, ownerSubject)).getHistoricalTeams(
+      league,
+      seasonId,
+      week,
+    );
   }
 
   public async getMatchups(id: string, seasonId: number, week: number, ownerSubject: string) {
     const league = await this.getLeagueById(id, ownerSubject);
-    return this.providers[league.leagueType].getMatchups(league, seasonId, week);
+    return (await this.providerFor(league, ownerSubject)).getMatchups(league, seasonId, week);
   }
 }
 export default LeaguesService;

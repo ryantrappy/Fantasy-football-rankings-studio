@@ -4,12 +4,14 @@ export enum LeagueType {
 }
 
 export interface League {
+  providerLeagueId?: string;
   _id?: string;
   leagueId: string;
   leagueName: string;
   leagueType: LeagueType;
   seasonId: number;
   ownerSubject?: string;
+  publicReports?: boolean;
 }
 
 export interface LeagueInfo extends League {

@@ -58,3 +58,49 @@ export const getLeagueSeasons = createServerFn({ method: 'GET' })
   .handler(({ data }) =>
     run('getLeagueSeasons', (owner) => operations.getLeagueSeasons(owner, data)),
   );
+
+export const getEspnCredentialStatus = createServerFn({ method: 'GET' }).handler(() =>
+  run('getEspnCredentialStatus', operations.getEspnCredentialStatus),
+);
+export const saveEspnCredentials = createServerFn({ method: 'POST' })
+  .validator((data: import('../espn-credentials').EspnCredentials) => data)
+  .handler(({ data }) =>
+    run('saveEspnCredentials', (owner) => operations.saveEspnCredentials(owner, data)),
+  );
+export const removeEspnCredentials = createServerFn({ method: 'POST' }).handler(() =>
+  run('removeEspnCredentials', operations.removeEspnCredentials),
+);
+export const skipEspnSetup = createServerFn({ method: 'POST' }).handler(() =>
+  run('skipEspnSetup', operations.skipEspnSetup),
+);
+
+export const getRankingRevisions = createServerFn({ method: 'GET' })
+  .validator((data: { id: string }) => data)
+  .handler(({ data }) =>
+    run('getRankingRevisions', (owner) => operations.getRankingRevisions(owner, data)),
+  );
+export const restoreRankingRevision = createServerFn({ method: 'POST' })
+  .validator((data: { id: string; revision: number; expectedRevision: number }) => data)
+  .handler(({ data }) =>
+    run('restoreRankingRevision', (owner) => operations.restoreRankingRevision(owner, data)),
+  );
+
+export const getReportSharing = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string }) => data)
+  .handler(({ data }) =>
+    run('getReportSharing', (owner) => operations.getReportSharing(owner, data)),
+  );
+export const setReportSharing = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; enabled: boolean }) => data)
+  .handler(({ data }) =>
+    run('setReportSharing', (owner) => operations.setReportSharing(owner, data)),
+  );
+
+export const listArchivedLeagues = createServerFn({ method: 'GET' }).handler(() =>
+  run('listArchivedLeagues', operations.listArchivedLeagues),
+);
+export const setLeagueArchived = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; archived: boolean }) => data)
+  .handler(({ data }) =>
+    run('setLeagueArchived', (owner) => operations.setLeagueArchived(owner, data)),
+  );

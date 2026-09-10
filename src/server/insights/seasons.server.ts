@@ -1,3 +1,4 @@
+import { logServerError } from '../logging.server';
 import '@tanstack/react-start/server-only';
 import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
@@ -23,7 +24,7 @@ async function seasonYears(league: League, access: EspnAccess): Promise<number[]
       id: number;
       seasonId: number;
       status?: { previousSeasons?: number[] };
-    }>(league.leagueId, league.seasonId, ['mSettings']);
+    }>(league.providerLeagueId ?? league.leagueId, league.seasonId, ['mSettings']);
     return [...new Set([data.seasonId, ...(data.status?.previousSeasons || [])])]
       .filter((y) => Number.isInteger(y) && y >= 2000 && y <= 2100)
       .sort((a, b) => b - a);
@@ -31,7 +32,7 @@ async function seasonYears(league: League, access: EspnAccess): Promise<number[]
   const provider = new SleeperProvider(),
     seen = new Set<string>(),
     years = new Set<number>();
-  let id = league.leagueId;
+  let id = league.providerLeagueId ?? league.leagueId;
   while (id && !seen.has(id) && seen.size < 30) {
     seen.add(id);
     const data = await provider.get<{ season: string; previous_league_id?: string }>(id);
@@ -43,7 +44,7 @@ async function seasonYears(league: League, access: EspnAccess): Promise<number[]
   return [...years].sort((a, b) => b - a);
 }
 
-export async function discoverSeasons(league: League, access: EspnAccess = 'environment') {
+export async function discoverSeasons(league: League, access: EspnAccess = 'public') {
   try {
     const years = await seasonYears(league, access);
     const activeSeason = years[0] ?? league.seasonId;
@@ -56,6 +57,7 @@ export async function discoverSeasons(league: League, access: EspnAccess = 'envi
     };
   } catch (error) {
     if (access === 'public' && isPublicAccessDenied(error)) {
+      logServerError('discoverSeasons.publicFallback', error, 401);
       const fallbackSeason = league.seasonId;
       return {
         years: [fallbackSeason],

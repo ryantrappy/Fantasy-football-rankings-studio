@@ -13,9 +13,18 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as PublicRouteImport } from './routes/_public'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.index'
-import { Route as PublicHistoryRouteImport } from './routes/_public.history'
-import { Route as PublicInsightsRouteImport } from './routes/_public.insights'
+import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.espn'
+import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
+import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
+import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
+import { Route as AuthenticatedLeaguesManageRouteImport } from './routes/_authenticated.leagues.manage'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
+import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
+import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
+import { Route as PublicSharedPlayoffsRouteImport } from './routes/_public.shared.playoffs'
+import { Route as SharedRankingsPublicIdRouteImport } from './routes/shared.rankings.$publicId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -35,66 +44,178 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const PublicHistoryRoute = PublicHistoryRouteImport.update({
+const AuthenticatedEspnRoute = AuthenticatedEspnRouteImport.update({
+  id: '/espn',
+  path: '/espn',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
   id: '/history',
   path: '/history',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const PublicInsightsRoute = PublicInsightsRouteImport.update({
+const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
-  getParentRoute: () => PublicRoute,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedPlayoffsRoute = AuthenticatedPlayoffsRouteImport.update({
+  id: '/playoffs',
+  path: '/playoffs',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const SharedKonzSuxRoute = SharedKonzSuxRouteImport.update({
+  id: '/shared/konz-sux',
+  path: '/shared/konz-sux',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedLeaguesManageRoute =
+  AuthenticatedLeaguesManageRouteImport.update({
+    id: '/leagues/manage',
+    path: '/leagues/manage',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLeaguesNewRoute = AuthenticatedLeaguesNewRouteImport.update({
   id: '/leagues/new',
   path: '/leagues/new',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const PublicSharedHistoryRoute = PublicSharedHistoryRouteImport.update({
+  id: '/shared/history',
+  path: '/shared/history',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicSharedInsightsRoute = PublicSharedInsightsRouteImport.update({
+  id: '/shared/insights',
+  path: '/shared/insights',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicSharedPlayoffsRoute = PublicSharedPlayoffsRouteImport.update({
+  id: '/shared/playoffs',
+  path: '/shared/playoffs',
+  getParentRoute: () => PublicRoute,
+} as any)
+const SharedRankingsPublicIdRoute = SharedRankingsPublicIdRouteImport.update({
+  id: '/shared/rankings/$publicId',
+  path: '/shared/rankings/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
-  '/history': typeof PublicHistoryRoute
-  '/insights': typeof PublicInsightsRoute
+  '/espn': typeof AuthenticatedEspnRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/playoffs': typeof AuthenticatedPlayoffsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
+  '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/shared/history': typeof PublicSharedHistoryRoute
+  '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/playoffs': typeof PublicSharedPlayoffsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/health': typeof HealthRoute
-  '/history': typeof PublicHistoryRoute
-  '/insights': typeof PublicInsightsRoute
+  '/espn': typeof AuthenticatedEspnRoute
+  '/history': typeof AuthenticatedHistoryRoute
+  '/insights': typeof AuthenticatedInsightsRoute
+  '/playoffs': typeof AuthenticatedPlayoffsRoute
+  '/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
+  '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/shared/history': typeof PublicSharedHistoryRoute
+  '/shared/insights': typeof PublicSharedInsightsRoute
+  '/shared/playoffs': typeof PublicSharedPlayoffsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_public': typeof PublicRouteWithChildren
   '/health': typeof HealthRoute
-  '/_public/history': typeof PublicHistoryRoute
-  '/_public/insights': typeof PublicInsightsRoute
+  '/_authenticated/espn': typeof AuthenticatedEspnRoute
+  '/_authenticated/history': typeof AuthenticatedHistoryRoute
+  '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
+  '/_public/shared/history': typeof PublicSharedHistoryRoute
+  '/_public/shared/insights': typeof PublicSharedInsightsRoute
+  '/_public/shared/playoffs': typeof PublicSharedPlayoffsRoute
+  '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/health' | '/history' | '/insights' | '/leagues/new'
+  fullPaths:
+    | '/'
+    | '/health'
+    | '/espn'
+    | '/history'
+    | '/insights'
+    | '/playoffs'
+    | '/profile'
+    | '/shared/konz-sux'
+    | '/leagues/manage'
+    | '/leagues/new'
+    | '/shared/history'
+    | '/shared/insights'
+    | '/shared/playoffs'
+    | '/shared/rankings/$publicId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health' | '/history' | '/insights' | '/leagues/new'
+  to:
+    | '/'
+    | '/health'
+    | '/espn'
+    | '/history'
+    | '/insights'
+    | '/playoffs'
+    | '/profile'
+    | '/shared/konz-sux'
+    | '/leagues/manage'
+    | '/leagues/new'
+    | '/shared/history'
+    | '/shared/insights'
+    | '/shared/playoffs'
+    | '/shared/rankings/$publicId'
   id:
     | '__root__'
     | '/_authenticated'
     | '/_public'
     | '/health'
-    | '/_public/history'
-    | '/_public/insights'
+    | '/_authenticated/espn'
+    | '/_authenticated/history'
+    | '/_authenticated/insights'
+    | '/_authenticated/playoffs'
+    | '/_authenticated/profile'
+    | '/shared/konz-sux'
     | '/_authenticated/'
+    | '/_authenticated/leagues/manage'
     | '/_authenticated/leagues/new'
+    | '/_public/shared/history'
+    | '/_public/shared/insights'
+    | '/_public/shared/playoffs'
+    | '/shared/rankings/$publicId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PublicRoute: typeof PublicRouteWithChildren
   HealthRoute: typeof HealthRoute
+  SharedKonzSuxRoute: typeof SharedKonzSuxRoute
+  SharedRankingsPublicIdRoute: typeof SharedRankingsPublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -127,19 +248,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_public/history': {
-      id: '/_public/history'
+    '/_authenticated/espn': {
+      id: '/_authenticated/espn'
+      path: '/espn'
+      fullPath: '/espn'
+      preLoaderRoute: typeof AuthenticatedEspnRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/history': {
+      id: '/_authenticated/history'
       path: '/history'
       fullPath: '/history'
-      preLoaderRoute: typeof PublicHistoryRouteImport
-      parentRoute: typeof PublicRoute
+      preLoaderRoute: typeof AuthenticatedHistoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/_public/insights': {
-      id: '/_public/insights'
+    '/_authenticated/insights': {
+      id: '/_authenticated/insights'
       path: '/insights'
       fullPath: '/insights'
-      preLoaderRoute: typeof PublicInsightsRouteImport
-      parentRoute: typeof PublicRoute
+      preLoaderRoute: typeof AuthenticatedInsightsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/playoffs': {
+      id: '/_authenticated/playoffs'
+      path: '/playoffs'
+      fullPath: '/playoffs'
+      preLoaderRoute: typeof AuthenticatedPlayoffsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile': {
+      id: '/_authenticated/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/shared/konz-sux': {
+      id: '/shared/konz-sux'
+      path: '/shared/konz-sux'
+      fullPath: '/shared/konz-sux'
+      preLoaderRoute: typeof SharedKonzSuxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/leagues/manage': {
+      id: '/_authenticated/leagues/manage'
+      path: '/leagues/manage'
+      fullPath: '/leagues/manage'
+      preLoaderRoute: typeof AuthenticatedLeaguesManageRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/leagues/new': {
       id: '/_authenticated/leagues/new'
@@ -148,16 +304,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLeaguesNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_public/shared/history': {
+      id: '/_public/shared/history'
+      path: '/shared/history'
+      fullPath: '/shared/history'
+      preLoaderRoute: typeof PublicSharedHistoryRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/shared/insights': {
+      id: '/_public/shared/insights'
+      path: '/shared/insights'
+      fullPath: '/shared/insights'
+      preLoaderRoute: typeof PublicSharedInsightsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/shared/playoffs': {
+      id: '/_public/shared/playoffs'
+      path: '/shared/playoffs'
+      fullPath: '/shared/playoffs'
+      preLoaderRoute: typeof PublicSharedPlayoffsRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/shared/rankings/$publicId': {
+      id: '/shared/rankings/$publicId'
+      path: '/shared/rankings/$publicId'
+      fullPath: '/shared/rankings/$publicId'
+      preLoaderRoute: typeof SharedRankingsPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedEspnRoute: typeof AuthenticatedEspnRoute
+  AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
+  AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedLeaguesManageRoute: typeof AuthenticatedLeaguesManageRoute
   AuthenticatedLeaguesNewRoute: typeof AuthenticatedLeaguesNewRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedEspnRoute: AuthenticatedEspnRoute,
+  AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
+  AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedLeaguesManageRoute: AuthenticatedLeaguesManageRoute,
   AuthenticatedLeaguesNewRoute: AuthenticatedLeaguesNewRoute,
 }
 
@@ -166,13 +362,15 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface PublicRouteChildren {
-  PublicHistoryRoute: typeof PublicHistoryRoute
-  PublicInsightsRoute: typeof PublicInsightsRoute
+  PublicSharedHistoryRoute: typeof PublicSharedHistoryRoute
+  PublicSharedInsightsRoute: typeof PublicSharedInsightsRoute
+  PublicSharedPlayoffsRoute: typeof PublicSharedPlayoffsRoute
 }
 
 const PublicRouteChildren: PublicRouteChildren = {
-  PublicHistoryRoute: PublicHistoryRoute,
-  PublicInsightsRoute: PublicInsightsRoute,
+  PublicSharedHistoryRoute: PublicSharedHistoryRoute,
+  PublicSharedInsightsRoute: PublicSharedInsightsRoute,
+  PublicSharedPlayoffsRoute: PublicSharedPlayoffsRoute,
 }
 
 const PublicRouteWithChildren =
@@ -182,6 +380,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PublicRoute: PublicRouteWithChildren,
   HealthRoute: HealthRoute,
+  SharedKonzSuxRoute: SharedKonzSuxRoute,
+  SharedRankingsPublicIdRoute: SharedRankingsPublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

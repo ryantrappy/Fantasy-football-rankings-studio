@@ -4,6 +4,13 @@ import HttpException from '../exceptions/HttpException';
 import weeklyRankingModel from '../models/weeklyRanking.model';
 import LeaguesService from './leagues.service';
 
+const revisionFilter = (revision = 0) =>
+  revision === 0 ? { $or: [{ revision: 0 }, { revision: { $exists: false } }] } : { revision };
+const conflict = () =>
+  new HttpException(
+    409,
+    'A newer edition was saved elsewhere. Review the saved version before resolving this conflict.',
+  );
 class RankingsService {
   public weeklyRankings = weeklyRankingModel;
   public leagueService = new LeaguesService();
@@ -21,7 +28,12 @@ class RankingsService {
       week: ranking.week,
       year: ranking.year,
       teams: ranking.teams.map((team, index) => ({
-        ...team,
+        teamName: team.teamName,
+        managerName: team.managerName,
+        description: team.description,
+        wins: team.wins,
+        loss: team.loss,
+        ties: team.ties,
         teamId: String(team.teamId),
         position: index + 1,
       })),
@@ -60,12 +72,21 @@ class RankingsService {
     )
       throw new HttpException(400, 'A ranking cannot be moved to another league, season, or week.');
     const ranking = this.normalize(input);
-    const result = await this.weeklyRankings.findByIdAndUpdate(
-      rankingId,
-      { $set: ranking },
+    const result = await this.weeklyRankings.findOneAndUpdate(
+      { _id: rankingId, ...revisionFilter(input.revision) },
+      {
+        $set: ranking,
+        $inc: { revision: 1 },
+        $push: {
+          revisions: {
+            savedAt: current.updatedAt?.toISOString() ?? new Date().toISOString(),
+            ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
+          },
+        },
+      },
       { returnDocument: 'after', runValidators: true },
     );
-    if (!result) throw new HttpException(404, 'Ranking not found.');
+    if (!result) throw conflict();
     return result as unknown as WeeklyRanking;
   }
 
@@ -79,13 +100,32 @@ class RankingsService {
     await this.leagueService.getLeagueById(leagueId, ownerSubject);
     if (input.leagueId !== leagueId || input.week !== week || input.year !== year)
       throw new HttpException(400, 'Ranking details must match the URL.');
-    const result = await this.weeklyRankings.findOneAndUpdate(
-      { leagueId, week, year },
-      { $set: this.normalize(input) },
-      { returnDocument: 'after', runValidators: true },
-    );
-    if (!result) throw new HttpException(404, 'Ranking not found. Create it before updating.');
-    return result as unknown as WeeklyRanking;
+    const current = await this.weeklyRankings.findOne({ leagueId, week, year });
+    if (!current) throw new HttpException(404, 'Ranking not found.');
+    return this.updateRanking(String(current._id), input, ownerSubject);
+  }
+
+  public async getRevisions(id: string, owner: string) {
+    const current = await this.getRankingById(id, owner);
+    return [
+      ...(current.revisions ?? []),
+      {
+        savedAt: current.updatedAt?.toISOString() ?? '',
+        ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
+      },
+    ].reverse();
+  }
+
+  public async restoreRevision(
+    id: string,
+    revision: number,
+    expectedRevision: number,
+    owner: string,
+  ) {
+    const entries = await this.getRevisions(id, owner);
+    const selected = entries.find((entry) => entry.ranking.revision === revision);
+    if (!selected) throw new HttpException(404, 'Revision not found.');
+    return this.updateRanking(id, { ...selected.ranking, revision: expectedRevision }, owner);
   }
 
   public async getRankingById(rankingId: string, ownerSubject: string): Promise<WeeklyRanking> {

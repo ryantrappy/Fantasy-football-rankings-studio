@@ -1,3 +1,6 @@
+import { sleeperResults, espnResults, type BracketMatch, type EspnResultsData } from './results';
+import { logServerError } from '../logging.server';
+import { defaultSeason } from '../../util/rankings';
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
 import type { InsightsSource, PlayerMove, ScoreWeek } from '../../insights';
@@ -59,7 +62,7 @@ interface SleeperTransaction {
 }
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
   const provider = new SleeperProvider();
-  const season = await provider.resolveSeason(league.leagueId, year);
+  const season = await provider.resolveSeason(league.providerLeagueId ?? league.leagueId, year);
   const [{ data: state }, teams] = await Promise.all([
     axios.get<{ season: string; leg: number; season_type: string }>(
       'https://api.sleeper.app/v1/state/nfl',
@@ -158,12 +161,49 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       }));
     return [...adds, ...drops];
   });
+  let results: InsightsSource['results'];
+  const resultNotes: string[] = [];
+  if (
+    season.status === 'complete' ||
+    (season.settings?.playoff_week_start && completedWeek >= season.settings.playoff_week_start)
+  ) {
+    const brackets = await Promise.allSettled([
+      provider.get<BracketMatch[]>(`${season.league_id}/winners_bracket`),
+      provider.get<BracketMatch[]>(`${season.league_id}/losers_bracket`),
+    ]);
+    for (const result of brackets)
+      if (result.status === 'rejected') {
+        logServerError('insights.sleeperResults', result.reason, 502);
+        resultNotes.push(
+          'Some playoff/finish data could not be loaded. Missing results are excluded from achievement totals.',
+        );
+      }
+    results = sleeperResults(
+      teams.map((t) => t.teamId),
+      season.settings?.playoff_teams,
+      season.status === 'complete',
+      brackets[0].status === 'fulfilled' && Array.isArray(brackets[0].value)
+        ? brackets[0].value
+        : [],
+      brackets[1].status === 'fulfilled' && Array.isArray(brackets[1].value)
+        ? brackets[1].value
+        : [],
+    );
+  }
   const catalog = moves.length ? await sleeperNames() : { names: {}, positions: {} };
   return {
+    playoffSettings:
+      season.settings?.playoff_week_start && season.settings?.playoff_teams
+        ? {
+            regularSeasonEnd: season.settings.playoff_week_start - 1,
+            playoffTeams: season.settings.playoff_teams,
+          }
+        : undefined,
     completedWeek,
     teams,
     scores,
     moves,
+    results,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
     draftPickTradeIds: unique
@@ -171,6 +211,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       .map((t) => t.transaction_id),
     draftPickTrades: unique.filter((t) => t.type === 'trade' && t.draft_picks?.length).length,
     notes: [
+      ...resultNotes,
       'Sleeper’s documented API does not provide historical lineup projections. Scoring trends show actual points and league-median results instead. Positional comparisons use Sleeper’s current primary-position catalog.',
     ],
   };
@@ -207,7 +248,7 @@ interface EspnTransaction {
   proposedDate: number;
   items?: { type: string; playerId: number; fromTeamId: number; toTeamId: number }[];
 }
-interface EspnSnapshot {
+interface EspnSnapshot extends EspnResultsData {
   id: number;
   status?: { latestScoringPeriod: number; finalScoringPeriod: number };
   schedule?: { home?: EspnSide; away?: EspnSide; playoffTierType?: string }[];
@@ -216,7 +257,11 @@ interface EspnSnapshot {
 async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
   const provider = new EspnProvider(access);
   const [meta, teams] = await Promise.all([
-    provider.get<EspnSnapshot>(league.leagueId, year, ['mSettings']),
+    provider.get<EspnSnapshot>(league.providerLeagueId ?? league.leagueId, year, [
+      'mSettings',
+      'mTeam',
+      'mMatchup',
+    ]),
     provider.getTeams(league, year, 1),
   ]);
   if (!meta.status) throw new Error('ESPN season status unavailable');
@@ -228,14 +273,19 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     mapWeeks(weeksThrough(completedWeek), async (week) => ({
       week,
       data: await provider.get<EspnSnapshot>(
-        league.leagueId,
+        league.providerLeagueId ?? league.leagueId,
         year,
         ['mMatchupScore', 'mBoxscore'],
         week,
       ),
     })),
     mapWeeks(weeksThrough(Math.min(18, completedWeek + 1)), (week) =>
-      provider.get<EspnSnapshot>(league.leagueId, year, ['mTransactions2'], week),
+      provider.get<EspnSnapshot>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mTransactions2'],
+        week,
+      ),
     ),
   ]);
   const playerNames: Record<string, string> = {};
@@ -330,10 +380,31 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
       })),
   );
   return {
+    playoffSettings:
+      meta.settings?.scheduleSettings?.matchupPeriodCount &&
+      meta.settings.scheduleSettings.playoffTeamCount &&
+      meta.settings.scheduleSettings.matchupPeriodLength === 1
+        ? {
+            regularSeasonEnd: meta.settings.scheduleSettings.matchupPeriodCount,
+            playoffTeams: meta.settings.scheduleSettings.playoffTeamCount,
+          }
+        : undefined,
     completedWeek,
     teams,
     scores,
     moves,
+    results: espnResults(
+      teams.map((t) => t.teamId),
+      meta,
+      year < defaultSeason() || meta.status.latestScoringPeriod > meta.status.finalScoringPeriod,
+      (meta.schedule || []).some(
+        (m) =>
+          m.playoffTierType === 'WINNERS_BRACKET' &&
+          [m.home, m.away].some((side) =>
+            Object.keys(side?.pointsByScoringPeriod || {}).some((w) => Number(w) <= completedWeek),
+          ),
+      ),
+    ),
     playerNames,
     playerPositions,
     draftPickTrades: 0,
@@ -342,12 +413,14 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     ],
   };
 }
-export async function loadInsights(
+export async function loadInsights(league: League, year: number, access: EspnAccess = 'public') {
+  const source = await loadInsightsSource(league, year, access);
+  return { ...calculateInsights(source), playoffSettings: source.playoffSettings };
+}
+export async function loadInsightsSource(
   league: League,
   year: number,
-  access: EspnAccess = 'environment',
+  access: EspnAccess = 'public',
 ) {
-  return calculateInsights(
-    await (league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access)),
-  );
+  return league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access);
 }

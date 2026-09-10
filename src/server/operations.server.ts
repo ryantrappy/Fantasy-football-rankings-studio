@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
+import * as credentials from './espn-credentials.server';
 import { logServerError } from './logging.server';
 import { discoverSeasons } from './insights/seasons.server';
 import { loadInsights } from './insights/load.server';
@@ -27,6 +28,7 @@ function publicLeague(value: League): League {
   return {
     _id: String(value._id),
     leagueId: value.leagueId,
+    ...(value.providerLeagueId ? { providerLeagueId: value.providerLeagueId } : {}),
     leagueName: value.leagueName,
     leagueType: value.leagueType,
     seasonId: value.seasonId,
@@ -34,6 +36,7 @@ function publicLeague(value: League): League {
 }
 function publicRanking(value: WeeklyRanking): WeeklyRanking {
   return {
+    revision: value.revision ?? 0,
     _id: String(value._id),
     leagueId: value.leagueId,
     rankingsTitle: value.rankingsTitle,
@@ -95,14 +98,48 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  listArchivedLeagues: async (owner: string) =>
+    (await leagues.listLeagues(owner, true)).map(publicLeague),
+  setLeagueArchived: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ archived: z.boolean() }).parse(input);
+    await leagues.setArchived(data.leagueId, data.archived, owner);
+  },
+  getReportSharing: async (owner: string, input: unknown) =>
+    (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
+    false,
+  setReportSharing: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ enabled: z.boolean() }).parse(input);
+    return leagues.setReportSharing(data.leagueId, data.enabled, owner);
+  },
+  getRankingRevisions: async (owner: string, input: unknown) =>
+    (await rankings.getRevisions(objectIdSchema.parse(input).id, owner)).map((entry) => ({
+      savedAt: entry.savedAt,
+      ranking: publicRanking(entry.ranking),
+    })),
+  restoreRankingRevision: async (owner: string, input: unknown) => {
+    const data = objectIdSchema
+      .extend({
+        revision: z.number().int().nonnegative(),
+        expectedRevision: z.number().int().nonnegative(),
+      })
+      .parse(input);
+    return publicRanking(
+      await rankings.restoreRevision(data.id, data.revision, data.expectedRevision, owner),
+    );
+  },
+  getEspnCredentialStatus: credentials.getEspnCredentialStatus,
+  saveEspnCredentials: credentials.saveEspnCredentials,
+  removeEspnCredentials: credentials.removeEspnCredentials,
+  skipEspnSetup: credentials.skipEspnSetup,
   getLeagueSeasons: async (owner: string, input: unknown) => {
     const { leagueId } = leagueIdSchema.parse(input);
-    return discoverSeasons(await leagues.getLeagueById(leagueId, owner));
+    const league = await leagues.getLeagueById(leagueId, owner);
+    return discoverSeasons(league, await leagues.espnAccess(league, owner));
   },
   getInsights: async (owner: string, input: unknown) => {
     const data = seasonSchema.parse(input);
     const league = await leagues.getLeagueById(data.leagueId, owner);
-    return loadInsights(league, data.year);
+    return loadInsights(league, data.year, await leagues.espnAccess(league, owner));
   },
   listLeagues: async (owner: string) => (await leagues.listLeagues(owner)).map(publicLeague),
   createLeague: async (owner: string, input: unknown) =>

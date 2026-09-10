@@ -115,3 +115,48 @@ it('summarizes graded move quality without counting ungraded trades as losses', 
     tradeGainTotal: 4,
   });
 });
+
+it('aggregates finish achievements by manager with independent coverage and excludes unknown seasons', () => {
+  const older = make(),
+    newer = make(),
+    ongoing = make();
+  older.results = [{ teamId: 'a', playoff: true, champion: true, lastPlace: false, finish: 1 }];
+  newer.results = [{ teamId: 'a', playoff: false, champion: false, lastPlace: true, finish: 4 }];
+  newer.teams[0].managerName = 'Renamed';
+  const row = summarizeLeague([
+    { year: 2024, data: older },
+    { year: 2025, data: newer },
+    { year: 2026, data: ongoing },
+  ]).find((r) => r.key === 'a')!;
+  expect(row).toMatchObject({
+    playoffAppearances: 1,
+    playoffSeasons: 2,
+    championships: 1,
+    championshipSeasons: 2,
+    lastPlaces: 1,
+    lastPlaceSeasons: 2,
+    finishTotal: 5,
+    finishSeasons: 2,
+  });
+  expect(row.seasons).toHaveLength(3);
+});
+
+it('keeps changed co-owner groups separate while renamed teams retain their history', () => {
+  const first = make(),
+    second = make(),
+    third = make();
+  first.teams[0].managerKey = 'sleeper:a,b';
+  second.teams[0].managerKey = 'sleeper:a,b';
+  second.teams[0].teamName = 'Renamed';
+  third.teams[0].managerKey = 'sleeper:a,c';
+  const rows = summarizeLeague([
+    { year: 2023, data: first },
+    { year: 2024, data: second },
+    { year: 2025, data: third },
+  ]);
+  expect(rows.find((r) => r.key === 'sleeper:a,b')).toMatchObject({
+    seasons: [2023, 2024],
+    teamName: 'Renamed',
+  });
+  expect(rows.find((r) => r.key === 'sleeper:a,c')?.seasons).toEqual([2025]);
+});

@@ -1,3 +1,8 @@
+import { CopyEdition } from './CopyEdition';
+import { RevisionHistory } from './RevisionHistory';
+import { PublishEdition } from './PublishEdition';
+import { WritingSuggestions } from './WritingSuggestions';
+import { logClientError } from '../logging';
 import {
   Box,
   Button,
@@ -89,6 +94,7 @@ export const RankingEditor = forwardRef<
       link.click();
       link.remove();
     } catch (error) {
+      logClientError('RankingEditor', error);
       setExportError(`Image export failed: ${errorMessage(error)}`);
     } finally {
       exportHost.remove();
@@ -131,7 +137,7 @@ export const RankingEditor = forwardRef<
         <Text mb={4} role="alert">
           {editor.loadError}
         </Text>
-        <Button colorPalette="green" variant="solid" type="button" onClick={editor.reload}>
+        <Button colorPalette="indigo" variant="solid" type="button" onClick={editor.reload}>
           Try again
         </Button>
       </Box>
@@ -173,7 +179,7 @@ export const RankingEditor = forwardRef<
         <Box className="view-switch" aria-label="Ranking view">
           <Button
             variant={tab === 'edit' ? 'solid' : 'outline'}
-            colorPalette="green"
+            colorPalette="indigo"
             type="button"
             aria-pressed={tab === 'edit'}
             onClick={() => setTab('edit')}
@@ -182,7 +188,7 @@ export const RankingEditor = forwardRef<
           </Button>
           <Button
             variant={tab === 'preview' ? 'solid' : 'outline'}
-            colorPalette="green"
+            colorPalette="indigo"
             type="button"
             aria-pressed={tab === 'preview'}
             onClick={() => setTab('preview')}
@@ -203,6 +209,52 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      <CopyEdition
+        ranking={ranking}
+        history={editor.history}
+        disabled={editor.saving || !!editor.recovery || editor.hasConflict}
+        onCopy={(next) => editor.update(() => next)}
+      />
+      {api.revisions && ranking._id && (
+        <RevisionHistory
+          key={ranking._id}
+          api={api.revisions}
+          ranking={ranking}
+          disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
+          onRestored={editor.reload}
+        />
+      )}
+      {api.publishing && ranking._id && (
+        <PublishEdition
+          key={ranking._id}
+          api={api.publishing}
+          id={ranking._id}
+          revision={ranking.revision ?? 0}
+          disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
+        />
+      )}
+      {editor.storageError && (
+        <Text role="alert" mb={4}>
+          {editor.storageError}
+        </Text>
+      )}
+      {editor.recovery && (
+        <Box as="section" aria-label="Recover unsaved ranking" className="notice" bg="bg.muted">
+          <Heading as="h2" size="md">
+            Unsaved work found on this browser
+          </Heading>
+          <Text mb={3}>
+            Restore “{editor.recovery.rankingsTitle}” for this edition, or discard it to keep the
+            saved version. Editing is paused until you choose.
+          </Text>
+          <Button onClick={editor.restoreDraft} mr={3}>
+            Restore draft
+          </Button>
+          <Button variant="outline" onClick={editor.discardDraft}>
+            Discard local draft
+          </Button>
+        </Box>
+      )}
       {editor.saveError && (
         <Box className="notice error" role="alert">
           <Box>
@@ -212,10 +264,50 @@ export const RankingEditor = forwardRef<
           <Button
             variant="outline"
             type="button"
+            disabled={editor.hasConflict}
             onClick={() => void editor.flush().catch(() => {})}
           >
             Retry save
           </Button>
+        </Box>
+      )}
+      {editor.hasConflict && (
+        <Box
+          as="section"
+          aria-label="Resolve save conflict"
+          p={4}
+          mb={4}
+          borderWidth="1px"
+          bg="bg.muted"
+        >
+          <Heading as="h2" size="md">
+            Review the newer saved edition
+          </Heading>
+          <Button onClick={() => void editor.inspectConflict()} my={3}>
+            Load saved version for comparison
+          </Button>
+          {editor.conflictVersion && (
+            <>
+              <Box maxH="400px" overflowY="auto" p={3} bg="bg" mb={3}>
+                <Text fontWeight="bold">{editor.conflictVersion.rankingsTitle}</Text>
+                <Text whiteSpace="pre-wrap">{editor.conflictVersion.introduction}</Text>
+                {editor.conflictVersion.teams.map((t) => (
+                  <Box key={t.teamId} mb={3}>
+                    <Text fontWeight="bold">
+                      {t.position}. {t.teamName}
+                    </Text>
+                    <Text whiteSpace="pre-wrap">{t.description}</Text>
+                  </Box>
+                ))}
+              </Box>
+              <Button mr={3} onClick={() => editor.resolveConflict(false)}>
+                Use saved version
+              </Button>
+              <Button variant="outline" onClick={() => editor.resolveConflict(true)}>
+                Replace with my local draft
+              </Button>
+            </>
+          )}
         </Box>
       )}
       <Grid
@@ -304,6 +396,15 @@ export const RankingEditor = forwardRef<
               Undo move
             </Button>
           </Flex>
+          {api.writing && (
+            <WritingSuggestions
+              api={api.writing}
+              leagueId={league.leagueId}
+              year={year}
+              week={week}
+              teams={ranking.teams}
+            />
+          )}
           <SortableRankingList
             teams={ranking.teams}
             onReorder={reorder}
@@ -386,7 +487,7 @@ export const RankingEditor = forwardRef<
               {comments} of {ranking.teams.length} takes written
             </span>
             <Button
-              colorPalette="green"
+              colorPalette="indigo"
               variant="solid"
               type="button"
 

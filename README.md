@@ -8,7 +8,7 @@ Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 ```sh
 npm ci
 test -f .env || cp .env.example .env
-# Fill in Auth0 settings, MongoDB URI and private ESPN cookies in .env.
+# Fill in Auth0 settings, MongoDB URI and ESPN_CREDENTIALS_KEY in .env.
 npm run dev
 ```
 
@@ -67,22 +67,23 @@ It uses a temporary local JWKS issuer; the real application retains Auth0 valida
 Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON`, `TEST_SLEEPER_LEAGUE_ID`, and
 `TEST_ESPN_LEAGUE_ID` to change the provider fixtures.
 
-Provider records are season-to-date, not reconstructed historical weekly records.
-Weeks currently use 1–18. ESPN private cookies are deployment-wide. The existing
-ownership model allows one account per external league ID; sharing, per-user
-provider credentials, and cross-provider ID collisions are not part of this migration.
+New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
+Weeks currently use 1–18. Each account can register its own workspace for an external league. Sleeper and ESPN IDs can overlap. New workspaces have a separate numeric URL ID; provider requests use `providerLeagueId`. Existing documents without that field continue using their original ID, so rankings and shared links remain valid without rewriting records. Deployment adds a partial unique index on owner, provider and external ID; keep the existing unique workspace-ID index. Take the documented backup before deploying database changes.
 
 ## Season insights
 
 Open `/insights` from the main navigation. League and season selections are encoded
-in the URL. `/insights?leagueId=123&year=2025` and `/history?leagueId=123` are
+in the URL. These pages require sign-in. `/shared/insights?leagueId=123&year=2025` and
+`/shared/history?leagueId=123` are
 public read-only reports for registered leagues; no Auth0 session is required.
 Use **Copy share link** on either page. History links also include the selected seasons.
-Signed-in users retain their own league picker. Public reads return report data and
+Internal pages retain the owner league picker and rankings studio tab. Shared pages reuse
+the same report components, but always show only season insights and league history.
+They do not initialize Auth0, and remain public even when the viewer is signed in.
+Public reads return report data and
 selected league metadata, without owner subjects or internal database IDs; there is
-no public league directory. Shared ESPN reports never attach the server's `ESPN_S2`
-or `SWID` credentials; the league must be accessible through ESPN's public API.
-Authenticated owner-only endpoints retain credentialed ESPN access. League creation, ranking reads, and ranking changes remain
+no public league directory. Shared ESPN reports never load or attach any saved user credentials; the league must be accessible through ESPN's public API.
+Authenticated owner-only endpoints use the signed-in owner’s saved ESPN credentials. League creation, ranking reads, and ranking changes remain
 protected by authentication and ownership checks.
 
 TanStack Query caches reports in the browser for five minutes, with a manual refresh.
@@ -156,3 +157,246 @@ hover/focus states, placeholders, control borders, and keyboard focus against th
 dark header. Keep link defaults in the `legacy` CSS layer so they cannot override
 Chakra button foregrounds. The download canvas is excluded from the UI color audit
 because its original artwork is protected separately by exact PNG comparisons.
+
+## Per-user ESPN credentials
+
+After the first sign-in (including after Auth0 signup), the app offers optional ESPN
+setup. Save both `espn_s2` and `SWID` cookie values, or choose **Skip for now** for
+Sleeper/public ESPN leagues. The requested page opens after setup. Existing users
+see this once too. **ESPN settings** (`/espn`) allows later replacement or removal;
+saved values are never displayed or returned by the API. Saving does not test cookie
+validity: ESPN validates them on the next league request.
+
+Credentials are stored in MongoDB's `espncredentials` collection under the verified
+Auth0 subject, encrypted with AES-256-GCM and a fresh nonce. Encryption authenticates
+the subject as well as the payload. No ESPN cookies are stored in Auth0 metadata,
+tokens, browser storage, or public reports. All authenticated ESPN paths—including
+league creation, team/matchup reads and historical reports—resolve only that owner’s
+cookies. Sleeper and public reports never look up saved credentials.
+
+Set the server-only `ESPN_CREDENTIALS_KEY` to 32 random bytes encoded as **64 hex
+characters** before accepting private ESPN credentials. Generate it privately with
+`openssl rand -hex 32`, then place it in your deployment secret configuration. Never
+prefix it with `VITE_` or commit it. All app instances must use the same key; retain it
+securely with your backup recovery process. Losing or changing the key makes existing
+cookies unreadable; users must save them again. Skipping setup and removing cookies
+do not require the encryption key.
+
+Migration: `ESPN_S2` and `SWID` environment variables are no longer used, even as a
+fallback. Each existing ESPN owner must save their own cookies in ESPN settings.
+There is no automatic migration of deployment-wide cookies to user accounts. Remove
+obsolete cookie variables from your deployment after updating. A user without saved
+cookies can access only ESPN leagues that ESPN makes public. The live `check:local`
+script uses a disposable database with no saved cookies, so its ESPN fixture must be
+public. Existing `.env` files are not modified by this change.
+
+## User profile
+
+Open **Your profile** (`/profile`) after signing in to view your account ID, email,
+and email verification status, and edit your Auth0 name and nickname. Save failures
+retain your draft; reload the page to read the latest saved Auth0 profile. Existing
+ID-token claims elsewhere may retain the previous name until the next sign-in.
+Email, passwords, roles, and metadata are not editable on this page.
+
+Configure a server-only Auth0 Machine-to-Machine application authorized for the
+Auth0 Management API with only `read:users` and `update:users`. Set
+`AUTH0_MANAGEMENT_DOMAIN` (canonical tenant hostname), `AUTH0_MANAGEMENT_CLIENT_ID`,
+and `AUTH0_MANAGEMENT_CLIENT_SECRET` on the server; use the same tenant as login.
+These settings are optional for the rest of the app. If missing, the profile page
+shows a configuration error. Never expose the M2M secret through `VITE_*`.
+The server validates the application access token and derives the target account
+from its subject; clients cannot choose another user or update privileged fields.
+Management tokens are cached in server memory until shortly before expiry.
+
+For social/enterprise connections, configure profile synchronization to update
+attributes only on account creation if edited names should persist across logins.
+See [Auth0 user management](https://auth0.com/docs/manage-users/user-accounts/manage-users-using-the-management-api)
+and [production Management API tokens](https://auth0.com/docs/secure/tokens/access-tokens/management-api-access-tokens/get-management-api-access-tokens-for-production).
+
+### Calculation reference
+
+Open **How are these numbers calculated?** in either season or history summaries
+for formulas and a worked schedule-luck example. The [calculation reference](docs/calculations.md)
+explains every scoring and move-quality denominator, missing-data rules,
+leader thresholds, and weighting across seasons.
+
+## Error logging and recovery
+
+Failed private/public server calls and health checks write structured errors to
+stderr while returning a safe error response. Recoverable season-discovery
+fallbacks are logged too. The Nitro runtime error hook captures request failures
+and uncaught exceptions/rejections using its built-in Node handlers. Browser
+catches, route boundaries, `error`, and `unhandledrejection` events write diagnostic
+entries to the browser console. Repeated propagation of the same browser Error
+object logs once. Logging avoids whole request/response objects and redacts known
+secret patterns; server logs also redact configured secrets. Sensitive credential
+storage failures intentionally retain only a sanitized error.
+
+Request failures remain contained, failed saves retain drafts, and page errors
+provide a retry action. Logging does not guarantee recovery from fatal process
+errors or exhausted memory. Run production under a supervisor on `trappserv.er`
+(e.g. systemd with `Restart=on-failure`) and monitor `/health`; do not depend on
+catching an exception to repair corrupted process state. No process-wide handlers
+are duplicated by the application. Framework/development diagnostics may additionally
+write their own console output.
+
+Season and history summaries also show **Playoffs and final finishes**: playoff
+appearances, championships, last-place finishes and average final placement.
+Each value includes known-season coverage. The year-by-year history table shows
+individual outcomes. Unfinished or unavailable results stay unknown; see the
+[finish calculation rules](docs/calculations.md#playoffs-and-final-finishes).
+
+## Direct-link manager report
+
+`/shared/konz-sux` is a standalone, anonymous Sleeper report for konz4 in league
+`1312529175982129152`, with no navigation entry and `noindex, nofollow` metadata.
+It follows up to six linked seasons, reuses scoring/trade/pickup assessments,
+and highlights measured negative outcomes with counts and coverage. Draft
+hindsight compares same-position players selected within the next 12 picks over
+at least four common observed weeks; it requires a gap above 2 points/week.
+It does not reconstruct unobserved free-agent scores or predict draft value.
+The page identifies its deliberately critical selection and still shows final
+finishes and any absence of qualifying negative evidence.
+
+The server reads only the fixed public Sleeper league/manager, with no MongoDB or
+Auth0 requirement. Successful reports are cached for 15 minutes, partial reports
+for one minute, and simultaneous requests share one in-flight load. Errors are
+logged and displayed without inventing missing statistics. Direct-link-only is
+not access control: anyone with the URL can read this public report.
+
+Sleeper manager identity includes the sorted, deduplicated primary/co-owner IDs.
+Reordering owners or renaming a team preserves history; changing the ownership
+group starts a separate record. Single-owner identities remain compatible.
+
+`npm run dev` loads `ESPN_CREDENTIALS_KEY` from Vite's environment files, including
+`.env.local`; a value already exported in the shell takes precedence. The key is
+part of the server allowlist and is never exposed as a `VITE_*` browser setting.
+
+### Ranking writing suggestions
+
+Expand **Talking points for your rankings** in the editor and select a team. The
+panel loads scoring trends, graded trades and pickups, and observed positional
+depth through the selected ranking week. Missing data is identified explicitly;
+observed players are not a complete current roster snapshot.
+
+AI suggestions use TanStack AI with a server-side Codex or Claude Code CLI.
+Install and authenticate the desired CLI on the application server, then set
+`WRITING_AI_PROVIDERS=codex,claude` (or just one provider) and
+`WRITING_AI_USERS` to a comma-separated allowlist of authorized Auth0 subject IDs.
+Both settings default to disabled. Discovery checks server PATH without running
+the CLI. This uses the server CLI account, not a browser user's subscription.
+The writer chooses a provider and optional model and must approve each generation
+before the displayed context is sent to that provider. Generated text stays in a
+separate editable field for review and copying into the ranking commentary.
+
+CLI requests run in a temporary directory with tools disabled, restricted inherited
+environment, bounded output, a 60-second timeout, and one active request per user
+per server process. Codex uses read-only sandboxing and ignores user configuration;
+Claude runs with no tools or MCP servers. The host must have a compatible CLI
+version and available account quota. Tests mock CLI execution; no live generation
+is part of the test suite. Factual context works with AI disabled.
+
+Local development loads only defined server settings from Vite's environment files.
+Existing shell values take precedence; missing settings remain unset so optional
+features stay disabled and required-service validation can report missing configuration.
+
+React Compiler is enabled in Vite development/production and the browser-test
+fixture through `reactCompilerPreset` and `@rolldown/plugin-babel`, following the
+[official installation guide](https://react.dev/learn/react-compiler/installation).
+The latest stable compiler at installation is locked in package-lock.json. React
+19 supplies the compiler runtime. Existing manual memoization remains valid;
+compiler-ineligible functions safely retain their existing behavior. Verify the
+production output contains `react.memo_cache_sentinel` after `npm run build`.
+
+The application theme uses navy, indigo and cool neutral surfaces with a warm
+header accent. Chakra semantic colors live in `src/theme.ts`; application details
+live in `src/index.css`. The fixed download theme remains in `src/export.css`.
+Desktop/mobile browser tests compare the exported ranking canvas to the original
+pixel snapshots and check application contrast for light and dark system preferences.
+
+### Password recovery
+
+The signed-out screen and authenticated profile offer **Reset password through
+Auth0**. This opens Universal Login with `prompt=login` so an existing SSO session
+does not skip the login form. Choose **Forgot password?** (wording depends on the
+hosted login version), enter the account email, and follow the emailed link.
+Social and enterprise accounts reset passwords with their identity provider.
+See [Auth0's password reset documentation](https://auth0.com/docs/authenticate/database-connections/password-change).
+
+The Auth0 tenant must enable a database connection for this application, expose
+its password-recovery link in Universal Login, and configure working Change
+Password email delivery. The application collects no passwords and requires no
+additional Management API permission for recovery. To verify a deployment, use a
+test database account from both signed-out and signed-in states, request its
+reset email on Auth0, follow the link, and sign in with the new password. Local
+tests mock the SDK redirect; tenant configuration and email delivery are not
+verified by this repository's test suite.
+
+Season insights include a playoff-outlook scenario with qualification, round
+advancement and championship probabilities. Select a completed regular-season
+cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
+remaining schedule, standard bracket, and no division/median-game rules. These
+are model estimates, not provider-exact clinching odds. See the playoff section
+in [calculation documentation](docs/calculations.md) for the sampling method.
+
+Unsaved ranking edits are backed up in this browser as they are typed, scoped to
+the signed-in account, league, year and week. Reopening an edition offers
+**Restore draft** or **Discard local draft** before editing resumes. A restored
+draft follows normal autosave; a successful save removes its matching backup.
+Storage failures show a warning without preventing editing. Browser backups are
+local convenience copies, not server backups: clearing site data removes them,
+and someone with access to the browser's storage can read them. They contain no
+authentication tokens or ESPN credentials.
+
+Ranking saves use server-managed revisions. A stale tab receives a conflict rather
+than overwriting newer work. **Load saved version for comparison** displays the
+newer title, introduction and commentary; choose **Use saved version** or
+**Replace with my local draft**. Replacement is checked again against the reviewed
+revision, so a third intervening save still causes a conflict. Legacy editions
+start at revision zero. Both update-by-ID and update-by-week enforce this rule;
+clients must carry the revision returned by reads/saves.
+
+### Publishing weekly editions
+
+Once an edition is saved, **Publish edition** creates a public snapshot at an
+opaque `/shared/rankings/...` URL. Anyone with that link can read its title,
+introduction, team names, records and commentary without signing in. Later saves
+remain private until **Publish saved revision** is selected. Publishing verifies
+the reviewed revision; a stale request must reload first. **Unpublish** requires
+confirmation and disables the link; publishing again after removal creates a new
+link. Existing downloaded copies cannot be recalled. Public reads use no-store
+responses and never read mutable drafts. The original PNG export is unchanged.
+
+Backup procedures, retention guidance, separately protected encryption keys and
+safe restore/cutover steps are in [Backup and recovery](docs/backup-recovery.md).
+Run `npm run backup:verify` for a synthetic dump/restore rehearsal using its own
+disposable MongoDB instance; MongoDB Server and Database Tools must be on PATH.
+
+**View saved revisions** previews an edition's historical title, introduction,
+team order and commentary with saved timestamps. **Restore selected revision**
+creates a new current revision and leaves published snapshots unchanged. History
+starts when this feature is deployed; older overwritten content cannot be
+reconstructed. Previous snapshots are appended atomically with the revision-checked
+save. They count toward MongoDB's document-size limit; an oversized save fails
+without discarding existing history. Include rankings in regular database backups.
+
+Owners can enable or disable public season/history reports beside **Copy share
+link**. Existing leagues retain public sharing until explicitly disabled. Disabling
+blocks all subsequent public league/season/history data requests, including old
+URLs, while owner access remains available. Re-enabling restores those URLs.
+Already-rendered or copied data cannot be recalled. Published ranking editions
+have their own separate publish/unpublish controls.
+
+Use **Manage leagues** in the studio to archive an old league or restore one from
+**Show archived leagues**. Archived leagues leave the default active pickers, but
+retain their saved editions, revision history, credentials and sharing settings.
+Archiving is not a privacy control; disable report sharing or unpublish editions
+separately when public access should stop.
+
+**Copy from a previous edition** lets you select introduction, team commentary
+and/or ordering. Review the source and replacement warning, then confirm. Matching
+uses team IDs, preserves current names and records, and retains unmatched destination
+teams. Absent source teams are skipped with a count; the source edition is never edited.
+Copied content follows the destination's normal autosave and revision-history behavior.
+
+Playoff forecasts live in the **Playoff simulation** navigation tab. Switching between Season insights and Playoff simulation keeps the selected league and season. Its share link opens the same simulation view at `/shared/playoffs`.

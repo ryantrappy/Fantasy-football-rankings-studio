@@ -102,6 +102,9 @@ function RankingsPage() {
             Power rankings studio
           </Heading>
         </Box>
+        <Button asChild variant="outline">
+          <Link to="/leagues/manage">Manage leagues</Link>
+        </Button>
         <Button asChild colorPalette="indigo">
           <Link to="/leagues/new">Create league</Link>
         </Button>

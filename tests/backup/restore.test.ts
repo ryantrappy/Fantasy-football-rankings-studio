@@ -198,6 +198,18 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    await leagues.setArchived('101', true, 'owner-a');
+    expect(await leagues.listLeagues('owner-a')).toHaveLength(0);
+    expect(await leagues.listLeagues('owner-a', true)).toHaveLength(1);
+    expect(
+      (await rankings.getRankingById(String(saved._id), 'owner-a')).rankingsTitle,
+    ).toBeDefined();
+    expect((await leagues.getPublicLeagueById('101')).leagueId).toBe('101');
+    await expect(leagues.setArchived('101', false, 'owner-b')).rejects.toMatchObject({
+      status: 404,
+    });
+    await leagues.setArchived('101', false, 'owner-a');
+    expect(await leagues.listLeagues('owner-a')).toHaveLength(1);
     await leagues.setReportSharing('101', false, 'owner-a');
     await expect(leagues.getPublicLeagueById('101')).rejects.toMatchObject({ status: 404 });
     expect((await leagues.getLeagueById('101', 'owner-a')).leagueId).toBe('101');

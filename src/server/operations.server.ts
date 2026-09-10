@@ -97,6 +97,12 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  listArchivedLeagues: async (owner: string) =>
+    (await leagues.listLeagues(owner, true)).map(publicLeague),
+  setLeagueArchived: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ archived: z.boolean() }).parse(input);
+    await leagues.setArchived(data.leagueId, data.archived, owner);
+  },
   getReportSharing: async (owner: string, input: unknown) =>
     (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
     false,

@@ -50,8 +50,20 @@ class LeaguesService {
     return result.publicReports !== false;
   }
 
-  public async listLeagues(ownerSubject: string) {
-    return this.leagues.find({ ownerSubject }).sort({ leagueName: 1 }).lean();
+  public async listLeagues(ownerSubject: string, archived = false) {
+    return this.leagues
+      .find({ ownerSubject, archived: archived ? true : { $ne: true } })
+      .sort({ leagueName: 1 })
+      .lean();
+  }
+
+  public async setArchived(id: string, archived: boolean, owner: string) {
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner },
+      { $set: { archived } },
+      { returnDocument: 'after' },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
   }
 
   public async createNewLeague(input: League, ownerSubject: string): Promise<League> {

@@ -18,6 +18,7 @@ import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
+import { Route as AuthenticatedLeaguesManageRouteImport } from './routes/_authenticated.leagues.manage'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
 import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared.history'
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
@@ -66,6 +67,12 @@ const SharedKonzSuxRoute = SharedKonzSuxRouteImport.update({
   path: '/shared/konz-sux',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedLeaguesManageRoute =
+  AuthenticatedLeaguesManageRouteImport.update({
+    id: '/leagues/manage',
+    path: '/leagues/manage',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedLeaguesNewRoute = AuthenticatedLeaguesNewRouteImport.update({
   id: '/leagues/new',
   path: '/leagues/new',
@@ -95,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/insights': typeof AuthenticatedInsightsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
+  '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -108,6 +116,7 @@ export interface FileRoutesByTo {
   '/insights': typeof AuthenticatedInsightsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
+  '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/shared/history': typeof PublicSharedHistoryRoute
   '/shared/insights': typeof PublicSharedInsightsRoute
@@ -124,6 +133,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/_authenticated/leagues/new': typeof AuthenticatedLeaguesNewRoute
   '/_public/shared/history': typeof PublicSharedHistoryRoute
   '/_public/shared/insights': typeof PublicSharedInsightsRoute
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/profile'
     | '/shared/konz-sux'
+    | '/leagues/manage'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/profile'
     | '/shared/konz-sux'
+    | '/leagues/manage'
     | '/leagues/new'
     | '/shared/history'
     | '/shared/insights'
@@ -167,6 +179,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/shared/konz-sux'
     | '/_authenticated/'
+    | '/_authenticated/leagues/manage'
     | '/_authenticated/leagues/new'
     | '/_public/shared/history'
     | '/_public/shared/insights'
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedKonzSuxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/leagues/manage': {
+      id: '/_authenticated/leagues/manage'
+      path: '/leagues/manage'
+      fullPath: '/leagues/manage'
+      preLoaderRoute: typeof AuthenticatedLeaguesManageRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/leagues/new': {
       id: '/_authenticated/leagues/new'
       path: '/leagues/new'
@@ -283,6 +303,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedLeaguesManageRoute: typeof AuthenticatedLeaguesManageRoute
   AuthenticatedLeaguesNewRoute: typeof AuthenticatedLeaguesNewRoute
 }
 
@@ -292,6 +313,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedLeaguesManageRoute: AuthenticatedLeaguesManageRoute,
   AuthenticatedLeaguesNewRoute: AuthenticatedLeaguesNewRoute,
 }
 

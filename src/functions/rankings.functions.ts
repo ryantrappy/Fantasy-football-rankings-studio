@@ -95,3 +95,12 @@ export const setReportSharing = createServerFn({ method: 'POST' })
   .handler(({ data }) =>
     run('setReportSharing', (owner) => operations.setReportSharing(owner, data)),
   );
+
+export const listArchivedLeagues = createServerFn({ method: 'GET' }).handler(() =>
+  run('listArchivedLeagues', operations.listArchivedLeagues),
+);
+export const setLeagueArchived = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; archived: boolean }) => data)
+  .handler(({ data }) =>
+    run('setLeagueArchived', (owner) => operations.setLeagueArchived(owner, data)),
+  );

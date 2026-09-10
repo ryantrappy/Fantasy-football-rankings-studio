@@ -387,3 +387,9 @@ blocks all subsequent public league/season/history data requests, including old
 URLs, while owner access remains available. Re-enabling restores those URLs.
 Already-rendered or copied data cannot be recalled. Published ranking editions
 have their own separate publish/unpublish controls.
+
+Use **Manage leagues** in the studio to archive an old league or restore one from
+**Show archived leagues**. Archived leagues leave the default active pickers, but
+retain their saved editions, revision history, credentials and sharing settings.
+Archiving is not a privacy control; disable report sharing or unpublish editions
+separately when public access should stop.

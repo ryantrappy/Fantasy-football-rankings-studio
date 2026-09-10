@@ -232,7 +232,42 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     await expect(rankings.getRevisions(String(saved._id), 'owner-b')).rejects.toMatchObject({
       status: 404,
     });
+    const provider = vi.spyOn(leagues, 'providerFor').mockResolvedValue({
+      getLeague: async (input: import('../../src/server/interfaces/league.interface').League) => ({
+        ...input,
+        leagueName: 'Independent workspace',
+        maxWeek: 18,
+      }),
+    } as never);
+    const input = {
+      leagueId: '101',
+      leagueName: 'Independent workspace',
+      leagueType: 0,
+      seasonId: 2026,
+    };
+    await expect(leagues.createNewLeague(input, 'owner-a')).rejects.toMatchObject({ status: 409 });
+    const sameProvider = await leagues.createNewLeague(input, 'owner-b');
+    const otherProvider = await leagues.createNewLeague({ ...input, leagueType: 1 }, 'owner-a');
+    expect(new Set(['101', sameProvider.leagueId, otherProvider.leagueId]).size).toBe(3);
+    expect(sameProvider.providerLeagueId).toBe('101');
+    expect(otherProvider.providerLeagueId).toBe('101');
+    await expect(leagues.getLeagueById(sameProvider.leagueId, 'owner-a')).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(rankings.getByLeagueId(sameProvider.leagueId, 'owner-a')).rejects.toMatchObject({
+      status: 404,
+    });
+    await expect(leagues.createNewLeague(input, 'owner-b')).rejects.toMatchObject({ status: 409 });
+    const race = await Promise.allSettled([
+      leagues.createNewLeague({ ...input, leagueId: '303' }, 'owner-a'),
+      leagues.createNewLeague({ ...input, leagueId: '303' }, 'owner-a'),
+    ]);
+    expect(race.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+    expect(race.filter((r) => r.status === 'rejected')).toHaveLength(1);
+    expect((await leagues.getPublicLeagueById('101')).leagueId).toBe('101');
+    provider.mockRestore();
   } finally {
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     await mongoose.disconnect();
     if (daemon?.pid && daemon.exitCode === null) {

@@ -70,10 +70,15 @@ export default class EspnProvider implements LeagueProvider {
   }
 
   async getLeague(league: League, seasonId: number): Promise<LeagueInfo> {
-    const data = await this.get(league.leagueId, seasonId, ['mSettings']);
+    const data = await this.get(league.providerLeagueId ?? league.leagueId, seasonId, [
+      'mSettings',
+    ]);
     return {
       ...league,
-      leagueName: league.leagueName || data.settings?.name || `League ${league.leagueId}`,
+      leagueName:
+        league.leagueName ||
+        data.settings?.name ||
+        `League ${league.providerLeagueId ?? league.leagueId}`,
       seasonId,
       teamCount: data.settings?.size,
       maxWeek: 18,
@@ -81,7 +86,12 @@ export default class EspnProvider implements LeagueProvider {
   }
 
   async getTeams(league: League, seasonId: number, week: number): Promise<Team[]> {
-    const data = await this.get(league.leagueId, seasonId, ['mTeam'], week);
+    const data = await this.get(
+      league.providerLeagueId ?? league.leagueId,
+      seasonId,
+      ['mTeam'],
+      week,
+    );
     return (data.teams || []).map((team) => {
       const ownerIds = team.owners || (team.primaryOwner ? [team.primaryOwner] : []);
       const managerName =
@@ -115,7 +125,11 @@ export default class EspnProvider implements LeagueProvider {
   }
 
   async getHistoricalTeams(league: League, seasonId: number, week: number): Promise<Team[]> {
-    const data = await this.get(league.leagueId, seasonId, ['mSettings', 'mMatchup', 'mStatus']);
+    const data = await this.get(league.providerLeagueId ?? league.leagueId, seasonId, [
+      'mSettings',
+      'mMatchup',
+      'mStatus',
+    ]);
     const teams = await this.getTeams(league, seasonId, week);
     const settings = data.settings?.scheduleSettings;
     const count = settings?.matchupPeriodCount;
@@ -155,7 +169,12 @@ export default class EspnProvider implements LeagueProvider {
   }
 
   async getMatchups(league: League, seasonId: number, week: number): Promise<Matchup[]> {
-    const data = await this.get(league.leagueId, seasonId, ['mMatchup'], week);
+    const data = await this.get(
+      league.providerLeagueId ?? league.leagueId,
+      seasonId,
+      ['mMatchup'],
+      week,
+    );
     return (data.schedule || [])
       .filter((matchup) => matchup.matchupPeriodId === week && matchup.home)
       .map((matchup) => ({

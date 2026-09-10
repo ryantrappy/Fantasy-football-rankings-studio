@@ -68,8 +68,7 @@ Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON`, `TEST_SLEEPER_LEAGUE_ID`
 `TEST_ESPN_LEAGUE_ID` to change the provider fixtures.
 
 New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
-Weeks currently use 1–18. The existing ownership model allows one account per
-external league ID; cross-provider ID collisions are not supported.
+Weeks currently use 1–18. Each account can register its own workspace for an external league. Sleeper and ESPN IDs can overlap. New workspaces have a separate numeric URL ID; provider requests use `providerLeagueId`. Existing documents without that field continue using their original ID, so rankings and shared links remain valid without rewriting records. Deployment adds a partial unique index on owner, provider and external ID; keep the existing unique workspace-ID index. Take the documented backup before deploying database changes.
 
 ## Season insights
 

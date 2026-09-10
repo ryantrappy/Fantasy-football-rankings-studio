@@ -40,6 +40,7 @@ test('anonymous reads expose only the specified league metadata, without owner o
     leagueName: 1,
     leagueType: 1,
     seasonId: 1,
+    providerLeagueId: 1,
   });
 });
 test('anonymous season and insight reads use the registered league', async () => {

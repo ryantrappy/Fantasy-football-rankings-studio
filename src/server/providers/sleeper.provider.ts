@@ -65,7 +65,7 @@ export default class SleeperProvider implements LeagueProvider {
   }
 
   async getLeague(league: League, seasonId: number): Promise<LeagueInfo> {
-    const data = await this.resolveSeason(league.leagueId, seasonId);
+    const data = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
     return {
       ...league,
       leagueName: league.leagueName || data.name,
@@ -76,7 +76,7 @@ export default class SleeperProvider implements LeagueProvider {
   }
 
   async getTeams(league: League, seasonId: number, _week: number): Promise<Team[]> {
-    const data = await this.resolveSeason(league.leagueId, seasonId);
+    const data = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
     const [rosters, users] = await Promise.all([
       this.get<Roster[]>(`${data.league_id}/rosters`),
       this.get<User[]>(`${data.league_id}/users`),
@@ -105,7 +105,7 @@ export default class SleeperProvider implements LeagueProvider {
   }
 
   async getHistoricalTeams(league: League, seasonId: number, week: number): Promise<Team[]> {
-    const season = await this.resolveSeason(league.leagueId, seasonId);
+    const season = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
     const teams = await this.getTeams(league, seasonId, week);
     // Median-game records require league-wide completeness and distinct scoring rules.
     if (season.settings?.league_average_match) unavailableRecords();
@@ -150,7 +150,7 @@ export default class SleeperProvider implements LeagueProvider {
   }
 
   async getMatchups(league: League, seasonId: number, week: number): Promise<Matchup[]> {
-    const data = await this.resolveSeason(league.leagueId, seasonId);
+    const data = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
     const rows = await this.get<SleeperMatchup[]>(`${data.league_id}/matchups/${week}`);
     const groups = new Map<string, SleeperMatchup[]>();
     for (const row of rows) {

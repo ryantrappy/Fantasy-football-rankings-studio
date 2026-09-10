@@ -62,7 +62,7 @@ interface SleeperTransaction {
 }
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
   const provider = new SleeperProvider();
-  const season = await provider.resolveSeason(league.leagueId, year);
+  const season = await provider.resolveSeason(league.providerLeagueId ?? league.leagueId, year);
   const [{ data: state }, teams] = await Promise.all([
     axios.get<{ season: string; leg: number; season_type: string }>(
       'https://api.sleeper.app/v1/state/nfl',
@@ -257,7 +257,11 @@ interface EspnSnapshot extends EspnResultsData {
 async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
   const provider = new EspnProvider(access);
   const [meta, teams] = await Promise.all([
-    provider.get<EspnSnapshot>(league.leagueId, year, ['mSettings', 'mTeam', 'mMatchup']),
+    provider.get<EspnSnapshot>(league.providerLeagueId ?? league.leagueId, year, [
+      'mSettings',
+      'mTeam',
+      'mMatchup',
+    ]),
     provider.getTeams(league, year, 1),
   ]);
   if (!meta.status) throw new Error('ESPN season status unavailable');
@@ -269,14 +273,19 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     mapWeeks(weeksThrough(completedWeek), async (week) => ({
       week,
       data: await provider.get<EspnSnapshot>(
-        league.leagueId,
+        league.providerLeagueId ?? league.leagueId,
         year,
         ['mMatchupScore', 'mBoxscore'],
         week,
       ),
     })),
     mapWeeks(weeksThrough(Math.min(18, completedWeek + 1)), (week) =>
-      provider.get<EspnSnapshot>(league.leagueId, year, ['mTransactions2'], week),
+      provider.get<EspnSnapshot>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mTransactions2'],
+        week,
+      ),
     ),
   ]);
   const playerNames: Record<string, string> = {};

@@ -28,6 +28,7 @@ function publicLeague(value: League): League {
   return {
     _id: String(value._id),
     leagueId: value.leagueId,
+    ...(value.providerLeagueId ? { providerLeagueId: value.providerLeagueId } : {}),
     leagueName: value.leagueName,
     leagueType: value.leagueType,
     seasonId: value.seasonId,

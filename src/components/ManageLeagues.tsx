@@ -58,12 +58,20 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
         <Text>Loading leagues…</Text>
       ) : leagues.length ? (
         leagues.map((league) => (
-          <Box key={league.leagueId} p={4} my={3} bg="bg" borderWidth="1px" rounded="lg">
+          <Box
+            key={league.providerLeagueId ?? league.leagueId}
+            p={4}
+            my={3}
+            bg="bg"
+            borderWidth="1px"
+            rounded="lg"
+          >
             <Heading as="h2" size="md">
               {league.leagueName}
             </Heading>
             <Text my={2}>
-              {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} · {league.leagueId}
+              {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
+              {league.providerLeagueId ?? league.leagueId}
             </Text>
             <Button
               disabled={busy}

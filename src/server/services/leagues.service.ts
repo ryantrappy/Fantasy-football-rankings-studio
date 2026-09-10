@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import leagueModel from '../models/league.model';
 import { League, LeagueType } from '../interfaces/league.interface';
 import HttpException from '../exceptions/HttpException';
@@ -29,11 +30,19 @@ class LeaguesService {
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
       .findOne({ leagueId: id, publicReports: { $ne: false } })
-      .select({ _id: 0, leagueId: 1, leagueName: 1, leagueType: 1, seasonId: 1 })
+      .select({
+        _id: 0,
+        leagueId: 1,
+        leagueName: 1,
+        leagueType: 1,
+        seasonId: 1,
+        providerLeagueId: 1,
+      })
       .lean();
     if (!league) throw new HttpException(404, 'League not found.');
     return {
       leagueId: league.leagueId,
+      ...(league.providerLeagueId ? { providerLeagueId: league.providerLeagueId } : {}),
       leagueName: league.leagueName,
       leagueType: league.leagueType,
       seasonId: league.seasonId,
@@ -78,11 +87,21 @@ class LeaguesService {
       (typeof input.leagueName !== 'string' || input.leagueName.length > 120)
     )
       throw new HttpException(400, 'League name must be at most 120 characters.');
-    const leagueId = input.leagueId.replace(/^0+(?=\d)/, '');
-    if (await this.leagues.exists({ leagueId }))
+    const providerLeagueId = input.leagueId.replace(/^0+(?=\d)/, '');
+    if (
+      await this.leagues.exists({
+        ownerSubject,
+        leagueType: input.leagueType,
+        $or: [
+          { providerLeagueId },
+          { providerLeagueId: { $exists: false }, leagueId: providerLeagueId },
+        ],
+      })
+    )
       throw new HttpException(409, 'This league is already registered.');
     const league: League = {
-      leagueId,
+      leagueId: BigInt('0x' + randomBytes(12).toString('hex')).toString(),
+      providerLeagueId,
       leagueType: input.leagueType,
       leagueName: input.leagueName?.trim() || '',
       seasonId: input.seasonId,
@@ -91,10 +110,19 @@ class LeaguesService {
     const info = await (
       await this.providerFor(league, ownerSubject)
     ).getLeague(league, league.seasonId);
-    return this.leagues.create({
-      ...league,
-      leagueName: info.leagueName,
-    }) as unknown as Promise<League>;
+    try {
+      return (await this.leagues.create({
+        ...league,
+        leagueName: info.leagueName,
+      })) as unknown as League;
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000)
+        throw new HttpException(
+          409,
+          'This league is already registered or its workspace ID collided. Refresh and retry.',
+        );
+      throw error;
+    }
   }
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {

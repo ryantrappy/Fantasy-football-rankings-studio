@@ -136,3 +136,14 @@ it('keeps Sleeper co-owner identities stable across ordering and separates chang
   expect(renamed.teamName).toBe('Renamed');
   expect(changed.managerKey).toBe('sleeper:a,b');
 });
+
+it('uses the external ID for a new workspace while retaining its URL ID', async () => {
+  get.mockResolvedValueOnce({ data: { id: 123, settings: { name: 'External league' } } });
+  const result = await new EspnProvider().getLeague(
+    { ...league, leagueId: '999999', providerLeagueId: '123', leagueType: 1 },
+    2026,
+  );
+  expect(get.mock.calls[0][0]).toContain('/leagues/123');
+  expect(result.leagueId).toBe('999999');
+  expect(result.providerLeagueId).toBe('123');
+});

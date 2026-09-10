@@ -1,4 +1,5 @@
 export interface League {
+  providerLeagueId?: string;
   _id?: string;
   leagueId: string;
   leagueName: string;

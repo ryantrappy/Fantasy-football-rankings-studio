@@ -28,7 +28,7 @@ class LeaguesService {
 
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
-      .findOne({ leagueId: id })
+      .findOne({ leagueId: id, publicReports: { $ne: false } })
       .select({ _id: 0, leagueId: 1, leagueName: 1, leagueType: 1, seasonId: 1 })
       .lean();
     if (!league) throw new HttpException(404, 'League not found.');
@@ -38,6 +38,16 @@ class LeaguesService {
       leagueType: league.leagueType,
       seasonId: league.seasonId,
     };
+  }
+
+  public async setReportSharing(id: string, enabled: boolean, owner: string) {
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner },
+      { $set: { publicReports: enabled } },
+      { returnDocument: 'after' },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
+    return result.publicReports !== false;
   }
 
   public async listLeagues(ownerSubject: string) {

@@ -97,6 +97,13 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getReportSharing: async (owner: string, input: unknown) =>
+    (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
+    false,
+  setReportSharing: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ enabled: z.boolean() }).parse(input);
+    return leagues.setReportSharing(data.leagueId, data.enabled, owner);
+  },
   getRankingRevisions: async (owner: string, input: unknown) =>
     (await rankings.getRevisions(objectIdSchema.parse(input).id, owner)).map((entry) => ({
       savedAt: entry.savedAt,

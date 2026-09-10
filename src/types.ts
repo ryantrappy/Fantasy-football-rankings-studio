@@ -33,6 +33,10 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  reportSharing?: {
+    get(leagueId: string): Promise<boolean>;
+    set(leagueId: string, enabled: boolean): Promise<boolean>;
+  };
   revisions?: {
     list(id: string): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
     restore(id: string, revision: number, expectedRevision: number): Promise<WeeklyRanking>;

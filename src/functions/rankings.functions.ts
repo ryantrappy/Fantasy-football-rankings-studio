@@ -84,3 +84,14 @@ export const restoreRankingRevision = createServerFn({ method: 'POST' })
   .handler(({ data }) =>
     run('restoreRankingRevision', (owner) => operations.restoreRankingRevision(owner, data)),
   );
+
+export const getReportSharing = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string }) => data)
+  .handler(({ data }) =>
+    run('getReportSharing', (owner) => operations.getReportSharing(owner, data)),
+  );
+export const setReportSharing = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; enabled: boolean }) => data)
+  .handler(({ data }) =>
+    run('setReportSharing', (owner) => operations.setReportSharing(owner, data)),
+  );

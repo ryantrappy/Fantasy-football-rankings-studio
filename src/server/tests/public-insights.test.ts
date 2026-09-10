@@ -33,7 +33,7 @@ test('anonymous reads expose only the specified league metadata, without owner o
     data: league,
   });
   expect(verifyAuthorization).not.toHaveBeenCalled();
-  expect(leagueModel.findOne).toHaveBeenCalledWith({ leagueId: '123' });
+  expect(leagueModel.findOne).toHaveBeenCalledWith({ leagueId: '123', publicReports: { $ne: false } });
   expect(select).toHaveBeenCalledWith({
     _id: 0,
     leagueId: 1,

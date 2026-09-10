@@ -198,6 +198,14 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     ]);
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    await leagues.setReportSharing('101', false, 'owner-a');
+    await expect(leagues.getPublicLeagueById('101')).rejects.toMatchObject({ status: 404 });
+    expect((await leagues.getLeagueById('101', 'owner-a')).leagueId).toBe('101');
+    await expect(leagues.setReportSharing('101', true, 'owner-b')).rejects.toMatchObject({
+      status: 404,
+    });
+    await leagues.setReportSharing('101', true, 'owner-a');
+    expect((await leagues.getPublicLeagueById('101')).leagueId).toBe('101');
     const history = await rankings.getRevisions(String(saved._id), 'owner-a');
     expect(history.map((entry) => entry.ranking.revision)).toEqual([8, 7]);
     const restoredOld = await rankings.restoreRevision(String(saved._id), 7, 8, 'owner-a');

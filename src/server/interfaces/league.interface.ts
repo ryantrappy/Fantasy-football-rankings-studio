@@ -10,6 +10,7 @@ export interface League {
   leagueType: LeagueType;
   seasonId: number;
   ownerSubject?: string;
+  publicReports?: boolean;
 }
 
 export interface LeagueInfo extends League {

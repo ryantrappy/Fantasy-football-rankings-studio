@@ -7,6 +7,7 @@ const leagueSchema = new mongoose.Schema(
     leagueName: { type: String, required: true },
     leagueType: { type: Number, enum: [0, 1], required: true },
     seasonId: { type: Number, min: 2000, max: 2100 },
+    publicReports: { type: Boolean, default: true },
     ownerSubject: { type: String, index: true },
   },
   { timestamps: true },

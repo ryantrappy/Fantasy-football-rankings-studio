@@ -380,3 +380,10 @@ starts when this feature is deployed; older overwritten content cannot be
 reconstructed. Previous snapshots are appended atomically with the revision-checked
 save. They count toward MongoDB's document-size limit; an oversized save fails
 without discarding existing history. Include rankings in regular database backups.
+
+Owners can enable or disable public season/history reports beside **Copy share
+link**. Existing leagues retain public sharing until explicitly disabled. Disabling
+blocks all subsequent public league/season/history data requests, including old
+URLs, while owner access remains available. Re-enabling restores those URLs.
+Already-rendered or copied data cannot be recalled. Published ranking editions
+have their own separate publish/unpublish controls.

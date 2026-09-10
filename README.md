@@ -9,13 +9,13 @@ Copy `.env.example` to `.env`, fill in the required Auth0 settings and
 `ESPN_CREDENTIALS_KEY`, then run:
 
 ```sh
-docker compose up --build
+docker compose up
 ```
 
 The Compose setup runs the app and MongoDB on the internal `fantasy-internal`
 network and publishes only the app at http://localhost:3001. See
 [docker-running.md](docker-running.md) for the complete list of values to fill in,
-build-time versus runtime settings, and cleanup commands.
+the published image details, and cleanup commands.
 
 ## Run locally
 

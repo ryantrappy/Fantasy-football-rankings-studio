@@ -2,7 +2,7 @@ import { PlayoffForecast } from './PlayoffForecast';
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
-import { DataTable } from '../components/DataTable';
+import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
   Box,
   Button,
@@ -269,7 +269,17 @@ export function InsightsPage({
         </Box>
       )}
       {data && (
-        <>
+        <ReportExportScope
+          value={{
+            context: {
+              League:
+                leagues.find((league) => league.leagueId === leagueId)?.leagueName || leagueId,
+              Season: year,
+              'Completed through week': data.completedWeek || 'No completed weeks',
+            },
+            filenameContext: `${leagueId}-${year}`,
+          }}
+        >
           <Text mb={4} className="insights-meta">
             {data.completedWeek
               ? `Through completed week ${data.completedWeek}`
@@ -828,7 +838,7 @@ export function InsightsPage({
               </Box>
             </>
           )}
-        </>
+        </ReportExportScope>
       )}
     </>
   );

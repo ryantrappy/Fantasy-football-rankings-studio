@@ -118,6 +118,13 @@ seasons individually. Successful responses with missing provider data name the a
 near the top of the report and exclude unknown values instead of presenting them as current or zero.
 Loading, successful refreshes and continued partial availability are announced to assistive
 technology.
+Every table inside a loaded Season Insights, Playoff Simulation or League History report has a CSV
+download. The file follows the table's current sort order, active manager/team filters and visible
+row limit. It begins with public league, season and report-coverage context; unavailable cells are
+written as `Unavailable (not zero)`, and coverage-aware result columns include their known-season
+denominators. Only declared visible report columns are serialized. Internal owner IDs, account
+fields and credentials are never included, and text beginning like a spreadsheet formula is
+prefixed safely before normal CSV quoting.
 TanStack Charts renders weekly actuals and available projections, with exact values
 in an accessible sortable table.
 

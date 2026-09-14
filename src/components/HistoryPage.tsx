@@ -1,7 +1,7 @@
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
-import { DataTable } from '../components/DataTable';
+import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
   Box,
   Button,
@@ -366,7 +366,18 @@ export function HistoryPage({
                 </Box>
               )}
               {!!records.length && (
-                <>
+                <ReportExportScope
+                  value={{
+                    context: {
+                      League:
+                        currentCatalog.leagues.find((league) => league.leagueId === leagueId)
+                          ?.leagueName || leagueId,
+                      'Selected seasons': years.join(', '),
+                      Coverage: `${records.length} of ${years.length} seasons loaded`,
+                    },
+                    filenameContext: `${leagueId}-${years.join('-')}`,
+                  }}
+                >
                   <Text mb={4} className="insights-meta">
                     Included:{' '}
                     {records
@@ -483,6 +494,7 @@ export function HistoryPage({
                             id: '1',
                             header: 'Manager / team that year',
                             value: (r) => r.managerName,
+                            exportValue: (r) => `${r.managerName} — ${r.teamName}`,
                             rowHeader: true,
                             cell: (r) => (
                               <>
@@ -525,6 +537,10 @@ export function HistoryPage({
                             id: '2',
                             header: 'Avg. vs. median',
                             value: (r) => average(r.medianPercentTotal, r.medianWeeks),
+                            exportValue: (r) => {
+                              const value = average(r.medianPercentTotal, r.medianWeeks);
+                              return value === null ? null : `${n(value)}% (${r.weeks} weeks)`;
+                            },
                             cell: (r) => (
                               <>
                                 {n(average(r.medianPercentTotal, r.medianWeeks))}%
@@ -600,7 +616,7 @@ export function HistoryPage({
                       </details>
                     ))}
                   </Box>
-                </>
+                </ReportExportScope>
               )}
             </>
           )}

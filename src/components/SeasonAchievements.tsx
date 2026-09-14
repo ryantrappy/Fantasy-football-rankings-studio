@@ -32,6 +32,7 @@ export function SeasonAchievements({ rows }: { rows: ManagerSummary[] }) {
               id: 'manager',
               header: 'Manager / latest team',
               value: (r) => r.managerName,
+              exportValue: (r) => `${r.managerName} — ${r.teamName}`,
               rowHeader: true,
               cell: (r) => (
                 <>
@@ -44,24 +45,42 @@ export function SeasonAchievements({ rows }: { rows: ManagerSummary[] }) {
               id: 'playoffs',
               header: 'Playoff appearances',
               value: (r) => count(r.playoffAppearances, r.playoffSeasons),
+              exportValue: (r) =>
+                r.playoffSeasons
+                  ? `${r.playoffAppearances} (${r.playoffSeasons} of ${r.seasons.length} seasons known)`
+                  : null,
               cell: (r) => cell(r.playoffAppearances, r.playoffSeasons, r.seasons.length),
             },
             {
               id: 'titles',
               header: 'Championships',
               value: (r) => count(r.championships, r.championshipSeasons),
+              exportValue: (r) =>
+                r.championshipSeasons
+                  ? `${r.championships} (${r.championshipSeasons} of ${r.seasons.length} seasons known)`
+                  : null,
               cell: (r) => cell(r.championships, r.championshipSeasons, r.seasons.length),
             },
             {
               id: 'last',
               header: 'Last-place finishes',
               value: (r) => count(r.lastPlaces, r.lastPlaceSeasons),
+              exportValue: (r) =>
+                r.lastPlaceSeasons
+                  ? `${r.lastPlaces} (${r.lastPlaceSeasons} of ${r.seasons.length} seasons known)`
+                  : null,
               cell: (r) => cell(r.lastPlaces, r.lastPlaceSeasons, r.seasons.length),
             },
             {
               id: 'finish',
               header: 'Average finish',
               value: (r) => average(r.finishTotal, r.finishSeasons),
+              exportValue: (r) => {
+                const value = average(r.finishTotal, r.finishSeasons);
+                return value === null
+                  ? null
+                  : `${value.toFixed(1)} (${r.finishSeasons} of ${r.seasons.length} seasons known)`;
+              },
               cell: (r) => (
                 <>
                   {average(r.finishTotal, r.finishSeasons)?.toFixed(1) ?? '—'}

@@ -290,6 +290,7 @@ test('shared season insights load anonymously without requesting an access token
   expect(privateFunctions.listLeagues).not.toHaveBeenCalled();
   expect(privateFunctions.getEspnCredentialStatus).not.toHaveBeenCalled();
   expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Download Team scoring CSV' })).toBeInTheDocument();
 });
 test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
   const user = userEvent.setup();
@@ -370,6 +371,9 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(new URL(copied).pathname).toBe('/shared/history');
   expect(JSON.parse(new URL(copied).searchParams.get('years')!)).toEqual([2024]);
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole('button', { name: 'Download Manager scorecard CSV' }),
+  ).toBeInTheDocument();
 });
 test('history keeps a stale season available when its refresh fails', async () => {
   const user = userEvent.setup();

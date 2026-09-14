@@ -408,6 +408,25 @@ header :focus-visible {
   text-align: inherit;
   cursor: pointer;
 }
+.table-export-button {
+  display: block;
+  margin: 0 0 0.75rem auto;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.table-export-button:hover {
+  text-decoration: underline;
+}
+.table-export-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .table-sort-button:hover {
   text-decoration: underline;
 }

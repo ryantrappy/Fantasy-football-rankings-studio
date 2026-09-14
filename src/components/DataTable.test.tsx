@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DataTable, type DataColumn } from './DataTable';
+import { buildTableCsv, DataTable, ReportExportScope, type DataColumn } from './DataTable';
 
 type Entry = { id: string; name: string; score: number | null };
 const entries: Entry[] = [
@@ -24,6 +24,11 @@ const names = () =>
     .getAllByRole('row')
     .slice(1)
     .map((row) => within(row).getByRole('rowheader').textContent);
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 it('sorts raw numbers both ways with missing results last and accessible keyboard headers', async () => {
   const user = userEvent.setup();
@@ -91,4 +96,71 @@ it('toggles every column by clicking the header cell, label, and indicator', asy
     expect(header).toHaveAttribute('aria-sort', 'ascending');
   }
   expect(names()).toEqual(['Team 10', 'Team 2', 'Team 1', 'Team 3']);
+});
+
+it('builds contextual CSV from declared columns and neutralizes formula-like text', () => {
+  type SecureEntry = Entry & { privateCredential: string };
+  const secureColumns: DataColumn<SecureEntry>[] = [
+    { id: 'name', header: 'Manager, team', value: (row) => row.name, cell: (row) => row.name },
+    {
+      id: 'score',
+      header: 'Score',
+      value: (row) => row.score,
+      exportValue: (row) => (row.score === null ? null : `${row.score} (2 weeks known)`),
+      cell: (row) => row.score,
+    },
+  ];
+  const csv = buildTableCsv({
+    label: 'Manager scorecard',
+    context: { League: 'Formula, League', Season: 2025 },
+    columns: secureColumns,
+    rows: [
+      {
+        id: 'safe-id',
+        name: '=HYPERLINK("https://example.test")',
+        score: null,
+        privateCredential: 'never-export-this-token',
+      },
+    ],
+  });
+
+  expect(csv).toContain('League,"Formula, League"');
+  expect(csv).toContain('Missing values,Unavailable (not zero)');
+  expect(csv).toContain('"\'=HYPERLINK(""https://example.test"")",Unavailable');
+  expect(csv).not.toContain('never-export-this-token');
+});
+
+it('downloads the currently sorted and limited rows with report context', async () => {
+  const user = userEvent.setup();
+  let downloaded: Blob | undefined;
+  vi.stubGlobal('URL', {
+    createObjectURL: vi.fn((blob: Blob) => {
+      downloaded = blob;
+      return 'blob:test';
+    }),
+    revokeObjectURL: vi.fn(),
+  });
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+  render(
+    <ReportExportScope
+      value={{ context: { League: 'Test league', Season: 2025 }, filenameContext: '123-2025' }}
+    >
+      <DataTable
+        data={entries}
+        columns={columns}
+        getRowId={(row) => row.id}
+        label="Scores"
+        limit={2}
+        initialSorting={[{ id: 'score', desc: true }]}
+      />
+    </ReportExportScope>,
+  );
+  await user.click(screen.getByRole('button', { name: 'Points' }));
+  expect(names()).toEqual(['Team 3', 'Team 2']);
+  await user.click(screen.getByRole('button', { name: 'Download Scores CSV' }));
+
+  const csv = await downloaded!.text();
+  expect(csv.indexOf('Team 3')).toBeLessThan(csv.indexOf('Team 2'));
+  expect(csv).not.toContain('Team 10');
+  expect(csv).toContain('League,Test league');
 });

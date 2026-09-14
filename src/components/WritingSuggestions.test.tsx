@@ -39,15 +39,18 @@ it('loads factual context on expansion and requires fresh consent for generation
   expect(await screen.findByLabelText('Suggested talking points')).toHaveValue(
     'Discuss the scoring trend.',
   );
-  expect(client.generate).toHaveBeenCalledWith({
-    leagueId: '123',
-    year: 2025,
-    week: 2,
-    teamId: '1',
-    provider: 'codex',
-    model: '',
-    approved: true,
-  });
+  expect(client.generate).toHaveBeenCalledWith(
+    {
+      leagueId: '123',
+      year: 2025,
+      week: 2,
+      teamId: '1',
+      provider: 'codex',
+      model: '',
+      approved: true,
+    },
+    expect.any(AbortSignal),
+  );
   expect(screen.getByRole('checkbox')).not.toBeChecked();
   expect(button).toBeDisabled();
 });
@@ -129,6 +132,78 @@ it('sanitizes a generation failure and gives the operator a next step', async ()
     /verify the selected CLI login and model/i,
   );
   expect(screen.queryByText(/secret token|private\/server\/path/i)).not.toBeInTheDocument();
+});
+it('cancels a pending request and ignores its late response', async () => {
+  const client = api();
+  let finish!: (value: string) => void;
+  vi.mocked(client.generate).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(
+    <Provider>
+      <WritingSuggestions
+        api={client}
+        leagueId="123"
+        year={2025}
+        week={2}
+        teams={[{ teamId: '1', teamName: 'Team', managerName: 'A', wins: 1, loss: 0, ties: 0 }]}
+      />
+    </Provider>,
+  );
+  fireEvent.click(screen.getByText('Talking points for your rankings'));
+  await screen.findByText('100 points per week.');
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button', { name: 'Suggest talking points' }));
+  expect(await screen.findByText('Generation request pending…')).toBeInTheDocument();
+  const signal = vi.mocked(client.generate).mock.calls[0][1];
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel generation' }));
+  expect(signal?.aborted).toBe(true);
+  expect(screen.getByText('Cancellation requested…')).toBeInTheDocument();
+  finish('Late suggestions must be ignored.');
+  expect(await screen.findByText(/Request cancelled/i)).toBeInTheDocument();
+  expect(screen.queryByText('Late suggestions must be ignored.')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Suggest talking points' })).toBeDisabled();
+});
+it('aborts generation when the selected team changes and cannot populate the new team', async () => {
+  const client = api();
+  let finish!: (value: string) => void;
+  vi.mocked(client.generate).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  render(
+    <Provider>
+      <WritingSuggestions
+        api={client}
+        leagueId="123"
+        year={2025}
+        week={2}
+        teams={['1', '2'].map((teamId) => ({
+          teamId,
+          teamName: `Team ${teamId}`,
+          managerName: 'A',
+          wins: 1,
+          loss: 0,
+          ties: 0,
+        }))}
+      />
+    </Provider>,
+  );
+  fireEvent.click(screen.getByText('Talking points for your rankings'));
+  await screen.findByText('100 points per week.');
+  fireEvent.click(screen.getByRole('checkbox'));
+  fireEvent.click(screen.getByRole('button', { name: 'Suggest talking points' }));
+  const signal = vi.mocked(client.generate).mock.calls[0][1];
+  fireEvent.change(screen.getByLabelText('Team context'), { target: { value: '2' } });
+  await waitFor(() => expect(signal?.aborted).toBe(true));
+  finish('Old team response');
+  await waitFor(() => expect(client.context).toHaveBeenCalledTimes(2));
+  expect(screen.queryByText('Old team response')).not.toBeInTheDocument();
 });
 it('discards old context after the selected team changes', async () => {
   const client = api();

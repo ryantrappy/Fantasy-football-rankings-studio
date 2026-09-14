@@ -10,7 +10,7 @@ import {
   Textarea,
   chakra,
 } from '@chakra-ui/react';
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Team } from '../types';
 import type {
   WritingApi,
@@ -87,6 +87,7 @@ function TeamSuggestions({
   selection: { leagueId: string; year: number; week: number; teamId: string };
 }) {
   const consentId = useId();
+  const request = useRef<AbortController | undefined>(undefined);
   const { leagueId, year, week, teamId } = selection;
   const [context, setContext] = useState<WritingContext>(),
     [providers, setProviders] = useState<WritingProviderOption[]>([]),
@@ -96,8 +97,18 @@ function TeamSuggestions({
     [model, setModel] = useState(''),
     [approved, setApproved] = useState(false),
     [busy, setBusy] = useState(false),
+    [requestStatus, setRequestStatus] = useState<'idle' | 'pending' | 'cancelling' | 'cancelled'>(
+      'idle',
+    ),
     [generationError, setGenerationError] = useState(''),
     [suggestions, setSuggestions] = useState('');
+  useEffect(
+    () => () => {
+      request.current?.abort();
+      request.current = undefined;
+    },
+    [],
+  );
   useEffect(() => {
     let cancelled = false;
     void Promise.all([api.context({ leagueId, year, week, teamId }), api.providers()]).then(
@@ -163,6 +174,8 @@ function TeamSuggestions({
                 onChange={(e) => {
                   setProvider(e.target.value as WritingProvider);
                   setApproved(false);
+                  setRequestStatus('idle');
+                  setGenerationError('');
                   setSuggestions('');
                 }}
               >
@@ -191,6 +204,8 @@ function TeamSuggestions({
               onChange={(e) => {
                 setModel(e.target.value);
                 setApproved(false);
+                setRequestStatus('idle');
+                setGenerationError('');
                 setSuggestions('');
               }}
             />
@@ -203,6 +218,11 @@ function TeamSuggestions({
           </Text>
           <Text>{providerStatus(selectedProvider)}</Text>
           {!ready && <Text>The factual context above is available without AI.</Text>}
+          {requestStatus === 'pending' && <Text as="output">Generation request pending…</Text>}
+          {requestStatus === 'cancelling' && <Text as="output">Cancellation requested…</Text>}
+          {requestStatus === 'cancelled' && (
+            <Text as="output">Request cancelled. You can start a new generation.</Text>
+          )}
           {generationError && <Text role="alert">{generationError}</Text>}
           <label htmlFor={consentId}>
             <chakra.input
@@ -221,26 +241,52 @@ function TeamSuggestions({
             colorPalette="indigo"
             onClick={async () => {
               if (busy || !approved) return;
+              const controller = new AbortController();
+              request.current = controller;
               setBusy(true);
+              setRequestStatus('pending');
               setGenerationError('');
               setSuggestions('');
               try {
-                setSuggestions(
-                  await api.generate({ ...selection, provider, model, approved: true }),
+                const result = await api.generate(
+                  { ...selection, provider, model, approved: true },
+                  controller.signal,
                 );
+                if (!controller.signal.aborted && request.current === controller) {
+                  setSuggestions(result);
+                  setRequestStatus('idle');
+                }
               } catch (failure) {
                 logClientError('writing.generate', failure);
-                setGenerationError(
-                  'Generation failed. Ask the operator to verify the selected CLI login and model as the application service account, then try again.',
-                );
+                if (!controller.signal.aborted)
+                  setGenerationError(
+                    'Generation failed. Ask the operator to verify the selected CLI login and model as the application service account, then try again.',
+                  );
               } finally {
-                setBusy(false);
-                setApproved(false);
+                if (request.current === controller) {
+                  request.current = undefined;
+                  if (controller.signal.aborted) setRequestStatus('cancelled');
+                  setBusy(false);
+                  setApproved(false);
+                }
               }
             }}
           >
             {busy ? 'Generating…' : 'Suggest talking points'}
           </Button>
+          {busy && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={requestStatus === 'cancelling'}
+              onClick={() => {
+                setRequestStatus('cancelling');
+                request.current?.abort();
+              }}
+            >
+              {requestStatus === 'cancelling' ? 'Cancelling…' : 'Cancel generation'}
+            </Button>
+          )}
           {suggestions && (
             <Field.Root>
               <Field.Label>Suggested talking points</Field.Label>

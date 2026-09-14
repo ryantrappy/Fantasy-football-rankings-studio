@@ -24,5 +24,6 @@ export interface WritingApi {
   providers(): Promise<WritingProviderOption[]>;
   generate(
     selection: WritingSelection & { provider: WritingProvider; model: string; approved: boolean },
+    signal?: AbortSignal,
   ): Promise<string>;
 }

@@ -119,8 +119,10 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         unwrap(await writingFunctions.getContext({ data, headers: await headers() })),
       providers: async () =>
         unwrap(await writingFunctions.getProviders({ headers: await headers() })),
-      generate: async (data) =>
-        unwrap(await writingFunctions.generateSuggestions({ data, headers: await headers() })),
+      generate: async (data, signal) =>
+        unwrap(
+          await writingFunctions.generateSuggestions({ data, headers: await headers(), signal }),
+        ),
     },
     listLeagues: async () => {
       await leagueCollection.preload();

@@ -337,7 +337,10 @@ or `claude auth status` succeeds. This uses the server CLI account, not a browse
 user's subscription.
 The writer chooses a provider and optional model and must approve each generation
 before the displayed context is sent to that provider. Generated text stays in a
-separate editable field for review and copying into the ranking commentary.
+separate editable field for review and copying into the ranking commentary. A
+pending generation can be cancelled from the panel. Cancellation aborts the
+server CLI process, releases the user's generation slot, and does not change any
+ranking prose; a cancelled or late response is discarded.
 
 CLI requests run in a temporary directory with tools disabled, restricted inherited
 environment, bounded output, a 60-second timeout, and one active request per user

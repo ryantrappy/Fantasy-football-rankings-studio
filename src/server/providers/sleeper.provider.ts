@@ -18,6 +18,7 @@ interface SleeperLeagueData {
     playoff_week_start?: number;
     start_week?: number;
     league_average_match?: number;
+    playoff_round_type?: number;
   };
   scoring_settings?: Record<string, number>;
 }
@@ -67,12 +68,36 @@ export default class SleeperProvider implements LeagueProvider {
 
   async getLeague(league: League, seasonId: number): Promise<LeagueInfo> {
     const data = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
+    const firstWeek = Math.max(1, Math.min(18, data.settings?.start_week ?? 1));
+    const nflLastWeek = seasonId >= 2021 ? 18 : 17;
+    const playoffTeams = data.settings?.playoff_teams;
+    const playoffStart = data.settings?.playoff_week_start;
+    const playoffRounds = playoffTeams ? Math.ceil(Math.log2(Math.max(2, playoffTeams))) : 0;
+    const configuredLastWeek =
+      playoffStart && playoffRounds
+        ? playoffStart + playoffRounds - 1 + (data.settings?.playoff_round_type === 2 ? 1 : 0)
+        : nflLastWeek;
+    const lastWeek = Math.max(
+      firstWeek,
+      Math.min(
+        nflLastWeek,
+        data.status === 'complete' && data.settings?.last_scored_leg
+          ? data.settings.last_scored_leg
+          : configuredLastWeek,
+      ),
+    );
+    const validWeeks = Array.from({ length: lastWeek - firstWeek + 1 }, (_, i) => firstWeek + i);
+    const preseason = ['pre_draft', 'drafting'].includes(data.status || '');
     return {
       ...league,
       leagueName: league.leagueName || data.name,
       seasonId,
       teamCount: data.total_rosters,
-      maxWeek: 18,
+      maxWeek: lastWeek,
+      validWeeks,
+      scheduleNote: preseason
+        ? `Preseason schedule: weeks ${firstWeek}–${lastWeek} are available for planning; teams and matchups may remain empty until Sleeper publishes them.`
+        : `Sleeper’s configured ${seasonId} schedule runs from week ${firstWeek} through week ${lastWeek}.`,
     };
   }
 

@@ -51,6 +51,12 @@ export interface LeagueApi {
   writing?: import('./writing').WritingApi;
   listLeagues(): Promise<League[]>;
   createLeague(league: Omit<League, '_id'>): Promise<League>;
+  getLeagueInfo(
+    leagueId: string,
+    year: number,
+  ): Promise<
+    League & { teamCount?: number; maxWeek: number; validWeeks: number[]; scheduleNote: string }
+  >;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;
   getRankings(leagueId: string): Promise<WeeklyRanking[]>;
   saveRanking(ranking: WeeklyRanking): Promise<WeeklyRanking>;

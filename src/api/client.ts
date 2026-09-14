@@ -135,6 +135,13 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       leagueCollection.utils.writeUpsert(saved);
       return saved;
     },
+    getLeagueInfo: async (leagueId, year) =>
+      unwrap(
+        await functions.getLeagueInfo({
+          data: { leagueId, year },
+          headers: await headers(),
+        }),
+      ),
     getTeams: async (leagueId, year, week) =>
       unwrap(
         await functions.getTeams({ data: { leagueId, year, week }, headers: await headers() }),

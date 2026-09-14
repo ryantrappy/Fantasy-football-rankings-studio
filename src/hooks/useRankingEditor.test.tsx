@@ -44,6 +44,7 @@ function makeApi() {
   return {
     listLeagues: vi.fn<LeagueApi['listLeagues']>().mockResolvedValue([league]),
     createLeague: vi.fn<LeagueApi['createLeague']>(),
+    getLeagueInfo: vi.fn<LeagueApi['getLeagueInfo']>(),
     getRankings: vi.fn<LeagueApi['getRankings']>().mockResolvedValue([existing]),
     getTeams: vi.fn<LeagueApi['getTeams']>().mockResolvedValue(existing.teams),
     saveRanking: vi

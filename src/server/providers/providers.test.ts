@@ -55,6 +55,37 @@ describe('Provider normalization', () => {
     });
   });
 
+  it('derives Sleeper week choices from season and playoff settings', async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        league_id: '123',
+        season: '2026',
+        name: 'League',
+        total_rosters: 10,
+        status: 'pre_draft',
+        settings: {
+          start_week: 2,
+          playoff_week_start: 14,
+          playoff_teams: 6,
+          playoff_round_type: 1,
+        },
+      },
+    });
+    const result = await new SleeperProvider().getLeague(league, 2026);
+    expect(result.validWeeks).toEqual(Array.from({ length: 15 }, (_, index) => index + 2));
+    expect(result.maxWeek).toBe(16);
+    expect(result.scheduleNote).toMatch(/Preseason schedule/);
+  });
+
+  it('uses the 17-week NFL boundary for older Sleeper seasons without schedule settings', async () => {
+    get.mockResolvedValueOnce({
+      data: { league_id: '123', season: '2020', name: 'Old league', total_rosters: 10 },
+    });
+    const result = await new SleeperProvider().getLeague(league, 2020);
+    expect(result.validWeeks).toHaveLength(17);
+    expect(result.maxWeek).toBe(17);
+  });
+
   it('rejects unavailable future seasons instead of silently using current data', async () => {
     get.mockResolvedValueOnce({ data: { league_id: '123', season: '2026' } });
     await expect(new SleeperProvider().getLeague(league, 2027)).rejects.toMatchObject({
@@ -89,6 +120,22 @@ describe('Provider normalization', () => {
       ties: 0,
     });
     expect(get.mock.calls[0][1]).toMatchObject({ timeout: 10000 });
+  });
+
+  it('uses ESPN final scoring-period metadata for week choices', async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        id: 123,
+        settings: { name: 'League' },
+        status: { latestScoringPeriod: 1, finalScoringPeriod: 16 },
+      },
+    });
+    const result = await new EspnProvider().getLeague({ ...league, leagueType: 1 }, 2026);
+    expect(result.validWeeks).toEqual(Array.from({ length: 16 }, (_, index) => index + 1));
+    expect(result.scheduleNote).toMatch(/Preseason schedule/);
+    const params = get.mock.calls[0][1]?.params;
+    expect(params).toBeInstanceOf(URLSearchParams);
+    expect((params as URLSearchParams).getAll('view')).toEqual(['mSettings', 'mStatus']);
   });
 
   it('groups Sleeper matchups and keeps each bye separate', async () => {

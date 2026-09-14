@@ -90,3 +90,13 @@ it('missing per-user cookies never falls back to global environment cookies', as
   await service.getLeagueInfo('123', 2025, 'owner-a');
   expect(vi.mocked(axios.get).mock.calls[0][1]?.headers).not.toHaveProperty('Cookie');
 });
+it('returns season-specific week metadata through the authenticated operation', async () => {
+  const result = await operations.getLeagueInfo('owner-a', { leagueId: '123', year: 2025 });
+  expect(result).toMatchObject({
+    leagueId: '123',
+    maxWeek: 18,
+    validWeeks: Array.from({ length: 18 }, (_, index) => index + 1),
+  });
+  expect(result.scheduleNote).toMatch(/ESPN reports scoring periods/);
+  expect(result).not.toHaveProperty('ownerSubject');
+});

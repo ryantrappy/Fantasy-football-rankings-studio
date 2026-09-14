@@ -5,6 +5,7 @@ import HttpException from '../exceptions/HttpException';
 import { League, LeagueInfo } from '../interfaces/league.interface';
 import { Matchup, Team } from '../interfaces/teams.interface';
 import { LeagueProvider } from './league-provider';
+import { defaultSeason } from '../../util/rankings';
 
 interface EspnData {
   id: number;
@@ -72,7 +73,20 @@ export default class EspnProvider implements LeagueProvider {
   async getLeague(league: League, seasonId: number): Promise<LeagueInfo> {
     const data = await this.get(league.providerLeagueId ?? league.leagueId, seasonId, [
       'mSettings',
+      'mStatus',
     ]);
+    const configuredWeeks = Object.values(
+      data.settings?.scheduleSettings?.matchupPeriods || {},
+    ).flat();
+    const lastWeek = Math.max(
+      1,
+      Math.min(
+        seasonId >= 2021 ? 18 : 17,
+        data.status?.finalScoringPeriod ||
+          (configuredWeeks.length ? Math.max(...configuredWeeks) : seasonId >= 2021 ? 18 : 17),
+      ),
+    );
+    const validWeeks = Array.from({ length: lastWeek }, (_, i) => i + 1);
     return {
       ...league,
       leagueName:
@@ -81,7 +95,12 @@ export default class EspnProvider implements LeagueProvider {
         `League ${league.providerLeagueId ?? league.leagueId}`,
       seasonId,
       teamCount: data.settings?.size,
-      maxWeek: 18,
+      maxWeek: lastWeek,
+      validWeeks,
+      scheduleNote:
+        seasonId === defaultSeason() && (data.status?.latestScoringPeriod ?? 1) <= 1
+          ? `Preseason schedule: ESPN reports weeks 1–${lastWeek}; teams and matchups may remain empty until the league schedule is published.`
+          : `ESPN reports scoring periods 1 through ${lastWeek} for ${seasonId}.`,
     };
   }
 

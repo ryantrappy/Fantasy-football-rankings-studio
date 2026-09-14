@@ -24,6 +24,21 @@ vi.mock('./functions/rankings.functions', () => ({
     .fn()
     .mockResolvedValue({ ok: true, data: { configured: false, onboardingComplete: true } }),
   listLeagues: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  getLeagueInfo: vi.fn().mockResolvedValue({
+    ok: true,
+    data: {
+      leagueId: '123',
+      leagueName: 'League',
+      leagueType: 0,
+      seasonId: 2026,
+      maxWeek: 17,
+      validWeeks: Array.from({ length: 17 }, (_, index) => index + 1),
+      scheduleNote: 'Sleeper schedule weeks 1–17.',
+    },
+  }),
+  getRankings: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  getTeams: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  saveRanking: vi.fn().mockImplementation(async ({ data }) => ({ ok: true, data })),
   getLeagueSeasons: vi.fn().mockResolvedValue({
     ok: true,
     data: { years: [2025], activeSeason: 2025, activeManagerKeys: [] },
@@ -73,6 +88,21 @@ beforeEach(() => {
   vi.stubGlobal('scrollTo', vi.fn());
   auth.isAuthenticated = false;
   vi.mocked(privateFunctions.listLeagues).mockResolvedValue({ ok: true, data: [] });
+  vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
+    ok: true,
+    data: {
+      leagueId: '123',
+      leagueName: 'League',
+      leagueType: 0,
+      seasonId: 2026,
+      teamCount: undefined,
+      maxWeek: 17,
+      validWeeks: Array.from({ length: 17 }, (_, index) => index + 1),
+      scheduleNote: 'Sleeper schedule weeks 1–17.',
+    },
+  });
+  vi.mocked(privateFunctions.getRankings).mockResolvedValue({ ok: true, data: [] });
+  vi.mocked(privateFunctions.getTeams).mockResolvedValue({ ok: true, data: [] });
   vi.stubEnv('VITE_AUTH0_DOMAIN', 'example.auth0.com');
   vi.stubEnv('VITE_AUTH0_CLIENT_ID', 'test-client');
   vi.stubEnv('VITE_AUTH0_AUDIENCE', 'https://test-api');
@@ -122,6 +152,116 @@ test('authenticated visitors can navigate to league creation and return', async 
   expect(router.state.location.pathname).toBe('/leagues/new');
   await userEvent.click(screen.getByRole('button', { name: /Back to rankings/ }));
   expect(await screen.findByRole('heading', { name: 'Power rankings studio' })).toBeInTheDocument();
+});
+test('the rankings studio uses provider weeks and retains saved out-of-schedule editions', async () => {
+  auth.isAuthenticated = true;
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
+    ok: true,
+    data: {
+      leagueId: '123',
+      leagueName: 'League',
+      leagueType: 0,
+      seasonId: 2026,
+      teamCount: undefined,
+      maxWeek: 3,
+      validWeeks: [2, 3],
+      scheduleNote: 'Preseason schedule: weeks 2–3 are available for planning.',
+    },
+  });
+  vi.mocked(privateFunctions.getRankings).mockResolvedValue({
+    ok: true,
+    data: [
+      {
+        leagueId: '123',
+        year: 2026,
+        week: 1,
+        rankingsTitle: 'Saved week',
+        introduction: '',
+        teams: [],
+      },
+    ],
+  });
+  await openPage();
+  expect(await screen.findByRole('option', { name: '1 (saved edition)' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '2' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: '3' })).toBeInTheDocument();
+  expect(screen.queryByRole('option', { name: '4' })).not.toBeInTheDocument();
+  expect(
+    screen.getByText(/Saved editions outside that schedule remain available/),
+  ).toBeInTheDocument();
+});
+
+test('an invalid week moves safely to the first provider week with an explanation', async () => {
+  auth.isAuthenticated = true;
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
+    ok: true,
+    data: {
+      leagueId: '123',
+      leagueName: 'League',
+      leagueType: 0,
+      seasonId: 2026,
+      teamCount: undefined,
+      maxWeek: 3,
+      validWeeks: [2, 3],
+      scheduleNote: 'Sleeper schedule weeks 2–3.',
+    },
+  });
+  await openPage();
+  expect(await screen.findByRole('status')).toHaveTextContent(/Week 1 is not available/);
+  expect(screen.getByLabelText('Week')).toHaveValue('2');
+});
+
+test('an unavailable schedule leaves season selection available with recovery guidance', async () => {
+  auth.isAuthenticated = true;
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
+    ok: false,
+    error: { status: 404, message: 'Season not found.' },
+  });
+  await openPage();
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Choose another season/);
+  expect(screen.getByLabelText('Season')).toBeEnabled();
+  expect(screen.getByLabelText('Week')).toBeDisabled();
+});
+
+test('saved editions remain selectable when historical provider metadata is unavailable', async () => {
+  auth.isAuthenticated = true;
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
+    ok: false,
+    error: { status: 404, message: 'Season not found.' },
+  });
+  vi.mocked(privateFunctions.getRankings).mockResolvedValue({
+    ok: true,
+    data: [
+      {
+        leagueId: '123',
+        year: 2026,
+        week: 4,
+        rankingsTitle: 'Archived edition',
+        introduction: '',
+        teams: [],
+      },
+    ],
+  });
+  await openPage();
+  expect(await screen.findByRole('option', { name: '4 (saved edition)' })).toBeInTheDocument();
+  expect(screen.getByText(/Only previously saved editions are shown/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Week')).toBeEnabled();
 });
 test('the create league URL supports direct navigation', async () => {
   auth.isAuthenticated = true;

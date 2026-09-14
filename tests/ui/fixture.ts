@@ -42,6 +42,13 @@ export const history: WeeklyRanking[] = [
 export const api: LeagueApi = {
   listLeagues: async () => [league],
   createLeague: async (value) => value,
+  getLeagueInfo: async () => ({
+    ...league,
+    teamCount: ranking.teams.length,
+    maxWeek: 17,
+    validWeeks: Array.from({ length: 17 }, (_, index) => index + 1),
+    scheduleNote: 'Sleeper’s configured 2026 schedule runs from week 1 through week 17.',
+  }),
   getTeams: async () => ranking.teams,
   getRankings: async () => [...history, ranking],
   saveRanking: async (value) => value,

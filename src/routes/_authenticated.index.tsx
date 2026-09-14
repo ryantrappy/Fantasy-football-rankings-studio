@@ -17,6 +17,7 @@ import { errorMessage } from '../api/client';
 import { RankingEditor, type EditorHandle } from '../components/RankingEditor';
 import { useLiveQuery } from '@tanstack/react-db';
 import { defaultSeason } from '../util/rankings';
+import { safeWeek, weekChoices, type WeekChoice } from '../week-options';
 
 export const Route = createFileRoute('/_authenticated/')({ component: RankingsPage });
 
@@ -29,10 +30,19 @@ function RankingsPage() {
   const [selected, setSelected] = useState('');
   const [year, setYear] = useState(defaultSeason);
   const [week, setWeek] = useState(1);
+  const weekRef = useRef(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [switching, setSwitching] = useState(false);
+  const [schedule, setSchedule] = useState<{
+    leagueId: string;
+    year: number;
+    choices: WeekChoice[];
+    note: string;
+    adjustedFrom?: number;
+  }>();
+  const [scheduleError, setScheduleError] = useState('');
   const editor = useRef<EditorHandle>(null);
   useBlocker({
     shouldBlockFn: async () => {
@@ -69,11 +79,75 @@ function RankingsPage() {
     };
   }, [api, retry]);
 
+  useEffect(() => {
+    if (!selected) return;
+    let cancelled = false;
+    const applySchedule = (choices: WeekChoice[], note: string) => {
+      const currentWeek = weekRef.current;
+      const nextWeek = safeWeek(currentWeek, choices);
+      setSchedule({
+        leagueId: selected,
+        year,
+        choices,
+        note,
+        adjustedFrom: nextWeek !== undefined && nextWeek !== currentWeek ? currentWeek : undefined,
+      });
+      if (nextWeek !== undefined) {
+        weekRef.current = nextWeek;
+        setWeek(nextWeek);
+      }
+    };
+    Promise.allSettled([api.getLeagueInfo(selected, year), api.getRankings(selected)])
+      .then(([infoResult, rankingsResult]) => {
+        if (cancelled) return;
+        const rankings = rankingsResult.status === 'fulfilled' ? rankingsResult.value : [];
+        if (rankingsResult.status === 'rejected')
+          logClientError('_authenticated.index.rankings', rankingsResult.reason);
+        if (infoResult.status === 'rejected') {
+          logClientError('_authenticated.index.schedule', infoResult.reason);
+          const choices = weekChoices([], rankings, year);
+          if (choices.length) {
+            applySchedule(
+              choices,
+              `The provider’s ${year} schedule is unavailable. Only previously saved editions are shown; choose another season to create a new edition.`,
+            );
+          } else {
+            setSchedule(undefined);
+            setScheduleError(
+              `The ${year} schedule is unavailable: ${errorMessage(infoResult.reason)} Choose another season or retry after checking the league with its provider.`,
+            );
+          }
+          return;
+        }
+        const info = infoResult.value;
+        const choices = weekChoices(info.validWeeks, rankings, year);
+        if (!choices.length) {
+          setSchedule(undefined);
+          setScheduleError(
+            `No supported weeks are available for ${year}. Choose another season or verify the league schedule with the provider.`,
+          );
+          return;
+        }
+        applySchedule(choices, info.scheduleNote);
+      })
+      .catch((failure) => {
+        logClientError('_authenticated.index.schedule', failure);
+        if (!cancelled) {
+          setSchedule(undefined);
+          setScheduleError(`The ${year} schedule could not be prepared. Choose another season.`);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, selected, year, retry]);
+
   async function changeSelection(change: () => void) {
     setSwitching(true);
     try {
       await editor.current?.flush();
       setError('');
+      setScheduleError('');
       change();
     } catch (failure) {
       logClientError('_authenticated.index', failure);
@@ -83,6 +157,8 @@ function RankingsPage() {
     }
   }
   const league = leagues.find((entry) => entry.leagueId === selected);
+  const activeSchedule =
+    schedule?.leagueId === selected && schedule.year === year ? schedule : undefined;
   return (
     <>
       <Flex
@@ -174,32 +250,59 @@ function RankingsPage() {
                 <NativeSelect.Indicator />
               </NativeSelect.Root>
             </Field.Root>
-            <Field.Root width="auto" minW="120px" gap={2}>
+            <Field.Root width="auto" minW="120px" gap={2} disabled={!activeSchedule}>
               <Field.Label>Week</Field.Label>
               <NativeSelect.Root>
                 <NativeSelect.Field
                   value={week}
                   onChange={(event) => {
                     const value = Number(event.target.value);
-                    void changeSelection(() => setWeek(value));
+                    void changeSelection(() => {
+                      weekRef.current = value;
+                      setWeek(value);
+                    });
                   }}
                 >
-                  {Array.from({ length: 18 }, (_, index) => index + 1).map((value) => (
-                    <option key={value}>{value}</option>
+                  {(activeSchedule?.choices || []).map(({ week: value, savedOnly }) => (
+                    <option key={value} value={value}>
+                      {value}
+                      {savedOnly ? ' (saved edition)' : ''}
+                    </option>
                   ))}
                 </NativeSelect.Field>
                 <NativeSelect.Indicator />
               </NativeSelect.Root>
             </Field.Root>
           </fieldset>
-          <RankingEditor
-            key={`${selected}-${year}-${week}`}
-            ref={editor}
-            api={api}
-            league={league}
-            year={year}
-            week={week}
-          />
+          {scheduleError ? (
+            <Box className="notice error" role="alert">
+              {scheduleError}
+            </Box>
+          ) : activeSchedule ? (
+            <>
+              <Text fontSize="sm" mb={4}>
+                {activeSchedule.note}
+                {activeSchedule.choices.some((choice) => choice.savedOnly) &&
+                  ' Saved editions outside that schedule remain available and are labeled in the week picker.'}
+              </Text>
+              {activeSchedule.adjustedFrom !== undefined && (
+                <chakra.output className="notice" display="block" mb={4}>
+                  Week {activeSchedule.adjustedFrom} is not available for this league season, so the
+                  studio moved to week {week}. Choose any other available week above.
+                </chakra.output>
+              )}
+              <RankingEditor
+                key={`${selected}-${year}-${week}`}
+                ref={editor}
+                api={api}
+                league={league}
+                year={year}
+                week={week}
+              />
+            </>
+          ) : (
+            <chakra.output>Loading the {year} schedule…</chakra.output>
+          )}
         </>
       ) : (
         !error && (

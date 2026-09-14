@@ -149,7 +149,13 @@ export const operations = {
   getLeagueInfo: async (owner: string, input: unknown) => {
     const data = seasonSchema.parse(input);
     const info = await leagues.getLeagueInfo(data.leagueId, data.year, owner);
-    return { ...publicLeague(info), teamCount: info.teamCount, maxWeek: info.maxWeek };
+    return {
+      ...publicLeague(info),
+      teamCount: info.teamCount,
+      maxWeek: info.maxWeek,
+      validWeeks: info.validWeeks,
+      scheduleNote: info.scheduleNote,
+    };
   },
   getTeams: async (owner: string, input: unknown) => {
     const data = weekSchema.parse(input);

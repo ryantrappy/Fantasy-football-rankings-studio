@@ -37,6 +37,7 @@ export interface LeagueApi {
   management?: {
     archived(): Promise<League[]>;
     archive(leagueId: string, archived: boolean): Promise<void>;
+    rename(leagueId: string, leagueName: string): Promise<League>;
   };
   reportSharing?: {
     get(leagueId: string): Promise<boolean>;

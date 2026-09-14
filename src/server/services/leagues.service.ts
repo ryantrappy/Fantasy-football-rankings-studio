@@ -75,6 +75,20 @@ class LeaguesService {
     if (!result) throw new HttpException(404, 'League not found.');
   }
 
+  public async rename(id: string, name: string, owner: string): Promise<League> {
+    const leagueName = typeof name === 'string' ? name.trim() : '';
+    if (!leagueName) throw new HttpException(400, 'Enter a league display name.');
+    if (leagueName.length > 120)
+      throw new HttpException(400, 'League display name must be at most 120 characters.');
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner },
+      { $set: { leagueName } },
+      { returnDocument: 'after' },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
+    return result as unknown as League;
+  }
+
   public async createNewLeague(input: League, ownerSubject: string): Promise<League> {
     if (!input || typeof input.leagueId !== 'string' || !/^\d{1,30}$/.test(input.leagueId))
       throw new HttpException(400, 'Enter a valid numeric league ID.');

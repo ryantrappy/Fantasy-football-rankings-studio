@@ -74,6 +74,16 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         );
         await leagueCollection.utils.refetch({ throwOnError: true });
       },
+      rename: async (leagueId, leagueName) => {
+        const renamed = unwrap(
+          await functions.renameLeague({
+            data: { leagueId, leagueName },
+            headers: await headers(),
+          }),
+        );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+        return renamed;
+      },
     },
     reportSharing: {
       get: async (leagueId) =>

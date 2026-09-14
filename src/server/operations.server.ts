@@ -104,6 +104,12 @@ export const operations = {
     const data = leagueIdSchema.extend({ archived: z.boolean() }).parse(input);
     await leagues.setArchived(data.leagueId, data.archived, owner);
   },
+  renameLeague: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema
+      .extend({ leagueName: z.string().trim().min(1).max(120) })
+      .parse(input);
+    return publicLeague(await leagues.rename(data.leagueId, data.leagueName, owner));
+  },
   getReportSharing: async (owner: string, input: unknown) =>
     (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
     false,

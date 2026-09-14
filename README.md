@@ -93,6 +93,11 @@ explains the private-league cookie requirement before import. A successful conne
 opens that league directly in the rankings studio with a short guide to ordering teams,
 writing takes, automatic saving, and image export.
 
+The ranking editor’s **Keyboard shortcuts** disclosure documents how to focus a drag
+handle, lift and move a team with Space/Enter and arrow keys, drop or cancel it, use the
+one-step move buttons, and activate Undo. The disclosure itself opens and closes from
+the keyboard and does not install shortcuts over commentary fields.
+
 ## Verification
 
 ```sh

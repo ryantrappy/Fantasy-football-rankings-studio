@@ -29,10 +29,11 @@ for (const width of [1440, 390]) {
   });
 }
 
-test('keyboard drag can cancel or drop with reduced motion', async ({ page }) => {
+test('keyboard drag can cancel with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto('/tests/ui/');
   const handle = page.getByRole('button', { name: 'Drag Fourth & Long to reorder' });
+  await handle.scrollIntoViewIfNeeded();
   await handle.focus();
   await page.keyboard.press('Space');
   await expect(page.locator('.team-editor-overlay')).toBeVisible();
@@ -44,6 +45,13 @@ test('keyboard drag can cancel or drop with reduced motion', async ({ page }) =>
   await page.keyboard.press('Escape');
   await expect(page.locator('.team-editor-overlay')).toHaveCount(0);
   await expect(page.locator('.export-team-name').first()).toHaveText('Fourth & Long');
+});
+
+test('keyboard drag can drop with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/tests/ui/');
+  const handle = page.getByRole('button', { name: 'Drag Fourth & Long to reorder' });
+  await handle.scrollIntoViewIfNeeded();
   await handle.focus();
   await page.keyboard.press('Space');
   await expect(page.locator('.team-editor-overlay')).toBeVisible();
@@ -55,4 +63,30 @@ test('keyboard drag can cancel or drop with reduced motion', async ({ page }) =>
   await page.keyboard.press('Space');
   await expect(page.locator('.export-team-name').first()).toHaveText('Sunday Stunners');
   await expect(handle).toBeFocused();
+});
+
+test('shortcut reference works by keyboard on mobile without intercepting commentary', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.goto('/tests/ui/');
+  const summary = page.getByText('Keyboard shortcuts', { exact: true });
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(/Lift the focused team/)).toBeVisible();
+  await expect(page.getByText(/Cancel a keyboard drag/)).toBeVisible();
+  await expect(page.getByText(/Activate a move-up, move-down, or Undo move button/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.keyboard.press('Enter');
+  await expect(page.getByText(/Lift the focused team/)).toBeHidden();
+
+  const commentary = page.getByLabel('Commentary for Fourth & Long');
+  await commentary.fill('Typing here');
+  await commentary.focus();
+  await page.keyboard.press('Space');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Escape');
+  await expect(commentary).toHaveValue('Typing here ');
+  await expect(page.locator('.team-editor-overlay')).toHaveCount(0);
+  await expect(page.locator('.export-team-name').first()).toHaveText('Fourth & Long');
 });

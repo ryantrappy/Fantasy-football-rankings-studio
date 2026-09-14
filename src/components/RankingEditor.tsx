@@ -24,6 +24,7 @@ import { errorMessage } from '../api/client';
 import { RankingPreview } from './RankingPreview';
 import { Icon } from './Icon';
 import { SortableRankingList } from './SortableRankingList';
+import { KeyboardShortcutReference } from './KeyboardShortcutReference';
 
 export interface EditorHandle {
   flush: () => Promise<void>;
@@ -397,6 +398,7 @@ export const RankingEditor = forwardRef<
               Undo move
             </Button>
           </Flex>
+          <KeyboardShortcutReference />
           {api.writing && (
             <WritingSuggestions
               api={api.writing}

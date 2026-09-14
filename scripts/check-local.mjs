@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { readFile, readdir } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { generateKeyPair, exportJWK, SignJWT } from 'jose';
 import { toJSON, fromCrossJSON } from 'seroval';
@@ -25,7 +25,31 @@ const ids = Object.fromEntries(
     match[1],
   ]),
 );
-assert.equal(Object.keys(ids).length, 19, 'Build server functions before running this check');
+const requiredFunctions = [
+  'createLeague',
+  'getInsights',
+  'getLeague',
+  'getLeagueInfo',
+  'getLeagueSeasons',
+  'getMatchups',
+  'getPublicInsights',
+  'getPublicLeague',
+  'getPublicLeagueSeasons',
+  'getRanking',
+  'getRankingRevisions',
+  'getRankings',
+  'getTeams',
+  'listLeagues',
+  'saveRanking',
+  'saveEspnCredentials',
+  'updateRankingByWeek',
+];
+const missingFunctions = requiredFunctions.filter((name) => !ids[name]);
+assert.deepEqual(
+  missingFunctions,
+  [],
+  `Build is missing server functions required by this check: ${missingFunctions.join(', ')}`,
+);
 const { publicKey, privateKey } = await generateKeyPair('RS256');
 const jwk = { ...(await exportJWK(publicKey)), kid: 'local-check', alg: 'RS256', use: 'sig' };
 const issuerServer = createServer((_req, res) => {
@@ -42,12 +66,14 @@ const dbName = `fantasy_start_check_${randomUUID().replaceAll('-', '')}`;
 const baseUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/fantasy_rankings';
 const uri = baseUri.replace(/(mongodb(?:\+srv)?:\/\/[^/]+)(?:\/[^?]*)?(.*)/, `$1/${dbName}$2`);
 assert.ok(uri.includes(`/${dbName}`));
+const espnCredentialsKey = randomBytes(32).toString('hex');
 const app = spawn(process.execPath, ['.output/server/index.mjs'], {
   env: {
     ...process.env,
     PORT: String(port),
     HOST: '127.0.0.1',
     MONGODB_URI: uri,
+    ESPN_CREDENTIALS_KEY: espnCredentialsKey,
     AUTH0_ISSUER_BASE_URL: issuer,
     AUTH0_AUDIENCE: 'local-check',
   },
@@ -63,7 +89,12 @@ async function token(subject, audience = 'local-check') {
     .sign(privateKey);
 }
 async function rpc(name, data, auth, status = 200) {
-  const method = ['createLeague', 'saveRanking', 'updateRankingByWeek'].includes(name)
+  const method = [
+    'createLeague',
+    'saveEspnCredentials',
+    'saveRanking',
+    'updateRankingByWeek',
+  ].includes(name)
     ? 'POST'
     : 'GET';
   const payload = JSON.stringify(toJSON({ data }));
@@ -108,20 +139,46 @@ try {
     await rpc(name, {}, undefined, 401);
   await rpc('getPublicLeague', { leagueId: 'invalid' }, undefined, 400);
   await rpc('getPublicLeague', { leagueId: '999999999999999999999999999999' }, undefined, 404);
-  const year = Number(process.env.TEST_SEASON || 2026);
-  for (const [leagueType, leagueId] of [
-    [0, process.env.TEST_SLEEPER_LEAGUE_ID || '1312529175982129152'],
-    [1, process.env.TEST_ESPN_LEAGUE_ID || '1140768'],
-  ]) {
+  const year = Number(process.env.TEST_SEASON || 2025);
+  const providerFixtures = [[0, process.env.TEST_SLEEPER_LEAGUE_ID || '1312529175982129152']];
+  const espnSettings = [
+    process.env.TEST_ESPN_LEAGUE_ID,
+    process.env.TEST_ESPN_S2,
+    process.env.TEST_ESPN_SWID,
+  ];
+  if (espnSettings.some(Boolean) && !espnSettings.every(Boolean))
+    throw new Error(
+      'Set TEST_ESPN_LEAGUE_ID, TEST_ESPN_S2, and TEST_ESPN_SWID together for the ESPN live check.',
+    );
+  if (espnSettings.every(Boolean)) {
+    await rpc('saveEspnCredentials', { espnS2: espnSettings[1], swid: espnSettings[2] }, owner);
+    providerFixtures.push([1, espnSettings[0]]);
+  } else {
+    console.log('ESPN live check skipped; no test-only ESPN credentials were supplied.');
+  }
+  for (const [leagueType, providerLeagueId] of providerFixtures) {
     const league = await rpc(
       'createLeague',
-      { leagueId, leagueType, leagueName: '', seasonId: year, ownerSubject: 'forged-owner' },
+      {
+        leagueId: providerLeagueId,
+        leagueType,
+        leagueName: '',
+        seasonId: year,
+        ownerSubject: 'forged-owner',
+      },
       owner,
     );
-    assert.equal(league.leagueId, leagueId);
+    assert.equal(league.providerLeagueId, providerLeagueId);
+    assert.notEqual(league.leagueId, providerLeagueId);
+    const leagueId = league.leagueId;
     assert.ok(!('ownerSubject' in league));
     await rpc('getLeague', { leagueId }, other, 404);
-    await rpc('createLeague', { ...league, _id: undefined }, owner, 409);
+    await rpc(
+      'createLeague',
+      { leagueId: providerLeagueId, leagueType, leagueName: '', seasonId: year },
+      owner,
+      409,
+    );
     await rpc('getLeagueInfo', { leagueId, year }, owner);
     await rpc('getInsights', { leagueId, year }, other, 404);
     await rpc('getInsights', { leagueId, year }, undefined, 401);
@@ -188,6 +245,7 @@ try {
       teams: teams.map((team, i) => ({ ...team, description: '', position: i + 1 })),
     };
     const saved = await rpc('saveRanking', draft, owner);
+    assert.equal(saved.revision, 0);
     await rpc('saveRanking', draft, owner, 409);
     await rpc('getRanking', { id: saved._id }, other, 404);
     await rpc('saveRanking', { ...saved, rankingsTitle: 'Unauthorized' }, other, 404);
@@ -196,23 +254,34 @@ try {
       { ...saved, rankingsTitle: 'Updated', teams: [...saved.teams].reverse() },
       owner,
     );
+    assert.equal(updated.revision, 1);
     assert.equal(updated.teams[0].teamId, saved.teams.at(-1).teamId);
     assert.equal(updated.teams[0].position, 1);
-    await rpc(
+    await rpc('saveRanking', { ...saved, rankingsTitle: 'Stale update' }, owner, 409);
+    const persisted = await rpc(
       'updateRankingByWeek',
       { leagueId, year, week: 1, ranking: { ...updated, introduction: 'Persisted' } },
       owner,
     );
+    assert.equal(persisted.revision, 2);
     const reloaded = await rpc('getRanking', { id: saved._id }, owner);
+    assert.equal(reloaded.revision, 2);
     assert.equal(reloaded.rankingsTitle, 'Updated');
     assert.equal(reloaded.introduction, 'Persisted');
+    const revisions = await rpc('getRankingRevisions', { id: saved._id }, owner);
+    assert.deepEqual(
+      revisions.map((entry) => entry.ranking.revision),
+      [2, 1, 0],
+    );
+    assert.equal(revisions[1].ranking.rankingsTitle, 'Updated');
+    assert.equal(revisions[0].ranking.introduction, 'Persisted');
     assert.equal((await rpc('getRankings', { leagueId }, owner)).length, 1);
     await rpc('getTeams', { leagueId, year, week: 19 }, owner, 400);
     console.log(
-      `${leagueType === 0 ? 'Sleeper' : 'ESPN'}: ${teams.length} teams, ${matchups.length} matchups; create/update/reload and ownership passed`,
+      `${leagueType === 0 ? 'Sleeper' : 'ESPN'}: ${teams.length} teams, ${matchups.length} matchups; create/update/revision/reload and ownership passed`,
     );
   }
-  assert.equal((await rpc('listLeagues', undefined, owner)).length, 2);
+  assert.equal((await rpc('listLeagues', undefined, owner)).length, providerFixtures.length);
   assert.deepEqual(await rpc('listLeagues', undefined, other), []);
   console.log('Production Start HTTP integration passed; no separate API server used.');
 } finally {

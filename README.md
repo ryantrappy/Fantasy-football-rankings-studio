@@ -94,12 +94,21 @@ baseline. Failed browser runs upload the HTML report, trace, screenshot, and vid
 for diagnosis. Run the same checks above before proposing a change.
 
 `check:local` is a separate live integration check, not a deterministic CI gate. It
-builds and runs a separate disposable instance of the production app,
-verifies signed JWTs over HTTP, reads live Sleeper/ESPN data, tests ranking writes,
-reloads and ownership isolation, then drops only its randomly named test database.
+builds and runs a separate disposable instance of the production app, verifies signed
+JWTs over HTTP, reads live Sleeper data, tests ranking writes, revision conflicts/history,
+reloads and ownership isolation, then drops only its randomly named
+`fantasy_start_check_*` test database. It derives that database from `MONGODB_URI` but
+refuses to start unless the URI was rewritten to the random name; the configured
+production database is never selected or dropped. A successful run ends with
+`Production Start HTTP integration passed` followed by `Disposable test database removed`.
 It uses a temporary local JWKS issuer; the real application retains Auth0 validation.
-Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON`, `TEST_SLEEPER_LEAGUE_ID`, and
-`TEST_ESPN_LEAGUE_ID` to change the provider fixtures.
+Set `TEST_PORT` if port 3101 is busy, or `TEST_SEASON` and `TEST_SLEEPER_LEAGUE_ID`
+to change the default fixture. The default workspace and insights fixture season is
+the completed 2025 season for repeatability. ESPN no longer exposes the former public
+fixture anonymously. To include its live scenario, set `TEST_ESPN_LEAGUE_ID`,
+`TEST_ESPN_S2`, and `TEST_ESPN_SWID` together. The harness does not print those values;
+it encrypts them with an ephemeral key in the disposable database, then drops that
+database during cleanup.
 
 New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
 The rankings studio loads valid week choices for the selected league and season instead of assuming 1–18. Each account can register its own workspace for an external league. Sleeper and ESPN IDs can overlap. New workspaces have a separate numeric URL ID; provider requests use `providerLeagueId`. Existing documents without that field continue using their original ID, so rankings and shared links remain valid without rewriting records. Deployment adds a partial unique index on owner, provider and external ID; keep the existing unique workspace-ID index. Take the documented backup before deploying database changes.

@@ -24,6 +24,7 @@ import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
 import { LeagueSummary } from '../components/LeagueSummary';
 import { ScoreTrend } from '../components/ScoreTrend';
+import { reportFreshnessLabel } from './report-freshness';
 
 const number = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -41,10 +42,12 @@ export function InsightsPage({
   const leagues = leagueResult?.api === api ? leagueResult.entries : [];
   const [result, setResult] = useState<{
     key: string;
+    scope: string;
     api: typeof api;
     data?: SeasonInsights;
     activeManagerKeys?: string[];
     error?: string;
+    refreshed?: boolean;
   }>();
   const [reload, setReload] = useState(0);
   const [teamId, setTeamId] = useState('');
@@ -52,8 +55,9 @@ export function InsightsPage({
   const [allPickups, setAllPickups] = useState(false);
   const [includeFormer, setIncludeFormer] = useState(false);
   const requestKey = `${leagueId}:${year}:${reload}`;
+  const reportScope = `${leagueId}:${year}`;
   const loading = result?.key !== requestKey || result?.api !== api;
-  const data = loading ? undefined : result?.data;
+  const data = result?.api === api && result.scope === reportScope ? result.data : undefined;
   const error = loading ? '' : result?.error || '';
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +77,7 @@ export function InsightsPage({
           entries.find((l) => l.leagueId === leagueId) || (!leagueId ? entries[0] : undefined);
         if (!selected) {
           if (leagueId) throw new Error('League not found.');
-          setResult({ api, key: requestKey });
+          setResult({ api, key: requestKey, scope: reportScope });
           return;
         }
         if (!leagueId) {
@@ -88,8 +92,10 @@ export function InsightsPage({
           setResult({
             api,
             key: requestKey,
+            scope: reportScope,
             data: result,
             activeManagerKeys: context.activeManagerKeys,
+            refreshed: reload > 0,
           });
           setTeamId(result.teams[0]?.teamId || '');
           setPickupTeam('');
@@ -97,13 +103,26 @@ export function InsightsPage({
         }
       } catch (failure) {
         logClientError('InsightsPage', failure);
-        if (!cancelled) setResult({ api, key: requestKey, error: errorMessage(failure) });
+        if (!cancelled)
+          setResult((previous) => ({
+            api,
+            key: requestKey,
+            scope: reportScope,
+            data:
+              previous?.api === api && previous.scope === reportScope ? previous.data : undefined,
+            activeManagerKeys:
+              previous?.api === api && previous.scope === reportScope
+                ? previous.activeManagerKeys
+                : undefined,
+            error: errorMessage(failure),
+            refreshed: reload > 0,
+          }));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, year, reload, navigate, requestKey]);
+  }, [api, leagueId, year, reload, navigate, requestKey, reportScope]);
   const scoreRows = useMemo(
     () => data?.scores.filter((s) => s.teamId === teamId).sort((a, b) => a.week - b.week) || [],
     [data, teamId],
@@ -191,7 +210,7 @@ export function InsightsPage({
           Refresh insights
         </Button>
       </Box>
-      {error && (
+      {error && !data && (
         <Box className="notice error" role="alert">
           {error}{' '}
           <Button variant="outline" type="button" onClick={() => setReload((v) => v + 1)}>
@@ -201,6 +220,7 @@ export function InsightsPage({
       )}
       {loading && (
         <chakra.output
+          aria-live="polite"
           bg="bg"
           borderWidth="1px"
           borderStyle="solid"
@@ -209,7 +229,24 @@ export function InsightsPage({
           p={{ base: 4, md: 6 }}
           className="panel"
         >
-          Reading season scores and transactions… This can take a moment for a full season.
+          {data
+            ? `Refreshing insights… Showing the report ${reportFreshnessLabel(data.generatedAt).toLowerCase()} until the refresh finishes.`
+            : 'Reading season scores and transactions… This can take a moment for a full season.'}
+        </chakra.output>
+      )}
+      {!loading && error && data && (
+        <Box className="notice error" role="alert">
+          <strong>Refresh failed; this report remains partially available.</strong> Every section
+          below uses data {reportFreshnessLabel(data.generatedAt).toLowerCase()} and is not labeled
+          current. {error}{' '}
+          <Button variant="outline" type="button" onClick={() => setReload((v) => v + 1)}>
+            Try refresh again
+          </Button>
+        </Box>
+      )}
+      {!loading && !error && result?.refreshed && data && (
+        <chakra.output className="notice insights-notice" aria-live="polite">
+          Insights refreshed successfully. {reportFreshnessLabel(data.generatedAt)}.
         </chakra.output>
       )}
       {!loading && !error && !leagues.length && (
@@ -237,12 +274,23 @@ export function InsightsPage({
             {data.completedWeek
               ? `Through completed week ${data.completedWeek}`
               : 'No completed weeks yet'}{' '}
-            · Updated{' '}
-            {new Date(data.generatedAt).toLocaleTimeString(undefined, {
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
+            · {reportFreshnessLabel(data.generatedAt)}
+            {loading || error ? ' · displayed sections may be stale' : ''}
           </Text>
+          {!!data.partialFailures?.length && (
+            <Box as="output" className="notice insights-notice">
+              <strong>This report is partially available.</strong> The unaffected sections use the
+              refresh time above. Affected sections are labeled here and do not treat missing data
+              as current or as zero.
+              <ul>
+                {data.partialFailures.map((issue) => (
+                  <li key={`${issue.section}:${issue.message}`}>
+                    <strong>{issue.section}:</strong> {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </Box>
+          )}
           {!data.completedWeek && (
             <Box className="notice insights-notice">
               The current week is excluded while games are unfinished. Choose an earlier season to

@@ -43,6 +43,7 @@ export interface InsightsSource {
   playerNames: Record<string, string>;
   playerPositions?: Record<string, string>;
   draftPickTradeIds?: string[];
+  partialFailures?: { section: string; message: string }[];
   notes: string[];
   draftPickTrades: number;
 }
@@ -77,6 +78,7 @@ export interface SeasonInsights {
   tradeComparisons: TradeComparison[];
   completedWeek: number;
   generatedAt: string;
+  partialFailures?: { section: string; message: string }[];
   notes: string[];
   teams: (InsightsSource['teams'][number] & {
     weeks: number;

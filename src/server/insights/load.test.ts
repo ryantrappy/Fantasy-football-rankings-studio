@@ -169,4 +169,8 @@ it('keeps insights available when current Sleeper projections fail', async () =>
     teamPoints: {},
   });
   expect(result.playoffProjection?.note).toMatch(/historical scoring only/);
+  expect(result.partialFailures).toContainEqual({
+    section: 'Playoff simulation',
+    message: 'Current-week Sleeper projections are unavailable; historical scoring is used.',
+  });
 });

@@ -111,6 +111,13 @@ Authenticated owner-only endpoints use the signed-in owner’s saved ESPN creden
 protected by authentication and ownership checks.
 
 TanStack Query caches reports in the browser for five minutes, with a manual refresh.
+Every season report shows the date and time of its last successful refresh. Manual refreshes keep
+the last usable report visible while provider reads run. If a refresh still fails, affected report
+sections are labeled stale and retain that earlier timestamp; history retries preserve successful
+seasons individually. Successful responses with missing provider data name the affected sections
+near the top of the report and exclude unknown values instead of presenting them as current or zero.
+Loading, successful refreshes and continued partial availability are announced to assistive
+technology.
 TanStack Charts renders weekly actuals and available projections, with exact values
 in an accessible sortable table.
 

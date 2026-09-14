@@ -1,6 +1,6 @@
 import * as publicFunctions from './functions/public-insights.functions';
 import * as privateFunctions from './functions/rankings.functions';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { renderToString } from 'react-dom/server';
@@ -46,6 +46,7 @@ vi.mock('./functions/rankings.functions', () => ({
   getInsights: vi.fn().mockResolvedValue({
     ok: true,
     data: {
+      playoffSettings: undefined,
       completedWeek: 0,
       generatedAt: '2026-09-08T00:00:00Z',
       teams: [],
@@ -290,6 +291,69 @@ test('shared season insights load anonymously without requesting an access token
   expect(privateFunctions.getEspnCredentialStatus).not.toHaveBeenCalled();
   expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
 });
+test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
+  const user = userEvent.setup();
+  await openPage('/shared/insights?leagueId=123&year=2025');
+  expect(await screen.findByText(/Last successfully refreshed Sep 7, 2026/i)).toBeInTheDocument();
+
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
+    ok: false,
+    error: { status: 503, message: 'Sleeper is temporarily unavailable.' },
+  });
+  await user.click(screen.getByRole('button', { name: 'Refresh insights' }));
+
+  const partial = await screen.findByRole('alert');
+  expect(partial).toHaveTextContent('this report remains partially available');
+  expect(partial).toHaveTextContent('Every section below uses data last successfully refreshed');
+  expect(screen.getByText(/displayed sections may be stale/)).toBeInTheDocument();
+
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
+    ok: true,
+    data: {
+      playoffSettings: undefined,
+      completedWeek: 0,
+      generatedAt: '2026-09-09T00:00:00Z',
+      teams: [],
+      scores: [],
+      pickups: [],
+      trades: [],
+      tradeComparisons: [],
+      notes: [],
+    },
+  });
+  await user.click(screen.getByRole('button', { name: 'Try refresh again' }));
+  expect(await screen.findByText(/Insights refreshed successfully/)).toBeInTheDocument();
+  expect(screen.getAllByText(/Last successfully refreshed Sep 8, 2026/i)).toHaveLength(2);
+});
+test('a successfully loaded partial report names every affected section', async () => {
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
+    ok: true,
+    data: {
+      playoffSettings: undefined,
+      completedWeek: 0,
+      generatedAt: '2026-09-08T00:00:00Z',
+      teams: [],
+      scores: [],
+      pickups: [],
+      trades: [],
+      tradeComparisons: [],
+      partialFailures: [
+        {
+          section: 'League summary and final finishes',
+          message: 'Some bracket results are unavailable.',
+        },
+      ],
+      notes: [],
+    },
+  });
+
+  await openPage('/shared/insights?leagueId=123&year=2025');
+  const status = await screen.findByRole('status', { name: '' });
+  expect(status).toHaveTextContent('This report is partially available');
+  expect(status).toHaveTextContent(
+    'League summary and final finishes: Some bracket results are unavailable.',
+  );
+});
 test('shared history loads the selected seasons and preserves them in a copied link', async () => {
   const user = userEvent.setup();
   await openPage('/shared/history?leagueId=123&years=%5B2024%5D');
@@ -306,6 +370,25 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(new URL(copied).pathname).toBe('/shared/history');
   expect(JSON.parse(new URL(copied).searchParams.get('years')!)).toEqual([2024]);
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
+});
+test('history keeps a stale season available when its refresh fails', async () => {
+  const user = userEvent.setup();
+  await openPage('/shared/history?leagueId=123&years=%5B2024%5D');
+  expect(await screen.findByText(/2024: last successfully refreshed/i)).toBeInTheDocument();
+
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
+    ok: false,
+    error: { status: 503, message: 'Provider timeout.' },
+  });
+  await user.click(screen.getByRole('button', { name: 'Refresh selected seasons' }));
+
+  const partial = await screen.findByRole('alert');
+  expect(partial).toHaveTextContent('2024: Provider timeout.');
+  expect(partial).toHaveTextContent('This season remains visible using data last successfully');
+  expect(screen.getByText(/1 of 1 selected seasons loaded/)).toBeInTheDocument();
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Retry selected seasons' })).toBeEnabled(),
+  );
 });
 test('public reports work without Auth0 configuration', async () => {
   vi.stubEnv('VITE_AUTH0_DOMAIN', '');

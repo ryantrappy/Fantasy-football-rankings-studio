@@ -14,7 +14,7 @@ import {
   Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInsightsApi } from '../auth/InsightsAccess';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
@@ -28,6 +28,7 @@ import {
   luckIndex,
 } from '../league-summary';
 import { LeagueSummary } from '../components/LeagueSummary';
+import { reportFreshnessLabel } from './report-freshness';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -53,10 +54,17 @@ export function HistoryPage({
   const [loaded, setLoaded] = useState<{
     api: typeof api;
     key: string;
+    scope: string;
     records: SeasonRecord[];
-    errors: { year: number; message: string }[];
+    errors: { year: number; message: string; retained: boolean }[];
     done: boolean;
+    refreshed: boolean;
+    completed: number;
   }>();
+  const loadedRef = useRef(loaded);
+  useEffect(() => {
+    loadedRef.current = loaded;
+  }, [loaded]);
   const currentCatalog =
     catalog?.api === api && catalog.leagueId === leagueId ? catalog : undefined;
   const years = useMemo(() => {
@@ -66,8 +74,10 @@ export function HistoryPage({
     return (prior.length ? prior : currentCatalog.years).slice(0, 3);
   }, [currentCatalog, requestedYears]);
   const key = `${leagueId}:${years.join(',')}:${refresh}`;
+  const reportScope = `${leagueId}:${years.join(',')}`;
   const current = loaded?.api === api && loaded.key === key ? loaded : undefined;
-  const records = current?.records || [];
+  const retained = loaded?.api === api && loaded.scope === reportScope ? loaded : undefined;
+  const records = current?.records || retained?.records || [];
   const loading = !!years.length && !current?.done;
   useEffect(() => {
     let cancelled = false;
@@ -108,32 +118,43 @@ export function HistoryPage({
     if (!years.length) return;
     let cancelled = false;
     void (async () => {
-      const records: SeasonRecord[] = [],
-        errors: { year: number; message: string }[] = [];
+      const previous = loadedRef.current;
+      const priorRecords =
+        previous?.api === api && previous.scope === reportScope ? previous.records : [];
+      const recordByYear = new Map(priorRecords.map((record) => [record.year, record]));
+      const completed = new Set<number>();
+      const errors: { year: number; message: string; retained: boolean }[] = [];
       for (const year of years) {
         if (cancelled) return;
         try {
           const data = await api.getInsights(leagueId, year, refresh > 0);
           if (cancelled) return;
-          records.push({ year, data });
+          recordByYear.set(year, { year, data });
         } catch (error) {
           logClientError('HistoryPage', error);
           if (cancelled) return;
-          errors.push({ year, message: errorMessage(error) });
+          errors.push({ year, message: errorMessage(error), retained: recordByYear.has(year) });
         }
+        completed.add(year);
         setLoaded({
           api,
           key,
-          records: [...records],
+          scope: reportScope,
+          records: years.flatMap((selectedYear) => {
+            const record = recordByYear.get(selectedYear);
+            return record ? [record] : [];
+          }),
           errors: [...errors],
-          done: records.length + errors.length === years.length,
+          done: completed.size === years.length,
+          refreshed: refresh > 0,
+          completed: completed.size,
         });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [api, key, leagueId, years, refresh]);
+  }, [api, key, leagueId, years, refresh, reportScope]);
   const managers = visibleManagers(
     summarizeLeague(records),
     currentCatalog?.activeManagerKeys || [],
@@ -292,9 +313,10 @@ export function HistoryPage({
               </Box>
               {!years.length && <Text mb={4}>Select at least one season to compare.</Text>}
               {loading && (
-                <chakra.output className="notice insights-notice">
-                  Loaded {records.length + (current?.errors.length || 0)} of {years.length} seasons.
-                  Historical provider reads can take a moment.
+                <chakra.output className="notice insights-notice" aria-live="polite">
+                  {refresh > 0 ? 'Refreshed' : 'Loaded'} {current?.completed || 0} of {years.length}{' '}
+                  seasons. Historical provider reads can take a moment.
+                  {!!retained?.records.length && ' Previously loaded seasons remain visible below.'}
                 </chakra.output>
               )}
               {!!current?.errors.length && (
@@ -302,7 +324,12 @@ export function HistoryPage({
                   <strong>Some seasons could not be loaded.</strong>
                   {current.errors.map((e) => (
                     <Text mb={4} key={e.year}>
-                      {e.year}: {e.message}
+                      {e.year}: {e.message}{' '}
+                      {e.retained
+                        ? `This season remains visible using data ${reportFreshnessLabel(
+                            records.find((record) => record.year === e.year)!.data.generatedAt,
+                          ).toLowerCase()}.`
+                        : 'No saved report is available, so this season is excluded from every section.'}
                     </Text>
                   ))}
                   <Button
@@ -315,6 +342,31 @@ export function HistoryPage({
                   </Button>
                 </Box>
               )}
+              {!loading && current?.refreshed && !current.errors.length && (
+                <chakra.output
+                  className="notice insights-notice"
+                  aria-live="polite"
+                >
+                  All selected seasons refreshed successfully.
+                </chakra.output>
+              )}
+              {!!records.some((record) => record.data.partialFailures?.length) && (
+                <Box as="output" className="notice insights-notice">
+                  <strong>Some season sections are partially available.</strong>
+                  <ul>
+                    {records.flatMap((record) =>
+                      (record.data.partialFailures || []).map((issue) => (
+                        <li key={`${record.year}:${issue.section}:${issue.message}`}>
+                          <strong>
+                            {record.year} {issue.section}:
+                          </strong>{' '}
+                          {issue.message}
+                        </li>
+                      )),
+                    )}
+                  </ul>
+                </Box>
+              )}
               {!!records.length && (
                 <>
                   <Text mb={4} className="insights-meta">
@@ -324,7 +376,14 @@ export function HistoryPage({
                       .sort((a, b) => b - a)
                       .join(', ')}{' '}
                     · {records.length} of {years.length} selected seasons loaded
-                    {loading ? ' · provisional while loading' : ''}. Managers match by provider
+                    {loading ? ' · provisional while refreshing' : ''}.{' '}
+                    {records
+                      .map(
+                        (record) =>
+                          `${record.year}: ${reportFreshnessLabel(record.data.generatedAt).toLowerCase()}`,
+                      )
+                      .join(' · ')}
+                    . Managers match by provider
                     account ID; renamed teams stay together. New owners and changed co-owner groups
                     start a separate record. Unknown owners stay separate by season.
                   </Text>

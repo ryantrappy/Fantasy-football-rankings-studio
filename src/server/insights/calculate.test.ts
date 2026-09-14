@@ -38,6 +38,24 @@ it('keeps missing projections distinct from zero and excludes unfinished weeks',
   });
   expect(result.scores).toHaveLength(3);
 });
+it('labels sections affected by incomplete provider lineup data', () => {
+  const input = source([
+    { ...score('1', 1, 90), lineupAvailable: false },
+    score('2', 1, 100),
+  ]);
+  input.partialFailures = [
+    { section: 'League summary and final finishes', message: 'Bracket unavailable.' },
+  ];
+
+  expect(calculateInsights(input).partialFailures).toEqual([
+    { section: 'League summary and final finishes', message: 'Bracket unavailable.' },
+    {
+      section: 'Trade and pickup assessments',
+      message:
+        'Some weekly lineup details are unavailable; only observed comparable player scores are graded.',
+    },
+  ]);
+});
 it('uses a strict league-median comparison including ties and negative points', () => {
   const result = calculateInsights(
     source([

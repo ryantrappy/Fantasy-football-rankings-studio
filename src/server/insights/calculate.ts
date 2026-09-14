@@ -117,6 +117,18 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     tradeComparisons: normalized.trades,
     completedWeek: source.completedWeek,
     generatedAt: new Date().toISOString(),
+    partialFailures: [
+      ...(source.partialFailures || []),
+      ...(scores.some((s) => s.lineupAvailable === false)
+        ? [
+            {
+              section: 'Trade and pickup assessments',
+              message:
+                'Some weekly lineup details are unavailable; only observed comparable player scores are graded.',
+            },
+          ]
+        : []),
+    ],
     notes: [
       ...source.notes,
       ...(scores.some((s) => s.lineupAvailable === false)

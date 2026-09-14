@@ -137,6 +137,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   );
   const projectionWeek = completedWeek + 1;
   let playoffProjection: InsightsSource['playoffProjection'];
+  const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
   if (
     Number(state.season) === year &&
     state.season_type === 'regular' &&
@@ -174,6 +175,10 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         totalStarters: 0,
         note: 'Sleeper projections could not be loaded; the forecast uses historical scoring only.',
       };
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: 'Current-week Sleeper projections are unavailable; historical scoring is used.',
+      });
     }
   }
   const unique = [
@@ -223,6 +228,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         resultNotes.push(
           'Some playoff/finish data could not be loaded. Missing results are excluded from achievement totals.',
         );
+        if (!partialFailures.some((issue) => issue.section === 'League summary and final finishes'))
+          partialFailures.push({
+            section: 'League summary and final finishes',
+            message:
+              'Some playoff bracket results are unavailable; missing achievements are excluded rather than counted as zero.',
+          });
       }
     results = sleeperResults(
       teams.map((t) => t.teamId),
@@ -257,6 +268,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       .filter((t) => t.type === 'trade' && t.draft_picks?.length)
       .map((t) => t.transaction_id),
     draftPickTrades: unique.filter((t) => t.type === 'trade' && t.draft_picks?.length).length,
+    partialFailures,
     notes: [
       ...resultNotes,
       'Sleeper’s documented API does not provide historical lineup projections. Scoring trends show actual points and league-median results instead. Positional comparisons use Sleeper’s current primary-position catalog.',
@@ -398,6 +410,7 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
   }
   const projectionWeek = meta.status.latestScoringPeriod;
   let playoffProjection: InsightsSource['playoffProjection'];
+  const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
   if (
     year === defaultSeason() &&
     projectionWeek === completedWeek + 1 &&
@@ -429,6 +442,10 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
         totalStarters: 0,
         note: 'ESPN projections could not be loaded; the forecast uses historical scoring only.',
       };
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: 'Current-week ESPN projections are unavailable; historical scoring is used.',
+      });
     }
   }
   const txs = [
@@ -491,6 +508,7 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     playerNames,
     playerPositions,
     draftPickTrades: 0,
+    partialFailures,
     notes: [
       'ESPN projections sum the saved projections for that week’s starting lineup, excluding bench and IR. They are provider estimates, not guaranteed kickoff snapshots.',
     ],

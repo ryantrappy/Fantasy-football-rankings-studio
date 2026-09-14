@@ -136,3 +136,76 @@
   line-height: 1.17;
   white-space: pre-wrap;
 }
+
+/* Optional phone-friendly download. The unqualified rules above remain the original contract. */
+.export-canvas.compact-export,
+.compact-export .ranking-preview {
+  width: 720px;
+}
+.compact-export .export-title {
+  padding: 14px 24px;
+  font-size: 34px;
+}
+.compact-export .export-introduction {
+  padding: 14px 28px 18px;
+  font-size: 25px;
+  line-height: 1.3;
+  text-align: left;
+}
+.compact-export .export-table,
+.compact-export .export-table tbody {
+  display: block;
+}
+.compact-export .export-table thead,
+.compact-export .export-table colgroup {
+  display: none;
+}
+.compact-export .export-table tbody tr {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 156px;
+  height: auto;
+  min-height: 136px;
+  border-top: 2px solid #d6d8ca;
+}
+.compact-export .export-table tbody tr:nth-child(even) {
+  background: #f1f2e8;
+}
+.compact-export .export-table td {
+  display: block;
+  min-width: 0;
+  padding: 16px 14px;
+  overflow-wrap: anywhere;
+}
+.compact-export .export-table .export-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 8px;
+}
+.compact-export .export-rank-circle {
+  width: 88px;
+  height: 88px;
+  font-size: 38px;
+}
+.compact-export .export-team-name {
+  margin-bottom: 8px;
+  font-size: 29px;
+}
+.compact-export .export-team-details {
+  gap: 4px 20px;
+  font-size: 23px;
+}
+.compact-export .export-movement {
+  font-size: 32px;
+}
+.compact-export .export-last-week {
+  font-size: 20px;
+}
+.compact-export .export-comments {
+  grid-column: 1 / -1;
+  border-top: 1px solid #d6d8ca;
+  padding: 16px 24px 20px;
+  font-size: 25px;
+  line-height: 1.35;
+  text-align: left;
+}

@@ -79,6 +79,10 @@ signed-in account in that browser. A valid selection in the URL takes precedence
 while archived or removed leagues and unavailable weeks fall back to an active
 workspace and supported edition.
 
+The preview toolbar keeps the established wide PNG as its default download and also
+offers a **Download compact PNG** option for phone chats. The compact image uses stacked
+team commentary while preserving the complete ranking order and text.
+
 ## Verification
 
 ```sh

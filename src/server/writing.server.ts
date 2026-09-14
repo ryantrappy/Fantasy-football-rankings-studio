@@ -38,10 +38,17 @@ export async function generateWriting(owner: string, input: unknown) {
   if (active.has(owner)) throw new HttpException(409, 'A writing request is already running.');
   const options = await writingProviders(owner),
     option = options.find((p) => p.id === data.provider);
-  if (!option?.enabled)
+  if (!option || option.status === 'not-enabled')
     throw new HttpException(
       403,
       'This assistant is not enabled for your account by the server administrator.',
+    );
+  if (option.status === 'not-installed')
+    throw new HttpException(503, 'The selected assistant is not installed on the server.');
+  if (option.status === 'login-check-failed')
+    throw new HttpException(
+      503,
+      'The selected assistant login check failed. Ask the server operator to verify its login.',
     );
   const executable = await findWritingCli(data.provider);
   if (!executable)

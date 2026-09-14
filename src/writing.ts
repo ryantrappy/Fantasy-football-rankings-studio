@@ -17,6 +17,7 @@ export interface WritingProviderOption {
   id: WritingProvider;
   installed: boolean;
   enabled: boolean;
+  status: 'not-installed' | 'not-enabled' | 'login-check-failed' | 'ready';
 }
 export interface WritingApi {
   context(selection: WritingSelection): Promise<WritingContext>;

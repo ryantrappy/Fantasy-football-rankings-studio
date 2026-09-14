@@ -331,7 +331,10 @@ Install and authenticate the desired CLI on the application server, then set
 `WRITING_AI_PROVIDERS=codex,claude` (or just one provider) and
 `WRITING_AI_USERS` to a comma-separated allowlist of authorized Auth0 subject IDs.
 Both settings default to disabled. Discovery checks server PATH without running
-the CLI. This uses the server CLI account, not a browser user's subscription.
+the CLI, so installation alone does not prove that an account is authenticated.
+For an enabled provider, the panel reports ready only after `codex login status`
+or `claude auth status` succeeds. This uses the server CLI account, not a browser
+user's subscription.
 The writer chooses a provider and optional model and must approve each generation
 before the displayed context is sent to that provider. Generated text stays in a
 separate editable field for review and copying into the ranking commentary.
@@ -342,6 +345,20 @@ per server process. Codex uses read-only sandboxing and ignores user configurati
 Claude runs with no tools or MCP servers. The host must have a compatible CLI
 version and available account quota. Tests mock CLI execution; no live generation
 is part of the test suite. Factual context works with AI disabled.
+
+Verify setup as the same OS account, with the same PATH, home/config directory,
+and provider environment that run the application. For a host service, use its
+service manager to open a shell as that account; for a container, run the checks
+inside the application container. In that environment, run `command -v codex`
+and `codex login status`, or `command -v claude` and `claude auth status`. A
+missing command requires installation in the service PATH. A failed status check
+requires logging in as that service account (`codex login` or
+`claude auth login`) and then repeating the status check. On a headless
+`trappserv.er` session, Codex also supports `codex login --device-auth`. Restart
+the service after changing its environment or login configuration, then reopen
+the panel. Do not copy credential caches between accounts or print tokens while
+diagnosing setup. See the official [Codex authentication guide](https://learn.chatgpt.com/docs/auth)
+and [Claude Code CLI reference](https://code.claude.com/docs/en/cli-usage).
 
 Local development loads only defined server settings from Vite's environment files.
 Existing shell values take precedence; missing settings remain unset so optional

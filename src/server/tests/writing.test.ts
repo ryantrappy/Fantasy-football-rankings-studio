@@ -35,7 +35,9 @@ beforeEach(() => {
     notes: [],
     draftPickTrades: 0,
   });
-  mocks.providers.mockResolvedValue([{ id: 'codex', enabled: true, installed: true }]);
+  mocks.providers.mockResolvedValue([
+    { id: 'codex', enabled: true, installed: true, status: 'ready' },
+  ]);
   mocks.find.mockResolvedValue('/bin/codex');
   mocks.chat.mockResolvedValue('- Discuss scoring.');
 });
@@ -52,7 +54,9 @@ it('requires explicit approval and administrator enablement before generation', 
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: false }),
   ).rejects.toThrow();
   expect(mocks.chat).not.toHaveBeenCalled();
-  mocks.providers.mockResolvedValue([{ id: 'codex', enabled: false, installed: true }]);
+  mocks.providers.mockResolvedValue([
+    { id: 'codex', enabled: false, installed: true, status: 'not-enabled' },
+  ]);
   await expect(
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: true }),
   ).rejects.toMatchObject({ status: 403 });

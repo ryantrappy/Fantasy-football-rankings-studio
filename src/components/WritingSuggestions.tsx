@@ -19,6 +19,15 @@ import type {
   WritingProviderOption,
 } from '../writing';
 import { logClientError } from '../logging';
+function providerStatus(option: WritingProviderOption | undefined) {
+  if (!option || option.status === 'not-installed')
+    return 'The CLI is not installed in the application server environment. Ask the operator to install it for the service.';
+  if (option.status === 'not-enabled')
+    return 'The CLI is installed, but your account is not enabled. Ask an administrator to enable this assistant for your account.';
+  if (option.status === 'login-check-failed')
+    return 'The CLI is installed and enabled, but its login check failed. Ask the operator to sign in and verify the CLI as the application service account.';
+  return 'The CLI is installed and enabled, and its login check passed.';
+}
 export function WritingSuggestions({
   api,
   leagueId,
@@ -81,12 +90,13 @@ function TeamSuggestions({
   const { leagueId, year, week, teamId } = selection;
   const [context, setContext] = useState<WritingContext>(),
     [providers, setProviders] = useState<WritingProviderOption[]>([]),
-    [error, setError] = useState(''),
+    [contextError, setContextError] = useState(''),
     [retry, setRetry] = useState(0);
   const [provider, setProvider] = useState<WritingProvider>('codex'),
     [model, setModel] = useState(''),
     [approved, setApproved] = useState(false),
     [busy, setBusy] = useState(false),
+    [generationError, setGenerationError] = useState(''),
     [suggestions, setSuggestions] = useState('');
   useEffect(() => {
     let cancelled = false;
@@ -95,28 +105,29 @@ function TeamSuggestions({
         if (!cancelled) {
           setContext(context);
           setProviders(providers);
-          setProvider(providers.find((p) => p.installed && p.enabled)?.id || 'codex');
+          setProvider(providers.find((p) => p.status === 'ready')?.id || 'codex');
         }
       },
       (failure) => {
         logClientError('writing.context', failure);
         if (!cancelled)
-          setError(failure instanceof Error ? failure.message : 'Context unavailable.');
+          setContextError(failure instanceof Error ? failure.message : 'Context unavailable.');
       },
     );
     return () => {
       cancelled = true;
     };
   }, [api, leagueId, year, week, teamId, retry]);
-  const ready = providers.some((p) => p.id === provider && p.installed && p.enabled);
+  const selectedProvider = providers.find((p) => p.id === provider);
+  const ready = selectedProvider?.status === 'ready';
   return (
     <Stack gap={4}>
-      {!context && !error && <Text as="output">Loading team context…</Text>}
-      {error && <Text role="alert">{error}</Text>}
-      {!context && error && (
+      {!context && !contextError && <Text as="output">Loading team context…</Text>}
+      {contextError && <Text role="alert">{contextError}</Text>}
+      {!context && contextError && (
         <Button
           onClick={() => {
-            setError('');
+            setContextError('');
             setRetry((v) => v + 1);
           }}
         >
@@ -158,7 +169,13 @@ function TeamSuggestions({
                 {providers.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.id === 'codex' ? 'Codex CLI' : 'Claude Code CLI'}
-                    {!p.installed ? ' · not installed' : !p.enabled ? ' · not enabled' : ' · ready'}
+                    {p.status === 'not-installed'
+                      ? ' · not installed'
+                      : p.status === 'not-enabled'
+                        ? ' · not enabled'
+                        : p.status === 'login-check-failed'
+                          ? ' · login check failed'
+                          : ' · ready'}
                   </option>
                 ))}
               </NativeSelect.Field>
@@ -184,12 +201,9 @@ function TeamSuggestions({
             displayed team context to that assistant’s provider. Your ranking text is changed only
             by you.
           </Text>
-          {!ready && (
-            <Text>
-              AI generation needs an installed CLI and administrator enablement for your account.
-              The factual context above is available without AI.
-            </Text>
-          )}
+          <Text>{providerStatus(selectedProvider)}</Text>
+          {!ready && <Text>The factual context above is available without AI.</Text>}
+          {generationError && <Text role="alert">{generationError}</Text>}
           <label htmlFor={consentId}>
             <chakra.input
               id={consentId}
@@ -208,7 +222,7 @@ function TeamSuggestions({
             onClick={async () => {
               if (busy || !approved) return;
               setBusy(true);
-              setError('');
+              setGenerationError('');
               setSuggestions('');
               try {
                 setSuggestions(
@@ -216,7 +230,9 @@ function TeamSuggestions({
                 );
               } catch (failure) {
                 logClientError('writing.generate', failure);
-                setError(failure instanceof Error ? failure.message : 'Suggestions unavailable.');
+                setGenerationError(
+                  'Generation failed. Ask the operator to verify the selected CLI login and model as the application service account, then try again.',
+                );
               } finally {
                 setBusy(false);
                 setApproved(false);

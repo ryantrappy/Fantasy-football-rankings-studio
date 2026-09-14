@@ -3,6 +3,7 @@ import axios from 'axios';
 import { loadInsights } from './load.server';
 import EspnProvider from '../providers/espn.provider';
 import SleeperProvider from '../providers/sleeper.provider';
+import { defaultSeason } from '../../util/rankings';
 vi.mock('axios', () => ({ default: { get: vi.fn() } }));
 afterEach(() => vi.restoreAllMocks());
 const teams = [{ teamId: '1', teamName: 'One', managerName: 'A', wins: 0, loss: 0, ties: 0 }];
@@ -124,4 +125,48 @@ it('caps Sleeper at the league last-scored week even when the NFL played more we
   expect(result.completedWeek).toBe(2);
   expect(result.scores[0]).toMatchObject({ actual: -2, projected: null });
   expect(read.mock.calls.map(([path]) => path)).not.toContain('123/matchups/3');
+});
+it('keeps insights available when current Sleeper projections fail', async () => {
+  const year = defaultSeason();
+  vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  vi.mocked(axios.get).mockImplementation(async (url): Promise<any> => {
+    if (String(url).includes('/state/nfl'))
+      return { data: { season: String(year), leg: 4, season_type: 'regular' } };
+    throw new Error('projection endpoint unavailable');
+  });
+  vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
+    league_id: '123',
+    name: 'League',
+    season: String(year),
+    total_rosters: 2,
+    settings: { last_scored_leg: 3, start_week: 1, playoff_week_start: 10, playoff_teams: 2 },
+    scoring_settings: { rec: 1 },
+  });
+  vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue([
+    ...teams,
+    { teamId: '2', teamName: 'Two', managerName: 'B', wins: 0, loss: 0, ties: 0 },
+  ]);
+  vi.spyOn(SleeperProvider.prototype, 'get').mockImplementation(async (path): Promise<any> => {
+    if (path.includes('/transactions/')) return [];
+    if (path.endsWith('/matchups/4'))
+      return [
+        { roster_id: 1, starters: ['a'] },
+        { roster_id: 2, starters: ['b'] },
+      ];
+    return [
+      { roster_id: 1, matchup_id: 1, points: 100, starters: [], players_points: {} },
+      { roster_id: 2, matchup_id: 1, points: 90, starters: [], players_points: {} },
+    ];
+  });
+  const result = await loadInsights(
+    { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: year },
+    year,
+  );
+  expect(result.scores).toHaveLength(6);
+  expect(result.playoffProjection).toMatchObject({
+    provider: 'Sleeper',
+    week: 4,
+    teamPoints: {},
+  });
+  expect(result.playoffProjection?.note).toMatch(/historical scoring only/);
 });

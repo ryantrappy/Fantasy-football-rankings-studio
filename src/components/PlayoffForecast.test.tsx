@@ -22,6 +22,7 @@ it('shows cutoff-controlled probabilities and the scenario limitations', () => {
   );
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
   expect(screen.getByText(/random remaining opponents/)).toBeInTheDocument();
+  expect(screen.getByText(/Projection mode:.*historical scoring only/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
   expect(screen.getByText(/At least three/)).toBeInTheDocument();
   expect(screen.queryByRole('table')).not.toBeInTheDocument();

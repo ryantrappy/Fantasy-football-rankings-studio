@@ -8,6 +8,14 @@ export interface PlayoffForecast {
   simulations: number;
   rounds: string[];
   rows: { teamId: string; teamName: string; playoff: number; advance: number[] }[];
+  projection: {
+    used: boolean;
+    provider?: 'Sleeper' | 'ESPN';
+    week?: number;
+    coveredStarters: number;
+    totalStarters: number;
+    note: string;
+  };
   reason?: string;
 }
 // Reproducible model estimates, not provider playoff-clinch declarations.
@@ -28,11 +36,36 @@ export function forecastPlayoffs(
       : size === 4
         ? ['Reach final', 'Win title']
         : ['Reach semifinal', 'Reach final', 'Win title'];
+  const snapshot = data.playoffProjection;
+  const projectionIsCurrent =
+    !!snapshot && throughWeek === data.completedWeek && snapshot.week === throughWeek + 1;
+  const projectedTeams = snapshot ? teamsWithProjection(data, snapshot.teamPoints) : 0;
+  const useProjection =
+    projectionIsCurrent &&
+    projectedTeams === data.teams.length &&
+    snapshot.totalStarters > 0 &&
+    snapshot.coveredStarters === snapshot.totalStarters;
+  const projection: PlayoffForecast['projection'] = {
+    used: useProjection,
+    provider: snapshot?.provider,
+    week: snapshot?.week,
+    coveredStarters: snapshot?.coveredStarters ?? 0,
+    totalStarters: snapshot?.totalStarters ?? 0,
+    note: useProjection
+      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} starters across ${projectedTeams} of ${data.teams.length} teams and are blended equally with each team’s historical scoring average for that week.`
+      : snapshot?.note ||
+        (snapshot && !projectionIsCurrent
+          ? `${snapshot.provider} week ${snapshot.week} projections are excluded from this retrospective cutoff.`
+          : snapshot
+            ? `${snapshot.provider} week ${snapshot.week} projections cover ${snapshot.coveredStarters} of ${snapshot.totalStarters} starters and ${projectedTeams} of ${data.teams.length} teams, so the forecast uses historical scoring only.`
+            : 'Current-week provider projections are unavailable for this season, so the forecast uses historical scoring only.'),
+  };
   const empty = (reason: string): PlayoffForecast => ({
     throughWeek,
     simulations: 0,
     rounds,
     rows: [],
+    projection,
     reason,
   });
   if (
@@ -80,6 +113,7 @@ export function forecastPlayoffs(
   for (const char of JSON.stringify([
     histories.map((h) => h.map((s) => [s.week, s.actual, s.opponentTeamId])),
     settings,
+    useProjection ? snapshot?.teamPoints : null,
   ]))
     seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
   const random = () => {
@@ -106,6 +140,14 @@ export function forecastPlayoffs(
       Math.cos(2 * Math.PI * random());
     return distributions[i].mean + distributions[i].sd * normal;
   };
+  const drawProjectedWeek = (i: number) => {
+    const normal =
+      Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) *
+      Math.cos(2 * Math.PI * random());
+    const providerMean = snapshot!.teamPoints[teams[i].teamId];
+    const mean = (distributions[i].mean + providerMean) / 2;
+    return mean + distributions[i].sd * normal;
+  };
   const counts = teams.map((t) => ({
     teamId: t.teamId,
     teamName: t.teamName,
@@ -128,8 +170,8 @@ export function forecastPlayoffs(
       for (let k = 0; k < order.length; k += 2) {
         const a = order[k],
           b = order[k + 1],
-          sa = draw(a),
-          sb = draw(b);
+          sa = useProjection && week === snapshot!.week ? drawProjectedWeek(a) : draw(a),
+          sb = useProjection && week === snapshot!.week ? drawProjectedWeek(b) : draw(b);
         p[a] += sa;
         p[b] += sb;
         w[sa > sb ? a : b]++;
@@ -169,10 +211,15 @@ export function forecastPlayoffs(
     throughWeek,
     simulations,
     rounds,
+    projection,
     rows: counts.map((r) => ({
       ...r,
       playoff: r.playoff / simulations,
       advance: r.advance.map((n) => n / simulations),
     })),
   };
+}
+
+function teamsWithProjection(data: SeasonInsights, points: Record<string, number>) {
+  return data.teams.filter((team) => Number.isFinite(points[team.teamId])).length;
 }

@@ -15,6 +15,14 @@ export interface ScoreWeek {
   starters: { playerId: string; points: number }[];
   players?: { playerId: string; points: number }[];
 }
+export interface PlayoffProjection {
+  provider: 'Sleeper' | 'ESPN';
+  week: number;
+  teamPoints: Record<string, number>;
+  coveredStarters: number;
+  totalStarters: number;
+  note?: string;
+}
 export interface PlayerMove {
   id: string;
   week: number;
@@ -26,6 +34,7 @@ export interface PlayerMove {
 }
 export interface InsightsSource {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
@@ -63,6 +72,7 @@ export interface PickupComparison {
 }
 export interface SeasonInsights {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;

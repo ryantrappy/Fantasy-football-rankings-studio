@@ -61,6 +61,9 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
             week {settings!.regularSeasonEnd}. All percentages are unconditional chances from this
             cutoff, not chances conditional on reaching a round. Byes count as advancement.
           </Text>
+          <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
+            Projection mode: {forecast.projection.note}
+          </Text>
           {data.completedWeek > settings!.regularSeasonEnd && (
             <Text mb={3} fontWeight="bold">
               Retrospective pre-playoff forecast: actual postseason results are excluded.

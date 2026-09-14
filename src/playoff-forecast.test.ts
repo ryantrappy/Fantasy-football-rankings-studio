@@ -44,6 +44,33 @@ it('is deterministic and never includes future scores', () => {
   data.scores.filter((s) => s.week === 4).forEach((s) => (s.actual = 99999));
   expect(forecastPlayoffs(data, settings, 3)).toEqual(first);
 });
+it('uses only a complete current-cutoff projection snapshot', () => {
+  const data = fixture();
+  data.playoffProjection = {
+    provider: 'Sleeper',
+    week: 5,
+    teamPoints: Object.fromEntries(
+      data.teams.map((team, index) => [team.teamId, 300 - index * 20]),
+    ),
+    coveredStarters: 72,
+    totalStarters: 72,
+  };
+  const settings = { regularSeasonEnd: 5, playoffTeams: 4 };
+  const projected = forecastPlayoffs(data, settings, 4);
+  const historical = forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 4);
+  expect(projected.projection.used).toBe(true);
+  expect(projected.projection.note).toMatch(/blended equally/);
+  expect(projected.rows[0].playoff).toBeGreaterThan(historical.rows[0].playoff);
+
+  const retrospective = forecastPlayoffs(data, settings, 3);
+  expect(retrospective.projection.used).toBe(false);
+  expect(retrospective.projection.note).toMatch(/excluded/);
+
+  data.playoffProjection.coveredStarters--;
+  const incomplete = forecastPlayoffs(data, settings, 4);
+  expect(incomplete.projection.used).toBe(false);
+  expect(incomplete.projection.note).toMatch(/historical scoring only/);
+});
 it('requires sufficient data and paired results', () => {
   expect(forecastPlayoffs(fixture(), { regularSeasonEnd: 10, playoffTeams: 4 }, 2).reason).toMatch(
     /three/,

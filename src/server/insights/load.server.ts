@@ -8,6 +8,7 @@ import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
 import { calculateInsights } from './calculate';
+import { espnProjectionSnapshot, sleeperProjectionSnapshot } from './projections';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
   const results: T[] = [];
@@ -49,6 +50,10 @@ interface SleeperScore {
   starters?: string[];
   players_points?: Record<string, number>;
   starters_points?: number[];
+}
+interface SleeperProjectionRow {
+  player_id?: string;
+  stats?: Record<string, number>;
 }
 interface SleeperTransaction {
   transaction_id: string;
@@ -130,6 +135,47 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         })),
     })),
   );
+  const projectionWeek = completedWeek + 1;
+  let playoffProjection: InsightsSource['playoffProjection'];
+  if (
+    Number(state.season) === year &&
+    state.season_type === 'regular' &&
+    projectionWeek === state.leg &&
+    projectionWeek < (season.settings?.playoff_week_start ?? 19)
+  ) {
+    try {
+      const [lineups, response] = await Promise.all([
+        provider.get<SleeperScore[]>(`${season.league_id}/matchups/${projectionWeek}`),
+        axios.get<SleeperProjectionRow[]>(
+          `https://api.sleeper.app/projections/nfl/${year}/${projectionWeek}`,
+          {
+            params: {
+              season_type: 'regular',
+              'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
+            },
+            timeout: 10000,
+          },
+        ),
+      ]);
+      playoffProjection = sleeperProjectionSnapshot(
+        projectionWeek,
+        teams.map((team) => team.teamId),
+        lineups,
+        response.data,
+        season.scoring_settings || {},
+      );
+    } catch (error) {
+      logServerError('insights.sleeperProjections', error, 502);
+      playoffProjection = {
+        provider: 'Sleeper',
+        week: projectionWeek,
+        teamPoints: {},
+        coveredStarters: 0,
+        totalStarters: 0,
+        note: 'Sleeper projections could not be loaded; the forecast uses historical scoring only.',
+      };
+    }
+  }
   const unique = [
     ...new Map(
       transactions
@@ -192,6 +238,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   }
   const catalog = moves.length ? await sleeperNames() : { names: {}, positions: {} };
   return {
+    playoffProjection,
     playoffSettings:
       season.settings?.playoff_week_start && season.settings?.playoff_teams
         ? {
@@ -349,6 +396,41 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
       });
     }
   }
+  const projectionWeek = meta.status.latestScoringPeriod;
+  let playoffProjection: InsightsSource['playoffProjection'];
+  if (
+    year === defaultSeason() &&
+    projectionWeek === completedWeek + 1 &&
+    projectionWeek <= (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0)
+  ) {
+    try {
+      const projectionData = await provider.get<EspnSnapshot>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mMatchupScore', 'mBoxscore'],
+        projectionWeek,
+      );
+      const sides = (projectionData.schedule || []).flatMap((matchup) =>
+        [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
+      );
+      playoffProjection = espnProjectionSnapshot(
+        year,
+        projectionWeek,
+        teams.map((team) => team.teamId),
+        sides,
+      );
+    } catch (error) {
+      logServerError('insights.espnProjections', error, 502);
+      playoffProjection = {
+        provider: 'ESPN',
+        week: projectionWeek,
+        teamPoints: {},
+        coveredStarters: 0,
+        totalStarters: 0,
+        note: 'ESPN projections could not be loaded; the forecast uses historical scoring only.',
+      };
+    }
+  }
   const txs = [
     ...new Map(
       transactions
@@ -380,6 +462,7 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
       })),
   );
   return {
+    playoffProjection,
     playoffSettings:
       meta.settings?.scheduleSettings?.matchupPeriodCount &&
       meta.settings.scheduleSettings.playoffTeamCount &&

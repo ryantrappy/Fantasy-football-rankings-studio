@@ -19,6 +19,7 @@ interface SleeperLeagueData {
     start_week?: number;
     league_average_match?: number;
   };
+  scoring_settings?: Record<string, number>;
 }
 interface Roster {
   roster_id: number;

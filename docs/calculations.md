@@ -120,7 +120,16 @@ through the selected cutoff, capped at the end of the regular season. At least
 three completed weeks and paired head-to-head results per team are required.
 A team's mean and variance are blended with league values using weight
 `completed samples / (completed samples + 3)`; variance has a one-point-squared
-floor. Independent normal score draws simulate each future week. Remaining
+floor. Independent normal score draws simulate each future week. For the latest
+cutoff in the active season, a complete next-week projection for every starter
+and team shifts that week's mean halfway from the historical estimate toward the
+provider total. Later simulated weeks continue to use the historical distribution.
+Sleeper player stat projections are multiplied by that league's scoring weights;
+ESPN uses each current starter's `statSourceId=1` applied total. Bench and IR slots
+are excluded. Missing players, unset lineups, partial team coverage, or a provider
+request failure disable the projection blend for the whole league and are disclosed
+as historical-only mode. Selecting an older cutoff or season never applies a future
+projection. Remaining
 opponents are randomly paired each week, so these are neutral-schedule scenarios,
 not provider schedule-aware odds. Completed wins and ties (half a win) are retained;
 seeding uses wins, points scored, then a random resolution of exact ties.

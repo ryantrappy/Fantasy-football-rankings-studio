@@ -126,7 +126,9 @@ from its current player catalog; ESPN uses each historical box score's primary p
 
 Sleeper uses linked historical seasons and the league's last scored week. Its
 [documented API](https://docs.sleeper.com/) does not supply historical projections;
-that section shows actual points and median comparisons. ESPN reads saved lineup
+that section shows actual points and median comparisons. For the active season's
+immediate next week, the playoff simulator can score Sleeper's undocumented player
+projection feed with the league's scoring settings. ESPN reads saved lineup
 projections and weekly box scores, excluding bench/IR. Missing projections stay
 missing. Only completed weeks are included, so a new season has an explicit empty
 state. Partial lineup coverage is disclosed rather than counted as zero.
@@ -351,7 +353,11 @@ advancement and championship probabilities. Select a completed regular-season
 cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
 remaining schedule, standard bracket, and no division/median-game rules. These
 are model estimates, not provider-exact clinching odds. See the playoff section
-in [calculation documentation](docs/calculations.md) for the sampling method.
+in [calculation documentation](docs/calculations.md) for the sampling method. At
+the latest active-season cutoff only, complete current Sleeper or ESPN starter
+projections are blended 50/50 with historical team scoring for the next simulated
+week. The page shows provider, week and coverage; incomplete or failed projection
+loads visibly fall back to the historical model. Older cutoffs never use the snapshot.
 
 Unsaved ranking edits are backed up in this browser as they are typed, scoped to
 the signed-in account, league, year and week. Reopening an edition offers

@@ -1,0 +1,71 @@
+name: Verify proposed change
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Unit, types, lint, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Use project Node version
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - name: Install exactly from lockfile
+        run: npm ci
+      - name: Run unit tests
+        run: npm test
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Run lint
+        run: npm run lint
+      - name: Build production application without service credentials
+        run: npm run build
+
+  browser:
+    name: Browser interactions, accessibility, and export baseline
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      CI: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Use project Node version
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - name: Install exactly from lockfile
+        run: npm ci
+      - name: Install Playwright diagnostic runtime
+        run: npx playwright install ffmpeg
+      - name: Run deterministic Chrome browser checks
+        run: npm run test:ui
+      - name: Retain browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

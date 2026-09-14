@@ -81,10 +81,20 @@ npm test
 npm run typecheck
 npm run lint
 npm run format:check
+npm run test:ui
 npm run check:local
 ```
 
-`check:local` builds and runs a separate disposable instance of the production app,
+Pull requests and pushes to `main` run `.github/workflows/verify-proposed-change.yml`.
+The required deterministic jobs install exactly from `package-lock.json`, then run
+unit tests, type checking, lint, a production build, and the Chrome browser suite
+without production credentials. Browser coverage includes ranking interactions,
+keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
+baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
+for diagnosis. Run the same checks above before proposing a change.
+
+`check:local` is a separate live integration check, not a deterministic CI gate. It
+builds and runs a separate disposable instance of the production app,
 verifies signed JWTs over HTTP, reads live Sleeper/ESPN data, tests ranking writes,
 reloads and ownership isolation, then drops only its randomly named test database.
 It uses a temporary local JWKS issuer; the real application retains Auth0 validation.
@@ -192,8 +202,8 @@ Run `npm run test:ui` with Google Chrome installed to check editing, keyboard
 reorder, undo, save, league creation, chart rendering, and PNG downloads at desktop
 and mobile widths. These tests use local fixtures and do not access league data.
 The PNG baseline was captured with the original pre-migration stylesheet and
-markup in standards mode at full size on macOS Chrome; image comparisons require
-the same fonts/platform. Do not update the baseline to accept an unintended export
+markup in standards mode at full size on macOS Chrome; CI therefore runs the browser
+job on macOS Chrome. Do not update the baseline to accept an unintended export
 redesign. Unit tests, type checking, and lint remain `npm test`, `npm run typecheck`,
 and `npm run lint`.
 

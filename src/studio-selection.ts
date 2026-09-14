@@ -10,6 +10,7 @@ export interface StudioSearch {
   leagueId?: string;
   year?: number;
   week?: number;
+  welcome?: boolean;
 }
 
 const leagueIdPattern = /^\d{1,30}$/;
@@ -25,6 +26,7 @@ export function validateStudioSearch(input: Record<string, unknown>): StudioSear
       : {}),
     ...(validYear(input.year) ? { year: input.year } : {}),
     ...(validWeek(input.week) ? { week: input.week } : {}),
+    ...(input.welcome === true ? { welcome: true } : {}),
   };
 }
 

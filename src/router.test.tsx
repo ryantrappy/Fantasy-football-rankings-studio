@@ -24,6 +24,7 @@ vi.mock('./functions/rankings.functions', () => ({
     .fn()
     .mockResolvedValue({ ok: true, data: { configured: false, onboardingComplete: true } }),
   listLeagues: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  createLeague: vi.fn().mockImplementation(async ({ data }) => ({ ok: true, data })),
   getLeagueInfo: vi.fn().mockResolvedValue({
     ok: true,
     data: {
@@ -89,6 +90,10 @@ beforeEach(() => {
   vi.stubGlobal('scrollTo', vi.fn());
   auth.isAuthenticated = false;
   vi.mocked(privateFunctions.listLeagues).mockResolvedValue({ ok: true, data: [] });
+  vi.mocked(privateFunctions.createLeague).mockImplementation(async ({ data }) => ({
+    ok: true,
+    data,
+  }));
   vi.mocked(privateFunctions.getLeagueInfo).mockResolvedValue({
     ok: true,
     data: {
@@ -152,11 +157,48 @@ test('authenticated visitors can navigate to league creation and return', async 
   auth.isAuthenticated = true;
   const router = await openPage();
   await screen.findByRole('heading', { name: 'Create your first league' });
+  expect(screen.getByText('/leagues/')).toBeInTheDocument();
+  expect(screen.getByText('leagueId')).toBeInTheDocument();
   await userEvent.click(screen.getAllByRole('link', { name: 'Create league' })[0]);
   expect(await screen.findByRole('heading', { name: 'Create a league.' })).toBeInTheDocument();
+  expect(screen.getByText(/immediately after \/leagues\//)).toBeInTheDocument();
+  await userEvent.click(screen.getByLabelText('ESPN', { exact: true }));
+  expect(screen.getByRole('note')).toHaveTextContent(
+    'Save both your espn_s2 and SWID cookies in ESPN settings before connecting it',
+  );
+  expect(screen.getByText(/numeric value after leagueId=/)).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/leagues/new');
   await userEvent.click(screen.getByRole('button', { name: /Back to rankings/ }));
   expect(await screen.findByRole('heading', { name: 'Power rankings studio' })).toBeInTheDocument();
+});
+
+test('successful first-league creation opens its guided editor', async () => {
+  auth.isAuthenticated = true;
+  const league = {
+    leagueId: '456',
+    providerLeagueId: '123',
+    leagueName: 'First league',
+    leagueType: 0 as const,
+    seasonId: 2026,
+  };
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+  vi.mocked(privateFunctions.createLeague).mockResolvedValue({ ok: true, data: league });
+  const router = await openPage('/leagues/new');
+  await userEvent.type(await screen.findByLabelText(/League ID/), '123');
+  await userEvent.click(screen.getByRole('button', { name: 'Create league' }));
+  const welcome = await screen.findByRole('heading', { name: 'Your league is ready' });
+  expect(welcome.closest('output')).toHaveTextContent(
+    'Set the team order and write each take. Changes save as you work',
+  );
+  expect(router.state.location.pathname).toBe('/');
+  expect(router.state.location.search).toMatchObject({
+    leagueId: '456',
+    year: 2026,
+    week: 1,
+    welcome: true,
+  });
+  await userEvent.click(screen.getByRole('button', { name: 'Got it' }));
+  await waitFor(() => expect(router.state.location.search.welcome).toBeUndefined());
 });
 test('the rankings studio uses provider weeks and retains saved out-of-schedule editions', async () => {
   auth.isAuthenticated = true;

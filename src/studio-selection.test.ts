@@ -63,11 +63,14 @@ describe('studio selection', () => {
   });
 
   it('accepts only supported URL selection values', () => {
-    expect(validateStudioSearch({ leagueId: '222', year: 2026, week: 18 })).toEqual({
+    expect(validateStudioSearch({ leagueId: '222', year: 2026, week: 18, welcome: true })).toEqual({
       leagueId: '222',
       year: 2026,
       week: 18,
+      welcome: true,
     });
-    expect(validateStudioSearch({ leagueId: 'archived', year: 1999, week: 19 })).toEqual({});
+    expect(
+      validateStudioSearch({ leagueId: 'archived', year: 1999, week: 19, welcome: 'yes' }),
+    ).toEqual({});
   });
 });

@@ -32,7 +32,12 @@ export const Route = createFileRoute('/_authenticated/')({
 
 function RankingsPage() {
   const api = useApi();
-  const { leagueId: searchLeagueId, year: searchYear, week: searchWeek } = Route.useSearch();
+  const {
+    leagueId: searchLeagueId,
+    year: searchYear,
+    week: searchWeek,
+    welcome,
+  } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: leagues = [] } = useLiveQuery({
     query: (q) =>
@@ -229,6 +234,29 @@ function RankingsPage() {
         <chakra.output>Loading leagues…</chakra.output>
       ) : league ? (
         <>
+          {welcome && searchLeagueId === league.leagueId && (
+            <chakra.output className="notice" display="block" mb={5}>
+              <Heading as="h2" size="md" mb={2}>
+                Your league is ready
+              </Heading>
+              <Text mb={3}>
+                Set the team order and write each take. Changes save as you work; use Preview &amp;
+                export when the edition is ready to share.
+              </Text>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  void navigate({
+                    search: { leagueId: selected, year, week },
+                    replace: true,
+                  })
+                }
+              >
+                Got it
+              </Button>
+            </chakra.output>
+          )}
           <fieldset className="selection-bar" disabled={switching}>
             <legend className="sr-only">Choose rankings</legend>
             <Field.Root width="auto" minW="120px" gap={2}>
@@ -350,7 +378,15 @@ function RankingsPage() {
             <Heading as="h2" size="xl" mb={4}>
               Create your first league
             </Heading>
-            <Text mb={4}>Connect a Sleeper or ESPN league to start ranking your teams.</Text>
+            <Text mb={3}>Connect a Sleeper or ESPN league to start ranking your teams.</Text>
+            <Text mb={2}>
+              <strong>Sleeper:</strong> copy the number after <code>/leagues/</code> in the league
+              URL.
+            </Text>
+            <Text mb={4}>
+              <strong>ESPN:</strong> copy the numeric <code>leagueId</code> value from the league
+              URL. Private leagues also need ESPN cookies saved in ESPN settings.
+            </Text>
             <ChakraLink asChild>
               <Link to="/leagues/new">Create league</Link>
             </ChakraLink>

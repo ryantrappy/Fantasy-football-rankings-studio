@@ -88,6 +88,11 @@ and descriptions from public league and season/week context. Metadata never incl
 account identifiers, provider credentials, or unpublished ranking prose. Invalid,
 revoked, and unavailable links use a generic shared-report preview.
 
+First-time accounts start with provider-specific league-ID directions. Selecting ESPN
+explains the private-league cookie requirement before import. A successful connection
+opens that league directly in the rankings studio with a short guide to ordering teams,
+writing takes, automatic saving, and image export.
+
 ## Verification
 
 ```sh

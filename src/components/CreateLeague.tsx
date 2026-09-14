@@ -160,10 +160,19 @@ export function CreateLeague({
                 aria-describedby="league-id-help"
               />
               <small id="league-id-help">
-                Copy the numeric ID from your league’s URL. Keep the full ID, including any leading
-                zeros.
+                {provider === 0
+                  ? 'In a Sleeper league URL, copy the full number immediately after /leagues/.'
+                  : 'In an ESPN league URL, copy the full numeric value after leagueId=.'}{' '}
+                Keep any leading zeros.
               </small>
             </Field.Root>
+            {provider === 1 && (
+              <Box className="notice" role="note" mb={5}>
+                <strong>Private ESPN league?</strong> Save both your espn_s2 and SWID cookies in{' '}
+                <a href="/espn">ESPN settings</a> before connecting it. Public ESPN leagues do not
+                need cookies.
+              </Box>
+            )}
             <Field.Root mb={5} gap={2} className="field">
               <Field.Label htmlFor="league-name">
                 Display name <span>Optional</span>

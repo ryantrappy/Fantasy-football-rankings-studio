@@ -159,6 +159,13 @@ Season Insights summarizes trade quality, waiver quality, median scoring, and sc
 
 Former managers are hidden initially in summaries and history; “Include former managers” restores them. Active membership uses the newest linked season. Historical league baselines always include all teams. Changed owners/co-owner groups form separate records.
 
+The history comparison lets readers choose two distinct manager ownership groups and narrow the
+loaded seasons to a contiguous range. Scoring and league-median rates use the exact completed weeks
+observed for both managers. Achievements use only seasons in which both selected ownership groups
+appear and retain separate known-result denominators. The coverage list names missing season data
+and seasons where a manager played under a different ownership group. These report controls are
+read-only and never create or modify ranking editions.
+
 Schedule luck is actual regular-season wins (ties count half) minus expected wins based on each weekly score’s all-play win rate. The index is 100 times extra wins divided by measured games. Positive values indicate favorable scheduling. Byes, playoffs, missing opponents, and incomplete league score sets are excluded; history weights games equally. This does not estimate injury luck.
 
 Trading leaders require three graded trades; waiver leaders require five rated pickups. Quality averages use the existing four-week, position-adjusted move assessments, with coverage shown alongside results.

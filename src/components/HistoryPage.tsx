@@ -29,6 +29,7 @@ import {
 } from '../league-summary';
 import { LeagueSummary } from '../components/LeagueSummary';
 import { reportFreshnessLabel } from './report-freshness';
+import { ManagerComparison } from './ManagerComparison';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -343,10 +344,7 @@ export function HistoryPage({
                 </Box>
               )}
               {!loading && current?.refreshed && !current.errors.length && (
-                <chakra.output
-                  className="notice insights-notice"
-                  aria-live="polite"
-                >
+                <chakra.output className="notice insights-notice" aria-live="polite">
                   All selected seasons refreshed successfully.
                 </chakra.output>
               )}
@@ -383,9 +381,9 @@ export function HistoryPage({
                           `${record.year}: ${reportFreshnessLabel(record.data.generatedAt).toLowerCase()}`,
                       )
                       .join(' · ')}
-                    . Managers match by provider
-                    account ID; renamed teams stay together. New owners and changed co-owner groups
-                    start a separate record. Unknown owners stay separate by season.
+                    . Managers match by provider account ID; renamed teams stay together. New owners
+                    and changed co-owner groups start a separate record. Unknown owners stay
+                    separate by season.
                   </Text>
                   <label className="history-toggle">
                     <chakra.input
@@ -410,6 +408,7 @@ export function HistoryPage({
                     activeManagerKeys={currentCatalog.activeManagerKeys || []}
                     includeFormer={includeFormer}
                   />
+                  <ManagerComparison records={records} years={years} />
                   <Box
                     as="section"
                     bg="bg"

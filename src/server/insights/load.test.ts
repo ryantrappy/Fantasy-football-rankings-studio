@@ -1,6 +1,6 @@
 // @vitest-environment node
 import axios from 'axios';
-import { loadInsights } from './load.server';
+import { loadInsights, loadInsightsSource } from './load.server';
 import EspnProvider from '../providers/espn.provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import { defaultSeason } from '../../util/rankings';
@@ -173,4 +173,94 @@ it('keeps insights available when current Sleeper projections fail', async () =>
     section: 'Playoff simulation',
     message: 'Current-week Sleeper projections are unavailable; historical scoring is used.',
   });
+});
+it('loads current Sleeper ownership as a dated starter and bench snapshot', async () => {
+  const year = defaultSeason();
+  vi.mocked(axios.get).mockImplementation(async (url): Promise<any> =>
+    String(url).includes('/state/nfl')
+      ? { data: { season: String(year), leg: 1, season_type: 'pre' } }
+      : {
+          data: {
+            a: { full_name: 'Starter', position: 'RB' },
+            b: { full_name: 'Bench', position: 'RB' },
+          },
+        },
+  );
+  vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
+    league_id: '123',
+    name: 'League',
+    season: String(year),
+    total_rosters: 1,
+  });
+  vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
+  vi.spyOn(SleeperProvider.prototype, 'get').mockImplementation(async (path): Promise<any> =>
+    path.endsWith('/rosters')
+      ? [{ roster_id: 1, players: ['a', 'b'], starters: ['a', 'no-longer-owned'] }]
+      : [],
+  );
+  const source = await loadInsightsSource(
+    { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: year },
+    year,
+  );
+  expect(source.rosterSnapshot?.capturedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  expect(source.rosterSnapshot?.teams).toEqual([{ teamId: '1', starters: ['a'], bench: ['b'] }]);
+  expect(source.playerNames).toMatchObject({ a: 'Starter', b: 'Bench' });
+});
+it('loads current ESPN ownership without using it for historical seasons', async () => {
+  const year = defaultSeason();
+  vi.spyOn(EspnProvider.prototype, 'getTeams').mockResolvedValue(teams);
+  const read = vi
+    .spyOn(EspnProvider.prototype, 'get')
+    .mockImplementation(async (_id, _year, views): Promise<any> => {
+      if (views.includes('mSettings'))
+        return {
+          id: 123,
+          status: { latestScoringPeriod: 1, finalScoringPeriod: 18 },
+        };
+      if (views.includes('mRoster'))
+        return {
+          id: 123,
+          teams: [
+            {
+              id: 1,
+              roster: {
+                entries: [
+                  {
+                    playerId: 7,
+                    lineupSlotId: 2,
+                    playerPoolEntry: {
+                      player: { id: 7, fullName: 'Starter', defaultPositionId: 2 },
+                    },
+                  },
+                  {
+                    playerId: 8,
+                    lineupSlotId: 20,
+                    playerPoolEntry: {
+                      player: { id: 8, fullName: 'Bench', defaultPositionId: 2 },
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        };
+      return { id: 123, transactions: [] };
+    });
+  const current = await loadInsightsSource(
+    { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: year },
+    year,
+  );
+  expect(current.rosterSnapshot?.teams[0]).toEqual({
+    teamId: '1',
+    starters: ['7'],
+    bench: ['8'],
+  });
+  expect(current.playerNames).toMatchObject({ '7': 'Starter', '8': 'Bench' });
+  const historical = await loadInsightsSource(
+    { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: year - 1 },
+    year - 1,
+  );
+  expect(historical.rosterSnapshot).toBeUndefined();
+  expect(historical.rosterSnapshotNote).toMatch(/current ownership was not substituted/i);
+  expect(read.mock.calls.filter(([, , views]) => views.includes('mRoster'))).toHaveLength(1);
 });

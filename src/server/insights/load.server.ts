@@ -65,6 +65,11 @@ interface SleeperTransaction {
   drops?: Record<string, number> | null;
   draft_picks?: unknown[];
 }
+interface SleeperRosterSnapshot {
+  roster_id: number;
+  players?: string[] | null;
+  starters?: string[] | null;
+}
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
   const provider = new SleeperProvider();
   const season = await provider.resolveSeason(league.providerLeagueId ?? league.leagueId, year);
@@ -87,6 +92,34 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     nflCompletedWeek,
     season.settings?.last_scored_leg ?? nflCompletedWeek,
   );
+  let rosterSnapshot: InsightsSource['rosterSnapshot'];
+  let rosterSnapshotNote: string;
+  if (year !== Number(state.season)) {
+    rosterSnapshotNote = `Historical ${year} roster ownership snapshots are unavailable; current ownership was not substituted.`;
+  } else {
+    try {
+      const rosters = await provider.get<SleeperRosterSnapshot[]>(`${season.league_id}/rosters`);
+      rosterSnapshot = {
+        capturedAt: new Date().toISOString(),
+        teams: rosters.map((roster) => {
+          const owned = [...new Set(roster.players || [])];
+          const starters = [...new Set(roster.starters || [])].filter(
+            (id) => id !== '0' && owned.includes(id),
+          );
+          return {
+            teamId: String(roster.roster_id),
+            starters,
+            bench: owned.filter((id) => !starters.includes(id)),
+          };
+        }),
+      };
+      rosterSnapshotNote = 'Latest current-season roster ownership was retrieved from Sleeper.';
+    } catch (error) {
+      logServerError('insights.sleeperRoster', error, 502);
+      rosterSnapshotNote =
+        'Current Sleeper roster ownership could not be loaded, so current depth claims are omitted.';
+    }
+  }
   const [weekly, transactions] = await Promise.all([
     mapWeeks(
       weeksThrough(completedWeek).filter((week) => week >= (season.settings?.start_week ?? 1)),
@@ -247,7 +280,17 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         : [],
     );
   }
-  const catalog = moves.length ? await sleeperNames() : { names: {}, positions: {} };
+  let catalog = { names: {}, positions: {} };
+  if (moves.length) catalog = await sleeperNames();
+  else if (rosterSnapshot)
+    try {
+      catalog = await sleeperNames();
+    } catch (error) {
+      logServerError('insights.sleeperRosterCatalog', error, 502);
+      rosterSnapshot = undefined;
+      rosterSnapshotNote =
+        'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
+    }
   return {
     playoffProjection,
     playoffSettings:
@@ -264,6 +307,8 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     results,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
+    rosterSnapshot,
+    rosterSnapshotNote,
     draftPickTradeIds: unique
       .filter((t) => t.type === 'trade' && t.draft_picks?.length)
       .map((t) => t.transaction_id),
@@ -313,6 +358,10 @@ interface EspnSnapshot extends EspnResultsData {
   schedule?: { home?: EspnSide; away?: EspnSide; playoffTierType?: string }[];
   transactions?: EspnTransaction[];
 }
+interface EspnRosterData {
+  id: number;
+  teams?: { id: number; roster?: { entries?: EspnEntry[] } }[];
+}
 async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
   const provider = new EspnProvider(access);
   const [meta, teams] = await Promise.all([
@@ -328,6 +377,25 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     0,
     Math.min(18, meta.status.finalScoringPeriod, meta.status.latestScoringPeriod - 1),
   );
+  let currentRosters: EspnRosterData | undefined;
+  let rosterSnapshotNote: string;
+  if (year !== defaultSeason()) {
+    rosterSnapshotNote = `Historical ${year} roster ownership snapshots are unavailable; current ownership was not substituted.`;
+  } else {
+    try {
+      currentRosters = await provider.get<EspnRosterData>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mRoster'],
+        meta.status.latestScoringPeriod,
+      );
+      rosterSnapshotNote = 'Latest current-season roster ownership was retrieved from ESPN.';
+    } catch (error) {
+      logServerError('insights.espnRoster', error, 502);
+      rosterSnapshotNote =
+        'Current ESPN roster ownership could not be loaded, so current depth claims are omitted.';
+    }
+  }
   const [weekly, transactions] = await Promise.all([
     mapWeeks(weeksThrough(completedWeek), async (week) => ({
       week,
@@ -349,6 +417,30 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
   ]);
   const playerNames: Record<string, string> = {};
   const playerPositions: Record<string, string> = {};
+  const rosterSnapshot: InsightsSource['rosterSnapshot'] = currentRosters
+    ? {
+        capturedAt: new Date().toISOString(),
+        teams: (currentRosters.teams || []).map((team) => {
+          const starters: string[] = [];
+          const bench: string[] = [];
+          for (const entry of team.roster?.entries || []) {
+            const player = entry.playerPoolEntry?.player;
+            const id = entry.playerId ?? player?.id;
+            if (id == null) continue;
+            const playerId = String(id);
+            if (player?.fullName) playerNames[playerId] = player.fullName;
+            const position = (
+              { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' } as Record<number, string>
+            )[player?.defaultPositionId ?? -1];
+            if (position) playerPositions[playerId] = position;
+            (entry.lineupSlotId === 20 || entry.lineupSlotId === 21 ? bench : starters).push(
+              playerId,
+            );
+          }
+          return { teamId: String(team.id), starters, bench };
+        }),
+      }
+    : undefined;
   const scores: ScoreWeek[] = [];
   for (const { week, data } of weekly) {
     const opponents = new Map<number, string>();
@@ -507,6 +599,8 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     ),
     playerNames,
     playerPositions,
+    rosterSnapshot,
+    rosterSnapshotNote,
     draftPickTrades: 0,
     partialFailures,
     notes: [

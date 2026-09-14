@@ -32,6 +32,14 @@ export interface PlayerMove {
   from: string | null;
   to: string | null;
 }
+export interface RosterSnapshot {
+  capturedAt: string;
+  teams: {
+    teamId: string;
+    starters: string[];
+    bench: string[];
+  }[];
+}
 export interface InsightsSource {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
@@ -42,6 +50,8 @@ export interface InsightsSource {
   moves: PlayerMove[];
   playerNames: Record<string, string>;
   playerPositions?: Record<string, string>;
+  rosterSnapshot?: RosterSnapshot;
+  rosterSnapshotNote?: string;
   draftPickTradeIds?: string[];
   partialFailures?: { section: string; message: string }[];
   notes: string[];

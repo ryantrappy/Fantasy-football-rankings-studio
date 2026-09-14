@@ -322,9 +322,13 @@ part of the server allowlist and is never exposed as a `VITE_*` browser setting.
 ### Ranking writing suggestions
 
 Expand **Talking points for your rankings** in the editor and select a team. The
-panel loads scoring trends, graded trades and pickups, and observed positional
-depth through the selected ranking week. Missing data is identified explicitly;
-observed players are not a complete current roster snapshot.
+panel loads scoring trends and graded trades and pickups through the selected
+ranking week. For the current season, positional depth uses the provider's latest
+available ownership snapshot, separates starters from bench players, and shows
+when that snapshot was retrieved. It describes current ownership only—not roster
+ownership at the selected week. Historical selections never substitute today's
+roster; when the provider cannot supply historical ownership, the panel identifies
+that limitation and omits depth claims.
 
 AI suggestions use TanStack AI with a server-side Codex or Claude Code CLI.
 Install and authenticate the desired CLI on the application server, then set

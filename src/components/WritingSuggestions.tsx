@@ -155,16 +155,29 @@ function TeamSuggestions({
               <li key={i}>{fact}</li>
             ))}
           </Box>
-          {!!context.depth.length && (
-            <>
-              <Text fontWeight="bold">Observed positional depth</Text>
+          <>
+            <Text fontWeight="bold">
+              {context.depthSnapshotAt
+                ? 'Current positional depth'
+                : 'Positional depth unavailable'}
+            </Text>
+            {context.depthSnapshotAt && (
+              <Text fontSize="sm">
+                Latest roster snapshot:{' '}
+                <time dateTime={context.depthSnapshotAt}>
+                  {new Date(context.depthSnapshotAt).toLocaleString()}
+                </time>
+              </Text>
+            )}
+            {!!context.depth.length && (
               <Box as="ul" pl={5}>
                 {context.depth.map((fact) => (
                   <li key={fact}>{fact}</li>
                 ))}
               </Box>
-            </>
-          )}
+            )}
+            <Text fontSize="sm">{context.depthNote}</Text>
+          </>
           <Text fontSize="sm">{context.notes.join(' ')}</Text>
           <Field.Root disabled={busy}>
             <Field.Label>Writing assistant</Field.Label>

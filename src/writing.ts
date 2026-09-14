@@ -11,6 +11,8 @@ export interface WritingContext {
   throughWeek: number;
   facts: string[];
   depth: string[];
+  depthSnapshotAt?: string;
+  depthNote: string;
   notes: string[];
 }
 export interface WritingProviderOption {

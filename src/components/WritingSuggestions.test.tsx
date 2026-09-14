@@ -9,6 +9,7 @@ const api = (): WritingApi => ({
     throughWeek: 2,
     facts: ['100 points per week.'],
     depth: [],
+    depthNote: 'Historical roster ownership is unavailable.',
     notes: [],
   }),
   providers: vi
@@ -53,6 +54,34 @@ it('loads factual context on expansion and requires fresh consent for generation
   );
   expect(screen.getByRole('checkbox')).not.toBeChecked();
   expect(button).toBeDisabled();
+});
+it('shows the current roster snapshot date and separates starters from bench players', async () => {
+  const client = api();
+  vi.mocked(client.context).mockResolvedValue({
+    teamName: 'Team',
+    year: 2026,
+    throughWeek: 2,
+    facts: [],
+    depth: ['RB: starters — Starter; bench — Bench.'],
+    depthSnapshotAt: '2026-09-14T12:00:00.000Z',
+    depthNote: 'This is latest roster ownership, not ownership at the selected ranking week.',
+    notes: [],
+  });
+  render(
+    <Provider>
+      <WritingSuggestions
+        api={client}
+        leagueId="123"
+        year={2026}
+        week={2}
+        teams={[{ teamId: '1', teamName: 'Team', managerName: 'A', wins: 1, loss: 0, ties: 0 }]}
+      />
+    </Provider>,
+  );
+  fireEvent.click(screen.getByText('Talking points for your rankings'));
+  expect(await screen.findByText('Current positional depth')).toBeInTheDocument();
+  expect(screen.getByText(/Latest roster snapshot:/)).toBeInTheDocument();
+  expect(screen.getByText('RB: starters — Starter; bench — Bench.')).toBeInTheDocument();
 });
 it('keeps factual context when no CLI is enabled and prevents generation', async () => {
   const client = api();
@@ -242,6 +271,7 @@ it('discards old context after the selected team changes', async () => {
     throughWeek: 2,
     facts: ['Stale facts'],
     depth: [],
+    depthNote: 'Historical roster ownership is unavailable.',
     notes: [],
   });
   await waitFor(() => expect(client.context).toHaveBeenCalledTimes(2));

@@ -317,12 +317,14 @@ Existing shell values take precedence; missing settings remain unset so optional
 features stay disabled and required-service validation can report missing configuration.
 
 React Compiler is enabled in Vite development/production and the browser-test
-fixture through `reactCompilerPreset` and `@rolldown/plugin-babel`, following the
-[official installation guide](https://react.dev/learn/react-compiler/installation).
-The latest stable compiler at installation is locked in package-lock.json. React
-19 supplies the compiler runtime. Existing manual memoization remains valid;
-compiler-ineligible functions safely retain their existing behavior. Verify the
-production output contains `react.memo_cache_sentinel` after `npm run build`.
+fixture through `@vitejs/plugin-react`'s native `compiler` option and
+`oxc-transform-react`. Oxc runs its Rust React Compiler port on original JSX before
+the JSX transform, targeting React 19. The Oxc integration is experimental, so its
+locked version should be upgraded deliberately and verified with the complete test
+and production-build checks. React 19 supplies the compiler runtime. Existing manual
+memoization remains valid; compiler-ineligible functions safely retain their existing
+behavior. Verify the production output contains `react.memo_cache_sentinel` after
+`npm run build`.
 
 The application theme uses navy, indigo and cool neutral surfaces with a warm
 header accent. Chakra semantic colors live in `src/theme.ts`; application details

@@ -74,6 +74,11 @@ are labeled **saved edition**. An unavailable week is never opened silently: the
 moves to the first valid choice and explains the adjustment, while an unavailable
 season leaves the season picker available for recovery.
 
+The studio remembers the last active league, season, and week separately for each
+signed-in account in that browser. A valid selection in the URL takes precedence,
+while archived or removed leagues and unavailable weeks fall back to an active
+workspace and supported edition.
+
 ## Verification
 
 ```sh

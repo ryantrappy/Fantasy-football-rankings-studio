@@ -18,11 +18,22 @@ import { RankingEditor, type EditorHandle } from '../components/RankingEditor';
 import { useLiveQuery } from '@tanstack/react-db';
 import { defaultSeason } from '../util/rankings';
 import { safeWeek, weekChoices, type WeekChoice } from '../week-options';
+import {
+  readStudioSelection,
+  rememberStudioSelection,
+  resolveStudioSelection,
+  validateStudioSearch,
+} from '../studio-selection';
 
-export const Route = createFileRoute('/_authenticated/')({ component: RankingsPage });
+export const Route = createFileRoute('/_authenticated/')({
+  validateSearch: validateStudioSearch,
+  component: RankingsPage,
+});
 
 function RankingsPage() {
   const api = useApi();
+  const { leagueId: searchLeagueId, year: searchYear, week: searchWeek } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: leagues = [] } = useLiveQuery({
     query: (q) =>
       q.from({ league: api.leagueCollection }).orderBy(({ league }) => league.leagueName, 'asc'),
@@ -64,8 +75,15 @@ function RankingsPage() {
       .listLeagues()
       .then((entries) => {
         if (cancelled) return;
-        setSelected(entries[0]?.leagueId || '');
-        setYear(entries[0]?.seasonId || defaultSeason());
+        const selection = resolveStudioSelection(
+          entries,
+          { leagueId: searchLeagueId, year: searchYear, week: searchWeek },
+          readStudioSelection(api.subject),
+        );
+        setSelected(selection?.leagueId || '');
+        setYear(selection?.year || defaultSeason());
+        weekRef.current = selection?.week || 1;
+        setWeek(selection?.week || 1);
       })
       .catch((failure) => {
         logClientError('_authenticated.index', failure);
@@ -77,7 +95,7 @@ function RankingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, retry]);
+  }, [api, retry, searchLeagueId, searchWeek, searchYear]);
 
   useEffect(() => {
     if (!selected) return;
@@ -159,6 +177,10 @@ function RankingsPage() {
   const league = leagues.find((entry) => entry.leagueId === selected);
   const activeSchedule =
     schedule?.leagueId === selected && schedule.year === year ? schedule : undefined;
+  useEffect(() => {
+    if (!activeSchedule) return;
+    rememberStudioSelection(api.subject, { leagueId: selected, year, week });
+  }, [activeSchedule, api.subject, selected, week, year]);
   return (
     <>
       <Flex
@@ -218,9 +240,12 @@ function RankingsPage() {
                     const id = event.target.value;
                     void changeSelection(() => {
                       setSelected(id);
-                      setYear(
-                        leagues.find((entry) => entry.leagueId === id)?.seasonId || defaultSeason(),
-                      );
+                      const nextYear =
+                        leagues.find((entry) => entry.leagueId === id)?.seasonId || defaultSeason();
+                      setYear(nextYear);
+                      weekRef.current = 1;
+                      setWeek(1);
+                      void navigate({ search: { leagueId: id, year: nextYear, week: 1 } });
                     });
                   }}
                 >
@@ -240,7 +265,12 @@ function RankingsPage() {
                   value={year}
                   onChange={(event) => {
                     const value = Number(event.target.value);
-                    void changeSelection(() => setYear(value));
+                    void changeSelection(() => {
+                      setYear(value);
+                      weekRef.current = 1;
+                      setWeek(1);
+                      void navigate({ search: { leagueId: selected, year: value, week: 1 } });
+                    });
                   }}
                 >
                   {Array.from({ length: 101 }, (_, index) => 2100 - index).map((season) => (
@@ -260,6 +290,7 @@ function RankingsPage() {
                     void changeSelection(() => {
                       weekRef.current = value;
                       setWeek(value);
+                      void navigate({ search: { leagueId: selected, year, week: value } });
                     });
                   }}
                 >

@@ -104,6 +104,10 @@ beforeEach(() => {
   });
   vi.mocked(privateFunctions.getRankings).mockResolvedValue({ ok: true, data: [] });
   vi.mocked(privateFunctions.getTeams).mockResolvedValue({ ok: true, data: [] });
+  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
+    ok: true,
+    data: { leagueId: '123', leagueName: 'Shared league', leagueType: 0, seasonId: 2026 },
+  });
   vi.stubEnv('VITE_AUTH0_DOMAIN', 'example.auth0.com');
   vi.stubEnv('VITE_AUTH0_CLIENT_ID', 'test-client');
   vi.stubEnv('VITE_AUTH0_AUDIENCE', 'https://test-api');
@@ -405,12 +409,13 @@ test('public reports work without Auth0 configuration', async () => {
   expect(screen.queryByText('Sign-in is not configured.')).not.toBeInTheDocument();
 });
 test('unknown shared links show a useful error without a login prompt', async () => {
-  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValueOnce({
+  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
     ok: false,
     error: { status: 404, message: 'League not found.' },
   });
   await openPage('/shared/history?leagueId=999');
   expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
+  expect(document.title).toBe('Shared fantasy report | Fantasy Power Rankings');
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
 });
 test('authenticated users retain their league picker on internal reports', async () => {
@@ -428,7 +433,7 @@ test('authenticated users retain their league picker on internal reports', async
 
 test('shared links preserve long numeric provider IDs exactly', async () => {
   const id = '1312529175982129152';
-  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValueOnce({
+  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
     ok: true,
     data: { leagueId: id, leagueName: 'Sleeper league', leagueType: 0, seasonId: 2026 },
   });
@@ -436,6 +441,11 @@ test('shared links preserve long numeric provider IDs exactly', async () => {
   expect(
     await screen.findByRole('heading', { name: 'Who delivers every week?' }),
   ).toBeInTheDocument();
+  expect(document.title).toBe('Sleeper league 2025 season insights | Fantasy Power Rankings');
+  expect(document.querySelector('meta[property="og:description"]')).toHaveAttribute(
+    'content',
+    'View 2025 season insights for Sleeper league.',
+  );
   expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
     expect.objectContaining({ data: { leagueId: id, year: 2025 } }),
   );

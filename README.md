@@ -83,6 +83,11 @@ The preview toolbar keeps the established wide PNG as its default download and a
 offers a **Download compact PNG** option for phone chats. The compact image uses stacked
 team commentary while preserving the complete ranking order and text.
 
+Shared season, playoff, history, and published-edition pages emit link-preview titles
+and descriptions from public league and season/week context. Metadata never includes
+account identifiers, provider credentials, or unpublished ranking prose. Invalid,
+revoked, and unavailable links use a generic shared-report preview.
+
 ## Verification
 
 ```sh

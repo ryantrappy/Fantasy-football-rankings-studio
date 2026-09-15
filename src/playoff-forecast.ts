@@ -89,8 +89,8 @@ export function forecastPlayoffs(
         s.teamId === t.teamId && s.week <= throughWeek && s.week >= 1 && Number.isFinite(s.actual),
     ),
   );
-  if (histories.some((h) => h.length < 3 || new Set(h.map((s) => s.week)).size !== h.length))
-    return empty('At least three distinct completed scoring weeks per team are needed.');
+  if (histories.some((h) => h.length < 1 || new Set(h.map((s) => s.week)).size !== h.length))
+    return empty('At least one distinct completed scoring week per team is needed.');
   const byId = new Map(teams.map((t, i) => [t.teamId, i]));
   const wins = teams.map(() => 0),
     points = histories.map((h) => h.reduce((sum, s) => sum + s.actual, 0));

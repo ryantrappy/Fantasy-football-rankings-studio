@@ -123,7 +123,8 @@ placements alongside the selected seasons.
 
 The season report offers 5,000 reproducible Monte Carlo trials using only scores
 through the selected cutoff, capped at the end of the regular season. At least
-three completed weeks and paired head-to-head results per team are required.
+one completed week and paired head-to-head results per team are required. Forecasts through weeks
+1–2 carry a prominent small-sample warning because their probabilities can change sharply.
 A team's mean and variance are blended with league values using weight
 `completed samples / (completed samples + 3)`; variance has a one-point-squared
 floor. Independent normal score draws simulate each future week. For the latest

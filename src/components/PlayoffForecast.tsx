@@ -61,6 +61,14 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
             week {settings!.regularSeasonEnd}. All percentages are unconditional chances from this
             cutoff, not chances conditional on reaching a round. Byes count as advancement.
           </Text>
+          {forecast.throughWeek <= 2 && (
+            <Text role="note" mb={3} fontWeight="bold">
+              Early-season estimate: only {forecast.throughWeek} completed scoring week
+              {forecast.throughWeek === 1 ? '' : 's'} informs team strength. Heavy league-average
+              weighting limits overreaction, but these probabilities are especially uncertain and
+              can move sharply as more results arrive.
+            </Text>
+          )}
           <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
             Projection mode: {forecast.projection.note}
           </Text>

@@ -455,7 +455,9 @@ Season insights include a playoff-outlook scenario with qualification, round
 advancement and championship probabilities. Select a completed regular-season
 cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
 remaining schedule, standard bracket, and no division/median-game rules. These
-are model estimates, not provider-exact clinching odds. See the playoff section
+are model estimates, not provider-exact clinching odds. Forecasts are available after one completed
+week; weeks 1–2 are explicitly labeled especially uncertain and retain heavy league-average
+weighting to limit small-sample overreaction. See the playoff section
 in [calculation documentation](docs/calculations.md) for the sampling method. At
 the latest active-season cutoff only, complete current Sleeper or ESPN starter
 projections are blended 50/50 with historical team scoring for the next simulated

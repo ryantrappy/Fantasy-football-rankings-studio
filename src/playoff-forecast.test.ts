@@ -71,15 +71,28 @@ it('uses only a complete current-cutoff projection snapshot', () => {
   expect(incomplete.projection.used).toBe(false);
   expect(incomplete.projection.note).toMatch(/historical scoring only/);
 });
-it('requires sufficient data and paired results', () => {
-  expect(forecastPlayoffs(fixture(), { regularSeasonEnd: 10, playoffTeams: 4 }, 2).reason).toMatch(
-    /three/,
-  );
+it('supports one- and two-week forecasts but still requires completed paired results', () => {
+  const settings = { regularSeasonEnd: 10, playoffTeams: 4 };
+  expect(forecastPlayoffs(fixture(), settings, 1).reason).toBeUndefined();
+  expect(forecastPlayoffs(fixture(), settings, 2).reason).toBeUndefined();
+  expect(forecastPlayoffs(fixture(), settings, 0).reason).toMatch(/one distinct/);
   const data = fixture();
   data.scores[0].opponentTeamId = null;
-  expect(forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 4 }, 4).reason).toMatch(
-    /paired/,
-  );
+  expect(forecastPlayoffs(data, settings, 4).reason).toMatch(/paired/);
+});
+it('uses a complete current-week projection in a one-week forecast', () => {
+  const data = fixture();
+  data.completedWeek = 1;
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 2,
+    teamPoints: Object.fromEntries(data.teams.map((team) => [team.teamId, 100])),
+    coveredStarters: 72,
+    totalStarters: 72,
+  };
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 4 }, 1);
+  expect(result.reason).toBeUndefined();
+  expect(result.projection.used).toBe(true);
 });
 it('gives top seeds a semifinal bye in a six-team bracket', () => {
   const data = fixture();

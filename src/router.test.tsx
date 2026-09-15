@@ -23,6 +23,7 @@ const auth = vi.hoisted(() => ({
   loginWithRedirect: vi.fn().mockResolvedValue(undefined),
   logout: vi.fn().mockResolvedValue(undefined),
   getAccessTokenSilently: vi.fn().mockResolvedValue('test-token'),
+  user: undefined as { sub: string } | undefined,
 }));
 vi.mock('./functions/rankings.functions', () => ({
   getEspnCredentialStatus: vi
@@ -98,6 +99,7 @@ vi.mock('@auth0/auth0-react', () => ({
 beforeEach(() => {
   vi.stubGlobal('scrollTo', vi.fn());
   auth.isAuthenticated = false;
+  auth.user = undefined;
   vi.mocked(privateFunctions.listLeagues).mockResolvedValue({ ok: true, data: [] });
   vi.mocked(privateFunctions.createLeague).mockImplementation(async ({ data }) => ({
     ok: true,
@@ -197,6 +199,51 @@ test('authenticated visitors can navigate to league creation and return', async 
   expect(router.state.location.pathname).toBe('/leagues/new');
   await userEvent.click(screen.getByRole('button', { name: /Back to rankings/ }));
   expect(await screen.findByRole('heading', { name: 'Power rankings studio' })).toBeInTheDocument();
+});
+
+test('authenticated sessions detach live queries before disposing their collections', async () => {
+  const reported: unknown[][] = [];
+  const errorLog = vi.spyOn(console, 'error').mockImplementation((...args) => reported.push(args));
+  auth.isAuthenticated = true;
+
+  for (const subject of ['owner-a', 'owner-b', 'owner-c']) {
+    auth.user = { sub: subject };
+    await openPage();
+    await screen.findByRole('heading', { name: 'Create your first league' });
+    cleanup();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    });
+  }
+
+  auth.user = { sub: 'owner-a' };
+  const router = getRouter();
+  router.update({ history: createMemoryHistory({ initialEntries: ['/'] }) });
+  await router.load();
+  let view!: ReturnType<typeof render>;
+  await act(async () => {
+    view = render(<RouterProvider router={router} />);
+  });
+  await screen.findByRole('heading', { name: 'Create your first league' });
+
+  auth.isAuthenticated = false;
+  await act(async () => view.rerender(<RouterProvider key="signed-out" router={router} />));
+  await screen.findByRole('button', { name: 'Sign in' });
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+
+  auth.isAuthenticated = true;
+  auth.user = { sub: 'owner-b' };
+  await act(async () => view.rerender(<RouterProvider key="owner-b" router={router} />));
+  await screen.findByRole('heading', { name: 'Create your first league' });
+  auth.user = { sub: 'owner-c' };
+  await act(async () => view.rerender(<RouterProvider key="owner-c" router={router} />));
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+  cleanup();
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
+
+  const output = reported.map((args) => args.join(' ')).join('\n');
+  errorLog.mockRestore();
+  expect(output).not.toMatch(/Live Query Error|manually cleaned up/);
 });
 
 test('successful first-league creation opens its guided editor', async () => {

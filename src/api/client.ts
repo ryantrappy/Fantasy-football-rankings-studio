@@ -60,6 +60,17 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     }
     return collection;
   }
+  let disposePromise: Promise<void> | undefined;
+  function dispose() {
+    disposePromise ??= (async () => {
+      const collections = [leagueCollection, ...rankingCollections.values()];
+      queryClient.clear();
+      while (collections.some((collection) => collection.subscriberCount > 0))
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      await Promise.all(collections.map((collection) => collection.cleanup()));
+    })();
+    return disposePromise;
+  }
   const api: LeagueApi = {
     subject,
     management: {
@@ -230,13 +241,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     },
     leagueCollection,
     rankingsFor,
-    dispose: async () => {
-      await Promise.all([
-        leagueCollection.cleanup(),
-        ...[...rankingCollections.values()].map((collection) => collection.cleanup()),
-      ]);
-      queryClient.clear();
-    },
+    dispose,
   };
 }
 export function errorMessage(error: unknown): string {

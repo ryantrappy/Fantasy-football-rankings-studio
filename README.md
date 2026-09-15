@@ -56,8 +56,9 @@ Public `VITE_*` settings are embedded at build time, so rebuild when they change
 TanStack DB manages reactive client collections; MongoDB remains the durable server
 store. Existing leagues and rankings use the same database and collection names.
 Database and provider secrets remain server-only. Authenticated collections are
-created separately for each session and cleaned up when it changes. Confirmed
-server writes update the corresponding collection; failed writes preserve the draft.
+created separately for each session and cleaned up after descendant live queries detach when the
+session ends or the account changes. Confirmed server writes update the corresponding collection;
+failed writes preserve the draft.
 Private RPC responses disable caching. No CORS proxy or separate API port is needed.
 
 The document and loading shell render on the server; authenticated data loads after

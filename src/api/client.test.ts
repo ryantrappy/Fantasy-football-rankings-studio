@@ -74,12 +74,19 @@ describe('Start-backed collections', () => {
   });
   it('does not share cached leagues between accounts', async () => {
     vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+    vi.mocked(functions.getRankings).mockResolvedValue({ ok: true, data: [ranking] });
     const owner = session('owner');
     await owner.listLeagues();
+    await owner.getRankings(league.leagueId);
+    const ownerRankings = owner.rankingsFor(league.leagueId);
+    await owner.dispose();
+    expect(owner.leagueCollection.status).toBe('cleaned-up');
+    expect(owner.leagueCollection.toArray).toEqual([]);
+    expect(ownerRankings.status).toBe('cleaned-up');
+    expect(ownerRankings.toArray).toEqual([]);
     vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [] });
     const other = session('other');
     expect(await other.listLeagues()).toEqual([]);
-    expect(owner.leagueCollection.toArray).toMatchObject([league]);
   });
 });
 

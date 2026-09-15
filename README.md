@@ -249,6 +249,12 @@ ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
 
 ### Season summaries and League History
 
+Past-season reports stay cached in browser memory while you navigate between reports,
+with one hour of idle retention. Current-season reports refresh on the next read after
+five minutes. Use Refresh insights or Refresh selected seasons to fetch fresh data at
+any time. Private caches belong to the signed-in session and are cleared when it ends
+or ESPN credentials change; reloading the browser starts a fresh cache.
+
 Season Insights summarizes trade quality, waiver quality, median scoring, and schedule luck. League History discovers linked provider seasons, defaults to the three most recent prior seasons, and aggregates managers by provider account ID. Select more seasons or inspect individual manager years. Failed seasons are reported and excluded.
 
 Former managers are hidden initially in summaries and history; “Include former managers” restores them. Active membership uses the newest linked season. Historical league baselines always include all teams. Changed owners/co-owner groups form separate records.

@@ -12,7 +12,12 @@ export function InsightsAccess({
   publicApi?: PublicInsightsApi;
 }) {
   const [publicApi] = useState(() => suppliedPublicApi || createPublicInsightsApi());
-  useEffect(() => () => publicApi.dispose(), [publicApi]);
+  useEffect(
+    () => () => {
+      if (!suppliedPublicApi) publicApi.dispose();
+    },
+    [publicApi, suppliedPublicApi],
+  );
   const api = useMemo(
     () => (privateApi ? withOwnerInsights(publicApi, privateApi) : publicApi),
     [publicApi, privateApi],

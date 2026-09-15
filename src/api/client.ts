@@ -1,4 +1,5 @@
 import * as publishingFunctions from '../functions/publishing.functions';
+import { insightsCacheOptions } from './insights-cache';
 import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
@@ -228,7 +229,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       if (refresh) await queryClient.invalidateQueries({ queryKey });
       return queryClient.fetchQuery({
         queryKey,
-        staleTime: 5 * 60 * 1000,
+        ...insightsCacheOptions(year),
         queryFn: async ({ signal }) =>
           unwrap(
             await functions.getInsights({

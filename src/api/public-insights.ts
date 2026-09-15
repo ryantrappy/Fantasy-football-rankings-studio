@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/query-core';
+import { insightsCacheOptions } from './insights-cache';
 import * as functions from '../functions/public-insights.functions';
 import { ApiError } from './client';
 import type { League } from '../types';
@@ -30,6 +31,7 @@ export function createPublicInsightsApi() {
       if (refresh) await queries.invalidateQueries({ queryKey });
       return queries.fetchQuery({
         queryKey,
+        ...insightsCacheOptions(year),
         queryFn: async ({ signal }) =>
           unwrap(await functions.getPublicInsights({ data: { leagueId, year }, signal })),
       });

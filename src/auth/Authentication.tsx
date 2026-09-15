@@ -164,7 +164,9 @@ function Session({ children }: { children: ReactNode }) {
             <Link to="/profile">Your profile</Link>
           </Button>
           <Button asChild variant="plain">
-            <Link to="/espn">ESPN settings</Link>
+            <Link to="/espn" search={{ returnTo: undefined }}>
+              ESPN settings
+            </Link>
           </Button>
           <Button
             variant="plain"

@@ -61,6 +61,39 @@ it('saves password fields, clears their values, and supports removal in settings
   await screen.findByText('ESPN credentials removed.');
   expect(api.removeEspnCredentials).toHaveBeenCalledTimes(1);
 });
+it('returns from a settings detour after saving or explicitly continuing', async () => {
+  const api = makeApi();
+  const onComplete = vi.fn();
+  const view = render(
+    <Provider>
+      <EspnSetup api={api} settings onComplete={onComplete} />
+    </Provider>,
+  );
+  fireEvent.change(await screen.findByLabelText(/espn_s2/), { target: { value: 'cookie' } });
+  fireEvent.change(screen.getByLabelText(/SWID/), { target: { value: 'swid' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save ESPN credentials' }));
+  await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+
+  view.unmount();
+  const second = makeApi();
+  render(
+    <Provider>
+      <EspnSetup api={second} settings onComplete={onComplete} />
+    </Provider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue without credentials' }));
+  await waitFor(() => expect(second.skipEspnSetup).toHaveBeenCalledTimes(1));
+  expect(onComplete).toHaveBeenCalledTimes(2);
+});
+it('does not offer a league-setup return action on a direct settings visit', async () => {
+  render(
+    <Provider>
+      <EspnSetup api={makeApi()} settings />
+    </Provider>,
+  );
+  await screen.findByRole('heading', { name: 'ESPN settings' });
+  expect(screen.queryByRole('button', { name: /league setup|without credentials/i })).toBeNull();
+});
 it('shows save failures and allows retry without discarding typed values', async () => {
   const api = makeApi();
   vi.mocked(api.saveEspnCredentials).mockRejectedValueOnce(new Error('Storage unavailable.'));

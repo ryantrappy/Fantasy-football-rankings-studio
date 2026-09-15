@@ -1,11 +1,28 @@
 import { logClientError } from '../logging';
-import { Box, Button, Field, Flex, Grid, Heading, Input, Text, chakra } from '@chakra-ui/react';
-import { useState } from 'react';
+import {
+  Box,
+  Button,
+  Field,
+  Flex,
+  Grid,
+  Heading,
+  Input,
+  Text,
+  chakra,
+  Link as ChakraLink,
+} from '@chakra-ui/react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useStore } from '@tanstack/react-form';
+import { Link } from '@tanstack/react-router';
 import type { League, LeagueApi } from '../types';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
 import { Icon } from './Icon';
+import {
+  clearLeagueSetupDraft,
+  readLeagueSetupDraft,
+  writeLeagueSetupDraft,
+} from '../league-setup-draft';
 
 export function CreateLeague({
   api,
@@ -17,8 +34,10 @@ export function CreateLeague({
   onCancel: () => void;
 }) {
   const [error, setError] = useState('');
+  const finalized = useRef(false);
+  const [restored] = useState(() => readLeagueSetupDraft(api.subject));
   const form = useForm({
-    defaultValues: {
+    defaultValues: restored || {
       leagueId: '',
       leagueName: '',
       leagueType: 0 as 0 | 1,
@@ -27,13 +46,14 @@ export function CreateLeague({
     onSubmit: async ({ value }) => {
       setError('');
       try {
-        onCreated(
-          await api.createLeague({
-            ...value,
-            leagueId: value.leagueId.trim(),
-            leagueName: value.leagueName.trim(),
-          }),
-        );
+        const league = await api.createLeague({
+          ...value,
+          leagueId: value.leagueId.trim(),
+          leagueName: value.leagueName.trim(),
+        });
+        finalized.current = true;
+        clearLeagueSetupDraft(api.subject);
+        onCreated(league);
       } catch (failure) {
         logClientError('CreateLeague', failure);
         setError(errorMessage(failure));
@@ -47,10 +67,28 @@ export function CreateLeague({
     seasonId: season,
   } = useStore(form.store, (state) => state.values);
   const busy = useStore(form.store, (state) => state.isSubmitting);
+  useEffect(() => {
+    if (finalized.current) return;
+    writeLeagueSetupDraft(api.subject, {
+      leagueId,
+      leagueName,
+      leagueType: provider,
+      seasonId: season,
+    });
+  }, [api.subject, leagueId, leagueName, provider, season]);
 
   return (
     <Box className="create-page">
-      <Button variant="plain" type="button" onClick={onCancel} disabled={busy}>
+      <Button
+        variant="plain"
+        type="button"
+        onClick={() => {
+          finalized.current = true;
+          clearLeagueSetupDraft(api.subject);
+          onCancel();
+        }}
+        disabled={busy}
+      >
         ← Back to rankings
       </Button>
       <Flex
@@ -70,6 +108,11 @@ export function CreateLeague({
         </Heading>
         <Text mb={4}>Bring your league into the studio. We’ll take care of the teams.</Text>
       </Flex>
+      {restored && (
+        <Text as="output" className="notice insights-notice">
+          Your league details were restored. Create the league when you’re ready.
+        </Text>
+      )}
       <Grid
         templateColumns={{ base: '1fr', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }}
         gap={8}
@@ -169,8 +212,12 @@ export function CreateLeague({
             {provider === 1 && (
               <Box className="notice" role="note" mb={5}>
                 <strong>Private ESPN league?</strong> Save both your espn_s2 and SWID cookies in{' '}
-                <a href="/espn">ESPN settings</a> before connecting it. Public ESPN leagues do not
-                need cookies.
+                <ChakraLink asChild>
+                  <Link to="/espn" search={{ returnTo: '/leagues/new' }}>
+                    ESPN settings
+                  </Link>
+                </ChakraLink>{' '}
+                before connecting it. Public ESPN leagues do not need cookies.
               </Box>
             )}
             <Field.Root mb={5} gap={2} className="field">

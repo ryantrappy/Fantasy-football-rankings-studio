@@ -7,6 +7,7 @@ import { renderToString } from 'react-dom/server';
 import { getRouter } from './router';
 import { Provider } from './components/ui/provider';
 import { Authentication } from './auth/Authentication';
+import { readLeagueSetupDraft } from './league-setup-draft';
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -199,6 +200,46 @@ test('authenticated visitors can navigate to league creation and return', async 
   expect(router.state.location.pathname).toBe('/leagues/new');
   await userEvent.click(screen.getByRole('button', { name: /Back to rankings/ }));
   expect(await screen.findByRole('heading', { name: 'Power rankings studio' })).toBeInTheDocument();
+});
+
+test('ESPN settings restores an in-progress league and completion clears it', async () => {
+  const user = userEvent.setup();
+  auth.isAuthenticated = true;
+  auth.user = { sub: 'owner-a' };
+  const router = await openPage('/leagues/new');
+  await screen.findByRole('heading', { name: 'Create a league.' });
+  await user.click(screen.getByLabelText('ESPN', { exact: true }));
+  await user.type(screen.getByLabelText(/League ID/), '00123');
+  await user.type(screen.getByLabelText(/Display name/), 'Private league');
+  const season = screen.getByLabelText('Season');
+  await user.clear(season);
+  await user.type(season, '2025');
+
+  await user.click(screen.getByRole('note').getElementsByTagName('a')[0]);
+  await screen.findByRole('heading', { name: 'ESPN settings' });
+  expect(router.state.location.search.returnTo).toBe('/leagues/new');
+  await user.click(screen.getByRole('button', { name: 'Continue without credentials' }));
+
+  await screen.findByRole('heading', { name: 'Create a league.' });
+  expect(screen.getByRole('status')).toHaveTextContent('league details were restored');
+  expect(screen.getByRole('radio', { name: 'ESPN' })).toBeChecked();
+  expect(screen.getByLabelText(/League ID/)).toHaveValue('00123');
+  expect(screen.getByLabelText(/Display name/)).toHaveValue('Private league');
+  expect(screen.getByLabelText('Season')).toHaveValue(2025);
+  await user.click(screen.getByRole('button', { name: 'Create league' }));
+  await screen.findByRole('heading', { name: 'Power rankings studio' });
+  expect(readLeagueSetupDraft('owner-a')).toBeNull();
+});
+
+test('cancelling league creation clears its temporary draft', async () => {
+  const user = userEvent.setup();
+  auth.isAuthenticated = true;
+  auth.user = { sub: 'owner-a' };
+  await openPage('/leagues/new');
+  await user.type(await screen.findByLabelText(/League ID/), '123');
+  expect(readLeagueSetupDraft('owner-a')).not.toBeNull();
+  await user.click(screen.getByRole('button', { name: /Back to rankings/ }));
+  expect(readLeagueSetupDraft('owner-a')).toBeNull();
 });
 
 test('authenticated sessions detach live queries before disposing their collections', async () => {

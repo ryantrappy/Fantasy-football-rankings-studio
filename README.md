@@ -239,6 +239,10 @@ instead of treating missing players as zero.
 The Season insights table shows each selected team-week's actual score, best legal
 lineup, and missed points. A dash in either lineup column means the provider data
 cannot form a complete legal lineup for that week, not that the value is zero.
+Start accuracy is the share of actual starters retained by the highest-scoring legal
+lineup. Season and League History rates weight every eligible roster slot equally;
+weeks without complete lineup data are excluded from both the percentage and
+best-lineup average.
 
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.

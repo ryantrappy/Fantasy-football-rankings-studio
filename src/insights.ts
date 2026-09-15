@@ -106,6 +106,10 @@ export interface SeasonInsights {
     projectionDelta: number | null;
     beatProjection: number;
     aboveMedian: number;
+    bestLineupPoints: number;
+    lineupWeeks: number;
+    correctStarts: number;
+    lineupSlots: number;
     tradeCount: number;
     receivedPoints: number;
     sentPoints: number;

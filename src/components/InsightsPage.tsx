@@ -30,6 +30,8 @@ const number = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 const signed = (value: number | null) =>
   value === null ? '—' : `${value > 0 ? '+' : ''}${number(value)}`;
+const accuracy = (correctStarts: number, slots: number) =>
+  slots ? (correctStarts / slots) * 100 : null;
 export function InsightsPage({
   search,
   navigate,
@@ -493,6 +495,25 @@ export function InsightsPage({
                                 <>{signed(s.bestLineup ? s.bestLineup.points - s.actual : null)}</>
                               ),
                             },
+                            {
+                              id: '6',
+                              header: 'Start accuracy',
+                              value: (s) =>
+                                s.bestLineup
+                                  ? accuracy(s.bestLineup.correctStarts, s.bestLineup.slots)
+                                  : null,
+                              exportValue: (s) =>
+                                s.bestLineup
+                                  ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                  : null,
+                              cell: (s) => (
+                                <>
+                                  {s.bestLineup
+                                    ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                    : '—'}
+                                </>
+                              ),
+                            },
                           ]}
                         />
                       </Box>
@@ -573,6 +594,31 @@ export function InsightsPage({
                         cell: (t) => (
                           <>
                             {t.projectedWeeks ? `${t.beatProjection} / ${t.projectedWeeks}` : '—'}
+                          </>
+                        ),
+                      },
+                      {
+                        id: '6',
+                        header: 'Best lineup / wk',
+                        value: (t) =>
+                          t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null,
+                        cell: (t) => (
+                          <>{number(t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null)}</>
+                        ),
+                      },
+                      {
+                        id: '7',
+                        header: 'Start accuracy',
+                        value: (t) => accuracy(t.correctStarts, t.lineupSlots),
+                        exportValue: (t) =>
+                          t.lineupSlots
+                            ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
+                            : null,
+                        cell: (t) => (
+                          <>
+                            {t.lineupSlots
+                              ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
+                              : '—'}
                           </>
                         ),
                       },

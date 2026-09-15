@@ -33,6 +33,8 @@ import { ManagerComparison } from './ManagerComparison';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+const lineupAccuracy = (correctStarts: number, slots: number) =>
+  slots ? percentage(correctStarts, slots) : null;
 export function HistoryPage({
   search,
   navigate,
@@ -615,6 +617,28 @@ export function HistoryPage({
                             header: 'Pickup hit rate',
                             value: (r) => percentage(r.pickupHits, r.ratedPickups),
                             cell: (r) => <>{n(percentage(r.pickupHits, r.ratedPickups))}%</>,
+                          },
+                          {
+                            id: '8',
+                            header: 'Best lineup / wk',
+                            value: (r) => average(r.bestLineupPoints, r.lineupWeeks),
+                            cell: (r) => <>{n(average(r.bestLineupPoints, r.lineupWeeks))}</>,
+                          },
+                          {
+                            id: '9',
+                            header: 'Start accuracy',
+                            value: (r) => lineupAccuracy(r.correctStarts, r.lineupSlots),
+                            exportValue: (r) =>
+                              r.lineupSlots
+                                ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                : null,
+                            cell: (r) => (
+                              <>
+                                {r.lineupSlots
+                                  ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                  : '—'}
+                              </>
+                            ),
                           },
                         ]}
                       />

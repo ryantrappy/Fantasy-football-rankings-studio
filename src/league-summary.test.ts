@@ -1,5 +1,5 @@
 import { calculateInsights } from './server/insights/calculate';
-import { summarizeLeague, luckIndex, visibleManagers } from './league-summary';
+import { summarizeLeague, luckIndex, percentage, visibleManagers } from './league-summary';
 import type { ScoreWeek } from './insights';
 const make = (weeks = 1) =>
   calculateInsights({
@@ -45,6 +45,34 @@ it('weights history by measured games and keeps identity across renamed teams', 
   expect(row.managerName).toBe('Renamed');
   expect(row.luckGames).toBe(3);
   expect(luckIndex(row)).toBeCloseTo(400 / 9);
+});
+it('weights lineup accuracy by eligible roster slots across seasons', () => {
+  const older = make(),
+    newer = make();
+  Object.assign(older.teams.find((team) => team.teamId === 'a')!, {
+    bestLineupPoints: 100,
+    lineupWeeks: 1,
+    correctStarts: 1,
+    lineupSlots: 2,
+  });
+  Object.assign(newer.teams.find((team) => team.teamId === 'a')!, {
+    bestLineupPoints: 120,
+    lineupWeeks: 1,
+    correctStarts: 3,
+    lineupSlots: 4,
+  });
+  const row = summarizeLeague([
+    { year: 2024, data: older },
+    { year: 2025, data: newer },
+  ]).find((summary) => summary.key === 'a')!;
+
+  expect(row).toMatchObject({
+    bestLineupPoints: 220,
+    lineupWeeks: 2,
+    correctStarts: 4,
+    lineupSlots: 6,
+  });
+  expect(percentage(row.correctStarts, row.lineupSlots)).toBeCloseTo(200 / 3);
 });
 it('counts ties as half and excludes missing opponents or incomplete league weeks', () => {
   const data = make(3);

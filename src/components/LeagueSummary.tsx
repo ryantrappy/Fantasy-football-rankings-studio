@@ -244,6 +244,28 @@ export function LeagueSummary({
                 cell: (r) => <>{n(percentage(r.allPlayWins, r.allPlayGames))}%</>,
               },
               {
+                id: 'bestLineup',
+                header: 'Best lineup / wk',
+                value: (r) => average(r.bestLineupPoints, r.lineupWeeks),
+                cell: (r) => <>{n(average(r.bestLineupPoints, r.lineupWeeks))}</>,
+              },
+              {
+                id: 'startAccuracy',
+                header: 'Start accuracy',
+                value: (r) => percentage(r.correctStarts, r.lineupSlots),
+                exportValue: (r) =>
+                  r.lineupSlots
+                    ? `${n(percentage(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                    : null,
+                cell: (r) => (
+                  <>
+                    {r.lineupSlots
+                      ? `${n(percentage(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                      : '—'}
+                  </>
+                ),
+              },
+              {
                 id: '5',
                 header: 'Trade gain / trade',
                 value: (r) => average(r.tradeGainTotal, r.gradedTrades),

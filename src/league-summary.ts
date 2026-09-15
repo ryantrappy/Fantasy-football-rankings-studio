@@ -21,6 +21,10 @@ export interface ManagerSummary {
   weeks: number;
   totalPoints: number;
   aboveMedian: number;
+  bestLineupPoints: number;
+  lineupWeeks: number;
+  correctStarts: number;
+  lineupSlots: number;
   medianPercentTotal: number;
   medianWeeks: number;
   allPlayWins: number;
@@ -109,6 +113,10 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
           weeks: 0,
           totalPoints: 0,
           aboveMedian: 0,
+          bestLineupPoints: 0,
+          lineupWeeks: 0,
+          correctStarts: 0,
+          lineupSlots: 0,
           medianPercentTotal: 0,
           medianWeeks: 0,
           allPlayWins: 0,
@@ -134,6 +142,10 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
       row.managerName = team.managerName;
       row.teamName = team.teamName;
       if (!row.seasons.includes(year)) row.seasons.push(year);
+      row.bestLineupPoints += team.bestLineupPoints;
+      row.lineupWeeks += team.lineupWeeks;
+      row.correctStarts += team.correctStarts;
+      row.lineupSlots += team.lineupSlots;
       const result = data.results?.find((r) => r.teamId === team.teamId);
       if (result?.playoff != null) {
         row.playoffSeasons++;

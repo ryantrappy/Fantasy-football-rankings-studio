@@ -511,6 +511,10 @@ test('season weekly scores expose best legal lineups without inventing unavailab
           projectionDelta: null,
           beatProjection: 0,
           aboveMedian: 1,
+          bestLineupPoints: 120,
+          lineupWeeks: 1,
+          correctStarts: 1,
+          lineupSlots: 2,
           tradeCount: 0,
           receivedPoints: 0,
           sentPoints: 0,
@@ -541,9 +545,14 @@ test('season weekly scores expose best legal lineups without inventing unavailab
   const table = screen.getByRole('table', { name: 'Weekly scores' });
   expect(table).toHaveTextContent('Best lineup');
   expect(table).toHaveTextContent('Missed points');
+  expect(table).toHaveTextContent('Start accuracy');
   expect(table).toHaveTextContent('120');
   expect(table).toHaveTextContent('+20');
+  expect(table).toHaveTextContent('50% (1 / 2)');
   expect(table).toHaveTextContent('—');
+  expect(screen.getByRole('table', { name: 'Team scoring' })).toHaveTextContent(
+    'Best lineup / wk',
+  );
 });
 test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
   const user = userEvent.setup();

@@ -141,6 +141,10 @@ been removed: historical results can reflect players no longer in the lineup.
 This provider-centered choice has not yet been validated against archived pregame
 projections. Historical score variability remains a proxy for projection error;
 it is not a measured provider residual distribution. Later weeks use history only.
+The active next-week snapshot can also cover the first playoff round immediately
+after the regular season. Both providers load it at this boundary; it affects
+only teams playing in that round, not teams on a bye or later rounds. Once
+postseason results exist, the pre-playoff cutoff excludes newer snapshots.
 Sleeper player stat projections use league scoring weights; ESPN uses weekly
 `statSourceId=1` applied totals. The optimizer selects a legal highest-projected
 lineup from starters and bench, excluding reserve/taxi players and confirmed

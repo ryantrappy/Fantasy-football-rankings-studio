@@ -289,3 +289,78 @@ it('loads current ESPN ownership without using it for historical seasons', async
   expect(historical.rosterSnapshotNote).toMatch(/current ownership was not substituted/i);
   expect(read.mock.calls.filter(([, , views]) => views.includes('mRoster'))).toHaveLength(1);
 });
+
+it.each([
+  { completed: 14, historical: false, expected: true },
+  { completed: 15, historical: false, expected: false },
+  { completed: 14, historical: true, expected: false },
+])(
+  'limits Sleeper playoff projections to the current first round: %j',
+  async ({ completed, historical, expected }) => {
+    const currentYear = defaultSeason();
+    const year = currentYear - Number(historical);
+    vi.mocked(axios.get).mockImplementation(async (url): Promise<any> => {
+      if (String(url).includes('/state/nfl'))
+        return {
+          data: { season: String(currentYear), leg: completed + 1, season_type: 'regular' },
+        };
+      if (String(url).includes('/projections/')) return { data: [] };
+      return { data: {} };
+    });
+    vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
+      league_id: '123',
+      name: 'League',
+      season: String(year),
+      total_rosters: 1,
+      settings: {
+        last_scored_leg: completed,
+        start_week: 1,
+        playoff_week_start: 15,
+        playoff_teams: 2,
+      },
+    });
+    vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
+    vi.spyOn(SleeperProvider.prototype, 'get').mockResolvedValue([]);
+    const result = await loadInsightsSource(
+      { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: year },
+      year,
+    );
+    expect(!!result.playoffProjection).toBe(expected);
+    if (expected) expect(result.playoffProjection?.week).toBe(15);
+  },
+);
+
+it.each([
+  { completed: 14, historical: false, expected: true },
+  { completed: 15, historical: false, expected: false },
+  { completed: 14, historical: true, expected: false },
+])(
+  'limits ESPN playoff projections to the current first round: %j',
+  async ({ completed, historical, expected }) => {
+    const year = defaultSeason() - Number(historical);
+    vi.spyOn(EspnProvider.prototype, 'getTeams').mockResolvedValue(teams);
+    vi.spyOn(EspnProvider.prototype, 'get').mockImplementation(
+      async (_id, _year, views): Promise<any> => {
+        if (views.includes('mSettings'))
+          return {
+            id: 123,
+            status: { latestScoringPeriod: completed + 1, finalScoringPeriod: 18 },
+            settings: {
+              scheduleSettings: {
+                matchupPeriodCount: 14,
+                matchupPeriodLength: 1,
+                playoffTeamCount: 2,
+              },
+            },
+          };
+        return { id: 123, teams: [], schedule: [], transactions: [] };
+      },
+    );
+    const result = await loadInsightsSource(
+      { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: year },
+      year,
+    );
+    expect(!!result.playoffProjection).toBe(expected);
+    if (expected) expect(result.playoffProjection?.week).toBe(15);
+  },
+);

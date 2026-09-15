@@ -198,7 +198,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     Number(state.season) === year &&
     state.season_type === 'regular' &&
     projectionWeek === state.leg &&
-    projectionWeek < (season.settings?.playoff_week_start ?? 19)
+    projectionWeek <= Math.min(18, season.settings?.playoff_week_start ?? 18)
   ) {
     try {
       const response = await axios.get<SleeperProjectionRow[]>(
@@ -578,7 +578,8 @@ async function loadEspn(
   if (
     year === defaultSeason() &&
     projectionWeek === completedWeek + 1 &&
-    projectionWeek <= (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0)
+    !!meta.settings?.scheduleSettings?.matchupPeriodCount &&
+    projectionWeek <= Math.min(18, (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0) + 1)
   ) {
     try {
       const projectionData = await provider.get<EspnSnapshot>(

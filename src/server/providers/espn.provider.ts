@@ -43,7 +43,10 @@ interface EspnData {
 export type EspnAccess = 'public' | Readonly<EspnCredentials>;
 
 export default class EspnProvider implements LeagueProvider {
-  constructor(private readonly access: EspnAccess = 'public') {}
+  constructor(
+    private readonly access: EspnAccess = 'public',
+    private readonly apiBaseUrl = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl',
+  ) {}
 
   async get<T extends { id: number } = EspnData>(
     leagueId: string,
@@ -59,7 +62,7 @@ export default class EspnProvider implements LeagueProvider {
       headers.Cookie = `espn_s2=${this.access.espnS2}; SWID=${this.access.swid}`;
     }
     const { data } = await axios.get<T>(
-      `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${seasonId}/segments/0/leagues/${leagueId}`,
+      `${this.apiBaseUrl}/seasons/${seasonId}/segments/0/leagues/${leagueId}`,
       { params, headers, timeout: 10000 },
     );
     if (!data?.id)

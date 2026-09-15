@@ -147,7 +147,15 @@ the completed 2025 season for repeatability. ESPN no longer exposes the former p
 fixture anonymously. To include its live scenario, set `TEST_ESPN_LEAGUE_ID`,
 `TEST_ESPN_S2`, and `TEST_ESPN_SWID` together. The harness does not print those values;
 it encrypts them with an ephemeral key in the disposable database, then drops that
-database during cleanup.
+database during cleanup. Its output labels ESPN coverage as `live-provider` and says when
+that optional path was skipped.
+
+`npm run test:espn-contract` runs the deterministic ESPN integration path included in the full
+`npm test` CI suite. It serves sanitized league metadata, teams, matchups, box scores, and
+transactions from a local HTTP fixture, then exercises the real ESPN adapter and report loader.
+The contract verifies cookie-free public requests and account-isolated private requests using
+credentials that pass through the production encryption/decryption code. It never contacts ESPN
+and requires no personal league ID or cookies.
 
 New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
 The rankings studio loads valid week choices for the selected league and season instead of assuming 1–18. Each account can register its own workspace for an external league. Sleeper and ESPN IDs can overlap. New workspaces have a separate numeric URL ID; provider requests use `providerLeagueId`. Existing documents without that field continue using their original ID, so rankings and shared links remain valid without rewriting records. Deployment adds a partial unique index on owner, provider and external ID; keep the existing unique workspace-ID index. Take the documented backup before deploying database changes.
@@ -292,9 +300,9 @@ Migration: `ESPN_S2` and `SWID` environment variables are no longer used, even a
 fallback. Each existing ESPN owner must save their own cookies in ESPN settings.
 There is no automatic migration of deployment-wide cookies to user accounts. Remove
 obsolete cookie variables from your deployment after updating. A user without saved
-cookies can access only ESPN leagues that ESPN makes public. The live `check:local`
-script uses a disposable database with no saved cookies, so its ESPN fixture must be
-public. Existing `.env` files are not modified by this change.
+cookies can access only ESPN leagues that ESPN makes public. Optional live ESPN coverage in
+`check:local` stores supplied test-only cookies in its disposable database; deterministic coverage
+uses synthetic encrypted values and a local HTTP fixture. Existing `.env` files are not modified.
 
 ## User profile
 

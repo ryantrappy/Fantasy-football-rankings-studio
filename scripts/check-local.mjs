@@ -151,10 +151,13 @@ try {
       'Set TEST_ESPN_LEAGUE_ID, TEST_ESPN_S2, and TEST_ESPN_SWID together for the ESPN live check.',
     );
   if (espnSettings.every(Boolean)) {
+    console.log('ESPN live-provider coverage enabled with test-only credentials.');
     await rpc('saveEspnCredentials', { espnS2: espnSettings[1], swid: espnSettings[2] }, owner);
     providerFixtures.push([1, espnSettings[0]]);
   } else {
-    console.log('ESPN live check skipped; no test-only ESPN credentials were supplied.');
+    console.log(
+      'ESPN live-provider coverage skipped; deterministic ESPN HTTP contract coverage runs in npm test.',
+    );
   }
   for (const [leagueType, providerLeagueId] of providerFixtures) {
     const league = await rpc(

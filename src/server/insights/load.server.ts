@@ -362,8 +362,12 @@ interface EspnRosterData {
   id: number;
   teams?: { id: number; roster?: { entries?: EspnEntry[] } }[];
 }
-async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
-  const provider = new EspnProvider(access);
+async function loadEspn(
+  league: League,
+  year: number,
+  access: EspnAccess,
+  provider = new EspnProvider(access),
+): Promise<InsightsSource> {
   const [meta, teams] = await Promise.all([
     provider.get<EspnSnapshot>(league.providerLeagueId ?? league.leagueId, year, [
       'mSettings',
@@ -608,14 +612,22 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     ],
   };
 }
-export async function loadInsights(league: League, year: number, access: EspnAccess = 'public') {
-  const source = await loadInsightsSource(league, year, access);
+export async function loadInsights(
+  league: League,
+  year: number,
+  access: EspnAccess = 'public',
+  espnProvider?: EspnProvider,
+) {
+  const source = await loadInsightsSource(league, year, access, espnProvider);
   return { ...calculateInsights(source), playoffSettings: source.playoffSettings };
 }
 export async function loadInsightsSource(
   league: League,
   year: number,
   access: EspnAccess = 'public',
+  espnProvider?: EspnProvider,
 ) {
-  return league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access);
+  return league.leagueType === 0
+    ? loadSleeper(league, year)
+    : loadEspn(league, year, access, espnProvider);
 }

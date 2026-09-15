@@ -1,4 +1,4 @@
-import type { PlayoffProjection, RosterSnapshot } from '../../insights';
+import type { PlayoffProjection, RosterSnapshot, ScoreWeek } from '../../insights';
 
 type ProjectedPlayer = {
   id: string;
@@ -38,9 +38,10 @@ function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
     states = next;
     if (!states.size) return undefined;
   }
-  return [...states.values()].reduce((best, candidate) =>
+  const best = [...states.values()].reduce((best, candidate) =>
     candidate.points > best.points ? candidate : best,
   );
+  return { ...best, playerIds: best.chosen.map((index) => candidates[index].id) };
 }
 
 const sleeperSlot = (slot: string): Slot | undefined => {
@@ -150,6 +151,34 @@ export function sleeperProjectionSnapshot(
   };
 }
 
+export function sleeperBestLineup(
+  starters: string[],
+  players: NonNullable<ScoreWeek['players']>,
+  rosterPositions: string[],
+  playerPositions: Record<string, string>,
+): ScoreWeek['bestLineup'] {
+  const slots = rosterPositions.map(sleeperSlot).filter((slot): slot is Slot => !!slot);
+  const current = new Set(starters);
+  const lineup = bestProjectedLineup(
+    players
+      .map((player) => ({
+        id: player.playerId,
+        position: playerPositions[player.playerId] || '',
+        points: player.points,
+        starter: current.has(player.playerId),
+      }))
+      .filter((player) => !!player.position),
+    slots,
+  );
+  return lineup
+    ? {
+        points: lineup.points,
+        correctStarts: lineup.playerIds.filter((id) => current.has(id)).length,
+        slots: slots.length,
+      }
+    : undefined;
+}
+
 interface EspnProjectionEntry {
   lineupSlotId: number;
   playerId?: number;
@@ -234,4 +263,52 @@ export function espnProjectionSnapshot(
     benchSelections,
     optimizedLineup: true,
   };
+}
+
+export function espnBestLineup(
+  year: number,
+  week: number,
+  entries: EspnProjectionEntry[],
+): ScoreWeek['bestLineup'] {
+  const starters = entries.filter((entry) => ![20, 21].includes(entry.lineupSlotId));
+  const slots = starters
+    .map((entry) =>
+      espnSlot(entry.lineupSlotId, espnPosition(entry.playerPoolEntry?.player?.defaultPositionId)),
+    )
+    .filter((slot): slot is Slot => !!slot);
+  if (slots.length !== starters.length) return undefined;
+  const starterIds = new Set(
+    starters.map((entry) => String(entry.playerId ?? entry.playerPoolEntry?.player?.id)),
+  );
+  const lineup = bestProjectedLineup(
+    entries
+      .filter((entry) => entry.lineupSlotId !== 21)
+      .map((entry) => {
+        const player = entry.playerPoolEntry?.player;
+        const id = entry.playerId ?? player?.id;
+        return {
+          id: String(id),
+          position: espnPosition(player?.defaultPositionId) || '',
+          points:
+            player?.stats?.find(
+              (stat) =>
+                stat.seasonId === year &&
+                stat.scoringPeriodId === week &&
+                stat.statSourceId === 0 &&
+                stat.statSplitTypeId === 1 &&
+                Number.isFinite(stat.appliedTotal),
+            )?.appliedTotal ?? Number.NaN,
+          starter: starterIds.has(String(id)),
+        };
+      })
+      .filter((player) => player.id !== 'undefined' && !!player.position),
+    slots,
+  );
+  return lineup
+    ? {
+        points: lineup.points,
+        correctStarts: lineup.playerIds.filter((id) => starterIds.has(id)).length,
+        slots: slots.length,
+      }
+    : undefined;
 }

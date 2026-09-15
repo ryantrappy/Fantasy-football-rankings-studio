@@ -232,6 +232,11 @@ missing. Only completed weeks are included, so a new season has an explicit empt
 state. A team must have a complete legal projected lineup or the simulator visibly
 falls back to historical scoring.
 
+Historical lineup analysis follows the same provider roster-slot rules. It reports a
+best possible score and retained actual starts only when the completed box score has
+every required player score and position; incomplete box scores remain unavailable
+instead of treating missing players as zero.
+
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
 

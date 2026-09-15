@@ -8,7 +8,12 @@ import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
 import { calculateInsights } from './calculate';
-import { espnProjectionSnapshot, sleeperProjectionSnapshot } from './projections';
+import {
+  espnBestLineup,
+  espnProjectionSnapshot,
+  sleeperBestLineup,
+  sleeperProjectionSnapshot,
+} from './projections';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
   const results: T[] = [];
@@ -280,16 +285,25 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     );
   }
   let catalog = { names: {}, positions: {} };
-  if (moves.length) catalog = await sleeperNames();
-  else if (rosterSnapshot)
+  if (moves.length || rosterSnapshot || season.roster_positions?.length)
     try {
       catalog = await sleeperNames();
     } catch (error) {
       logServerError('insights.sleeperRosterCatalog', error, 502);
-      rosterSnapshot = undefined;
-      rosterSnapshotNote =
-        'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
+      if (rosterSnapshot) {
+        rosterSnapshot = undefined;
+        rosterSnapshotNote =
+          'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
+      }
     }
+  for (const score of scores)
+    if (season.roster_positions?.length && score.players?.length)
+      score.bestLineup = sleeperBestLineup(
+        score.starters.map((player) => player.playerId),
+        score.players,
+        season.roster_positions,
+        catalog.positions,
+      );
   return {
     playoffProjection,
     playoffSettings:
@@ -497,6 +511,7 @@ async function loadEspn(
           lineup.length && projections.every((p) => p != null)
             ? projections.reduce<number>((sum, p) => sum + p!, 0)
             : null,
+        bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)
           .map((e) => ({ playerId: String(e.playerId), points: stat(e, 0)! })),

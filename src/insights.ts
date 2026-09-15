@@ -14,6 +14,11 @@ export interface ScoreWeek {
   lineupAvailable?: boolean;
   starters: { playerId: string; points: number }[];
   players?: { playerId: string; points: number }[];
+  bestLineup?: {
+    points: number;
+    correctStarts: number;
+    slots: number;
+  };
 }
 export interface PlayoffProjection {
   provider: 'Sleeper' | 'ESPN';

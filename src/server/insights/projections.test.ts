@@ -1,4 +1,9 @@
-import { espnProjectionSnapshot, sleeperProjectionSnapshot } from './projections';
+import {
+  espnBestLineup,
+  espnProjectionSnapshot,
+  sleeperBestLineup,
+  sleeperProjectionSnapshot,
+} from './projections';
 
 it('uses the best legal Sleeper lineup from starters and bench players', () => {
   const result = sleeperProjectionSnapshot(
@@ -37,6 +42,16 @@ const entry = (slot: number, id: number, position: number, points?: number) => (
   playerId: id,
   playerPoolEntry: {
     player: { id, defaultPositionId: position, stats: points === undefined ? [] : [stat(points)] },
+  },
+});
+const actualEntry = (slot: number, id: number, position: number, points: number) => ({
+  ...entry(slot, id, position),
+  playerPoolEntry: {
+    player: {
+      id,
+      defaultPositionId: position,
+      stats: [{ ...stat(points), statSourceId: 0 }],
+    },
   },
 });
 
@@ -80,4 +95,32 @@ it('replaces a bye-week ESPN starter with an eligible projected bench player', (
   expect(result.teamPoints).toEqual({ '1': 35 });
   expect(result.benchSelections).toBe(1);
   expect(result.coveredStarters).toBe(result.totalStarters);
+});
+
+it('records historical best legal lineups and correct starts without guessing missing data', () => {
+  expect(
+    sleeperBestLineup(
+      ['a', 'b'],
+      [
+        { playerId: 'a', points: 20 },
+        { playerId: 'b', points: 5 },
+        { playerId: 'c', points: 16 },
+      ],
+      ['QB', 'RB'],
+      { a: 'QB', b: 'RB', c: 'RB' },
+    ),
+  ).toEqual({ points: 36, correctStarts: 1, slots: 2 });
+  expect(
+    sleeperBestLineup(['a'], [{ playerId: 'a', points: 20 }], ['QB', 'RB'], { a: 'QB' }),
+  ).toBeUndefined();
+});
+
+it('uses historical ESPN player totals from bench players for the best lineup', () => {
+  expect(
+    espnBestLineup(2026, 4, [
+      actualEntry(0, 1, 1, 20),
+      actualEntry(2, 2, 2, 5),
+      actualEntry(20, 3, 2, 15),
+    ]),
+  ).toEqual({ points: 35, correctStarts: 1, slots: 2 });
 });

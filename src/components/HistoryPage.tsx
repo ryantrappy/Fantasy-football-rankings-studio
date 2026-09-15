@@ -315,6 +315,15 @@ export function HistoryPage({
               {!years.length && <Text mb={4}>Select at least one season to compare.</Text>}
               {loading && (
                 <chakra.output className="notice insights-notice" aria-live="polite">
+                  <chakra.progress
+                    value={current?.completed || 0}
+                    max={years.length}
+                    width="full"
+                    height={2}
+                    accentColor="indigo.600"
+                    mb={3}
+                    aria-label={`${refresh > 0 ? 'Refreshing' : 'Loading'} ${years.length} selected seasons`}
+                  />
                   {refresh > 0 ? 'Refreshed' : 'Loaded'} {current?.completed || 0} of {years.length}{' '}
                   seasons. Historical provider reads can take a moment.
                   {!!retained?.records.length && ' Previously loaded seasons remain visible below.'}

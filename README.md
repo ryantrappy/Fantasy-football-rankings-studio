@@ -157,7 +157,8 @@ TanStack Query caches reports in the browser for five minutes, with a manual ref
 Every season report shows the date and time of its last successful refresh. Manual refreshes keep
 the last usable report visible while provider reads run. If a refresh still fails, affected report
 sections are labeled stale and retain that earlier timestamp; history retries preserve successful
-seasons individually. Successful responses with missing provider data name the affected sections
+seasons individually. League History shows determinate progress as each selected season finishes
+loading or refreshing. Successful responses with missing provider data name the affected sections
 near the top of the report and exclude unknown values instead of presenting them as current or zero.
 Loading, successful refreshes and continued partial availability are announced to assistive
 technology.

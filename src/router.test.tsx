@@ -8,6 +8,14 @@ import { getRouter } from './router';
 import { Provider } from './components/ui/provider';
 import { Authentication } from './auth/Authentication';
 
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 const auth = vi.hoisted(() => ({
   isLoading: false,
   isAuthenticated: false,
@@ -71,6 +79,7 @@ vi.mock('./functions/public-insights.functions', () => ({
   getPublicInsights: vi.fn().mockResolvedValue({
     ok: true,
     data: {
+      playoffSettings: undefined,
       completedWeek: 0,
       generatedAt: '2026-09-08T00:00:00Z',
       teams: [],
@@ -112,6 +121,24 @@ beforeEach(() => {
   vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
     ok: true,
     data: { leagueId: '123', leagueName: 'Shared league', leagueType: 0, seasonId: 2026 },
+  });
+  vi.mocked(publicFunctions.getPublicLeagueSeasons).mockResolvedValue({
+    ok: true,
+    data: { years: [2026, 2025, 2024], activeSeason: 2026, activeManagerKeys: [] },
+  });
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValue({
+    ok: true,
+    data: {
+      playoffSettings: undefined,
+      completedWeek: 0,
+      generatedAt: '2026-09-08T00:00:00Z',
+      teams: [],
+      scores: [],
+      pickups: [],
+      trades: [],
+      tradeComparisons: [],
+      notes: [],
+    },
   });
   vi.stubEnv('VITE_AUTH0_DOMAIN', 'example.auth0.com');
   vi.stubEnv('VITE_AUTH0_CLIENT_ID', 'test-client');
@@ -420,6 +447,66 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(
     screen.getByRole('button', { name: 'Download Manager scorecard CSV' }),
   ).toBeInTheDocument();
+});
+test('shared history reports determinate progress while seasons load and refresh', async () => {
+  const user = userEvent.setup();
+  type InsightsResult = Awaited<ReturnType<typeof publicFunctions.getPublicInsights>>;
+  const result = (): InsightsResult => ({
+    ok: true,
+    data: {
+      playoffSettings: undefined,
+      completedWeek: 0,
+      generatedAt: '2026-09-08T00:00:00Z',
+      teams: [],
+      scores: [],
+      pickups: [],
+      trades: [],
+      tradeComparisons: [],
+      notes: [],
+    },
+  });
+  const initial2025 = deferred<InsightsResult>();
+  const initial2024 = deferred<InsightsResult>();
+  vi.mocked(publicFunctions.getPublicInsights).mockImplementation(({ data }) =>
+    data.year === 2025 ? initial2025.promise : initial2024.promise,
+  );
+
+  await openPage('/shared/history?leagueId=123&years=%5B2025%2C2024%5D');
+
+  const initialProgress = await screen.findByRole('progressbar', {
+    name: 'Loading 2 selected seasons',
+  });
+  expect(initialProgress).toHaveAttribute('value', '0');
+  expect(initialProgress).toHaveAttribute('max', '2');
+
+  initial2025.resolve(result());
+  await waitFor(() => expect(initialProgress).toHaveAttribute('value', '1'));
+  expect(screen.getByText(/Loaded 1 of 2 seasons/)).toBeInTheDocument();
+
+  initial2024.resolve(result());
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('progressbar', { name: 'Loading 2 selected seasons' }),
+    ).not.toBeInTheDocument(),
+  );
+
+  const refreshed2025 = deferred<InsightsResult>();
+  const refreshed2024 = deferred<InsightsResult>();
+  vi.mocked(publicFunctions.getPublicInsights).mockImplementation(({ data }) =>
+    data.year === 2025 ? refreshed2025.promise : refreshed2024.promise,
+  );
+  await user.click(screen.getByRole('button', { name: 'Refresh selected seasons' }));
+
+  const refreshProgress = await screen.findByRole('progressbar', {
+    name: 'Refreshing 2 selected seasons',
+  });
+  expect(refreshProgress).toHaveAttribute('value', '0');
+  expect(screen.getByText(/2 of 2 selected seasons loaded/)).toBeInTheDocument();
+
+  refreshed2025.resolve(result());
+  await waitFor(() => expect(refreshProgress).toHaveAttribute('value', '1'));
+  refreshed2024.resolve(result());
+  await waitFor(() => expect(refreshProgress).not.toBeInTheDocument());
 });
 test('history keeps a stale season available when its refresh fails', async () => {
   const user = userEvent.setup();

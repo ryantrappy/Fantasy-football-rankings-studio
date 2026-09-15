@@ -124,3 +124,45 @@ it('uses historical ESPN player totals from bench players for the best lineup', 
     ]),
   ).toEqual({ points: 35, correctStarts: 1, slots: 2 });
 });
+
+it('excludes confirmed absences without arbitrarily discounting questionable players', () => {
+  const result = sleeperProjectionSnapshot(
+    3,
+    ['1'],
+    [{ teamId: '1', starters: ['out'], bench: ['healthy', 'questionable'] }],
+    [
+      { player_id: 'out', stats: { rush_yd: 300 } },
+      { player_id: 'healthy', stats: { rush_yd: 80 } },
+      { player_id: 'questionable', stats: { rush_yd: 100 } },
+    ],
+    { rush_yd: 0.1 },
+    ['RB'],
+    { out: 'RB', healthy: 'RB', questionable: 'RB' },
+    { out: 'Out', healthy: null, questionable: 'Questionable' },
+  );
+  expect(result.teamPoints['1']).toBe(10);
+  expect(result.unavailablePlayers).toBe(1);
+  expect(result.uncertainPlayers).toBe(1);
+});
+
+it('uses configured ESPN slots even if the current starting lineup is empty', () => {
+  const injured = entry(20, 2, 2, 80);
+  Object.assign(injured.playerPoolEntry.player, { injuryStatus: 'OUT' });
+  const result = espnProjectionSnapshot(
+    2026,
+    4,
+    ['1'],
+    [
+      {
+        teamId: 1,
+        rosterForCurrentScoringPeriod: {
+          entries: [entry(20, 1, 1, 20), injured, entry(20, 3, 2, 10)],
+        },
+      },
+    ],
+    { '0': 1, '2': 1, '20': 5 },
+  );
+  expect(result.teamPoints['1']).toBe(30);
+  expect(result.totalStarters).toBe(2);
+  expect(result.unavailablePlayers).toBe(1);
+});

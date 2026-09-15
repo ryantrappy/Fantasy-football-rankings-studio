@@ -244,6 +244,15 @@ lineup. Season and League History rates weight every eligible roster slot equall
 weeks without complete lineup data are excluded from both the percentage and
 best-lineup average.
 
+Playoff forecasts use complete published regular-season opponent pairings from ESPN
+and Sleeper, with visible coverage and a random-opponent fallback for missing weeks.
+Current projected lineups exclude confirmed Out/IR/PUP/suspended players and Sleeper
+reserve/taxi players; questionable/doubtful players keep the provider estimate and
+are flagged without an invented extra discount. ESPN lineup slots come from league
+settings even if current starting slots are empty. A missing team projection only
+affects that team's fallback. These availability adjustments apply to the current
+projection week; future injuries and recovery dates are not inferred.
+
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
 

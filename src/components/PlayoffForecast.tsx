@@ -26,9 +26,10 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
         Playoff outlook
       </Heading>
       <Text mb={3}>
-        Model scenario: league-wide seeding by wins, then points; random remaining opponents;
-        single-week playoff rounds with a fixed bracket. Division rules, median wins, reseeding,
-        custom tiebreaks, injuries and roster changes are not modeled.
+        Model scenario: league-wide seeding by wins, then points; published remaining opponents when
+        available; single-week playoff rounds with a fixed bracket. Division rules, median wins,
+        reseeding, custom tiebreaks and future roster changes are not modeled. Current confirmed
+        absences are excluded from projected lineups; injury recovery dates are not predicted.
       </Text>
       {settings && maxWeek > 0 && (
         <Field.Root mb={4} maxW="xs">
@@ -72,6 +73,19 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
           <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
             Projection mode: {forecast.projection.note}
           </Text>
+          <Text mb={3}>
+            Known schedule: {forecast.schedule.knownWeeks} of {forecast.schedule.remainingWeeks}{' '}
+            remaining regular-season weeks. Missing weeks use random remaining opponents.
+          </Text>
+          {forecast.projection.used && data.playoffProjection && (
+            <Text mb={3}>
+              Availability:{' '}
+              {data.playoffProjection.availabilityChecked
+                ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
+                : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
+              No extra injury discount is added to provider estimates.
+            </Text>
+          )}
           {data.completedWeek > settings!.regularSeasonEnd && (
             <Text mb={3} fontWeight="bold">
               Retrospective pre-playoff forecast: actual postseason results are excluded.

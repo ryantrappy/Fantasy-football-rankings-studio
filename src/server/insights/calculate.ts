@@ -117,6 +117,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     };
   });
   return {
+    forecastSchedule: source.forecastSchedule,
     results: source.results,
     playoffProjection: source.playoffProjection,
     tradeComparisons: normalized.trades,

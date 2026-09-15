@@ -9,7 +9,22 @@ type ProjectedPlayer = {
 
 type Slot = { accepts: (position: string) => boolean };
 
+export const unavailableStatus = (status?: string | null) =>
+  [
+    'OUT',
+    'IR',
+    'INJURED_RESERVE',
+    'INJURY_RESERVE',
+    'SUSPENDED',
+    'SUSPENSION',
+    'PUP',
+    'COVID',
+  ].includes((status || '').toUpperCase().replaceAll(' ', '_'));
+const uncertainStatus = (status?: string | null) =>
+  ['QUESTIONABLE', 'DOUBTFUL'].includes((status || '').toUpperCase());
+
 function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
+  if (!slots.length) return undefined;
   const candidates = [
     ...new Map(
       players
@@ -101,6 +116,7 @@ export function sleeperProjectionSnapshot(
   scoring: Record<string, number>,
   rosterPositions: string[],
   playerPositions: Record<string, string>,
+  availability: Record<string, string | null> = {},
 ): PlayoffProjection {
   const pointsByPlayer = new Map(
     projections
@@ -122,11 +138,21 @@ export function sleeperProjectionSnapshot(
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
+  let unavailablePlayers = 0;
+  let uncertainPlayers = 0;
   for (const teamId of teamIds) {
     totalStarters += slots.length;
     const roster = rosters.find((row) => row.teamId === teamId);
     const starters = new Set(roster?.starters || []);
     const players = [...new Set([...(roster?.starters || []), ...(roster?.bench || [])])]
+      .filter((id) => {
+        if (unavailableStatus(availability[id])) {
+          unavailablePlayers++;
+          return false;
+        }
+        if (uncertainStatus(availability[id])) uncertainPlayers++;
+        return true;
+      })
       .map((id) => ({
         id,
         position: playerPositions[id] || '',
@@ -142,6 +168,10 @@ export function sleeperProjectionSnapshot(
   }
   return {
     provider: 'Sleeper',
+    capturedAt: new Date().toISOString(),
+    unavailablePlayers,
+    uncertainPlayers,
+    availabilityChecked: Object.keys(availability).length > 0,
     week,
     teamPoints,
     coveredStarters,
@@ -186,6 +216,7 @@ interface EspnProjectionEntry {
     player?: {
       id?: number;
       defaultPositionId?: number;
+      injuryStatus?: string;
       stats?: {
         scoringPeriodId: number;
         seasonId: number;
@@ -207,28 +238,51 @@ export function espnProjectionSnapshot(
   week: number,
   teamIds: string[],
   sides: EspnProjectionSide[],
+  slotCounts?: Record<string, number>,
 ): PlayoffProjection {
   const teamPoints: Record<string, number> = {};
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
+  let unavailablePlayers = 0;
+  let uncertainPlayers = 0;
+  let availabilityChecked = false;
   for (const teamId of teamIds) {
     const entries =
       sides.find((side) => String(side.teamId) === teamId)?.rosterForCurrentScoringPeriod
         ?.entries || [];
     const starters = entries.filter((entry) => ![20, 21].includes(entry.lineupSlotId));
-    const slots = starters
-      .map((entry) =>
-        espnSlot(
-          entry.lineupSlotId,
-          espnPosition(entry.playerPoolEntry?.player?.defaultPositionId),
-        ),
-      )
-      .filter((slot): slot is Slot => !!slot);
-    totalStarters += starters.length;
-    if (slots.length !== starters.length) continue;
+    const configured =
+      slotCounts &&
+      Object.entries(slotCounts).flatMap(([id, count]) =>
+        [20, 21].includes(Number(id))
+          ? []
+          : Array.from({ length: count }, () => espnSlot(Number(id))),
+      );
+    const slots =
+      configured ||
+      starters
+        .map((entry) =>
+          espnSlot(
+            entry.lineupSlotId,
+            espnPosition(entry.playerPoolEntry?.player?.defaultPositionId),
+          ),
+        )
+        .filter((slot): slot is Slot => !!slot);
+    totalStarters += slots.length;
+    if (!slots.length || slots.some((s) => !s)) continue;
     const players = entries
       .filter((entry) => entry.lineupSlotId !== 21)
+      .filter((entry) => {
+        const status = entry.playerPoolEntry?.player?.injuryStatus;
+        if (status != null) availabilityChecked = true;
+        if (unavailableStatus(status)) {
+          unavailablePlayers++;
+          return false;
+        }
+        if (uncertainStatus(status)) uncertainPlayers++;
+        return true;
+      })
       .map((entry) => {
         const player = entry.playerPoolEntry?.player;
         const id = entry.playerId ?? player?.id;
@@ -248,7 +302,7 @@ export function espnProjectionSnapshot(
         };
       })
       .filter((player) => player.id !== 'undefined' && !!player.position);
-    const lineup = bestProjectedLineup(players, slots);
+    const lineup = bestProjectedLineup(players, slots as Slot[]);
     if (!lineup) continue;
     teamPoints[teamId] = lineup.points;
     coveredStarters += slots.length;
@@ -256,6 +310,10 @@ export function espnProjectionSnapshot(
   }
   return {
     provider: 'ESPN',
+    capturedAt: new Date().toISOString(),
+    unavailablePlayers,
+    uncertainPlayers,
+    availabilityChecked,
     week,
     teamPoints,
     coveredStarters,

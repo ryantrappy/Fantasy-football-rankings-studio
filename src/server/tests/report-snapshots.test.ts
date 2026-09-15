@@ -66,6 +66,16 @@ it('stores independent snapshots and reads them without provider calls or creden
       Promise.resolve(documents.get((filter as unknown as { publicId: string }).publicId)) as never,
   );
   const original = input();
+  original.records[0].data.forecastSchedule = [{ week: 2, homeTeamId: '1', awayTeamId: '2' }];
+  original.records[0].data.playoffProjection = {
+    provider: 'ESPN',
+    week: 2,
+    teamPoints: { '1': 105 },
+    coveredStarters: 1,
+    totalStarters: 1,
+    unavailablePlayers: 1,
+    availabilityChecked: true,
+  };
   const dirty = {
     ...original,
     espnS2: 'secret',
@@ -88,6 +98,8 @@ it('stores independent snapshots and reads them without provider calls or creden
   const saved = await reportSnapshots.read({ publicId: first.publicId });
   expect(saved.records).toHaveLength(2);
   expect(saved.records[0].data.scores[0].actual).toBe(100);
+  expect(saved.records[0].data.forecastSchedule).toEqual(original.records[0].data.forecastSchedule);
+  expect(saved.records[0].data.playoffProjection?.unavailablePlayers).toBe(1);
   expect(saved.records[0].data.scores[0].bestLineup?.points).toBe(120);
   expect(saved.records[1].data.teams[0].managerKey).toBe(saved.activeManagerKeys[0]);
   expect(JSON.stringify(saved)).not.toMatch(/secret|espn-owner|ownerSubject|swid|espnS2/);

@@ -4,6 +4,7 @@ export interface PlayoffSettings {
   playoffTeams: number;
 }
 export interface PlayoffForecast {
+  schedule: { knownWeeks: number; remainingWeeks: number };
   throughWeek: number;
   simulations: number;
   rounds: string[];
@@ -42,9 +43,9 @@ export function forecastPlayoffs(
   const projectedTeams = snapshot ? teamsWithProjection(data, snapshot.teamPoints) : 0;
   const useProjection =
     projectionIsCurrent &&
-    projectedTeams === data.teams.length &&
+    projectedTeams > 0 &&
     snapshot.totalStarters > 0 &&
-    snapshot.coveredStarters === snapshot.totalStarters;
+    snapshot.coveredStarters > 0;
   const projection: PlayoffForecast['projection'] = {
     used: useProjection,
     provider: snapshot?.provider,
@@ -52,7 +53,7 @@ export function forecastPlayoffs(
     coveredStarters: snapshot?.coveredStarters ?? 0,
     totalStarters: snapshot?.totalStarters ?? 0,
     note: useProjection
-      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and are blended equally with each team’s historical scoring average for that week.`
+      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and are blended equally with each covered team’s historical scoring average for that week. Uncovered teams use historical scoring only.`
       : snapshot?.note ||
         (snapshot && !projectionIsCurrent
           ? `${snapshot.provider} week ${snapshot.week} projections are excluded from this retrospective cutoff.`
@@ -61,6 +62,10 @@ export function forecastPlayoffs(
             : 'Current-week provider projections are unavailable for this season, so the forecast uses historical scoring only.'),
   };
   const empty = (reason: string): PlayoffForecast => ({
+    schedule: {
+      knownWeeks: 0,
+      remainingWeeks: Math.max(0, settings.regularSeasonEnd - throughWeek),
+    },
     throughWeek,
     simulations: 0,
     rounds,
@@ -92,6 +97,17 @@ export function forecastPlayoffs(
   if (histories.some((h) => h.length < 1 || new Set(h.map((s) => s.week)).size !== h.length))
     return empty('At least one distinct completed scoring week per team is needed.');
   const byId = new Map(teams.map((t, i) => [t.teamId, i]));
+  const scheduled = new Map<number, number[]>();
+  for (let week = throughWeek + 1; week <= settings.regularSeasonEnd; week++) {
+    const pairs = (data.forecastSchedule || []).filter((m) => m.week === week);
+    const order = pairs.flatMap((m) => [byId.get(m.homeTeamId), byId.get(m.awayTeamId)]);
+    if (
+      order.length === teams.length &&
+      order.every((i) => i !== undefined) &&
+      new Set(order).size === teams.length
+    )
+      scheduled.set(week, order as number[]);
+  }
   const wins = teams.map(() => 0),
     points = histories.map((h) => h.reduce((sum, s) => sum + s.actual, 0));
   for (let i = 0; i < teams.length; i++)
@@ -113,6 +129,7 @@ export function forecastPlayoffs(
   for (const char of JSON.stringify([
     histories.map((h) => h.map((s) => [s.week, s.actual, s.opponentTeamId])),
     settings,
+    [...scheduled],
     useProjection ? snapshot?.teamPoints : null,
   ]))
     seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
@@ -165,13 +182,23 @@ export function forecastPlayoffs(
     const w = [...wins],
       p = [...points];
     for (let week = throughWeek + 1; week <= settings.regularSeasonEnd; week++) {
-      // Future schedules may not be published: explicitly a neutral schedule scenario.
-      const order = shuffle(teams.map((_, i) => i));
+      // Use known opponent identities; missing weeks remain a neutral schedule scenario.
+      const order = scheduled.get(week) || shuffle(teams.map((_, i) => i));
       for (let k = 0; k < order.length; k += 2) {
         const a = order[k],
           b = order[k + 1],
-          sa = useProjection && week === snapshot!.week ? drawProjectedWeek(a) : draw(a),
-          sb = useProjection && week === snapshot!.week ? drawProjectedWeek(b) : draw(b);
+          sa =
+            useProjection &&
+            week === snapshot!.week &&
+            Number.isFinite(snapshot!.teamPoints[teams[a].teamId])
+              ? drawProjectedWeek(a)
+              : draw(a),
+          sb =
+            useProjection &&
+            week === snapshot!.week &&
+            Number.isFinite(snapshot!.teamPoints[teams[b].teamId])
+              ? drawProjectedWeek(b)
+              : draw(b);
         p[a] += sa;
         p[b] += sb;
         w[sa > sb ? a : b]++;
@@ -208,6 +235,10 @@ export function forecastPlayoffs(
     }
   }
   return {
+    schedule: {
+      knownWeeks: scheduled.size,
+      remainingWeeks: Math.max(0, settings.regularSeasonEnd - throughWeek),
+    },
     throughWeek,
     simulations,
     rounds,

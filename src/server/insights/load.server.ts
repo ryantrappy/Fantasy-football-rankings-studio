@@ -23,14 +23,26 @@ async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>):
 }
 const weeksThrough = (last: number) => Array.from({ length: Math.max(0, last) }, (_, i) => i + 1);
 let namesCache:
-  | { expires: number; names: Record<string, string>; positions: Record<string, string> }
+  | {
+      expires: number;
+      names: Record<string, string>;
+      positions: Record<string, string>;
+      availability: Record<string, string | null>;
+    }
   | undefined;
 async function sleeperNames() {
   if (namesCache && namesCache.expires > Date.now()) return namesCache;
   const { data } = await axios.get<
     Record<
       string,
-      { full_name?: string; first_name?: string; last_name?: string; position?: string }
+      {
+        full_name?: string;
+        first_name?: string;
+        last_name?: string;
+        position?: string;
+        injury_status?: string | null;
+        status?: string;
+      }
     >
   >('https://api.sleeper.app/v1/players/nfl', { timeout: 20000 });
   const names = Object.fromEntries(
@@ -44,7 +56,10 @@ async function sleeperNames() {
       .filter(([, p]) => !!p.position)
       .map(([id, p]) => [id, p.position === 'DEF' ? 'DST' : p.position!]),
   );
-  namesCache = { expires: Date.now() + 86400000, names, positions };
+  const availability = Object.fromEntries(
+    Object.entries(data).map(([id, p]) => [id, p.injury_status || p.status || null]),
+  );
+  namesCache = { expires: Date.now() + 5 * 60 * 1000, names, positions, availability };
   return namesCache;
 }
 interface SleeperScore {
@@ -74,6 +89,8 @@ interface SleeperRosterSnapshot {
   roster_id: number;
   players?: string[] | null;
   starters?: string[] | null;
+  reserve?: string[] | null;
+  taxi?: string[] | null;
 }
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
   const provider = new SleeperProvider();
@@ -107,7 +124,8 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       rosterSnapshot = {
         capturedAt: new Date().toISOString(),
         teams: rosters.map((roster) => {
-          const owned = [...new Set(roster.players || [])];
+          const ineligible = new Set([...(roster.reserve || []), ...(roster.taxi || [])]);
+          const owned = [...new Set(roster.players || [])].filter((id) => !ineligible.has(id));
           const starters = [...new Set(roster.starters || [])].filter(
             (id) => id !== '0' && owned.includes(id),
           );
@@ -201,6 +219,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         season.scoring_settings || {},
         season.roster_positions || [],
         (await sleeperNames()).positions,
+        (await sleeperNames()).availability,
       );
     } catch (error) {
       logServerError('insights.sleeperProjections', error, 502);
@@ -304,7 +323,36 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         season.roster_positions,
         catalog.positions,
       );
+  const regularEnd = season.settings?.playoff_week_start
+    ? Math.min(18, season.settings.playoff_week_start - 1)
+    : completedWeek;
+  const future = await mapWeeks(
+    weeksThrough(regularEnd).filter((w) => w > completedWeek),
+    async (week) => {
+      try {
+        return {
+          week,
+          rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
+        };
+      } catch {
+        return { week, rows: [] as SleeperScore[] };
+      }
+    },
+  );
+  const forecastSchedule = [...weekly, ...future].flatMap(({ week, rows }) => {
+    const groups = new Map<number, string[]>();
+    for (const row of rows)
+      if (row.matchup_id != null) {
+        const group = groups.get(row.matchup_id) || [];
+        group.push(String(row.roster_id));
+        groups.set(row.matchup_id, group);
+      }
+    return [...groups.values()]
+      .filter((group) => group.length === 2)
+      .map(([homeTeamId, awayTeamId]) => ({ week, homeTeamId, awayTeamId }));
+  });
   return {
+    forecastSchedule,
     playoffProjection,
     playoffSettings:
       season.settings?.playoff_week_start && season.settings?.playoff_teams
@@ -341,6 +389,7 @@ interface EspnEntry {
       id?: number;
       fullName?: string;
       defaultPositionId?: number;
+      injuryStatus?: string;
       stats?: {
         scoringPeriodId: number;
         seasonId: number;
@@ -368,7 +417,12 @@ interface EspnTransaction {
 interface EspnSnapshot extends EspnResultsData {
   id: number;
   status?: { latestScoringPeriod: number; finalScoringPeriod: number };
-  schedule?: { home?: EspnSide; away?: EspnSide; playoffTierType?: string }[];
+  schedule?: {
+    home?: EspnSide;
+    away?: EspnSide;
+    playoffTierType?: string;
+    matchupPeriodId?: number;
+  }[];
   transactions?: EspnTransaction[];
 }
 interface EspnRosterData {
@@ -541,6 +595,7 @@ async function loadEspn(
         projectionWeek,
         teams.map((team) => team.teamId),
         sides,
+        meta.settings?.rosterSettings?.lineupSlotCounts,
       );
     } catch (error) {
       logServerError('insights.espnProjections', error, 502);
@@ -589,6 +644,23 @@ async function loadEspn(
       })),
   );
   return {
+    forecastSchedule:
+      meta.settings?.scheduleSettings?.matchupPeriodLength === 1
+        ? (meta.schedule || []).flatMap((m) =>
+            m.matchupPeriodId &&
+            m.home &&
+            m.away &&
+            (!m.playoffTierType || m.playoffTierType === 'NONE')
+              ? [
+                  {
+                    week: m.matchupPeriodId,
+                    homeTeamId: String(m.home.teamId),
+                    awayTeamId: String(m.away.teamId),
+                  },
+                ]
+              : [],
+          )
+        : [],
     playoffProjection,
     playoffSettings:
       meta.settings?.scheduleSettings?.matchupPeriodCount &&

@@ -69,10 +69,24 @@ it('uses only a complete current-cutoff projection snapshot', () => {
   expect(retrospective.projection.used).toBe(false);
   expect(retrospective.projection.note).toMatch(/excluded/);
 
-  data.playoffProjection.coveredStarters--;
+  delete data.playoffProjection.teamPoints['0'];
+  data.playoffProjection.coveredStarters -= 9;
   const incomplete = forecastPlayoffs(data, settings, 4);
-  expect(incomplete.projection.used).toBe(false);
+  expect(incomplete.projection.used).toBe(true);
   expect(incomplete.projection.note).toMatch(/historical scoring only/);
+});
+
+it('uses complete published opponent pairs and rejects malformed schedule weeks', () => {
+  const data = fixture(4);
+  data.forecastSchedule = [
+    { week: 5, homeTeamId: '0', awayTeamId: '2' },
+    { week: 5, homeTeamId: '1', awayTeamId: '3' },
+  ];
+  const settings = { regularSeasonEnd: 5, playoffTeams: 2 };
+  const result = forecastPlayoffs(data, settings, 4);
+  expect(result.schedule).toEqual({ knownWeeks: 1, remainingWeeks: 1 });
+  data.forecastSchedule[1].homeTeamId = '0';
+  expect(forecastPlayoffs(data, settings, 4).schedule.knownWeeks).toBe(0);
 });
 it('supports one- and two-week forecasts but still requires completed paired results', () => {
   const settings = { regularSeasonEnd: 10, playoffTeams: 4 };

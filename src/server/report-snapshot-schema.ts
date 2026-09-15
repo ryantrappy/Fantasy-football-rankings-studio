@@ -9,6 +9,10 @@ const year = z.number().int().min(2000).max(2100);
 const strings = z.array(text).max(10000);
 const player = z.object({ playerId: text, points: num });
 const season: z.ZodType<SeasonInsights> = z.object({
+  forecastSchedule: z
+    .array(z.object({ week: num, homeTeamId: text, awayTeamId: text }))
+    .max(1800)
+    .optional(),
   completedWeek: count.max(18),
   generatedAt: z.string().datetime(),
   notes: strings,
@@ -16,6 +20,10 @@ const season: z.ZodType<SeasonInsights> = z.object({
   playoffSettings: z.object({ regularSeasonEnd: num, playoffTeams: num }).optional(),
   playoffProjection: z
     .object({
+      capturedAt: z.string().datetime().optional(),
+      unavailablePlayers: count.optional(),
+      uncertainPlayers: count.optional(),
+      availabilityChecked: z.boolean().optional(),
       provider: z.enum(['Sleeper', 'ESPN']),
       week: num,
       teamPoints: z.record(text, num),

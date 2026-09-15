@@ -49,6 +49,14 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
         return {
           id: 123,
           status: { latestScoringPeriod: 3, finalScoringPeriod: 2 },
+          schedule: [
+            {
+              matchupPeriodId: 3,
+              playoffTierType: 'NONE',
+              home: { teamId: 1 },
+              away: { teamId: 2 },
+            },
+          ],
           settings: {
             scheduleSettings: {
               matchupPeriodCount: 10,
@@ -100,6 +108,7 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
     2025,
   );
   expect(result.completedWeek).toBe(2);
+  expect(result.forecastSchedule).toEqual([{ week: 3, homeTeamId: '1', awayTeamId: '2' }]);
   expect(result.scores[1]).toMatchObject({
     actual: 10,
     projected: 15,

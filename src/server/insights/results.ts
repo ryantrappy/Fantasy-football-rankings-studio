@@ -111,6 +111,7 @@ export interface EspnResultsData {
   teams?: { id: number; rankCalculatedFinal?: number }[];
   schedule?: { playoffTierType?: string; home?: { teamId: number }; away?: { teamId: number } }[];
   settings?: {
+    rosterSettings?: { lineupSlotCounts?: Record<string, number> };
     scheduleSettings?: {
       playoffTeamCount?: number;
       matchupPeriodCount?: number;

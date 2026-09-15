@@ -21,6 +21,10 @@ export interface ScoreWeek {
   };
 }
 export interface PlayoffProjection {
+  capturedAt?: string;
+  unavailablePlayers?: number;
+  uncertainPlayers?: number;
+  availabilityChecked?: boolean;
   provider: 'Sleeper' | 'ESPN';
   week: number;
   teamPoints: Record<string, number>;
@@ -48,6 +52,7 @@ export interface RosterSnapshot {
   }[];
 }
 export interface InsightsSource {
+  forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
@@ -89,6 +94,7 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  forecastSchedule?: InsightsSource['forecastSchedule'];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];

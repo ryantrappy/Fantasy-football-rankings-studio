@@ -94,7 +94,13 @@ move comparisons are rounded to two decimals before summary aggregation.
 ## Playoffs and final finishes
 
 Playoff appearances, championships and last-place finishes count confirmed outcomes.
-Average finish = sum of known final placements / seasons with a known placement;
+Average regular-season placement ranks complete head-to-head records through the configured
+regular-season cutoff by wins (ties count half), then points scored. Exact ties share a placement.
+The value stays unknown until every selected team's scoring data is available for every
+regular-season week. Average regular-season placement is the sum of those known placements divided
+by seasons with a known regular-season placement.
+
+Average final placement = sum of known final placements / seasons with a known placement;
 1 is best. Each statistic shows its own coverage denominator. Unknown and unfinished
 outcomes are excluded, rather than counted as zero or last place.
 

@@ -447,6 +447,9 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(
     screen.getByRole('button', { name: 'Download Manager scorecard CSV' }),
   ).toBeInTheDocument();
+  const history = screen.getByRole('table', { name: 'Manager season history' });
+  expect(history).toHaveTextContent('Regular-season placement');
+  expect(history).toHaveTextContent('Final placement');
 });
 test('shared history reports determinate progress while seasons load and refresh', async () => {
   const user = userEvent.setup();

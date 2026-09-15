@@ -141,6 +141,32 @@ it('aggregates finish achievements by manager with independent coverage and excl
   expect(row.seasons).toHaveLength(3);
 });
 
+it('keeps regular-season and final placement coverage independent', () => {
+  const complete = make(2),
+    incomplete = make(2);
+  complete.playoffSettings = { regularSeasonEnd: 2, playoffTeams: 2 };
+  incomplete.playoffSettings = { regularSeasonEnd: 2, playoffTeams: 2 };
+  incomplete.scores = incomplete.scores.filter(
+    (score) => !(score.week === 2 && score.teamId === 'd'),
+  );
+  complete.results = [{ teamId: 'a', playoff: true, champion: true, lastPlace: false, finish: 1 }];
+  incomplete.results = [
+    { teamId: 'a', playoff: false, champion: false, lastPlace: true, finish: 4 },
+  ];
+
+  const row = summarizeLeague([
+    { year: 2024, data: complete },
+    { year: 2025, data: incomplete },
+  ]).find((summary) => summary.key === 'a')!;
+
+  expect(row).toMatchObject({
+    regularSeasonFinishTotal: 2,
+    regularSeasonFinishSeasons: 1,
+    finishTotal: 5,
+    finishSeasons: 2,
+  });
+});
+
 it('keeps changed co-owner groups separate while renamed teams retain their history', () => {
   const first = make(),
     second = make(),

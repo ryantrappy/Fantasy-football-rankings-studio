@@ -14,6 +14,8 @@ export interface ManagerSummary {
   championshipSeasons: number;
   lastPlaces: number;
   lastPlaceSeasons: number;
+  regularSeasonFinishTotal: number;
+  regularSeasonFinishSeasons: number;
   finishTotal: number;
   finishSeasons: number;
   weeks: number;
@@ -46,10 +48,45 @@ const median = (values: number[]) => {
     mid = Math.floor(rows.length / 2);
   return rows.length % 2 ? rows[mid] : (rows[mid - 1] + rows[mid]) / 2;
 };
+const regularSeasonPlacements = (data: SeasonInsights) => {
+  const end = data.playoffSettings?.regularSeasonEnd;
+  if (!end || data.completedWeek < end || !data.teams.length) return new Map<string, number>();
+  const scoreByWeekAndTeam = new Map(
+    data.scores
+      .filter((score) => score.week <= end)
+      .map((score) => [`${score.week}:${score.teamId}`, score]),
+  );
+  const standings = data.teams.map((team) => ({ teamId: team.teamId, wins: 0, points: 0 }));
+  for (const standing of standings)
+    for (let week = 1; week <= end; week++) {
+      const score = scoreByWeekAndTeam.get(`${week}:${standing.teamId}`);
+      if (!score) return new Map<string, number>();
+      standing.points += score.actual;
+      if (!score.opponentTeamId) continue;
+      const opponent = scoreByWeekAndTeam.get(`${week}:${score.opponentTeamId}`);
+      if (!opponent || opponent.opponentTeamId !== standing.teamId)
+        return new Map<string, number>();
+      standing.wins +=
+        score.actual > opponent.actual ? 1 : score.actual === opponent.actual ? 0.5 : 0;
+    }
+  standings.sort(
+    (a, b) => b.wins - a.wins || b.points - a.points || a.teamId.localeCompare(b.teamId),
+  );
+  const placements = new Map<string, number>();
+  let placement = 0;
+  standings.forEach((standing, index) => {
+    const previous = standings[index - 1];
+    if (!previous || previous.wins !== standing.wins || previous.points !== standing.points)
+      placement = index + 1;
+    placements.set(standing.teamId, placement);
+  });
+  return placements;
+};
 export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
   const summaries = new Map<string, ManagerSummary>();
   // Ascending order keeps the latest name while preserving identity and per-season denominators.
-  for (const { year, data } of [...records].sort((a, b) => a.year - b.year))
+  for (const { year, data } of [...records].sort((a, b) => a.year - b.year)) {
+    const regularSeason = regularSeasonPlacements(data);
     for (const team of data.teams) {
       const key = team.managerKey || `unidentified:${year}:${team.teamId}`;
       let row = summaries.get(key);
@@ -65,6 +102,8 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
           championshipSeasons: 0,
           lastPlaces: 0,
           lastPlaceSeasons: 0,
+          regularSeasonFinishTotal: 0,
+          regularSeasonFinishSeasons: 0,
           finishTotal: 0,
           finishSeasons: 0,
           weeks: 0,
@@ -111,6 +150,11 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
       if (result?.finish != null) {
         row.finishSeasons++;
         row.finishTotal += result.finish;
+      }
+      const regularSeasonFinish = regularSeason.get(team.teamId);
+      if (regularSeasonFinish != null) {
+        row.regularSeasonFinishSeasons++;
+        row.regularSeasonFinishTotal += regularSeasonFinish;
       }
       for (const score of data.scores.filter(
         (s) => s.teamId === team.teamId && s.week <= data.completedWeek,
@@ -171,6 +215,7 @@ export function summarizeLeague(records: SeasonRecord[]): ManagerSummary[] {
         }
       }
     }
+  }
   return [...summaries.values()].sort((a, b) => a.managerName.localeCompare(b.managerName));
 }
 

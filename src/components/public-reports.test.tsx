@@ -117,7 +117,8 @@ it('shows confirmed achievements with coverage and leaves unknown results empty'
   expect(table).toHaveTextContent('Playoff appearances');
   expect(table).toHaveTextContent('Championships');
   expect(table).toHaveTextContent('Last-place finishes');
-  expect(table).toHaveTextContent('Average finish');
+  expect(table).toHaveTextContent('Average regular-season placement');
+  expect(table).toHaveTextContent('Average final placement');
   expect(table).toHaveTextContent('1 / 1 seasons known');
   expect(table).toHaveTextContent('0 / 1 seasons known');
   expect(table).toHaveTextContent('1.0');

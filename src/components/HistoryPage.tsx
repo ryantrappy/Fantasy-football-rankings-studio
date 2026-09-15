@@ -513,8 +513,21 @@ export function HistoryPage({
                             ),
                           },
                           {
+                            id: 'regular-season-finish',
+                            header: 'Regular-season placement',
+                            value: (r) =>
+                              average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
+                            cell: (r) => (
+                              <>
+                                {n(
+                                  average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
+                                )}
+                              </>
+                            ),
+                          },
+                          {
                             id: 'finish',
-                            header: 'Final finish',
+                            header: 'Final placement',
                             value: (r) => average(r.finishTotal, r.finishSeasons),
                             cell: (r) => <>{n(average(r.finishTotal, r.finishSeasons))}</>,
                           },

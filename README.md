@@ -332,7 +332,9 @@ are duplicated by the application. Framework/development diagnostics may additio
 write their own console output.
 
 Season and history summaries also show **Playoffs and final finishes**: playoff
-appearances, championships, last-place finishes and average final placement.
+appearances, championships, last-place finishes, average regular-season placement and average final
+placement. Regular-season placement uses completed head-to-head records through the configured
+cutoff, with points scored as the tiebreaker; it is never substituted for postseason placement.
 Each value includes known-season coverage. The year-by-year history table shows
 individual outcomes. Unfinished or unavailable results stay unknown; see the
 [finish calculation rules](docs/calculations.md#playoffs-and-final-finishes).

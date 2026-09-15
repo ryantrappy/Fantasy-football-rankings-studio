@@ -9,6 +9,8 @@ import { Provider } from './components/ui/provider';
 import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
 
+vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
+
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((done) => {
@@ -26,6 +28,18 @@ const auth = vi.hoisted(() => ({
   getAccessTokenSilently: vi.fn().mockResolvedValue('test-token'),
   user: undefined as { sub: string } | undefined,
 }));
+const originalConsoleError = console.error;
+let consoleErrors: unknown[][] = [];
+let restoreConsoleError = () => {};
+
+function isClientErrorLog(args: unknown[]) {
+  if (args.length !== 1 || typeof args[0] !== 'string') return false;
+  try {
+    return (JSON.parse(args[0]) as { event?: unknown }).event === 'client_error';
+  } catch {
+    return false;
+  }
+}
 vi.mock('./functions/rankings.functions', () => ({
   getEspnCredentialStatus: vi
     .fn()
@@ -98,6 +112,11 @@ vi.mock('@auth0/auth0-react', () => ({
   useAuth0: () => auth,
 }));
 beforeEach(() => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation((...args) => {
+    if (isClientErrorLog(args)) originalConsoleError(...args);
+  });
+  consoleErrors = consoleError.mock.calls;
+  restoreConsoleError = () => consoleError.mockRestore();
   vi.stubGlobal('scrollTo', vi.fn());
   auth.isAuthenticated = false;
   auth.user = undefined;
@@ -152,10 +171,17 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  const emptyHrefs = [...document.querySelectorAll<HTMLElement>('[href]')].filter(
+    (element) => element.getAttribute('href') === '',
+  );
   cleanup();
+  const unexpectedConsoleErrors = consoleErrors.filter((args) => !isClientErrorLog(args));
+  restoreConsoleError();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  expect(emptyHrefs).toEqual([]);
+  expect(unexpectedConsoleErrors).toEqual([]);
 });
 async function openPage(path = '/') {
   const router = getRouter();
@@ -165,7 +191,7 @@ async function openPage(path = '/') {
   });
   await router.load();
   await act(async () => {
-    render(<RouterProvider router={router} />);
+    render(<RouterProvider router={router} />, { container: document });
   });
   return router;
 }
@@ -182,6 +208,10 @@ test('server rendering keeps browser authentication and private content behind h
 });
 test('anonymous visitors can sign in without making league API requests', async () => {
   await openPage();
+  expect(document.querySelector('link[rel="stylesheet"]')).toHaveAttribute(
+    'href',
+    '/assets/index.test.css',
+  );
   await userEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
   expect(auth.loginWithRedirect).toHaveBeenCalledTimes(1);
   expect(fetch).not.toHaveBeenCalled();
@@ -246,8 +276,7 @@ test('cancelling league creation clears its temporary draft', async () => {
 });
 
 test('authenticated sessions detach live queries before disposing their collections', async () => {
-  const reported: unknown[][] = [];
-  const errorLog = vi.spyOn(console, 'error').mockImplementation((...args) => reported.push(args));
+  const firstConsoleError = consoleErrors.length;
   auth.isAuthenticated = true;
 
   for (const subject of ['owner-a', 'owner-b', 'owner-c']) {
@@ -267,29 +296,31 @@ test('authenticated sessions detach live queries before disposing their collecti
     context: router.options.context,
   });
   await router.load();
-  let view!: ReturnType<typeof render>;
+  let rerender!: (ui: React.ReactNode) => void;
   await act(async () => {
-    view = render(<RouterProvider router={router} />);
+    rerender = render(<RouterProvider router={router} />, { container: document }).rerender;
   });
   await screen.findByRole('heading', { name: 'Create your first league' });
 
   auth.isAuthenticated = false;
-  await act(async () => view.rerender(<RouterProvider key="signed-out" router={router} />));
+  await act(async () => rerender(<RouterProvider key="signed-out" router={router} />));
   await screen.findByRole('button', { name: 'Sign in' });
   await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
 
   auth.isAuthenticated = true;
   auth.user = { sub: 'owner-b' };
-  await act(async () => view.rerender(<RouterProvider key="owner-b" router={router} />));
+  await act(async () => rerender(<RouterProvider key="owner-b" router={router} />));
   await screen.findByRole('heading', { name: 'Create your first league' });
   auth.user = { sub: 'owner-c' };
-  await act(async () => view.rerender(<RouterProvider key="owner-c" router={router} />));
+  await act(async () => rerender(<RouterProvider key="owner-c" router={router} />));
   await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
   cleanup();
   await act(async () => new Promise((resolve) => setTimeout(resolve, 10)));
 
-  const output = reported.map((args) => args.join(' ')).join('\n');
-  errorLog.mockRestore();
+  const output = consoleErrors
+    .slice(firstConsoleError)
+    .map((args) => args.join(' '))
+    .join('\n');
   expect(output).not.toMatch(/Live Query Error|manually cleaned up/);
 });
 

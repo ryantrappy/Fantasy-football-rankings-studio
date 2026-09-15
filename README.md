@@ -66,6 +66,10 @@ The cache is scoped to the router instance, follows the five-minute public-data 
 and is cleared when public report access unmounts. Unavailable leagues use generic preview and page
 copy without exposing provider errors or private league fields.
 
+Router tests mount the application shell into jsdom's document, mock CSS asset imports with a
+non-empty URL, and fail on unexpected `console.error` output. Structured `client_error` diagnostics
+remain visible so recovery-path assertions continue to exercise application logging.
+
 League creation keeps its non-secret provider, league ID, display name, and season in
 account-scoped session storage while visiting ESPN settings or reloading that detour. Saving ESPN
 credentials or explicitly continuing without them returns to the restored form. Creating or

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { loadInsights, loadInsightsSource } from './load.server';
 import EspnProvider from '../providers/espn.provider';
 import SleeperProvider from '../providers/sleeper.provider';
+import { forecastPlayoffs } from '../../playoff-forecast';
 import { defaultSeason } from '../../util/rankings';
 vi.mock('axios', () => ({ default: { get: vi.fn() } }));
 afterEach(() => vi.restoreAllMocks());
@@ -45,7 +46,17 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
   vi.spyOn(EspnProvider.prototype, 'get').mockImplementation(
     async (_id, _year, views, week): Promise<any> => {
       if (views.includes('mSettings'))
-        return { id: 123, status: { latestScoringPeriod: 3, finalScoringPeriod: 2 } };
+        return {
+          id: 123,
+          status: { latestScoringPeriod: 3, finalScoringPeriod: 2 },
+          settings: {
+            scheduleSettings: {
+              matchupPeriodCount: 10,
+              matchupPeriodLength: 1,
+              playoffTeamCount: 4,
+            },
+          },
+        };
       if (views.includes('mTransactions2'))
         return {
           id: 123,
@@ -97,6 +108,11 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
   expect(result.scores[0].projected).toBeNull();
   expect(result.pickups).toHaveLength(1);
   expect(result.pickups[0]).toMatchObject({ points: 10, starts: 1 });
+  expect(result.playoffSettings).toEqual({ regularSeasonEnd: 10, playoffTeams: 4 });
+  expect(forecastPlayoffs(result, result.playoffSettings!, result.completedWeek).rounds).toEqual([
+    'Reach final',
+    'Win title',
+  ]);
 });
 it('caps Sleeper at the league last-scored week even when the NFL played more weeks', async () => {
   vi.mocked(axios.get).mockResolvedValue({

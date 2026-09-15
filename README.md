@@ -558,3 +558,6 @@ teams. Absent source teams are skipped with a count; the source edition is never
 Copied content follows the destination's normal autosave and revision-history behavior.
 
 Playoff forecasts live in the **Playoff simulation** navigation tab. Switching between Season insights and Playoff simulation keeps the selected league and season. Its share link opens the same simulation view at `/shared/playoffs`.
+Playoff simulation settings come from the selected provider: configured playoff-team count controls
+the bracket, and the provider’s regular-season endpoint controls the simulation cutoff. The forecast
+does not infer league size or postseason timing from the number of visible teams.

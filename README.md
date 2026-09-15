@@ -61,6 +61,11 @@ session ends or the account changes. Confirmed server writes update the correspo
 failed writes preserve the draft.
 Private RPC responses disable caching. No CORS proxy or separate API port is needed.
 
+Shared report metadata and visible league context use the same public-only TanStack Query cache.
+The cache is scoped to the router instance, follows the five-minute public-data freshness window,
+and is cleared when public report access unmounts. Unavailable leagues use generic preview and page
+copy without exposing provider errors or private league fields.
+
 League creation keeps its non-secret provider, league ID, display name, and season in
 account-scoped session storage while visiting ESPN settings or reloading that detour. Saving ESPN
 credentials or explicitly continuing without them returns to the restored form. Creating or

@@ -159,7 +159,10 @@ afterEach(() => {
 });
 async function openPage(path = '/') {
   const router = getRouter();
-  router.update({ history: createMemoryHistory({ initialEntries: [path] }) });
+  router.update({
+    history: createMemoryHistory({ initialEntries: [path] }),
+    context: router.options.context,
+  });
   await router.load();
   await act(async () => {
     render(<RouterProvider router={router} />);
@@ -259,7 +262,10 @@ test('authenticated sessions detach live queries before disposing their collecti
 
   auth.user = { sub: 'owner-a' };
   const router = getRouter();
-  router.update({ history: createMemoryHistory({ initialEntries: ['/'] }) });
+  router.update({
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+    context: router.options.context,
+  });
   await router.load();
   let view!: ReturnType<typeof render>;
   await act(async () => {
@@ -627,15 +633,19 @@ test('public reports work without Auth0 configuration', async () => {
     await screen.findByRole('heading', { name: 'Who delivers every week?' }),
   ).toBeInTheDocument();
   expect(screen.queryByText('Sign-in is not configured.')).not.toBeInTheDocument();
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
 });
 test('unknown shared links show a useful error without a login prompt', async () => {
   vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
     ok: false,
-    error: { status: 404, message: 'League not found.' },
+    error: { status: 503, message: 'Private provider connection failed.' },
   });
   await openPage('/shared/history?leagueId=999');
   expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
   expect(document.title).toBe('Shared fantasy report | Fantasy Power Rankings');
+  expect(document.head.textContent).not.toContain('Private provider connection failed.');
+  expect(document.body.textContent).not.toContain('Private provider connection failed.');
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
 });
 test('authenticated users retain their league picker on internal reports', async () => {
@@ -721,6 +731,7 @@ test('a signed-in ESPN owner stays public while navigating shared reports', asyn
   });
   const router = await openPage('/shared/insights?leagueId=123&year=2025');
   await screen.findByRole('heading', { name: 'Who delivers every week?' });
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('link', { name: 'Rankings studio' })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('link', { name: 'League history' }));
   await screen.findByRole('heading', { name: 'Track the manager, not the team name' });
@@ -732,6 +743,27 @@ test('a signed-in ESPN owner stays public while navigating shared reports', asyn
   expect(privateFunctions.getEspnCredentialStatus).not.toHaveBeenCalled();
   expect(privateFunctions.getInsights).not.toHaveBeenCalled();
   expect(publicFunctions.getPublicInsights).toHaveBeenCalled();
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
+});
+
+test('shared league cache checks revocation again after its freshness window', async () => {
+  let now = Date.now();
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  await openPage('/shared/insights?leagueId=123&year=2025');
+  await screen.findByRole('heading', { name: 'Who delivers every week?' });
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
+
+  now += 300_001;
+  vi.mocked(publicFunctions.getPublicLeague).mockResolvedValue({
+    ok: false,
+    error: { status: 404, message: 'Sharing disabled.' },
+  });
+  await userEvent.click(screen.getByRole('link', { name: 'League history' }));
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
+  expect(document.title).toBe('Shared fantasy report | Fantasy Power Rankings');
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(2);
+  clock.mockRestore();
 });
 
 test('first-login ESPN setup returns to the requested internal route after skipping', async () => {

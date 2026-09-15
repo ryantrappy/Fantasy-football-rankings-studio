@@ -1,27 +1,36 @@
-import { getPublicLeague } from './functions/public-insights.functions';
+import type { PublicInsightsApi } from './api/public-insights';
+import type { League } from './types';
 
 export interface SharedReportPreview {
   leagueName: string;
   context: string;
 }
 
+export interface SharedReportLoaderData {
+  league: League | null;
+  preview: SharedReportPreview | null;
+}
+
 const genericTitle = 'Shared fantasy report | Fantasy Power Rankings';
 const genericDescription = 'View a shared fantasy football report.';
 
 export async function loadSharedReportPreview(
+  api: PublicInsightsApi,
   leagueId: string,
   context: string,
-): Promise<SharedReportPreview | null> {
-  if (!leagueId) return null;
+): Promise<SharedReportLoaderData> {
+  if (!leagueId) return { league: null, preview: null };
   try {
-    const result = await getPublicLeague({ data: { leagueId } });
-    if (!result.ok) return null;
+    const league = await api.getLeague(leagueId);
     return {
-      leagueName: result.data.leagueName.trim() || 'Fantasy league',
-      context,
+      league,
+      preview: {
+        leagueName: league.leagueName.trim() || 'Fantasy league',
+        context,
+      },
     };
   } catch {
-    return null;
+    return { league: null, preview: null };
   }
 }
 

@@ -7,7 +7,20 @@ import { useInsightsApi } from '../auth/InsightsAccess';
 import { AppNavigation } from './AppNavigation';
 import { ShareReport } from './ShareReport';
 
-const { readPublic, readAuth } = vi.hoisted(() => ({ readPublic: vi.fn(), readAuth: vi.fn() }));
+const { readPublic, readAuth, publicApi } = vi.hoisted(() => {
+  const readPublic = vi.fn();
+  return {
+    readPublic,
+    readAuth: vi.fn(),
+    publicApi: {
+      listLeagues: vi.fn().mockResolvedValue([]),
+      getLeague: vi.fn(),
+      getLeagueSeasons: vi.fn(),
+      getInsights: () => readPublic().then((result) => result.data),
+      dispose: vi.fn(),
+    },
+  };
+});
 vi.mock('@auth0/auth0-react', () => ({
   Auth0Provider: () => {
     readAuth();
@@ -20,7 +33,10 @@ vi.mock('../functions/public-insights.functions', () => ({
 }));
 vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
-  createFileRoute: () => (options: unknown) => ({ options }),
+  createFileRoute: () => (options: unknown) => ({
+    options,
+    useRouteContext: () => ({ publicInsightsApi: publicApi }),
+  }),
   useSearch: () => ({ leagueId: '123' }),
   Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
   Outlet: () => <ReportProbe />,

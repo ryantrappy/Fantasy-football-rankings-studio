@@ -37,7 +37,8 @@ export function HistoryPage({
   search,
   navigate,
   shared = false,
-}: ReportPageProps<{ leagueId: string; years?: number[] }>) {
+  initialLeague,
+}: ReportPageProps<{ leagueId: string; years?: number[] }> & { initialLeague?: League | null }) {
   const api = useInsightsApi(),
     { leagueId, years: requestedYears } = search;
   const [catalog, setCatalog] = useState<{
@@ -84,12 +85,17 @@ export function HistoryPage({
     let cancelled = false;
     void (async () => {
       try {
-        const leagues = await api.listLeagues().catch((error): League[] => {
-          logClientError('HistoryPage', error);
-          if (!leagueId) throw error;
-          return [];
-        });
+        const leagues = shared
+          ? initialLeague
+            ? [initialLeague]
+            : []
+          : await api.listLeagues().catch((error): League[] => {
+              logClientError('HistoryPage', error);
+              if (!leagueId) throw error;
+              return [];
+            });
         if (leagueId && !leagues.some((league) => league.leagueId === leagueId)) {
+          if (shared) throw new Error('League not found.');
           leagues.push(await api.getLeague(leagueId));
         }
         if (cancelled) return;
@@ -114,7 +120,7 @@ export function HistoryPage({
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, navigate]);
+  }, [api, leagueId, navigate, shared, initialLeague]);
   useEffect(() => {
     if (!years.length) return;
     let cancelled = false;

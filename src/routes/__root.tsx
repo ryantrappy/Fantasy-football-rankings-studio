@@ -1,11 +1,18 @@
 import { Box, Button, Container, Flex, Heading, Text, Link as ChakraLink } from '@chakra-ui/react';
 import { useEffect, type ReactNode } from 'react';
 import { installBrowserErrorLogging, logClientError } from '../logging';
-import { createRootRoute, HeadContent, Link, Outlet, Scripts } from '@tanstack/react-router';
+import {
+  createRootRouteWithContext,
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+} from '@tanstack/react-router';
 import { Provider } from '../components/ui/provider';
+import type { RouterContext } from '../router-context';
 import styles from '../index.css?url';
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

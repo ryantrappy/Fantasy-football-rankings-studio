@@ -37,3 +37,5 @@ export function createPublicInsightsApi() {
     dispose: () => queries.clear(),
   };
 }
+
+export type PublicInsightsApi = ReturnType<typeof createPublicInsightsApi>;

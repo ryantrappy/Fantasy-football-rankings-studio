@@ -35,7 +35,11 @@ export function InsightsPage({
   navigate,
   shared = false,
   playoff = false,
-}: ReportPageProps<{ leagueId: string; year: number }> & { playoff?: boolean }) {
+  initialLeague,
+}: ReportPageProps<{ leagueId: string; year: number }> & {
+  playoff?: boolean;
+  initialLeague?: League | null;
+}) {
   const api = useInsightsApi();
   const { leagueId, year } = search;
   const [leagueResult, setLeagueResult] = useState<{ api: typeof api; entries: League[] }>();
@@ -63,12 +67,17 @@ export function InsightsPage({
     let cancelled = false;
     void (async () => {
       try {
-        const entries = await api.listLeagues().catch((error): League[] => {
-          logClientError('InsightsPage', error);
-          if (!leagueId) throw error;
-          return [];
-        });
+        const entries = shared
+          ? initialLeague
+            ? [initialLeague]
+            : []
+          : await api.listLeagues().catch((error): League[] => {
+              logClientError('InsightsPage', error);
+              if (!leagueId) throw error;
+              return [];
+            });
         if (leagueId && !entries.some((league) => league.leagueId === leagueId)) {
+          if (shared) throw new Error('League not found.');
           entries.push(await api.getLeague(leagueId));
         }
         if (cancelled) return;
@@ -122,7 +131,7 @@ export function InsightsPage({
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, year, reload, navigate, requestKey, reportScope]);
+  }, [api, leagueId, year, reload, navigate, requestKey, reportScope, shared, initialLeague]);
   const scoreRows = useMemo(
     () => data?.scores.filter((s) => s.teamId === teamId).sort((a, b) => a.week - b.week) || [],
     [data, teamId],

@@ -61,7 +61,7 @@ it('uses only a complete current-cutoff projection snapshot', () => {
   const projected = forecastPlayoffs(data, settings, 4);
   const historical = forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 4);
   expect(projected.projection.used).toBe(true);
-  expect(projected.projection.note).toMatch(/blended equally/);
+  expect(projected.projection.note).toMatch(/set the expected score/);
   expect(projected.projection.note).toMatch(/8 bench selections/);
   expect(projected.rows[0].playoff).toBeGreaterThan(historical.rows[0].playoff);
 
@@ -117,4 +117,21 @@ it('gives top seeds a semifinal bye in a six-team bracket', () => {
   const r = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4);
   expect(r.rows[0].playoff).toBe(1);
   expect(r.rows[0].advance[0]).toBe(1);
+});
+
+it('uses a current first-round projection, never a later-week snapshot', () => {
+  const data = fixture(2);
+  const settings = { regularSeasonEnd: 4, playoffTeams: 2 };
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 5,
+    teamPoints: { '0': 200, '1': 50 },
+    coveredStarters: 2,
+    totalStarters: 2,
+  };
+  const result = forecastPlayoffs(data, settings, 4);
+  expect(result.rows[0].advance[0]).toBe(1);
+  expect(result.samplingMargin).toBeCloseTo(0.00693, 5);
+  data.playoffProjection.week = 6;
+  expect(forecastPlayoffs(data, settings, 4).projection.used).toBe(false);
 });

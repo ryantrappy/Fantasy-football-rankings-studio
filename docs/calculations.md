@@ -121,33 +121,97 @@ placements alongside the selected seasons.
 
 ## Playoff scenario forecasts
 
-The season report offers 5,000 reproducible Monte Carlo trials using only scores
+The playoff tab offers 20,000 reproducible Monte Carlo trials using only scores
 through the selected cutoff, capped at the end of the regular season. At least
 one completed week and paired head-to-head results per team are required. Forecasts through weeks
 1–2 carry a prominent small-sample warning because their probabilities can change sharply.
-A team's mean and variance are blended with league values using weight
-`completed samples / (completed samples + 3)`; variance has a one-point-squared
-floor. Independent normal score draws simulate each future week. For the latest
-cutoff in the active season, a complete next-week projection for every starter
-and team shifts that week's mean halfway from the historical estimate toward the
-provider total. Later simulated weeks continue to use the historical distribution.
-Sleeper player stat projections are multiplied by that league's scoring weights;
-ESPN uses each current starter's `statSourceId=1` applied total. Bench and IR slots
-are excluded. Missing players, unset lineups, partial team coverage, or a provider
-request failure disable the projection blend for the whole league and are disclosed
-as historical-only mode. Selecting an older cutoff or season never applies a future
-projection. Remaining
-opponents are randomly paired each week, so these are neutral-schedule scenarios,
-not provider schedule-aware odds. Completed wins and ties (half a win) are retained;
+A team's expected score is blended with the league average using weight
+`n / (n + 3)`. Three prior observations are a fixed regularization assumption, not
+a fitted claim of optimality. Weekly variance is pooled **within** teams using
+`sum(team squared residuals) / sum(n - 1)`, separating weekly noise from differences
+in team strength. When no team has two observations, cross-team variation is the
+fallback. Each team's variance is `(squared residuals + 3 * pooled variance) / (n - 1 + 3)`
+with a one-point-squared floor, multiplied by `1 + 1 / (n + 3)` to allow for mean
+estimation uncertainty. Independent normal score draws simulate future weeks.
+Persistent strength uncertainty, score skew/tails and player correlations are not modeled.
+
+For the latest cutoff in the active season, a covered team's next-week projection
+sets that week's expected score directly. The previous arbitrary 50/50 blend has
+been removed: historical results can reflect players no longer in the lineup.
+This provider-centered choice has not yet been validated against archived pregame
+projections. Historical score variability remains a proxy for projection error;
+it is not a measured provider residual distribution. Later weeks use history only.
+Sleeper player stat projections use league scoring weights; ESPN uses weekly
+`statSourceId=1` applied totals. The optimizer selects a legal highest-projected
+lineup from starters and bench, excluding reserve/taxi players and confirmed
+unavailable statuses. Questionable/doubtful players retain provider estimates;
+we do not invent a numerical injury probability or apply a second discount.
+Assuming optimal starts is a scenario assumption, not a model of manager behavior.
+Partial team coverage retains valid teams and discloses historical fallback for
+others. Older cutoffs and seasons never receive today's projections or injuries.
+The captured provider snapshot is preserved in shared reports; it is not live data.
+
+Complete published regular-season pairings are used where available. Missing or
+malformed weeks use neutral random pairings, with coverage shown in the UI.
+Sleeper supplies weekly matchup IDs; ESPN supplies one-week regular-season schedule
+entries. Schedule identities contain no future scores. Completed wins and ties (half a win) are retained;
 seeding uses wins, points scored, then a random resolution of exact ties.
 
 The model supports 2, 4, 6 and 8 entrants in a fixed single-elimination bracket.
 Six entrants give the top two seeds first-round byes. All rounds last one week.
 Qualification and round advancement percentages use all trials as the denominator;
 byes count as advancement. Title probabilities sum to 100% before rounding. The
-maximum approximate 95% Monte Carlo sampling margin is 1.4 percentage points;
-this excludes uncertainty about the model itself. The model does not replicate
-divisions, median games, reseeding, custom tiebreaks, multiweek rounds, injuries or
-roster changes. Postseason reports label these as retrospective pre-playoff
+maximum approximate 95% Monte Carlo sampling margin per estimate is
+`1.96 * sqrt(0.25 / trials)`, about 0.69 percentage points at 20,000 trials;
+this is not a simultaneous confidence band or a measure of real-world accuracy.
+The model does not replicate divisions, median games, reseeding, custom tiebreaks,
+multiweek rounds, injury recovery dates or future roster changes.
+Postseason reports label these as retrospective pre-playoff
 forecasts and exclude actual postseason scores. Missing settings produce an
 unavailable explanation. Forecasts do not change the exported ranking image.
+
+### Forecast validation
+
+The accuracy panel uses rolling-origin evaluation: week 3 is predicted from weeks
+1–2, week 4 from weeks 1–3, and so on, ending at the selected cutoff. Only actual
+earlier scores fit each distribution. Current projections, injuries and target-week
+results never enter that fit. Each paired non-tied game contributes once. Ties
+are counted separately and excluded from binary win diagnostics; malformed pairs
+and duplicate observations are excluded. Win probability is the normal CDF of
+`(mean A - mean B) / sqrt(variance A + variance B)`.
+
+Brier score is mean `(p - outcome)^2`; log loss is mean negative log probability
+of the winner, clipping probabilities to `[0.000001, 0.999999]` for numerical stability.
+Lower is better. The 50/50 reference is 0.25 Brier and ln(2) log loss. Reliability
+bins show mean predicted favorite chance, actual favorite win rate, and game count.
+These diagnose the historical scoring component, **not** the complete playoff model.
+Small within-league samples cannot establish calibration or generalization.
+
+`node --experimental-strip-types scripts/benchmark-forecast.mjs 1312529175982129152`
+repeats a public score-only comparison against the old variance model. It reads
+completed regular seasons from up to four linked Sleeper league records without
+credentials and prints aggregate metrics. On September 15, 2026:
+
+| Season | Games | Old Brier | Revised Brier | Old log loss | Revised log loss |
+| ------ | ----: | --------: | ------------: | -----------: | ---------------: |
+| 2023   |    60 |   0.26583 |       0.26343 |      0.72808 |          0.72224 |
+| 2024   |    60 |   0.25503 |       0.25381 |      0.70479 |          0.70188 |
+| 2025   |    60 |   0.23924 |       0.23911 |      0.67029 |          0.67029 |
+
+The improvement is small, and the revised model still trails the 50/50 baseline
+overall (Brier 0.25212). These are three related seasons of one league, not an
+independent multi-league test set. No coefficients were tuned to this benchmark.
+Historical scores alone are a weak predictor here. A stronger accuracy claim needs
+timestamped pregame projection/availability archives, projection-error distributions,
+independent leagues and multi-horizon playoff calibration. Live or revised historical
+provider projections must not be treated as immutable pregame forecasts.
+
+Method references: [rolling-origin evaluation](https://otexts.com/fpp3/tscv.html),
+[proper scores and reliability diagrams](https://scikit-learn.org/stable/modules/calibration.html),
+and [Sleeper matchup/player data](https://docs.sleeper.com/).
+The [nflverse availability schedule](https://nflreadr.nflverse.com/articles/nflverse_data_schedule.html)
+reports its former injury feed unavailable after 2024, so it is not used as live
+injury coverage. No paid feed is configured. A potential future source is
+[SportsDataIO's updated weekly projections and injuries](https://sportsdata.io/developers/workflow-guide/nfl);
+its legacy preseason season-long projections should not be mistaken for current
+rest-of-season projections.

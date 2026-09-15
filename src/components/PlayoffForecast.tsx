@@ -121,11 +121,80 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
             />
           </Box>
           <Text fontSize="sm" mt={3}>
-            Estimates use score variability with small samples pulled toward the league average.
-            Simulation noise is at most about ±1.4 percentage points at 95% under this model;
-            real-world uncertainty is larger. 0% and 100% simulation results are not official
-            elimination or clinching claims.
+            Historical estimates pool within-team score variability and allow for uncertainty in
+            small samples. Independent normal score distributions are assumed; player correlations
+            and long-term changes in team strength are not modeled. Simulation noise is at most
+            about ±{(forecast.samplingMargin * 100).toFixed(2)} percentage points at 95% for each
+            estimate under this model; real-world uncertainty is larger. 0% and 100% simulation
+            results are not official elimination or clinching claims.
           </Text>
+          {forecast.validation && (
+            <Box mt={6}>
+              <Heading as="h3" size="md" mb={2}>
+                Historical forecast accuracy
+              </Heading>
+              <Text mb={3}>
+                Each past game is predicted using only earlier scores, starting after two completed
+                weeks. This checks the historical scoring model, not today’s player projections,
+                injury adjustments or playoff qualification odds. Small samples are inconclusive.
+              </Text>
+              {forecast.validation.games ? (
+                <>
+                  <Text mb={3}>
+                    {forecast.validation.games} held-out games. Brier score:{' '}
+                    {forecast.validation.brier!.toFixed(3)} (50/50 baseline:{' '}
+                    {forecast.validation.baselineBrier.toFixed(3)}). Log loss:{' '}
+                    {forecast.validation.logLoss!.toFixed(3)} (baseline:{' '}
+                    {forecast.validation.baselineLogLoss.toFixed(3)}). Lower is better for both.
+                    {forecast.validation.brier! >= forecast.validation.baselineBrier
+                      ? ' The historical model has not beaten the 50/50 baseline on Brier score in this sample.'
+                      : ' A better Brier score alone does not establish calibration.'}
+                  </Text>
+                  <Box overflowX="auto">
+                    <DataTable
+                      label="Historical forecast reliability"
+                      data={forecast.validation.reliability.filter((bin) => bin.count)}
+                      getRowId={(bin) => bin.label}
+                      columns={[
+                        {
+                          id: 'range',
+                          header: 'Favorite chance',
+                          value: (r) => r.label,
+                          rowHeader: true,
+                          cell: (r) => r.label,
+                        },
+                        {
+                          id: 'games',
+                          header: 'Games',
+                          value: (r) => r.count,
+                          cell: (r) => r.count,
+                        },
+                        {
+                          id: 'predicted',
+                          header: 'Mean predicted',
+                          value: (r) => r.predicted,
+                          cell: (r) => percent(r.predicted),
+                        },
+                        {
+                          id: 'observed',
+                          header: 'Actual win rate',
+                          value: (r) => r.observed,
+                          cell: (r) => percent(r.observed),
+                        },
+                      ]}
+                    />
+                  </Box>
+                </>
+              ) : (
+                <Text>No eligible held-out games yet.</Text>
+              )}
+              {!!forecast.validation.skippedTies && (
+                <Text fontSize="sm" mt={2}>
+                  {forecast.validation.skippedTies} tied games excluded from binary win diagnostics.
+                </Text>
+              )}
+            </Box>
+          )}
         </>
       )}
     </Box>

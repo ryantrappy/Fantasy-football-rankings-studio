@@ -1,4 +1,9 @@
 import type { SeasonInsights } from './insights';
+import {
+  fitScoreDistributions,
+  validateHistoricalForecast,
+  type ForecastValidation,
+} from './forecast-statistics';
 export interface PlayoffSettings {
   regularSeasonEnd: number;
   playoffTeams: number;
@@ -7,6 +12,8 @@ export interface PlayoffForecast {
   schedule: { knownWeeks: number; remainingWeeks: number };
   throughWeek: number;
   simulations: number;
+  samplingMargin: number;
+  validation?: ForecastValidation;
   rounds: string[];
   rows: { teamId: string; teamName: string; playoff: number; advance: number[] }[];
   projection: {
@@ -24,7 +31,7 @@ export function forecastPlayoffs(
   data: SeasonInsights,
   settings: PlayoffSettings,
   cutoff: number,
-  simulations = 5000,
+  simulations = 20000,
 ): PlayoffForecast {
   const throughWeek = Math.max(
     0,
@@ -53,7 +60,7 @@ export function forecastPlayoffs(
     coveredStarters: snapshot?.coveredStarters ?? 0,
     totalStarters: snapshot?.totalStarters ?? 0,
     note: useProjection
-      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and are blended equally with each covered team’s historical scoring average for that week. Uncovered teams use historical scoring only.`
+      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and set the expected score for that week. Later weeks and uncovered teams use historical scoring only.`
       : snapshot?.note ||
         (snapshot && !projectionIsCurrent
           ? `${snapshot.provider} week ${snapshot.week} projections are excluded from this retrospective cutoff.`
@@ -68,6 +75,7 @@ export function forecastPlayoffs(
     },
     throughWeek,
     simulations: 0,
+    samplingMargin: 0,
     rounds,
     rows: [],
     projection,
@@ -139,30 +147,17 @@ export function forecastPlayoffs(
     t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const all = histories.flat().map((s) => s.actual);
-  const leagueMean = all.reduce((a, b) => a + b, 0) / all.length;
-  const leagueVariance = all.reduce((a, b) => a + (b - leagueMean) ** 2, 0) / all.length;
-  const distributions = histories.map((h) => {
-    const mean = h.reduce((a, b) => a + b.actual, 0) / h.length;
-    const variance = h.reduce((a, b) => a + (b.actual - mean) ** 2, 0) / h.length;
-    const weight = h.length / (h.length + 3);
-    return {
-      mean: weight * mean + (1 - weight) * leagueMean,
-      sd: Math.sqrt(Math.max(1, weight * variance + (1 - weight) * leagueVariance)),
-    };
-  });
-  const draw = (i: number) => {
+  const distributions = fitScoreDistributions(histories.map((h) => h.map((s) => s.actual)));
+  const draw = (i: number, week: number) => {
     const normal =
       Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) *
       Math.cos(2 * Math.PI * random());
-    return distributions[i].mean + distributions[i].sd * normal;
-  };
-  const drawProjectedWeek = (i: number) => {
-    const normal =
-      Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) *
-      Math.cos(2 * Math.PI * random());
-    const providerMean = snapshot!.teamPoints[teams[i].teamId];
-    const mean = (distributions[i].mean + providerMean) / 2;
+    const providerMean =
+      useProjection && week === snapshot!.week ? snapshot!.teamPoints[teams[i].teamId] : undefined;
+    const mean =
+      providerMean !== undefined && Number.isFinite(providerMean)
+        ? providerMean
+        : distributions[i].mean;
     return mean + distributions[i].sd * normal;
   };
   const counts = teams.map((t) => ({
@@ -187,18 +182,8 @@ export function forecastPlayoffs(
       for (let k = 0; k < order.length; k += 2) {
         const a = order[k],
           b = order[k + 1],
-          sa =
-            useProjection &&
-            week === snapshot!.week &&
-            Number.isFinite(snapshot!.teamPoints[teams[a].teamId])
-              ? drawProjectedWeek(a)
-              : draw(a),
-          sb =
-            useProjection &&
-            week === snapshot!.week &&
-            Number.isFinite(snapshot!.teamPoints[teams[b].teamId])
-              ? drawProjectedWeek(b)
-              : draw(b);
+          sa = draw(a, week),
+          sb = draw(b, week);
         p[a] += sa;
         p[b] += sb;
         w[sa > sb ? a : b]++;
@@ -210,11 +195,13 @@ export function forecastPlayoffs(
       .sort((a, b) => w[b] - w[a] || p[b] - p[a] || tie[b] - tie[a])
       .slice(0, size);
     seeds.forEach((i) => counts[i].playoff++);
-    const game = (a: number, b: number) => (draw(a) > draw(b) ? a : b);
+    let playoffWeek = settings.regularSeasonEnd + 1;
+    const game = (a: number, b: number) => (draw(a, playoffWeek) > draw(b, playoffWeek) ? a : b);
     let alive: number[];
     if (size === 6) {
       alive = [seeds[0], game(seeds[3], seeds[4]), seeds[1], game(seeds[2], seeds[5])];
       alive.forEach((i) => counts[i].advance[0]++);
+      playoffWeek++;
     } else
       alive =
         size === 8
@@ -232,6 +219,7 @@ export function forecastPlayoffs(
       }
       alive = next;
       round++;
+      playoffWeek++;
     }
   }
   return {
@@ -241,6 +229,8 @@ export function forecastPlayoffs(
     },
     throughWeek,
     simulations,
+    samplingMargin: 1.96 * Math.sqrt(0.25 / simulations),
+    validation: validateHistoricalForecast(data, throughWeek),
     rounds,
     projection,
     rows: counts.map((r) => ({

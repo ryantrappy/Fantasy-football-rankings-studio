@@ -533,17 +533,23 @@ verified by this repository's test suite.
 
 Season insights include a playoff-outlook scenario with qualification, round
 advancement and championship probabilities. Select a completed regular-season
-cutoff to avoid future-score leakage. Read the displayed assumptions: neutral
-remaining schedule, standard bracket, and no division/median-game rules. These
+cutoff to avoid future-score leakage. Read the displayed assumptions: published
+remaining schedule when available, standard bracket, and no division/median-game rules. These
 are model estimates, not provider-exact clinching odds. Forecasts are available after one completed
 week; weeks 1–2 are explicitly labeled especially uncertain and retain heavy league-average
 weighting to limit small-sample overreaction. See the playoff section
 in [calculation documentation](docs/calculations.md) for the sampling method. At
 the latest active-season cutoff only, complete current Sleeper or ESPN best-lineup
-projections are blended 50/50 with historical team scoring for the next simulated
-week. The page shows provider, week, coverage and bench selections; incomplete or
-failed projection loads visibly fall back to the historical model. Older cutoffs never
-use the snapshot.
+projections set the expected score for the next simulated week, with confirmed
+absences excluded and no arbitrary extra discount for questionable players.
+The page shows provider, week, coverage and bench selections; uncovered teams and
+later weeks visibly fall back to the historical model. Older cutoffs never use
+the snapshot. The model runs 20,000 trials, pools within-team score variation and
+allows for small-sample uncertainty. An accuracy panel reports rolling-origin
+Brier/log-loss scores versus 50/50 and predicted-versus-observed win rates.
+These diagnostics evaluate historical scoring, not current player projections
+or full playoff-odds calibration. The reproducible public benchmark and its
+limitations are documented in [calculations](docs/calculations.md#forecast-validation).
 
 Unsaved ranking edits are backed up in this browser as they are typed, scoped to
 the signed-in account, league, year and week. Reopening an edition offers

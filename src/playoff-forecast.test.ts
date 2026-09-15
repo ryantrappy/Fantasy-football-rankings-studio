@@ -54,12 +54,15 @@ it('uses only a complete current-cutoff projection snapshot', () => {
     ),
     coveredStarters: 72,
     totalStarters: 72,
+    optimizedLineup: true,
+    benchSelections: 8,
   };
   const settings = { regularSeasonEnd: 5, playoffTeams: 4 };
   const projected = forecastPlayoffs(data, settings, 4);
   const historical = forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 4);
   expect(projected.projection.used).toBe(true);
   expect(projected.projection.note).toMatch(/blended equally/);
+  expect(projected.projection.note).toMatch(/8 bench selections/);
   expect(projected.rows[0].playoff).toBeGreaterThan(historical.rows[0].playoff);
 
   const retrospective = forecastPlayoffs(data, settings, 3);

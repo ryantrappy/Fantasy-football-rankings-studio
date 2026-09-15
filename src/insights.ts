@@ -21,6 +21,8 @@ export interface PlayoffProjection {
   teamPoints: Record<string, number>;
   coveredStarters: number;
   totalStarters: number;
+  benchSelections?: number;
+  optimizedLineup?: boolean;
   note?: string;
 }
 export interface PlayerMove {

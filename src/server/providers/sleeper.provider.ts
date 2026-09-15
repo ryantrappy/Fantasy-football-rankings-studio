@@ -21,6 +21,7 @@ interface SleeperLeagueData {
     playoff_round_type?: number;
   };
   scoring_settings?: Record<string, number>;
+  roster_positions?: string[];
 }
 interface Roster {
   roster_id: number;

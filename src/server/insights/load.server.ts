@@ -178,25 +178,24 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     projectionWeek < (season.settings?.playoff_week_start ?? 19)
   ) {
     try {
-      const [lineups, response] = await Promise.all([
-        provider.get<SleeperScore[]>(`${season.league_id}/matchups/${projectionWeek}`),
-        axios.get<SleeperProjectionRow[]>(
-          `https://api.sleeper.app/projections/nfl/${year}/${projectionWeek}`,
-          {
-            params: {
-              season_type: 'regular',
-              'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
-            },
-            timeout: 10000,
+      const response = await axios.get<SleeperProjectionRow[]>(
+        `https://api.sleeper.app/projections/nfl/${year}/${projectionWeek}`,
+        {
+          params: {
+            season_type: 'regular',
+            'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
           },
-        ),
-      ]);
+          timeout: 10000,
+        },
+      );
       playoffProjection = sleeperProjectionSnapshot(
         projectionWeek,
         teams.map((team) => team.teamId),
-        lineups,
+        rosterSnapshot?.teams || [],
         response.data,
         season.scoring_settings || {},
+        season.roster_positions || [],
+        (await sleeperNames()).positions,
       );
     } catch (error) {
       logServerError('insights.sleeperProjections', error, 502);

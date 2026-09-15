@@ -225,9 +225,12 @@ Sleeper uses linked historical seasons and the league's last scored week. Its
 that section shows actual points and median comparisons. For the active season's
 immediate next week, the playoff simulator can score Sleeper's undocumented player
 projection feed with the league's scoring settings. ESPN reads saved lineup
-projections and weekly box scores, excluding bench/IR. Missing projections stay
+projections and weekly box scores. The simulator chooses each team’s highest total
+legal projected lineup from current starters and bench players, so an eligible bench
+player can replace a player on bye; IR players are excluded. Missing projections stay
 missing. Only completed weeks are included, so a new season has an explicit empty
-state. Partial lineup coverage is disclosed rather than counted as zero.
+state. A team must have a complete legal projected lineup or the simulator visibly
+falls back to historical scoring.
 
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
@@ -487,10 +490,11 @@ are model estimates, not provider-exact clinching odds. Forecasts are available 
 week; weeks 1–2 are explicitly labeled especially uncertain and retain heavy league-average
 weighting to limit small-sample overreaction. See the playoff section
 in [calculation documentation](docs/calculations.md) for the sampling method. At
-the latest active-season cutoff only, complete current Sleeper or ESPN starter
+the latest active-season cutoff only, complete current Sleeper or ESPN best-lineup
 projections are blended 50/50 with historical team scoring for the next simulated
-week. The page shows provider, week and coverage; incomplete or failed projection
-loads visibly fall back to the historical model. Older cutoffs never use the snapshot.
+week. The page shows provider, week, coverage and bench selections; incomplete or
+failed projection loads visibly fall back to the historical model. Older cutoffs never
+use the snapshot.
 
 Unsaved ranking edits are backed up in this browser as they are typed, scoped to
 the signed-in account, league, year and week. Reopening an edition offers

@@ -52,7 +52,7 @@ export function forecastPlayoffs(
     coveredStarters: snapshot?.coveredStarters ?? 0,
     totalStarters: snapshot?.totalStarters ?? 0,
     note: useProjection
-      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} starters across ${projectedTeams} of ${data.teams.length} teams and are blended equally with each team’s historical scoring average for that week.`
+      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and are blended equally with each team’s historical scoring average for that week.`
       : snapshot?.note ||
         (snapshot && !projectionIsCurrent
           ? `${snapshot.provider} week ${snapshot.week} projections are excluded from this retrospective cutoff.`

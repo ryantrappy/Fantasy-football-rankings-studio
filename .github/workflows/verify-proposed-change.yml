@@ -30,6 +30,8 @@ jobs:
           cache: npm
       - name: Install exactly from lockfile
         run: npm ci
+      - name: Check repository formatting
+        run: npm run format:check
       - name: Run unit tests
         run: npm test
       - name: Check TypeScript

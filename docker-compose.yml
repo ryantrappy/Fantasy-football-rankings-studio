@@ -10,7 +10,7 @@ services:
       mongo:
         condition: service_healthy
     ports:
-      - "3001:3001"
+      - '3001:3001'
     networks:
       - fantasy-internal
 
@@ -20,7 +20,7 @@ services:
     volumes:
       - ${MONGO_DATA_PATH:-./.docker/mongo-data}:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\""]
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand(''ping'').ok"']
       interval: 5s
       timeout: 5s
       retries: 12

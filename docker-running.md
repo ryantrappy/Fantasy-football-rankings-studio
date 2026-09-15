@@ -14,12 +14,12 @@
 
 Before starting the container, set these required runtime values:
 
-| Variable | What to provide |
-| --- | --- |
-| `AUTH0_ISSUER_BASE_URL` | The same Auth0 tenant URL, with `https://` |
-| `AUTH0_AUDIENCE` | The same API audience |
-| `ESPN_CREDENTIALS_KEY` | 64 hexadecimal characters; generate with `openssl rand -hex 32` |
-| `MONGO_DATA_PATH` | Host directory where MongoDB data should be persisted, such as `./.docker/mongo-data` |
+| Variable                | What to provide                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| `AUTH0_ISSUER_BASE_URL` | The same Auth0 tenant URL, with `https://`                                            |
+| `AUTH0_AUDIENCE`        | The same API audience                                                                 |
+| `ESPN_CREDENTIALS_KEY`  | 64 hexadecimal characters; generate with `openssl rand -hex 32`                       |
+| `MONGO_DATA_PATH`       | Host directory where MongoDB data should be persisted, such as `./.docker/mongo-data` |
 
 The published image is
 `ryantrappy/fantasy-football-rankings-builder:latest`. Its `VITE_*` Auth0

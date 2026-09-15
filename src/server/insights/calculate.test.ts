@@ -39,10 +39,7 @@ it('keeps missing projections distinct from zero and excludes unfinished weeks',
   expect(result.scores).toHaveLength(3);
 });
 it('labels sections affected by incomplete provider lineup data', () => {
-  const input = source([
-    { ...score('1', 1, 90), lineupAvailable: false },
-    score('2', 1, 100),
-  ]);
+  const input = source([{ ...score('1', 1, 90), lineupAvailable: false }, score('2', 1, 100)]);
   input.partialFailures = [
     { section: 'League summary and final finishes', message: 'Bracket unavailable.' },
   ];

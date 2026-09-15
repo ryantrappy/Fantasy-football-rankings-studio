@@ -120,13 +120,18 @@ npm test
 npm run typecheck
 npm run lint
 npm run format:check
+npx oxfmt --write .
 npm run test:ui
 npm run check:local
 ```
 
+`npm run format:check` is the CI gate. Use `npx oxfmt --write .` to repair formatter-covered
+files; the checked-in `.oxfmtrc.json` explicitly excludes dependencies, generated output, build
+artifacts, baselines, Backlog records, and agent guidance files.
+
 Pull requests and pushes to `main` run `.github/workflows/verify-proposed-change.yml`.
 The required deterministic jobs install exactly from `package-lock.json`, then run
-unit tests, type checking, lint, a production build, and the Chrome browser suite
+format checking, unit tests, type checking, lint, a production build, and the Chrome browser suite
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video

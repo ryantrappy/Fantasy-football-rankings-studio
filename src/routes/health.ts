@@ -10,7 +10,7 @@ export const Route = createFileRoute('/health')({
           await connectDatabase();
           return Response.json({ status: 'ok' }, { headers: { 'Cache-Control': 'no-store' } });
         } catch (error) {
-        logClientError('health', error);
+          logClientError('health', error);
           logServerError('health', error, 503);
           return Response.json({ status: 'unavailable' }, { status: 503 });
         }

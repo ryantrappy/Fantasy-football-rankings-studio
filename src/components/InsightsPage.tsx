@@ -478,6 +478,21 @@ export function InsightsPage({
                                 <>{signed(s.projected === null ? null : s.actual - s.projected)}</>
                               ),
                             },
+                            {
+                              id: '4',
+                              header: 'Best lineup',
+                              value: (s) => s.bestLineup?.points ?? null,
+                              cell: (s) => <>{number(s.bestLineup?.points ?? null)}</>,
+                            },
+                            {
+                              id: '5',
+                              header: 'Missed points',
+                              value: (s) =>
+                                s.bestLineup ? s.bestLineup.points - s.actual : null,
+                              cell: (s) => (
+                                <>{signed(s.bestLineup ? s.bestLineup.points - s.actual : null)}</>
+                              ),
+                            },
                           ]}
                         />
                       </Box>

@@ -490,6 +490,61 @@ test('shared season insights load anonymously without requesting an access token
   expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Download Team scoring CSV' })).toBeInTheDocument();
 });
+test('season weekly scores expose best legal lineups without inventing unavailable data', async () => {
+  const user = userEvent.setup();
+  vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
+    ok: true,
+    data: {
+      playoffSettings: undefined,
+      completedWeek: 2,
+      generatedAt: '2026-09-08T00:00:00Z',
+      teams: [
+        {
+          teamId: '1',
+          teamName: 'Alpha',
+          managerName: 'Alex',
+          weeks: 2,
+          total: 190,
+          average: 95,
+          best: 100,
+          projectedWeeks: 0,
+          projectionDelta: null,
+          beatProjection: 0,
+          aboveMedian: 1,
+          tradeCount: 0,
+          receivedPoints: 0,
+          sentPoints: 0,
+          netTradePoints: null,
+          tradeStarts: 0,
+        },
+      ],
+      scores: [
+        {
+          teamId: '1',
+          week: 1,
+          actual: 100,
+          projected: null,
+          starters: [],
+          bestLineup: { points: 120, correctStarts: 1, slots: 2 },
+        },
+        { teamId: '1', week: 2, actual: 90, projected: null, starters: [] },
+      ],
+      pickups: [],
+      trades: [],
+      tradeComparisons: [],
+      notes: [],
+    },
+  });
+  await openPage('/shared/insights?leagueId=123&year=2025');
+  await screen.findByRole('heading', { name: 'Weekly scoring trends' });
+  await user.click(screen.getByText('View exact weekly scores'));
+  const table = screen.getByRole('table', { name: 'Weekly scores' });
+  expect(table).toHaveTextContent('Best lineup');
+  expect(table).toHaveTextContent('Missed points');
+  expect(table).toHaveTextContent('120');
+  expect(table).toHaveTextContent('+20');
+  expect(table).toHaveTextContent('—');
+});
 test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
   const user = userEvent.setup();
   await openPage('/shared/insights?leagueId=123&year=2025');

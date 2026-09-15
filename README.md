@@ -236,6 +236,9 @@ Historical lineup analysis follows the same provider roster-slot rules. It repor
 best possible score and retained actual starts only when the completed box score has
 every required player score and position; incomplete box scores remain unavailable
 instead of treating missing players as zero.
+The Season insights table shows each selected team-week's actual score, best legal
+lineup, and missed points. A dash in either lineup column means the provider data
+cannot form a complete legal lineup for that week, not that the value is zero.
 
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.

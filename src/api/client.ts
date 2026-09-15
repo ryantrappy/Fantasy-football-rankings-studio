@@ -1,4 +1,5 @@
 import * as publishingFunctions from '../functions/publishing.functions';
+import { createReportSnapshot } from '../functions/report-snapshots.functions';
 import { insightsCacheOptions } from './insights-cache';
 import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
@@ -73,6 +74,8 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return disposePromise;
   }
   const api: LeagueApi = {
+    createReportSnapshot: async (data) =>
+      unwrap(await createReportSnapshot({ data, headers: await headers() })),
     subject,
     management: {
       archived: async () =>

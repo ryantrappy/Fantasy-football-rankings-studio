@@ -40,6 +40,7 @@ export function HistoryPage({
   navigate,
   shared = false,
   initialLeague,
+  snapshot,
 }: ReportPageProps<{ leagueId: string; years?: number[] }> & { initialLeague?: League | null }) {
   const api = useInsightsApi(),
     { leagueId, years: requestedYears } = search;
@@ -199,15 +200,28 @@ export function HistoryPage({
             One good move is a moment. Find the managers who repeat it across seasons.
           </Text>
         </Box>
-        <Button asChild colorPalette="indigo">
-          <Link
-            to={shared ? '/shared/insights' : '/insights'}
-            search={{ leagueId, year: defaultSeason() }}
-          >
-            Current season insights
-          </Link>
-        </Button>
-        <ShareReport path="/history" search={{ leagueId, years }} />
+        {!snapshot && (
+          <Button asChild colorPalette="indigo">
+            <Link
+              to={shared ? '/shared/insights' : '/insights'}
+              search={{ leagueId, year: defaultSeason() }}
+            >
+              Current season insights
+            </Link>
+          </Button>
+        )}
+        <ShareReport
+          key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
+          path="/history" search={{ leagueId, years }}
+          disabled={loading || !records.length}
+          snapshotHref={snapshot?.href}
+          espn={currentCatalog?.leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
+          snapshotData={!loading && records.length === years.length && records.length ? {
+            leagueId, view: 'history', records,
+            activeManagerKeys: currentCatalog?.activeManagerKeys || [],
+            activeSeason: currentCatalog?.activeSeason || records[0].year,
+          } : undefined}
+        />
       </Flex>
       {!currentCatalog ? (
         <chakra.output
@@ -313,7 +327,7 @@ export function HistoryPage({
                     variant="plain"
                     type="button"
 
-                    disabled={loading || !years.length}
+                    disabled={loading || !years.length || !!snapshot}
                     onClick={() => setRefresh((v) => v + 1)}
                   >
                     Refresh selected seasons
@@ -496,14 +510,18 @@ export function HistoryPage({
                             value: (r) => r.year,
                             cell: (r) => (
                               <>
-                                <ChakraLink asChild>
-                                  <Link
-                                    to={shared ? '/shared/insights' : '/insights'}
-                                    search={{ leagueId, year: r.year }}
-                                  >
-                                    {r.year}
-                                  </Link>
-                                </ChakraLink>
+                                {snapshot ? (
+                                  <Button variant="plain" onClick={() => snapshot.openSeason(r.year)}>{r.year}</Button>
+                                ) : (
+                                  <ChakraLink asChild>
+                                    <Link
+                                      to={shared ? '/shared/insights' : '/insights'}
+                                      search={{ leagueId, year: r.year }}
+                                    >
+                                      {r.year}
+                                    </Link>
+                                  </ChakraLink>
+                                )}
                               </>
                             ),
                           },

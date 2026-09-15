@@ -34,6 +34,9 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  createReportSnapshot?(
+    input: import('./report-snapshot').SnapshotInput,
+  ): Promise<{ publicId: string; savedAt: string }>;
   management?: {
     archived(): Promise<League[]>;
     archive(leagueId: string, archived: boolean): Promise<void>;

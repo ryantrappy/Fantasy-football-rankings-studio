@@ -38,6 +38,7 @@ export function InsightsPage({
   shared = false,
   playoff = false,
   initialLeague,
+  snapshot,
 }: ReportPageProps<{ leagueId: string; year: number }> & {
   playoff?: boolean;
   initialLeague?: League | null;
@@ -52,6 +53,7 @@ export function InsightsPage({
     api: typeof api;
     data?: SeasonInsights;
     activeManagerKeys?: string[];
+    activeSeason?: number;
     error?: string;
     refreshed?: boolean;
   }>();
@@ -106,6 +108,7 @@ export function InsightsPage({
             scope: reportScope,
             data: result,
             activeManagerKeys: context.activeManagerKeys,
+            activeSeason: context.activeSeason,
             refreshed: reload > 0,
           });
           setTeamId(result.teams[0]?.teamId || '');
@@ -171,7 +174,21 @@ export function InsightsPage({
               : 'Follow the points. Find the steals. See who keeps beating expectations.'}
           </Text>
         </Box>
-        <ShareReport path={playoff ? '/playoffs' : '/insights'} search={{ leagueId, year }} />
+        <ShareReport
+          key={`${reportScope}:${data?.generatedAt}:${playoff}`}
+          path={playoff ? '/playoffs' : '/insights'}
+          search={{ leagueId, year }}
+          disabled={loading || !data}
+          snapshotHref={snapshot?.href}
+          espn={leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
+          snapshotData={
+            !loading && data ? {
+              leagueId, view: playoff ? 'playoffs' : 'insights', records: [{ year, data }],
+              activeManagerKeys: result?.activeManagerKeys || [],
+              activeSeason: result?.activeSeason || year,
+            } : undefined
+          }
+        />
       </Flex>
       <Box className="selection-bar insights-controls">
         <Field.Root width="auto" minW="120px" gap={2}>
@@ -202,7 +219,7 @@ export function InsightsPage({
                 void navigate({ search: { leagueId, year: Number(e.target.value) } })
               }
             >
-              {Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i).map(
+              {(snapshot?.years || Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)).map(
                 (y) => (
                   <option key={y}>{y}</option>
                 ),
@@ -215,7 +232,7 @@ export function InsightsPage({
           variant="outline"
           type="button"
 
-          disabled={loading}
+          disabled={loading || !!snapshot}
           onClick={() => setReload((v) => v + 1)}
         >
           Refresh insights
@@ -373,13 +390,15 @@ export function InsightsPage({
                 activeManagerKeys={result?.activeManagerKeys || []}
                 includeFormer={includeFormer}
               />
-              <Text mb={4}>
-                <ChakraLink asChild>
-                  <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
-                    Explore this league’s history →
-                  </Link>
-                </ChakraLink>
-              </Text>
+              {!snapshot && (
+                <Text mb={4}>
+                  <ChakraLink asChild>
+                    <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
+                      Explore this league’s history →
+                    </Link>
+                  </ChakraLink>
+                </Text>
+              )}
               <Box
                 as="section"
                 bg="bg"

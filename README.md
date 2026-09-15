@@ -247,13 +247,35 @@ best-lineup average.
 The local integration check also exercises both leagues' 2025 insights and verifies
 ownership denial. Override this historical fixture with `TEST_INSIGHTS_SEASON`.
 
-### Season summaries and League History
+### Sharing private ESPN reports
+
+On an owner’s ESPN Season insights, League history, or Playoff simulation page,
+**Copy share link** saves the loaded report into the `reportsnapshots` MongoDB
+collection. History snapshots include all successfully loaded selected seasons;
+wait for all selected seasons to load before sharing. Each save creates a unique
+`/shared/snapshots/<id>` link. Recipients see those exact saved reports without
+logging in or supplying ESPN cookies. Snapshot navigation stays within saved seasons
+and cannot refresh from ESPN. Refresh the owner’s report and share again to capture
+new data. Sleeper reports continue to use their live public links.
+
+Snapshots expire **10 days after creation**. The stored `expiresAt` date has a
+MongoDB TTL index, so deletion does not depend on an application timer or an
+expiration event. App startup also deletes all overdue records after connecting to
+MongoDB, including records that expired while the server was offline. Reads reject
+expired snapshots immediately even if MongoDB’s background deletion has not run yet.
+The viewer displays the expiration date. Disabling a league’s public reports also
+blocks its snapshot links. Only report fields are saved: cookies and account metadata
+are excluded, and manager identifiers are replaced with snapshot-local identifiers.
+
+### Historical report caching
 
 Past-season reports stay cached in browser memory while you navigate between reports,
 with one hour of idle retention. Current-season reports refresh on the next read after
 five minutes. Use Refresh insights or Refresh selected seasons to fetch fresh data at
 any time. Private caches belong to the signed-in session and are cleared when it ends
 or ESPN credentials change; reloading the browser starts a fresh cache.
+
+### Season and league summaries
 
 Season Insights summarizes trade quality, waiver quality, median scoring, and schedule luck. League History discovers linked provider seasons, defaults to the three most recent prior seasons, and aggregates managers by provider account ID. Select more seasons or inspect individual manager years. Failed seasons are reported and excluded.
 

@@ -3,6 +3,7 @@ export type ReportPageProps<T> = {
   search: T;
   navigate: (options: { search: T; replace?: boolean }) => Promise<void>;
   shared?: boolean;
+  snapshot?: { href: string; years: number[]; openSeason: (year: number) => void };
 };
 export const validateInsightsPageSearch = (input: Record<string, unknown>) => ({
   leagueId:

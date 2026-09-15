@@ -1,4 +1,6 @@
 import * as publicFunctions from './functions/public-insights.functions';
+import { readReportSnapshot } from './functions/report-snapshots.functions';
+import { calculateInsights } from './server/insights/calculate';
 import * as privateFunctions from './functions/rankings.functions';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -10,6 +12,7 @@ import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
 
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
+vi.mock('./functions/report-snapshots.functions', () => ({ readReportSnapshot: vi.fn(), createReportSnapshot: vi.fn() }));
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -474,6 +477,43 @@ test('anonymous visitors do not see the rankings studio tab in navigation', asyn
     await screen.findByRole('heading', { name: 'Who delivers every week?' }),
   ).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Rankings studio' })).not.toBeInTheDocument();
+});
+
+test('anonymous snapshot navigation uses only saved records and exposes its expiration', async () => {
+  const user = userEvent.setup();
+  const data = calculateInsights({
+    completedWeek: 1, teams: [{ teamId: '1', managerKey: 'manager-1', teamName: 'Saved team', managerName: 'Alex' }],
+    scores: [{ teamId: '1', week: 1, actual: 100, projected: null, starters: [] }],
+    notes: [], moves: [], draftPickTrades: 0, playerNames: {},
+  });
+  vi.mocked(readReportSnapshot).mockResolvedValue({ ok: true, data: {
+    publicId: '0a460a85-0fa7-4daa-8617-56de7c568bba', savedAt: '2026-09-15T12:00:00Z', expiresAt: '2026-09-25T12:00:00Z',
+    league: { leagueId: '123', leagueType: 1, leagueName: 'Private ESPN', seasonId: 2026 },
+    view: 'insights', records: [{ year: 2025, data }], activeSeason: 2026, activeManagerKeys: ['manager-1'],
+  } });
+  await openPage('/shared/snapshots/0a460a85-0fa7-4daa-8617-56de7c568bba');
+  await screen.findByRole('table', { name: 'Team scoring' });
+  expect(screen.getByRole('note')).toHaveTextContent('Expires');
+  expect(screen.getByRole('button', { name: 'Refresh insights' })).toBeDisabled();
+  expect(screen.getByLabelText('Season').querySelectorAll('option')).toHaveLength(1);
+  await user.click(screen.getByRole('button', { name: 'League history' }));
+  const table = await screen.findByRole('table', { name: 'Manager season history' });
+  expect(table).toHaveTextContent('Saved team');
+  expect(screen.getByRole('button', { name: 'Refresh selected seasons' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: '2025' }));
+  await screen.findByRole('table', { name: 'Team scoring' });
+  expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
+  expect(publicFunctions.getPublicLeague).not.toHaveBeenCalled();
+  expect(publicFunctions.getPublicLeagueSeasons).not.toHaveBeenCalled();
+  expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
+  expect(privateFunctions.getInsights).not.toHaveBeenCalled();
+});
+
+test('an expired snapshot link shows an actionable unavailable message', async () => {
+  vi.mocked(readReportSnapshot).mockResolvedValue({ ok: false, error: { status: 404, message: 'This report snapshot has expired. Ask the owner for a new link.' } });
+  await openPage('/shared/snapshots/0a460a85-0fa7-4daa-8617-56de7c568bba');
+  expect(await screen.findByRole('alert')).toHaveTextContent('Ask the owner for a new link.');
+  expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
 });
 
 test('shared season insights load anonymously without requesting an access token', async () => {

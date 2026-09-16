@@ -373,6 +373,10 @@ Configure a server-only Auth0 Machine-to-Machine application authorized for the
 Auth0 Management API with only `read:users` and `update:users`. Set
 `AUTH0_MANAGEMENT_DOMAIN` (canonical tenant hostname), `AUTH0_MANAGEMENT_CLIENT_ID`,
 and `AUTH0_MANAGEMENT_CLIENT_SECRET` on the server; use the same tenant as login.
+When the canonical issuer is the standard `https://<tenant>.auth0.com/`,
+`AUTH0_ISSUER_BASE_URL` supplies the management hostname automatically, so only
+the M2M client ID and secret need to be added. Set `AUTH0_MANAGEMENT_DOMAIN`
+explicitly for any other supported tenant hostname.
 These settings are optional for the rest of the app. If missing, the profile page
 shows a configuration error. Never expose the M2M secret through `VITE_*`.
 The server validates the application access token and derives the target account

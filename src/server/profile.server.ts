@@ -12,7 +12,26 @@ const updateSchema = z
 let cached: { key: string; token: string; expires: number } | undefined;
 let pending: { key: string; value: Promise<string> } | undefined;
 function configuration() {
-  const domain = process.env.AUTH0_MANAGEMENT_DOMAIN;
+  const configuredDomain = process.env.AUTH0_MANAGEMENT_DOMAIN;
+  const issuer = process.env.AUTH0_ISSUER_BASE_URL;
+  let domain = configuredDomain;
+  if (!domain && issuer) {
+    try {
+      const url = new URL(issuer);
+      if (
+        url.protocol === 'https:' &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        (url.pathname === '/' || url.pathname === '') &&
+        url.hostname.endsWith('.auth0.com')
+      )
+        domain = url.hostname;
+    } catch {
+      // The generic configuration error below avoids revealing deployment details.
+    }
+  }
   const clientId = process.env.AUTH0_MANAGEMENT_CLIENT_ID;
   const clientSecret = process.env.AUTH0_MANAGEMENT_CLIENT_SECRET;
   if (!domain || !clientId || !clientSecret || !/^[a-zA-Z0-9.-]+$/.test(domain))

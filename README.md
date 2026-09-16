@@ -609,6 +609,9 @@ Owners can also choose **Edit display name** in **Manage leagues** to set a loca
 workspace name. Cancel leaves the current name unchanged. Renaming never changes
 the league at Sleeper or ESPN and does not rewrite titles or prose in saved ranking
 editions; newly created editions use the current workspace name.
+Management archive, restore and rename actions accept either the app workspace ID
+or the external provider league ID, while still enforcing the signed-in owner's
+record.
 
 **Copy from a previous edition** lets you select introduction, team commentary
 and/or ordering. Review the source and replacement warning, then confirm. Matching

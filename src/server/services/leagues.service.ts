@@ -27,6 +27,10 @@ class LeaguesService {
     return league as unknown as League;
   }
 
+  private ownerLeagueFilter(id: string, ownerSubject: string) {
+    return { ownerSubject, $or: [{ leagueId: id }, { providerLeagueId: id }] };
+  }
+
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
       .findOne({ leagueId: id, publicReports: { $ne: false } })
@@ -68,7 +72,7 @@ class LeaguesService {
 
   public async setArchived(id: string, archived: boolean, owner: string) {
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: id, ownerSubject: owner },
+      this.ownerLeagueFilter(id, owner),
       { $set: { archived } },
       { returnDocument: 'after' },
     );
@@ -81,7 +85,7 @@ class LeaguesService {
     if (leagueName.length > 120)
       throw new HttpException(400, 'League display name must be at most 120 characters.');
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: id, ownerSubject: owner },
+      this.ownerLeagueFilter(id, owner),
       { $set: { leagueName } },
       { returnDocument: 'after' },
     );

@@ -17,7 +17,7 @@ it('renames only the owner workspace and returns the updated league', async () =
   });
   const result = await new LeaguesService().rename('1', '  Writers league  ', 'owner');
   expect(update).toHaveBeenCalledWith(
-    { leagueId: '1', ownerSubject: 'owner' },
+    { ownerSubject: 'owner', $or: [{ leagueId: '1' }, { providerLeagueId: '1' }] },
     { $set: { leagueName: 'Writers league' } },
     { returnDocument: 'after' },
   );
@@ -39,4 +39,30 @@ it('does not reveal or rename another owner workspace', async () => {
   await expect(new LeaguesService().rename('1', 'New name', 'other')).rejects.toMatchObject({
     status: 404,
   });
+});
+
+it('renames by provider league ID while retaining owner isolation', async () => {
+  update.mockResolvedValue({
+    leagueId: 'workspace-1',
+    providerLeagueId: '99',
+    leagueName: 'Renamed',
+    leagueType: 0,
+    seasonId: 2026,
+  });
+  await new LeaguesService().rename('99', 'Renamed', 'owner');
+  expect(update).toHaveBeenCalledWith(
+    { ownerSubject: 'owner', $or: [{ leagueId: '99' }, { providerLeagueId: '99' }] },
+    { $set: { leagueName: 'Renamed' } },
+    { returnDocument: 'after' },
+  );
+});
+
+it('archives by provider league ID', async () => {
+  update.mockResolvedValue({ leagueId: 'workspace-1', providerLeagueId: '99' });
+  await new LeaguesService().setArchived('99', true, 'owner');
+  expect(update).toHaveBeenCalledWith(
+    { ownerSubject: 'owner', $or: [{ leagueId: '99' }, { providerLeagueId: '99' }] },
+    { $set: { archived: true } },
+    { returnDocument: 'after' },
+  );
 });

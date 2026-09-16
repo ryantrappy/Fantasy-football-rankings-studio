@@ -211,6 +211,13 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      {!ranking._id && (
+        <Text mb={4} role="note">
+          Suggested starting order uses completed scoring and point margin before this week, with
+          early results pulled toward the league average. It is a power signal, not a player or
+          season projection; adjust it with your own judgment before saving.
+        </Text>
+      )}
       <CopyEdition
         ranking={ranking}
         history={editor.history}

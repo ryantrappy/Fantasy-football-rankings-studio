@@ -16,6 +16,14 @@ export interface Team {
   ties: number;
 }
 
+export interface Matchup {
+  matchupId: string;
+  homeTeamId: string;
+  awayTeamId: string | null;
+  homeScore: number;
+  awayScore: number | null;
+}
+
 export interface TeamRanking extends Team {
   description: string;
   position: number;
@@ -64,6 +72,7 @@ export interface LeagueApi {
     League & { teamCount?: number; maxWeek: number; validWeeks: number[]; scheduleNote: string }
   >;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;
+  getMatchups(leagueId: string, year: number, week: number): Promise<Matchup[]>;
   getRankings(leagueId: string): Promise<WeeklyRanking[]>;
   saveRanking(ranking: WeeklyRanking): Promise<WeeklyRanking>;
 }

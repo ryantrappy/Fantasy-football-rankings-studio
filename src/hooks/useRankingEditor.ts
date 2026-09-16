@@ -37,8 +37,19 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
     (async () => {
       const entries = await api.getRankings(league.leagueId);
       let current = entries.find((entry) => entry.year === year && entry.week === week);
-      if (!current)
-        current = newRanking(league, year, week, await api.getTeams(league.leagueId, year, week));
+      if (!current) {
+        const [teams, weeklyMatchups] = await Promise.all([
+          api.getTeams(league.leagueId, year, week),
+          Promise.all(
+            Array.from(
+              { length: Math.max(0, week - 1) },
+              (_, index) =>
+                api.getMatchups?.(league.leagueId, year, index + 1) ?? Promise.resolve([]),
+            ),
+          ).catch(() => []),
+        ]);
+        current = newRanking(league, year, week, teams, weeklyMatchups.flat());
+      }
       current = { ...current, teams: orderTeams(current.teams) };
       if (cancelled) return;
       try {

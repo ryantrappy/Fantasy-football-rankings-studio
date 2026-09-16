@@ -1,4 +1,4 @@
-import type { League, Team, TeamRanking, WeeklyRanking } from '../types';
+import type { League, Matchup, Team, TeamRanking, WeeklyRanking } from '../types';
 
 export function defaultSeason(now = new Date()): number {
   return now.getMonth() < 3 ? now.getFullYear() - 1 : now.getFullYear();
@@ -24,6 +24,7 @@ export function newRanking(
   year: number,
   week: number,
   teams: Team[],
+  matchups: Matchup[] = [],
 ): WeeklyRanking {
   return {
     leagueId: league.leagueId,
@@ -32,13 +33,55 @@ export function newRanking(
     week,
     rankingsTitle: `Week ${week} power rankings`,
     introduction: '',
-    teams: teams.map((team, index) => ({
+    teams: powerOrderTeams(teams, matchups).map((team, index) => ({
       ...team,
       teamId: String(team.teamId),
       description: '',
       position: index + 1,
     })),
   };
+}
+
+// A conservative starting signal: points scored and point margin, both shrunk
+// toward league average after only a few games. It is not a player projection.
+export function powerOrderTeams(teams: Team[], matchups: Matchup[]): Team[] {
+  const entries = new Map(
+    teams.map((team) => [String(team.teamId), { points: [] as number[], margins: [] as number[] }]),
+  );
+  for (const matchup of matchups) {
+    if (
+      matchup.awayTeamId == null ||
+      matchup.awayScore == null ||
+      !Number.isFinite(matchup.homeScore) ||
+      !Number.isFinite(matchup.awayScore)
+    )
+      continue;
+    const home = entries.get(String(matchup.homeTeamId)),
+      away = entries.get(String(matchup.awayTeamId));
+    if (!home || !away) continue;
+    home.points.push(matchup.homeScore);
+    home.margins.push(matchup.homeScore - matchup.awayScore);
+    away.points.push(matchup.awayScore);
+    away.margins.push(matchup.awayScore - matchup.homeScore);
+  }
+  const allPoints = [...entries.values()].flatMap((entry) => entry.points);
+  if (!allPoints.length) return teams;
+  const average = (values: number[]) =>
+    values.reduce((sum, value) => sum + value, 0) / values.length;
+  const leaguePoints = average(allPoints);
+  const leagueMargin = average([...entries.values()].flatMap((entry) => entry.margins));
+  return [...teams].sort((a, b) => {
+    const score = (team: Team) => {
+      const data = entries.get(String(team.teamId))!,
+        n = data.points.length,
+        weight = n / (n + 3);
+      return (
+        weight * (0.7 * average(data.points) + 0.3 * average(data.margins)) +
+        (1 - weight) * (0.7 * leaguePoints + 0.3 * leagueMargin)
+      );
+    };
+    return score(b) - score(a) || a.teamName.localeCompare(b.teamName);
+  });
 }
 
 export function previousPosition(

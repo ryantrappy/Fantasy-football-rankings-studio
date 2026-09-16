@@ -187,6 +187,10 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       unwrap(
         await functions.getTeams({ data: { leagueId, year, week }, headers: await headers() }),
       ),
+    getMatchups: async (leagueId, year, week) =>
+      unwrap(
+        await functions.getMatchups({ data: { leagueId, year, week }, headers: await headers() }),
+      ),
     getRankings: async (leagueId) => {
       const collection = rankingsFor(leagueId);
       await collection.preload();

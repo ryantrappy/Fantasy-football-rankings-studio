@@ -172,6 +172,10 @@ credentials that pass through the production encryption/decryption code. It neve
 and requires no personal league ID or cookies.
 
 New weekly editions reconstruct regular-season wins, losses and ties through the selected week from completed matchups. Later games and unfinished ESPN matchup periods are excluded. Sleeper median-game leagues, unsupported ESPN scoring formats, and incomplete provider history show a historical-record error instead of substituting current standings. Already-saved editions retain their saved records. Sleeper weekly scores come from its [league matchup API](https://docs.sleeper.com/#getting-matchups-in-a-league).
+When an edition is created, its initial order is a conservative power suggestion based on completed
+points scored and point margin before that week, rather than record alone. Each team's signal is
+shrunk toward the league average after a small number of games. It does not use player projections,
+injuries, future results, or a claim about season-long odds; writers can reorder it before saving.
 The rankings studio loads valid week choices for the selected league and season instead of assuming 1–18. Each account can register its own workspace for an external league. Sleeper and ESPN IDs can overlap. New workspaces have a separate numeric URL ID; provider requests use `providerLeagueId`. Existing documents without that field continue using their original ID, so rankings and shared links remain valid without rewriting records. Deployment adds a partial unique index on owner, provider and external ID; keep the existing unique workspace-ID index. Take the documented backup before deploying database changes.
 
 ## Season insights

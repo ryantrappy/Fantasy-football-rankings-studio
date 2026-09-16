@@ -13,6 +13,8 @@ it('archives and restores leagues through the management view', async () => {
         archived = value;
       }),
       rename: vi.fn(),
+      updateProviderId: vi.fn(),
+      delete: vi.fn(),
     },
   } as unknown as LeagueApi;
   render(
@@ -35,6 +37,8 @@ it('validates, cancels, and saves a local display-name edit', async () => {
       archived: vi.fn(async () => []),
       archive: vi.fn(),
       rename: vi.fn(async (_id: string, leagueName: string) => ({ ...league, leagueName })),
+      updateProviderId: vi.fn(),
+      delete: vi.fn(),
     },
   } as unknown as LeagueApi;
   render(
@@ -62,4 +66,56 @@ it('validates, cancels, and saves a local display-name edit', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save display name' }));
   expect(await screen.findByRole('heading', { name: 'Writers league' })).toBeInTheDocument();
   expect(api.management!.rename).toHaveBeenCalledWith('1', 'Writers league');
+});
+
+it('validates a provider ID and requires the exact name before permanent deletion', async () => {
+  const league = {
+    leagueId: '1',
+    providerLeagueId: '99',
+    leagueName: 'Provider name',
+    leagueType: 0,
+    seasonId: 2026,
+  };
+  const api = {
+    listLeagues: vi.fn(async () => [league]),
+    management: {
+      archived: vi.fn(async () => []),
+      archive: vi.fn(),
+      rename: vi.fn(),
+      updateProviderId: vi.fn(async (_id: string, providerLeagueId: string) => ({
+        ...league,
+        providerLeagueId,
+      })),
+      delete: vi.fn(),
+    },
+  } as unknown as LeagueApi;
+  render(
+    <Provider>
+      <ManageLeagues api={api} />
+    </Provider>,
+  );
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit provider league ID' }));
+  fireEvent.change(screen.getByLabelText('Provider league ID'), {
+    target: { value: 'not-a-number' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Save provider league ID' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('valid numeric provider league ID');
+  fireEvent.change(screen.getByLabelText('Provider league ID'), { target: { value: '123' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save provider league ID' }));
+  expect(api.management!.updateProviderId).toHaveBeenCalledWith('1', '123');
+  await screen.findByText('Provider name now uses provider league ID 123.');
+  fireEvent.click(await screen.findByRole('button', { name: 'Delete league' }));
+  fireEvent.change(await screen.findByLabelText('Type Provider name to confirm'), {
+    target: { value: 'wrong' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Type Provider name to confirm deletion',
+  );
+  expect(api.management!.delete).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText('Type Provider name to confirm'), {
+    target: { value: 'Provider name' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
+  expect(api.management!.delete).toHaveBeenCalledWith('1');
 });

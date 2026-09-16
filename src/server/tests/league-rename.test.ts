@@ -1,11 +1,23 @@
 // @vitest-environment node
 const update = vi.hoisted(() => vi.fn());
+const findOne = vi.hoisted(() => vi.fn());
+const publicationDeleteMany = vi.hoisted(() => vi.fn());
 vi.mock('../models/league.model', () => ({
-  default: { findOneAndUpdate: update },
+  default: { findOneAndUpdate: update, findOne },
+}));
+vi.mock('../publishing.server', () => ({
+  publicationModel: { deleteMany: publicationDeleteMany },
 }));
 import LeaguesService from '../services/leagues.service';
 
-beforeEach(() => update.mockReset());
+beforeEach(() => {
+  update.mockReset();
+  findOne.mockReset();
+  findOne.mockReturnValue({
+    lean: () =>
+      Promise.resolve({ leagueId: '1', providerLeagueId: '99', leagueType: 0, seasonId: 2026 }),
+  });
+});
 
 it('renames only the owner workspace and returns the updated league', async () => {
   update.mockResolvedValue({
@@ -65,4 +77,47 @@ it('archives by provider league ID', async () => {
     { $set: { archived: true } },
     { returnDocument: 'after' },
   );
+});
+
+it('validates the replacement provider league before updating it', async () => {
+  const service = new LeaguesService();
+  const getLeague = vi.fn().mockResolvedValue({ leagueName: 'Provider league' });
+  vi.spyOn(service, 'providerFor').mockResolvedValue({ getLeague } as never);
+  update.mockResolvedValue({
+    leagueId: '1',
+    providerLeagueId: '123',
+    leagueName: 'Local',
+    leagueType: 0,
+    seasonId: 2026,
+  });
+  const result = await service.updateProviderLeagueId('1', '000123', 'owner');
+  expect(getLeague).toHaveBeenCalledWith(
+    expect.objectContaining({ providerLeagueId: '123' }),
+    2026,
+  );
+  expect(update).toHaveBeenCalledWith(
+    { leagueId: '1', ownerSubject: 'owner' },
+    { $set: { providerLeagueId: '123' } },
+    { returnDocument: 'after', runValidators: true },
+  );
+  expect(result.providerLeagueId).toBe('123');
+});
+
+it('deletes only the owned workspace and its local records', async () => {
+  const service = new LeaguesService();
+  const rankingDeleteMany = vi.fn().mockResolvedValue({});
+  const snapshotDeleteMany = vi.fn().mockResolvedValue({});
+  service.weeklyRankings = {
+    find: vi.fn(() => ({
+      select: () => ({ lean: () => Promise.resolve([{ _id: 'ranking-1' }]) }),
+    })),
+    deleteMany: rankingDeleteMany,
+  } as never;
+  service.reportSnapshots = { deleteMany: snapshotDeleteMany } as never;
+  service.leagues.deleteOne = vi.fn().mockResolvedValue({ deletedCount: 1 });
+  await service.deleteLeague('99', 'owner');
+  expect(publicationDeleteMany).toHaveBeenCalledWith({ rankingId: { $in: ['ranking-1'] } });
+  expect(rankingDeleteMany).toHaveBeenCalledWith({ leagueId: '1' });
+  expect(snapshotDeleteMany).toHaveBeenCalledWith({ leagueId: '1', ownerSubject: 'owner' });
+  expect(service.leagues.deleteOne).toHaveBeenCalledWith({ leagueId: '1', ownerSubject: 'owner' });
 });

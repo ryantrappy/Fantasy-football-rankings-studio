@@ -99,6 +99,20 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         await leagueCollection.utils.refetch({ throwOnError: true });
         return renamed;
       },
+      updateProviderId: async (leagueId, providerLeagueId) => {
+        const updated = unwrap(
+          await functions.updateLeagueProviderId({
+            data: { leagueId, providerLeagueId },
+            headers: await headers(),
+          }),
+        );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+        return updated;
+      },
+      delete: async (leagueId) => {
+        unwrap(await functions.deleteLeague({ data: { leagueId }, headers: await headers() }));
+        await leagueCollection.utils.refetch({ throwOnError: true });
+      },
     },
     reportSharing: {
       get: async (leagueId) =>

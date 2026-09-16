@@ -11,6 +11,9 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
     [notice, setNotice] = useState(''),
     [editing, setEditing] = useState(''),
     [name, setName] = useState(''),
+    [providerId, setProviderId] = useState(''),
+    [deleting, setDeleting] = useState(''),
+    [deleteConfirmation, setDeleteConfirmation] = useState(''),
     [nameError, setNameError] = useState(''),
     [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -142,19 +145,104 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                 </Button>
               </Box>
             ) : (
-              <Button
-                mr={2}
-                variant="outline"
-                disabled={busy}
-                onClick={() => {
-                  setEditing(league.leagueId);
-                  setName(league.leagueName);
+              <>
+                <Button
+                  mr={2}
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(league.leagueId);
+                    setName(league.leagueName);
+                    setNameError('');
+                    setNotice('');
+                  }}
+                >
+                  Edit display name
+                </Button>
+                <Button
+                  mr={2}
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing(`provider-${league.leagueId}`);
+                    setProviderId(league.providerLeagueId ?? league.leagueId);
+                    setNameError('');
+                    setNotice('');
+                  }}
+                >
+                  Edit provider league ID
+                </Button>
+              </>
+            )}
+            {editing === `provider-${league.leagueId}` && (
+              <Box
+                as="form"
+                mb={3}
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  const id = providerId.trim();
+                  if (!/^\d{1,30}$/.test(id)) {
+                    setNameError('Enter a valid numeric provider league ID.');
+                    return;
+                  }
+                  setBusy(true);
                   setNameError('');
-                  setNotice('');
+                  try {
+                    const updated = await api.management!.updateProviderId(league.leagueId, id);
+                    setLeagues((rows) =>
+                      rows.map((row) => (row.leagueId === updated.leagueId ? updated : row)),
+                    );
+                    setNotice(
+                      `${league.leagueName} now uses provider league ID ${updated.providerLeagueId}.`,
+                    );
+                    setEditing('');
+                  } catch (e) {
+                    logClientError('leagues.providerId', e);
+                    setNameError(
+                      'Could not update the provider league ID. Check the ID and try again.',
+                    );
+                  } finally {
+                    setBusy(false);
+                  }
                 }}
               >
-                Edit display name
-              </Button>
+                <label htmlFor={`provider-id-${league.leagueId}`}>Provider league ID</label>
+                <Input
+                  id={`provider-id-${league.leagueId}`}
+                  inputMode="numeric"
+                  value={providerId}
+                  aria-invalid={!!nameError}
+                  aria-describedby={nameError ? `provider-id-error-${league.leagueId}` : undefined}
+                  onChange={(event) => {
+                    setProviderId(event.target.value);
+                    setNameError('');
+                  }}
+                />
+                {nameError && (
+                  <Text id={`provider-id-error-${league.leagueId}`} role="alert">
+                    {nameError}
+                  </Text>
+                )}
+                <Text fontSize="sm" mt={1}>
+                  The new ID is checked with {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} before
+                  saving.
+                </Text>
+                <Button type="submit" mt={2} mr={2} disabled={busy}>
+                  Save provider league ID
+                </Button>
+                <Button
+                  type="button"
+                  mt={2}
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setEditing('');
+                    setNameError('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Box>
             )}
             <Button
               disabled={busy}
@@ -175,6 +263,79 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
             >
               {archived ? 'Restore league' : 'Archive league'}
             </Button>
+            {deleting === league.leagueId ? (
+              <Box
+                as="form"
+                mt={4}
+                onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (deleteConfirmation !== league.leagueName) {
+                    setNameError(`Type ${league.leagueName} to confirm deletion.`);
+                    return;
+                  }
+                  setBusy(true);
+                  setNameError('');
+                  try {
+                    await api.management!.delete(league.leagueId);
+                    setNotice(`${league.leagueName} and its local data were deleted.`);
+                    setRetry((v) => v + 1);
+                    setDeleting('');
+                  } catch (e) {
+                    logClientError('leagues.delete', e);
+                    setNameError('Could not delete the league. Try again.');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <Text fontWeight="bold">Delete this workspace and its local rankings?</Text>
+                <Text fontSize="sm">
+                  This cannot delete the league at {league.leagueType === 0 ? 'Sleeper' : 'ESPN'}.
+                </Text>
+                <label htmlFor={`delete-${league.leagueId}`}>
+                  Type {league.leagueName} to confirm
+                </label>
+                <Input
+                  id={`delete-${league.leagueId}`}
+                  value={deleteConfirmation}
+                  onChange={(event) => {
+                    setDeleteConfirmation(event.target.value);
+                    setNameError('');
+                  }}
+                />
+                {nameError && <Text role="alert">{nameError}</Text>}
+                <Button type="submit" mt={2} mr={2} colorPalette="red" disabled={busy}>
+                  Delete league permanently
+                </Button>
+                <Button
+                  type="button"
+                  mt={2}
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => {
+                    setDeleting('');
+                    setNameError('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            ) : (
+              <Button
+                mt={2}
+                variant="outline"
+                colorPalette="red"
+                disabled={busy}
+                onClick={() => {
+                  setDeleting(league.leagueId);
+                  setDeleteConfirmation('');
+                  setNameError('');
+                  setNotice('');
+                }}
+              >
+                Delete league
+              </Button>
+            )}
           </Box>
         ))
       ) : (

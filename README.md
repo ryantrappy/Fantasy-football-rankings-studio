@@ -613,6 +613,13 @@ Management archive, restore and rename actions accept either the app workspace I
 or the external provider league ID, while still enforcing the signed-in owner's
 record.
 
+**Edit provider league ID** validates the replacement numeric ID with the same
+provider before changing the workspace association; it keeps the local display
+name. **Delete league** asks for the exact display name before permanently
+removing the owned workspace, its local rankings and revisions, published
+edition links, and report snapshots. It does not delete or alter the league at
+Sleeper or ESPN.
+
 **Copy from a previous edition** lets you select introduction, team commentary
 and/or ordering. Review the source and replacement warning, then confirm. Matching
 uses team IDs, preserves current names and records, and retains unmatched destination

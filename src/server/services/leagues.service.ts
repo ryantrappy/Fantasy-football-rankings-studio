@@ -6,9 +6,13 @@ import { LeagueProvider } from '../providers/league-provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
 import { getEspnCredentials } from '../espn-credentials.server';
+import weeklyRankingModel from '../models/weeklyRanking.model';
+import { reportSnapshotModel } from '../models/report-snapshot.model';
 
 class LeaguesService {
   public leagues = leagueModel;
+  public weeklyRankings = weeklyRankingModel;
+  public reportSnapshots = reportSnapshotModel;
   public async providerFor(league: League, ownerSubject: string): Promise<LeagueProvider> {
     return league.leagueType === LeagueType.Espn
       ? new EspnProvider(await this.espnAccess(league, ownerSubject))
@@ -29,6 +33,51 @@ class LeaguesService {
 
   private ownerLeagueFilter(id: string, ownerSubject: string) {
     return { ownerSubject, $or: [{ leagueId: id }, { providerLeagueId: id }] };
+  }
+
+  private async managedLeague(id: string, ownerSubject: string): Promise<League> {
+    const league = await this.leagues.findOne(this.ownerLeagueFilter(id, ownerSubject)).lean();
+    if (!league) throw new HttpException(404, 'League not found.');
+    return league as unknown as League;
+  }
+
+  public async updateProviderLeagueId(id: string, providerLeagueId: string, owner: string) {
+    const normalized =
+      typeof providerLeagueId === 'string' ? providerLeagueId.replace(/^0+(?=\d)/, '') : '';
+    if (!/^\d{1,30}$/.test(normalized))
+      throw new HttpException(400, 'Enter a valid numeric provider league ID.');
+    const current = await this.managedLeague(id, owner);
+    if ((current.providerLeagueId ?? current.leagueId) === normalized) return current;
+    const target = { ...current, providerLeagueId: normalized };
+    // Validate the target before changing the saved association. Keep the owner's display name local.
+    await (await this.providerFor(target, owner)).getLeague(target, target.seasonId);
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: current.leagueId, ownerSubject: owner },
+      { $set: { providerLeagueId: normalized } },
+      { returnDocument: 'after', runValidators: true },
+    );
+    if (!result) throw new HttpException(404, 'League not found.');
+    return result as unknown as League;
+  }
+
+  public async deleteLeague(id: string, owner: string) {
+    const league = await this.managedLeague(id, owner);
+    const rankings = await this.weeklyRankings
+      .find({ leagueId: league.leagueId })
+      .select('_id')
+      .lean();
+    const rankingIds = rankings.map((ranking) => String(ranking._id));
+    // Publications are keyed by ranking ID; loading this model here avoids a service import cycle.
+    const { publicationModel } = await import('../publishing.server');
+    await Promise.all([
+      rankingIds.length
+        ? publicationModel.deleteMany({ rankingId: { $in: rankingIds } })
+        : undefined,
+      this.weeklyRankings.deleteMany({ leagueId: league.leagueId }),
+      this.reportSnapshots.deleteMany({ leagueId: league.leagueId, ownerSubject: owner }),
+    ]);
+    const result = await this.leagues.deleteOne({ leagueId: league.leagueId, ownerSubject: owner });
+    if (!result.deletedCount) throw new HttpException(404, 'League not found.');
   }
 
   public async getPublicLeagueById(id: string): Promise<League> {

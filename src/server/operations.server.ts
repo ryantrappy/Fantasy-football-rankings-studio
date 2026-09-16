@@ -110,6 +110,16 @@ export const operations = {
       .parse(input);
     return publicLeague(await leagues.rename(data.leagueId, data.leagueName, owner));
   },
+  updateLeagueProviderId: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ providerLeagueId: z.string() }).parse(input);
+    return publicLeague(
+      await leagues.updateProviderLeagueId(data.leagueId, data.providerLeagueId, owner),
+    );
+  },
+  deleteLeague: async (owner: string, input: unknown) => {
+    const { leagueId } = leagueIdSchema.parse(input);
+    await leagues.deleteLeague(leagueId, owner);
+  },
   getReportSharing: async (owner: string, input: unknown) =>
     (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
     false,

@@ -129,6 +129,15 @@ npm run check:local
 files; the checked-in `.oxfmtrc.json` explicitly excludes dependencies, generated output, build
 artifacts, baselines, Backlog records, and agent guidance files.
 
+## Docker Compose configuration
+
+`docker-compose.yml` loads runtime configuration from `.env`; copy `.env.example`
+and fill the server-only placeholders before starting the stack. Commented examples
+next to the Compose services cover Auth0 profile management, ESPN credential
+encryption, Mongo persistence, and optional writing assistants. `VITE_AUTH0_*`
+settings are different: they are embedded when the image is built, so changing
+them in a runtime `.env` does not alter a published image.
+
 Pull requests and pushes to `main` run `.github/workflows/verify-proposed-change.yml`.
 The required deterministic jobs install exactly from `package-lock.json`, then run
 format checking, unit tests, type checking, lint, a production build, and the Chrome browser suite

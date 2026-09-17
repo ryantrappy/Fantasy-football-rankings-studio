@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
+  // PNG exports share one Vite server and can delay page startup on CI runners.
+  // Keep local runs parallel, but make the CI suite deterministic.
+  workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'list',
   snapshotPathTemplate: '{testDir}/baselines/{arg}{ext}',
   testDir: './tests/ui',

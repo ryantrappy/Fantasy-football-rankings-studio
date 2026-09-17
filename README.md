@@ -144,7 +144,9 @@ format checking, unit tests, type checking, lint, a production build, and the Ch
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
-for diagnosis. Run the same checks above before proposing a change.
+for diagnosis. The browser suite uses one worker in CI because its PNG exports share
+one Vite server and can delay page startup; local `npm run test:ui` runs with
+Playwright's normal parallelism. Run the same checks above before proposing a change.
 
 `check:local` is a separate live integration check, not a deterministic CI gate. It
 builds and runs a separate disposable instance of the production app, verifies signed

@@ -12,7 +12,10 @@ import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
 
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
-vi.mock('./functions/report-snapshots.functions', () => ({ readReportSnapshot: vi.fn(), createReportSnapshot: vi.fn() }));
+vi.mock('./functions/report-snapshots.functions', () => ({
+  readReportSnapshot: vi.fn(),
+  createReportSnapshot: vi.fn(),
+}));
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -482,15 +485,27 @@ test('anonymous visitors do not see the rankings studio tab in navigation', asyn
 test('anonymous snapshot navigation uses only saved records and exposes its expiration', async () => {
   const user = userEvent.setup();
   const data = calculateInsights({
-    completedWeek: 1, teams: [{ teamId: '1', managerKey: 'manager-1', teamName: 'Saved team', managerName: 'Alex' }],
+    completedWeek: 1,
+    teams: [{ teamId: '1', managerKey: 'manager-1', teamName: 'Saved team', managerName: 'Alex' }],
     scores: [{ teamId: '1', week: 1, actual: 100, projected: null, starters: [] }],
-    notes: [], moves: [], draftPickTrades: 0, playerNames: {},
+    notes: [],
+    moves: [],
+    draftPickTrades: 0,
+    playerNames: {},
   });
-  vi.mocked(readReportSnapshot).mockResolvedValue({ ok: true, data: {
-    publicId: '0a460a85-0fa7-4daa-8617-56de7c568bba', savedAt: '2026-09-15T12:00:00Z', expiresAt: '2026-09-25T12:00:00Z',
-    league: { leagueId: '123', leagueType: 1, leagueName: 'Private ESPN', seasonId: 2026 },
-    view: 'insights', records: [{ year: 2025, data }], activeSeason: 2026, activeManagerKeys: ['manager-1'],
-  } });
+  vi.mocked(readReportSnapshot).mockResolvedValue({
+    ok: true,
+    data: {
+      publicId: '0a460a85-0fa7-4daa-8617-56de7c568bba',
+      savedAt: '2026-09-15T12:00:00Z',
+      expiresAt: '2026-09-25T12:00:00Z',
+      league: { leagueId: '123', leagueType: 1, leagueName: 'Private ESPN', seasonId: 2026 },
+      view: 'insights',
+      records: [{ year: 2025, data }],
+      activeSeason: 2026,
+      activeManagerKeys: ['manager-1'],
+    },
+  });
   await openPage('/shared/snapshots/0a460a85-0fa7-4daa-8617-56de7c568bba');
   await screen.findByRole('table', { name: 'Team scoring' });
   expect(screen.getByRole('note')).toHaveTextContent('Expires');
@@ -510,7 +525,13 @@ test('anonymous snapshot navigation uses only saved records and exposes its expi
 });
 
 test('an expired snapshot link shows an actionable unavailable message', async () => {
-  vi.mocked(readReportSnapshot).mockResolvedValue({ ok: false, error: { status: 404, message: 'This report snapshot has expired. Ask the owner for a new link.' } });
+  vi.mocked(readReportSnapshot).mockResolvedValue({
+    ok: false,
+    error: {
+      status: 404,
+      message: 'This report snapshot has expired. Ask the owner for a new link.',
+    },
+  });
   await openPage('/shared/snapshots/0a460a85-0fa7-4daa-8617-56de7c568bba');
   expect(await screen.findByRole('alert')).toHaveTextContent('Ask the owner for a new link.');
   expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
@@ -590,9 +611,7 @@ test('season weekly scores expose best legal lineups without inventing unavailab
   expect(table).toHaveTextContent('+20');
   expect(table).toHaveTextContent('50% (1 / 2)');
   expect(table).toHaveTextContent('—');
-  expect(screen.getByRole('table', { name: 'Team scoring' })).toHaveTextContent(
-    'Best lineup / wk',
-  );
+  expect(screen.getByRole('table', { name: 'Team scoring' })).toHaveTextContent('Best lineup / wk');
 });
 test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
   const user = userEvent.setup();

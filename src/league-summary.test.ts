@@ -49,18 +49,24 @@ it('weights history by measured games and keeps identity across renamed teams', 
 it('weights lineup accuracy by eligible roster slots across seasons', () => {
   const older = make(),
     newer = make();
-  Object.assign(older.teams.find((team) => team.teamId === 'a')!, {
-    bestLineupPoints: 100,
-    lineupWeeks: 1,
-    correctStarts: 1,
-    lineupSlots: 2,
-  });
-  Object.assign(newer.teams.find((team) => team.teamId === 'a')!, {
-    bestLineupPoints: 120,
-    lineupWeeks: 1,
-    correctStarts: 3,
-    lineupSlots: 4,
-  });
+  Object.assign(
+    older.teams.find((team) => team.teamId === 'a')!,
+    {
+      bestLineupPoints: 100,
+      lineupWeeks: 1,
+      correctStarts: 1,
+      lineupSlots: 2,
+    },
+  );
+  Object.assign(
+    newer.teams.find((team) => team.teamId === 'a')!,
+    {
+      bestLineupPoints: 120,
+      lineupWeeks: 1,
+      correctStarts: 3,
+      lineupSlots: 4,
+    },
+  );
   const row = summarizeLeague([
     { year: 2024, data: older },
     { year: 2025, data: newer },

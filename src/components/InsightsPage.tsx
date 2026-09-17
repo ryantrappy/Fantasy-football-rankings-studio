@@ -182,11 +182,15 @@ export function InsightsPage({
           snapshotHref={snapshot?.href}
           espn={leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
           snapshotData={
-            !loading && data ? {
-              leagueId, view: playoff ? 'playoffs' : 'insights', records: [{ year, data }],
-              activeManagerKeys: result?.activeManagerKeys || [],
-              activeSeason: result?.activeSeason || year,
-            } : undefined
+            !loading && data
+              ? {
+                  leagueId,
+                  view: playoff ? 'playoffs' : 'insights',
+                  records: [{ year, data }],
+                  activeManagerKeys: result?.activeManagerKeys || [],
+                  activeSeason: result?.activeSeason || year,
+                }
+              : undefined
           }
         />
       </Flex>
@@ -219,11 +223,12 @@ export function InsightsPage({
                 void navigate({ search: { leagueId, year: Number(e.target.value) } })
               }
             >
-              {(snapshot?.years || Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)).map(
-                (y) => (
-                  <option key={y}>{y}</option>
-                ),
-              )}
+              {(
+                snapshot?.years ||
+                Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)
+              ).map((y) => (
+                <option key={y}>{y}</option>
+              ))}
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>
@@ -508,8 +513,7 @@ export function InsightsPage({
                             {
                               id: '5',
                               header: 'Missed points',
-                              value: (s) =>
-                                s.bestLineup ? s.bestLineup.points - s.actual : null,
+                              value: (s) => (s.bestLineup ? s.bestLineup.points - s.actual : null),
                               cell: (s) => (
                                 <>{signed(s.bestLineup ? s.bestLineup.points - s.actual : null)}</>
                               ),
@@ -619,8 +623,7 @@ export function InsightsPage({
                       {
                         id: '6',
                         header: 'Best lineup / wk',
-                        value: (t) =>
-                          t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null,
+                        value: (t) => (t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null),
                         cell: (t) => (
                           <>{number(t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null)}</>
                         ),

@@ -212,15 +212,22 @@ export function HistoryPage({
         )}
         <ShareReport
           key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
-          path="/history" search={{ leagueId, years }}
+          path="/history"
+          search={{ leagueId, years }}
           disabled={loading || !records.length}
           snapshotHref={snapshot?.href}
           espn={currentCatalog?.leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
-          snapshotData={!loading && records.length === years.length && records.length ? {
-            leagueId, view: 'history', records,
-            activeManagerKeys: currentCatalog?.activeManagerKeys || [],
-            activeSeason: currentCatalog?.activeSeason || records[0].year,
-          } : undefined}
+          snapshotData={
+            !loading && records.length === years.length && records.length
+              ? {
+                  leagueId,
+                  view: 'history',
+                  records,
+                  activeManagerKeys: currentCatalog?.activeManagerKeys || [],
+                  activeSeason: currentCatalog?.activeSeason || records[0].year,
+                }
+              : undefined
+          }
         />
       </Flex>
       {!currentCatalog ? (
@@ -511,7 +518,12 @@ export function HistoryPage({
                             cell: (r) => (
                               <>
                                 {snapshot ? (
-                                  <Button variant="plain" onClick={() => snapshot.openSeason(r.year)}>{r.year}</Button>
+                                  <Button
+                                    variant="plain"
+                                    onClick={() => snapshot.openSeason(r.year)}
+                                  >
+                                    {r.year}
+                                  </Button>
                                 ) : (
                                   <ChakraLink asChild>
                                     <Link

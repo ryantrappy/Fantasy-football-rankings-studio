@@ -646,6 +646,7 @@ teams. Absent source teams are skipped with a count; the source edition is never
 Copied content follows the destination's normal autosave and revision-history behavior.
 
 Playoff forecasts live in the **Playoff simulation** navigation tab. Switching between Season insights and Playoff simulation keeps the selected league and season. Its share link opens the same simulation view at `/shared/playoffs`.
+The **Week-by-week chart** shows each team's playoff or championship chance after every completed regular-season week. Each point uses that week's completed scores, and older points exclude current player projections. Simulations are cached for the loaded report, so switching percentages or returning to the table is immediate. The chart animates points upward from the zero axis unless reduced motion is preferred; exact percentages remain available in its table.
 Playoff simulation settings come from the selected provider: configured playoff-team count controls
 the bracket, and the provider’s regular-season endpoint controls the simulation cutoff. The forecast
 does not infer league size or postseason timing from the number of visible teams.

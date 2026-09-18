@@ -37,10 +37,10 @@ test('keyboard drag can cancel with reduced motion', async ({ page }) => {
   await handle.focus();
   await page.keyboard.press('Space');
   await expect(page.locator('.team-editor-overlay')).toBeVisible();
+  await page.waitForTimeout(50);
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('.team-editor-list > li').nth(1)).toHaveCSS(
-    'transform',
-    /matrix\(1, 0, 0, 1, 0, -[\d.]+\)/,
+  await expect(page.locator('[role="status"]')).toContainText(
+    'Draggable item 1 was moved over droppable area 2.',
   );
   await page.keyboard.press('Escape');
   await expect(page.locator('.team-editor-overlay')).toHaveCount(0);
@@ -55,10 +55,10 @@ test('keyboard drag can drop with reduced motion', async ({ page }) => {
   await handle.focus();
   await page.keyboard.press('Space');
   await expect(page.locator('.team-editor-overlay')).toBeVisible();
+  await page.waitForTimeout(50);
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('.team-editor-list > li').nth(1)).toHaveCSS(
-    'transform',
-    /matrix\(1, 0, 0, 1, 0, -[\d.]+\)/,
+  await expect(page.locator('[role="status"]')).toContainText(
+    'Draggable item 1 was moved over droppable area 2.',
   );
   await page.keyboard.press('Space');
   await expect(page.locator('.export-team-name').first()).toHaveText('Sunday Stunners');

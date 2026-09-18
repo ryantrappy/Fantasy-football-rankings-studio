@@ -55,7 +55,11 @@ test('editing, keyboard reorder, undo, and save still work', async ({ page }) =>
 test('league creation retains labels, platform selection, and submission', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/tests/ui/?mode=create');
-  await page.getByLabel('ESPN', { exact: true }).check();
+  const espnOption = page.locator('label[for="provider-espn"]');
+  const espnRadio = page.getByRole('radio', { name: 'ESPN', exact: true });
+  await espnOption.click();
+  await expect(espnOption).toHaveClass(/selected/);
+  await expect(espnRadio).toBeChecked();
   await page.getByLabel(/League ID/).fill('123456');
   await page.getByLabel(/Display name/).fill('Sunday League');
   await page.getByRole('button', { name: 'Create league', exact: true }).click();

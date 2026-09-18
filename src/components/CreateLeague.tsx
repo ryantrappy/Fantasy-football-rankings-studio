@@ -50,6 +50,7 @@ export function CreateLeague({
           ...value,
           leagueId: value.leagueId.trim(),
           leagueName: value.leagueName.trim(),
+          leagueType: provider,
         });
         finalized.current = true;
         clearLeagueSetupDraft(api.subject);
@@ -60,12 +61,8 @@ export function CreateLeague({
       }
     },
   });
-  const {
-    leagueId,
-    leagueName,
-    leagueType: provider,
-    seasonId: season,
-  } = useStore(form.store, (state) => state.values);
+  const { leagueId, leagueName, seasonId: season } = useStore(form.store, (state) => state.values);
+  const [provider, setProvider] = useState<0 | 1>(() => restored?.leagueType ?? 0);
   const busy = useStore(form.store, (state) => state.isSubmitting);
   useEffect(() => {
     if (finalized.current) return;
@@ -150,7 +147,7 @@ export function CreateLeague({
                   id="provider-sleeper"
                   value="0"
                   checked={provider === 0}
-                  onChange={() => form.setFieldValue('leagueType', 0)}
+                  onChange={() => setProvider(0)}
                 />
                 <span>
                   <strong>Sleeper</strong>
@@ -170,7 +167,7 @@ export function CreateLeague({
                   id="provider-espn"
                   value="1"
                   checked={provider === 1}
-                  onChange={() => form.setFieldValue('leagueType', 1)}
+                  onChange={() => setProvider(1)}
                 />
                 <span>
                   <strong>ESPN</strong>

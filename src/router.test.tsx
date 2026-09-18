@@ -10,6 +10,7 @@ import { getRouter } from './router';
 import { Provider } from './components/ui/provider';
 import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
+import { reportFreshnessLabel } from './components/report-freshness';
 
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
 vi.mock('./functions/report-snapshots.functions', () => ({
@@ -616,7 +617,10 @@ test('season weekly scores expose best legal lineups without inventing unavailab
 test('a failed insights refresh keeps the last successful report visible and reports recovery', async () => {
   const user = userEvent.setup();
   await openPage('/shared/insights?leagueId=123&year=2025');
-  expect(await screen.findByText(/Last successfully refreshed Sep 7, 2026/i)).toBeInTheDocument();
+  const initialFreshness = reportFreshnessLabel('2026-09-08T00:00:00Z');
+  expect(
+    await screen.findByText((content) => content.includes(initialFreshness)),
+  ).toBeInTheDocument();
 
   vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({
     ok: false,
@@ -645,7 +649,8 @@ test('a failed insights refresh keeps the last successful report visible and rep
   });
   await user.click(screen.getByRole('button', { name: 'Try refresh again' }));
   expect(await screen.findByText(/Insights refreshed successfully/)).toBeInTheDocument();
-  expect(screen.getAllByText(/Last successfully refreshed Sep 8, 2026/i)).toHaveLength(2);
+  const refreshedFreshness = reportFreshnessLabel('2026-09-09T00:00:00Z');
+  expect(screen.getAllByText((content) => content.includes(refreshedFreshness))).toHaveLength(2);
 });
 test('a successfully loaded partial report names every affected section', async () => {
   vi.mocked(publicFunctions.getPublicInsights).mockResolvedValueOnce({

@@ -22,9 +22,17 @@ it('shows cutoff-controlled probabilities and the scenario limitations', () => {
   );
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
   expect(screen.getByText(/random remaining opponents/)).toBeInTheDocument();
+  expect(screen.getByText(/Projection mode:.*historical scoring only/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('table', { name: 'Historical forecast reliability' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/2 held-out games/)).toBeInTheDocument();
+  expect(screen.getByText(/±0.69 percentage points/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
-  expect(screen.getByText(/At least three/)).toBeInTheDocument();
-  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  expect(screen.getByRole('note')).toHaveTextContent(/only 2 completed scoring weeks/);
+  expect(screen.getByRole('note')).toHaveTextContent(/especially uncertain/);
+  expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
+  expect(screen.getByText(/No eligible held-out games yet/)).toBeInTheDocument();
 });
 it('explains missing provider settings', () => {
   render(

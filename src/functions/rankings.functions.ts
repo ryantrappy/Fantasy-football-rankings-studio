@@ -104,3 +104,14 @@ export const setLeagueArchived = createServerFn({ method: 'POST' })
   .handler(({ data }) =>
     run('setLeagueArchived', (owner) => operations.setLeagueArchived(owner, data)),
   );
+export const renameLeague = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; leagueName: string }) => data)
+  .handler(({ data }) => run('renameLeague', (owner) => operations.renameLeague(owner, data)));
+export const updateLeagueProviderId = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; providerLeagueId: string }) => data)
+  .handler(({ data }) =>
+    run('updateLeagueProviderId', (owner) => operations.updateLeagueProviderId(owner, data)),
+  );
+export const deleteLeague = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string }) => data)
+  .handler(({ data }) => run('deleteLeague', (owner) => operations.deleteLeague(owner, data)));

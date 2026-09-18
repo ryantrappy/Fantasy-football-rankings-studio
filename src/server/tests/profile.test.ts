@@ -64,6 +64,19 @@ it('reports missing configuration without calling Auth0', async () => {
   await expect(getProfile('auth0|owner')).rejects.toMatchObject({ status: 503 });
   expect(fetchMock).not.toHaveBeenCalled();
 });
+it('derives the canonical Management API hostname from the configured Auth0 issuer', async () => {
+  vi.stubEnv('AUTH0_MANAGEMENT_DOMAIN', '');
+  vi.stubEnv('AUTH0_ISSUER_BASE_URL', 'https://tenant.auth0.com/');
+  fetchMock.mockResolvedValueOnce(reply(profile));
+  await expect(getProfile('auth0|owner')).resolves.toMatchObject({ userId: 'auth0|owner' });
+  expect(fetchMock.mock.calls[0][0]).toBe('https://tenant.auth0.com/oauth/token');
+});
+it('rejects an invalid issuer fallback without making an upstream request', async () => {
+  vi.stubEnv('AUTH0_MANAGEMENT_DOMAIN', '');
+  vi.stubEnv('AUTH0_ISSUER_BASE_URL', 'https://attacker.example/');
+  await expect(getProfile('auth0|owner')).rejects.toMatchObject({ status: 503 });
+  expect(fetchMock).not.toHaveBeenCalled();
+});
 it('sanitizes upstream failures and rate limits', async () => {
   fetchMock.mockResolvedValueOnce(reply({ message: 'sensitive provider body' }, 429));
   await expect(getProfile('auth0|owner')).rejects.toMatchObject({ status: 429 });

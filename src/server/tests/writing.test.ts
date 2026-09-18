@@ -35,7 +35,9 @@ beforeEach(() => {
     notes: [],
     draftPickTrades: 0,
   });
-  mocks.providers.mockResolvedValue([{ id: 'codex', enabled: true, installed: true }]);
+  mocks.providers.mockResolvedValue([
+    { id: 'codex', enabled: true, installed: true, status: 'ready' },
+  ]);
   mocks.find.mockResolvedValue('/bin/codex');
   mocks.chat.mockResolvedValue('- Discuss scoring.');
 });
@@ -52,7 +54,9 @@ it('requires explicit approval and administrator enablement before generation', 
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: false }),
   ).rejects.toThrow();
   expect(mocks.chat).not.toHaveBeenCalled();
-  mocks.providers.mockResolvedValue([{ id: 'codex', enabled: false, installed: true }]);
+  mocks.providers.mockResolvedValue([
+    { id: 'codex', enabled: false, installed: true, status: 'not-enabled' },
+  ]);
   await expect(
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: true }),
   ).rejects.toMatchObject({ status: 403 });
@@ -80,4 +84,23 @@ it('allows only one simultaneous request per account even during CLI discovery',
   await vi.waitFor(() => expect(mocks.chat).toHaveBeenCalledTimes(1));
   finish('A suggestion');
   await expect(first).resolves.toBe('A suggestion');
+});
+it('aborts server generation and releases the account request slot', async () => {
+  mocks.chat.mockImplementationOnce(
+    ({ abortController }: { abortController: AbortController }) =>
+      new Promise<string>((_resolve, reject) => {
+        abortController.signal.addEventListener(
+          'abort',
+          () => reject(new DOMException('Cancelled', 'AbortError')),
+          { once: true },
+        );
+      }),
+  );
+  const controller = new AbortController();
+  const input = { ...selection, provider: 'codex', model: '', approved: true };
+  const first = generateWriting('owner', input, controller.signal);
+  await vi.waitFor(() => expect(mocks.chat).toHaveBeenCalledTimes(1));
+  controller.abort();
+  await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+  expect(await generateWriting('owner', input)).toBe('- Discuss scoring.');
 });

@@ -25,6 +25,7 @@ import { Route as PublicSharedHistoryRouteImport } from './routes/_public.shared
 import { Route as PublicSharedInsightsRouteImport } from './routes/_public.shared.insights'
 import { Route as PublicSharedPlayoffsRouteImport } from './routes/_public.shared.playoffs'
 import { Route as SharedRankingsPublicIdRouteImport } from './routes/shared.rankings.$publicId'
+import { Route as SharedSnapshotsPublicIdRouteImport } from './routes/shared.snapshots.$publicId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -105,6 +106,11 @@ const SharedRankingsPublicIdRoute = SharedRankingsPublicIdRouteImport.update({
   path: '/shared/rankings/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SharedSnapshotsPublicIdRoute = SharedSnapshotsPublicIdRouteImport.update({
+  id: '/shared/snapshots/$publicId',
+  path: '/shared/snapshots/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/shared/insights': typeof PublicSharedInsightsRoute
   '/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
+  '/shared/snapshots/$publicId': typeof SharedSnapshotsPublicIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/shared/insights': typeof PublicSharedInsightsRoute
   '/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
+  '/shared/snapshots/$publicId': typeof SharedSnapshotsPublicIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/_public/shared/insights': typeof PublicSharedInsightsRoute
   '/_public/shared/playoffs': typeof PublicSharedPlayoffsRoute
   '/shared/rankings/$publicId': typeof SharedRankingsPublicIdRoute
+  '/shared/snapshots/$publicId': typeof SharedSnapshotsPublicIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/shared/insights'
     | '/shared/playoffs'
     | '/shared/rankings/$publicId'
+    | '/shared/snapshots/$publicId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/shared/insights'
     | '/shared/playoffs'
     | '/shared/rankings/$publicId'
+    | '/shared/snapshots/$publicId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/_public/shared/insights'
     | '/_public/shared/playoffs'
     | '/shared/rankings/$publicId'
+    | '/shared/snapshots/$publicId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   SharedKonzSuxRoute: typeof SharedKonzSuxRoute
   SharedRankingsPublicIdRoute: typeof SharedRankingsPublicIdRoute
+  SharedSnapshotsPublicIdRoute: typeof SharedSnapshotsPublicIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -332,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SharedRankingsPublicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shared/snapshots/$publicId': {
+      id: '/shared/snapshots/$publicId'
+      path: '/shared/snapshots/$publicId'
+      fullPath: '/shared/snapshots/$publicId'
+      preLoaderRoute: typeof SharedSnapshotsPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   SharedKonzSuxRoute: SharedKonzSuxRoute,
   SharedRankingsPublicIdRoute: SharedRankingsPublicIdRoute,
+  SharedSnapshotsPublicIdRoute: SharedSnapshotsPublicIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

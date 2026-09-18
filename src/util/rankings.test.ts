@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { League, TeamRanking, WeeklyRanking } from '../types';
-import { defaultSeason, moveTeam, newRanking, previousPosition } from './rankings';
+import { defaultSeason, moveTeam, newRanking, powerOrderTeams, previousPosition } from './rankings';
 
 const teams: TeamRanking[] = ['first-team', 'second-team', 'third-team'].map((teamId, index) => ({
   teamId,
@@ -69,6 +69,44 @@ describe('ranking calculations', () => {
         ['third-team', 3, ''],
       ]);
     }
+  });
+
+  it('suggests a power order from scoring and margin instead of win-loss record', () => {
+    const standings = [
+      { ...teams[0], wins: 3, loss: 0 },
+      { ...teams[1], wins: 0, loss: 3 },
+    ];
+    const ordered = powerOrderTeams(standings, [
+      {
+        matchupId: '1',
+        homeTeamId: 'first-team',
+        awayTeamId: 'second-team',
+        homeScore: 80,
+        awayScore: 130,
+      },
+      {
+        matchupId: '2',
+        homeTeamId: 'first-team',
+        awayTeamId: 'second-team',
+        homeScore: 85,
+        awayScore: 125,
+      },
+    ]);
+    expect(ordered.map((team) => team.teamId)).toEqual(['second-team', 'first-team']);
+    expect(powerOrderTeams(standings, []).map((team) => team.teamId)).toEqual(
+      standings.map((team) => team.teamId),
+    );
+    expect(
+      newRanking(league, 2026, 3, standings, [
+        {
+          matchupId: '1',
+          homeTeamId: 'first-team',
+          awayTeamId: 'second-team',
+          homeScore: 80,
+          awayScore: 130,
+        },
+      ]).teams[0].teamId,
+    ).toBe('second-team');
   });
 
   it('keeps January through March in the previous football season', () => {

@@ -1,16 +1,32 @@
 services:
   app:
+    # Published image; set a tag here when pinning a release.
+    # image: ryantrappy/fantasy-football-rankings-builder:2026.09.16
     image: ryantrappy/fantasy-football-rankings-builder:latest
+    # Copy .env.example to .env and fill the server-only values there.
     env_file:
       - .env
     environment:
       MONGODB_URI: mongodb://mongo:27017/fantasy_rankings
       PORT: 3001
+      # Profile editing: Auth0 M2M app with read:users,update:users only.
+      # AUTH0_MANAGEMENT_CLIENT_ID: your-m2m-client-id
+      # AUTH0_MANAGEMENT_CLIENT_SECRET: replace-with-a-secret-from-your-manager
+      # Optional when AUTH0_ISSUER_BASE_URL is a standard *.auth0.com hostname.
+      # AUTH0_MANAGEMENT_DOMAIN: your-tenant.auth0.com
+      # ESPN per-user credential encryption: openssl rand -hex 32
+      # ESPN_CREDENTIALS_KEY: 64-hex-characters
+      # Optional local writing assistant: codex,claude
+      # WRITING_AI_PROVIDERS: codex
+      # WRITING_AI_USERS: auth0|allowed-user-id
+      # VITE_AUTH0_* are baked into the browser bundle at image build time.
+      # Rebuild the image with VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, and
+      # VITE_AUTH0_AUDIENCE; adding them here will not change an existing image.
     depends_on:
       mongo:
         condition: service_healthy
     ports:
-      - "3001:3001"
+      - '3001:3001'
     networks:
       - fantasy-internal
 
@@ -18,9 +34,11 @@ services:
     image: mongo:8
     restart: unless-stopped
     volumes:
+      # Override MONGO_DATA_PATH in .env to keep database files elsewhere.
+      # MONGO_DATA_PATH: /srv/fantasy-rankings/mongo-data
       - ${MONGO_DATA_PATH:-./.docker/mongo-data}:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand('ping').ok\""]
+      test: ['CMD-SHELL', 'mongosh --quiet --eval "db.adminCommand(''ping'').ok"']
       interval: 5s
       timeout: 5s
       retries: 12

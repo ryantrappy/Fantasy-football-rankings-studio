@@ -59,28 +59,36 @@ export function buildWritingContext(
     facts.push(
       `W${pickup.week} pickup ${pickup.player}: ${n(pickup.lift!)} points/start versus ${pickup.baseline}, ${pickup.comparisonWeeks.length} compared starts.`,
     );
-  const latest = scores.at(-1),
-    positions = new Map<string, { rostered: number; started: number }>();
-  for (const player of latest?.players || []) {
-    const position = source.playerPositions?.[player.playerId];
-    if (!position) continue;
-    const bucket = positions.get(position) || { rostered: 0, started: 0 };
-    bucket.rostered++;
-    if (latest?.starters.some((p) => p.playerId === player.playerId)) bucket.started++;
-    positions.set(position, bucket);
+  const roster = source.rosterSnapshot?.teams.find((entry) => entry.teamId === teamId);
+  const positions = new Map<string, { starters: string[]; bench: string[] }>();
+  for (const group of ['starters', 'bench'] as const) {
+    for (const playerId of roster?.[group] || []) {
+      const position = source.playerPositions?.[playerId] || 'Other';
+      const bucket = positions.get(position) || { starters: [], bench: [] };
+      bucket[group].push(source.playerNames[playerId] || playerId);
+      positions.set(position, bucket);
+    }
   }
   return {
     teamName: team.teamName,
     year,
     throughWeek,
     facts,
-    depth: [...positions].map(
-      ([position, p]) =>
-        `W${latest!.week} ${position}: ${p.rostered} players with observed scores, ${p.started} starters.`,
-    ),
+    depth: [...positions]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(
+        ([position, players]) =>
+          `${position}: starters — ${players.starters.join(', ') || 'none'}; bench — ${players.bench.join(', ') || 'none'}.`,
+      ),
+    depthSnapshotAt: roster ? source.rosterSnapshot?.capturedAt : undefined,
+    depthNote: roster
+      ? 'This is latest roster ownership, not ownership at the selected ranking week. It is not an injury report or projection.'
+      : source.rosterSnapshot
+        ? 'The latest roster snapshot did not include this team, so current depth claims are omitted.'
+        : source.rosterSnapshotNote ||
+          'Historical roster ownership is unavailable; current ownership was not substituted.',
     notes: [
       'Context ends at the selected ranking week or latest completed week, whichever is earlier. No future scoring is included.',
-      'Depth is an observed lineup snapshot, not a complete current roster, injury report or projection. Missing data cannot establish weak depth.',
       'Trade/pickup grades use short post-move windows and positional baselines. They do not value dynasty assets or predict future results.',
     ],
   };

@@ -14,6 +14,25 @@ export interface ScoreWeek {
   lineupAvailable?: boolean;
   starters: { playerId: string; points: number }[];
   players?: { playerId: string; points: number }[];
+  bestLineup?: {
+    points: number;
+    correctStarts: number;
+    slots: number;
+  };
+}
+export interface PlayoffProjection {
+  capturedAt?: string;
+  unavailablePlayers?: number;
+  uncertainPlayers?: number;
+  availabilityChecked?: boolean;
+  provider: 'Sleeper' | 'ESPN';
+  week: number;
+  teamPoints: Record<string, number>;
+  coveredStarters: number;
+  totalStarters: number;
+  benchSelections?: number;
+  optimizedLineup?: boolean;
+  note?: string;
 }
 export interface PlayerMove {
   id: string;
@@ -24,8 +43,18 @@ export interface PlayerMove {
   from: string | null;
   to: string | null;
 }
+export interface RosterSnapshot {
+  capturedAt: string;
+  teams: {
+    teamId: string;
+    starters: string[];
+    bench: string[];
+  }[];
+}
 export interface InsightsSource {
+  forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
@@ -33,7 +62,10 @@ export interface InsightsSource {
   moves: PlayerMove[];
   playerNames: Record<string, string>;
   playerPositions?: Record<string, string>;
+  rosterSnapshot?: RosterSnapshot;
+  rosterSnapshotNote?: string;
   draftPickTradeIds?: string[];
+  partialFailures?: { section: string; message: string }[];
   notes: string[];
   draftPickTrades: number;
 }
@@ -62,11 +94,14 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  forecastSchedule?: InsightsSource['forecastSchedule'];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
+  playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;
   generatedAt: string;
+  partialFailures?: { section: string; message: string }[];
   notes: string[];
   teams: (InsightsSource['teams'][number] & {
     weeks: number;
@@ -77,6 +112,10 @@ export interface SeasonInsights {
     projectionDelta: number | null;
     beatProjection: number;
     aboveMedian: number;
+    bestLineupPoints: number;
+    lineupWeeks: number;
+    correctStarts: number;
+    lineupSlots: number;
     tradeCount: number;
     receivedPoints: number;
     sentPoints: number;

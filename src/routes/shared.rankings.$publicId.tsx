@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Box, Heading, Text } from '@chakra-ui/react';
 import { readEdition } from '../functions/publishing.functions';
+import { publishedEditionMeta } from '../shared-report-meta';
 export const Route = createFileRoute('/shared/rankings/$publicId')({
   loader: ({ params }) => readEdition({ data: { publicId: params.publicId } }),
   staleTime: 0,
-  head: () => ({
-    meta: [{ title: 'Published power rankings' }, { name: 'robots', content: 'noindex, nofollow' }],
-  }),
+  head: ({ loaderData }) => ({ meta: publishedEditionMeta(loaderData) }),
   component: PublishedRanking,
 });
 function PublishedRanking() {

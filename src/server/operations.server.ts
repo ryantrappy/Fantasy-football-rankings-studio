@@ -104,6 +104,22 @@ export const operations = {
     const data = leagueIdSchema.extend({ archived: z.boolean() }).parse(input);
     await leagues.setArchived(data.leagueId, data.archived, owner);
   },
+  renameLeague: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema
+      .extend({ leagueName: z.string().trim().min(1).max(120) })
+      .parse(input);
+    return publicLeague(await leagues.rename(data.leagueId, data.leagueName, owner));
+  },
+  updateLeagueProviderId: async (owner: string, input: unknown) => {
+    const data = leagueIdSchema.extend({ providerLeagueId: z.string() }).parse(input);
+    return publicLeague(
+      await leagues.updateProviderLeagueId(data.leagueId, data.providerLeagueId, owner),
+    );
+  },
+  deleteLeague: async (owner: string, input: unknown) => {
+    const { leagueId } = leagueIdSchema.parse(input);
+    await leagues.deleteLeague(leagueId, owner);
+  },
   getReportSharing: async (owner: string, input: unknown) =>
     (await leagues.getLeagueById(leagueIdSchema.parse(input).leagueId, owner)).publicReports !==
     false,
@@ -149,7 +165,13 @@ export const operations = {
   getLeagueInfo: async (owner: string, input: unknown) => {
     const data = seasonSchema.parse(input);
     const info = await leagues.getLeagueInfo(data.leagueId, data.year, owner);
-    return { ...publicLeague(info), teamCount: info.teamCount, maxWeek: info.maxWeek };
+    return {
+      ...publicLeague(info),
+      teamCount: info.teamCount,
+      maxWeek: info.maxWeek,
+      validWeeks: info.validWeeks,
+      scheduleNote: info.scheduleNote,
+    };
   },
   getTeams: async (owner: string, input: unknown) => {
     const data = weekSchema.parse(input);

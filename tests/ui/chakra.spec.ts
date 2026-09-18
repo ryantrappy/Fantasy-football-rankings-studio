@@ -16,6 +16,28 @@ for (const width of [1440, 390]) {
   });
 }
 
+test('compact download keeps every team and long commentary readable without clipping', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.goto('/tests/ui/');
+  await page
+    .getByLabel('Edition title')
+    .fill('A compact ranking with a deliberately long headline');
+  await page
+    .getByLabel('Commentary for Fourth & Long')
+    .fill(
+      'This deliberately long mobile commentary preserves every word, including SupercalifragilisticexpialidociousWithoutBreaks, on a compact image without clipping.',
+    );
+  await page.getByRole('button', { name: 'Preview & export' }).click();
+  const downloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download compact PNG' }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe('power-rankings-2026-week-2-compact.png');
+  const png = await readFile((await download.path())!);
+  expect(png).toMatchSnapshot('rankings-compact.png', { maxDiffPixels: 0, threshold: 0 });
+});
+
 test('editing, keyboard reorder, undo, and save still work', async ({ page }) => {
   await page.goto('/tests/ui/');
   await page.getByLabel('Edition title').fill('Updated edition');
@@ -33,7 +55,11 @@ test('editing, keyboard reorder, undo, and save still work', async ({ page }) =>
 test('league creation retains labels, platform selection, and submission', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/tests/ui/?mode=create');
-  await page.getByLabel('ESPN', { exact: true }).check();
+  const espnOption = page.locator('label[for="provider-espn"]');
+  const espnRadio = page.getByRole('radio', { name: 'ESPN', exact: true });
+  await espnOption.click();
+  await expect(espnOption).toHaveClass(/selected/);
+  await expect(espnRadio).toBeChecked();
   await page.getByLabel(/League ID/).fill('123456');
   await page.getByLabel(/Display name/).fill('Sunday League');
   await page.getByRole('button', { name: 'Create league', exact: true }).click();

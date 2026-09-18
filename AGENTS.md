@@ -3,6 +3,11 @@
 <!-- backlog.md-instructions-version: 1.51.0 -->
 
 <CRITICAL_INSTRUCTION>
+follow the guidelines.md file
+
+</CRITICAL_INSTRUCTION>
+
+<CRITICAL_INSTRUCTION>
 
 ## BACKLOG WORKFLOW INSTRUCTIONS
 

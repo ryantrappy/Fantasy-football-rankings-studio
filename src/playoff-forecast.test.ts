@@ -44,15 +44,72 @@ it('is deterministic and never includes future scores', () => {
   data.scores.filter((s) => s.week === 4).forEach((s) => (s.actual = 99999));
   expect(forecastPlayoffs(data, settings, 3)).toEqual(first);
 });
-it('requires sufficient data and paired results', () => {
-  expect(forecastPlayoffs(fixture(), { regularSeasonEnd: 10, playoffTeams: 4 }, 2).reason).toMatch(
-    /three/,
-  );
+it('uses only a complete current-cutoff projection snapshot', () => {
+  const data = fixture();
+  data.playoffProjection = {
+    provider: 'Sleeper',
+    week: 5,
+    teamPoints: Object.fromEntries(
+      data.teams.map((team, index) => [team.teamId, 300 - index * 20]),
+    ),
+    coveredStarters: 72,
+    totalStarters: 72,
+    optimizedLineup: true,
+    benchSelections: 8,
+  };
+  const settings = { regularSeasonEnd: 5, playoffTeams: 4 };
+  const projected = forecastPlayoffs(data, settings, 4);
+  const historical = forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 4);
+  expect(projected.projection.used).toBe(true);
+  expect(projected.projection.note).toMatch(/set the expected score/);
+  expect(projected.projection.note).toMatch(/8 bench selections/);
+  expect(projected.rows[0].playoff).toBeGreaterThan(historical.rows[0].playoff);
+
+  const retrospective = forecastPlayoffs(data, settings, 3);
+  expect(retrospective.projection.used).toBe(false);
+  expect(retrospective.projection.note).toMatch(/excluded/);
+
+  delete data.playoffProjection.teamPoints['0'];
+  data.playoffProjection.coveredStarters -= 9;
+  const incomplete = forecastPlayoffs(data, settings, 4);
+  expect(incomplete.projection.used).toBe(true);
+  expect(incomplete.projection.note).toMatch(/historical scoring only/);
+});
+
+it('uses complete published opponent pairs and rejects malformed schedule weeks', () => {
+  const data = fixture(4);
+  data.forecastSchedule = [
+    { week: 5, homeTeamId: '0', awayTeamId: '2' },
+    { week: 5, homeTeamId: '1', awayTeamId: '3' },
+  ];
+  const settings = { regularSeasonEnd: 5, playoffTeams: 2 };
+  const result = forecastPlayoffs(data, settings, 4);
+  expect(result.schedule).toEqual({ knownWeeks: 1, remainingWeeks: 1 });
+  data.forecastSchedule[1].homeTeamId = '0';
+  expect(forecastPlayoffs(data, settings, 4).schedule.knownWeeks).toBe(0);
+});
+it('supports one- and two-week forecasts but still requires completed paired results', () => {
+  const settings = { regularSeasonEnd: 10, playoffTeams: 4 };
+  expect(forecastPlayoffs(fixture(), settings, 1).reason).toBeUndefined();
+  expect(forecastPlayoffs(fixture(), settings, 2).reason).toBeUndefined();
+  expect(forecastPlayoffs(fixture(), settings, 0).reason).toMatch(/one distinct/);
   const data = fixture();
   data.scores[0].opponentTeamId = null;
-  expect(forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 4 }, 4).reason).toMatch(
-    /paired/,
-  );
+  expect(forecastPlayoffs(data, settings, 4).reason).toMatch(/paired/);
+});
+it('uses a complete current-week projection in a one-week forecast', () => {
+  const data = fixture();
+  data.completedWeek = 1;
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 2,
+    teamPoints: Object.fromEntries(data.teams.map((team) => [team.teamId, 100])),
+    coveredStarters: 72,
+    totalStarters: 72,
+  };
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 4 }, 1);
+  expect(result.reason).toBeUndefined();
+  expect(result.projection.used).toBe(true);
 });
 it('gives top seeds a semifinal bye in a six-team bracket', () => {
   const data = fixture();
@@ -60,4 +117,21 @@ it('gives top seeds a semifinal bye in a six-team bracket', () => {
   const r = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4);
   expect(r.rows[0].playoff).toBe(1);
   expect(r.rows[0].advance[0]).toBe(1);
+});
+
+it('uses a current first-round projection, never a later-week snapshot', () => {
+  const data = fixture(2);
+  const settings = { regularSeasonEnd: 4, playoffTeams: 2 };
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 5,
+    teamPoints: { '0': 200, '1': 50 },
+    coveredStarters: 2,
+    totalStarters: 2,
+  };
+  const result = forecastPlayoffs(data, settings, 4);
+  expect(result.rows[0].advance[0]).toBe(1);
+  expect(result.samplingMargin).toBeCloseTo(0.00693, 5);
+  data.playoffProjection.week = 6;
+  expect(forecastPlayoffs(data, settings, 4).projection.used).toBe(false);
 });

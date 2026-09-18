@@ -76,6 +76,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
   const teams = source.teams.map((team) => {
     const rows = scores.filter((s) => s.teamId === team.teamId);
     const projections = rows.filter((s) => s.projected !== null);
+    const lineupRows = rows.filter((s) => s.bestLineup);
     const teamTrades = trades.filter((t) => t.teamId === team.teamId);
     const total = round(rows.reduce((sum, r) => sum + r.actual, 0));
     const receivedPoints = round(teamTrades.reduce((sum, t) => sum + t.receivedPoints, 0));
@@ -102,6 +103,10 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
         const median = all.length % 2 ? all[middle] : (all[middle - 1] + all[middle]) / 2;
         return r.actual > median;
       }).length,
+      bestLineupPoints: round(lineupRows.reduce((sum, r) => sum + r.bestLineup!.points, 0)),
+      lineupWeeks: lineupRows.length,
+      correctStarts: lineupRows.reduce((sum, r) => sum + r.bestLineup!.correctStarts, 0),
+      lineupSlots: lineupRows.reduce((sum, r) => sum + r.bestLineup!.slots, 0),
       tradeCount: teamTrades.length,
       receivedPoints,
       sentPoints,
@@ -112,10 +117,24 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     };
   });
   return {
+    forecastSchedule: source.forecastSchedule,
     results: source.results,
+    playoffProjection: source.playoffProjection,
     tradeComparisons: normalized.trades,
     completedWeek: source.completedWeek,
     generatedAt: new Date().toISOString(),
+    partialFailures: [
+      ...(source.partialFailures || []),
+      ...(scores.some((s) => s.lineupAvailable === false)
+        ? [
+            {
+              section: 'Trade and pickup assessments',
+              message:
+                'Some weekly lineup details are unavailable; only observed comparable player scores are graded.',
+            },
+          ]
+        : []),
+    ],
     notes: [
       ...source.notes,
       ...(scores.some((s) => s.lineupAvailable === false)

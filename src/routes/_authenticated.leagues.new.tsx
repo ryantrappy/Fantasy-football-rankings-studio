@@ -10,7 +10,17 @@ function NewLeaguePage() {
   return (
     <CreateLeague
       api={api}
-      onCreated={() => void navigate({ to: '/' })}
+      onCreated={(league) =>
+        void navigate({
+          to: '/',
+          search: {
+            leagueId: league.leagueId,
+            year: league.seasonId,
+            week: 1,
+            welcome: true,
+          },
+        })
+      }
       onCancel={() => void navigate({ to: '/' })}
     />
   );

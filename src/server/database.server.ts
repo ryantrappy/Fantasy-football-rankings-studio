@@ -2,6 +2,7 @@ import '@tanstack/react-start/server-only';
 import mongoose from 'mongoose';
 import './models/league.model';
 import './models/weeklyRanking.model';
+import { cleanupExpiredSnapshots } from './models/report-snapshot.model';
 
 let connection: Promise<void> | undefined;
 export async function connectDatabase() {
@@ -11,6 +12,7 @@ export async function connectDatabase() {
       if (!uri) throw new Error('MONGODB_URI is required.');
       await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
       await Promise.all(Object.values(mongoose.models).map((model) => model.init()));
+      await cleanupExpiredSnapshots();
     })().catch((error) => {
       connection = undefined;
       throw error;

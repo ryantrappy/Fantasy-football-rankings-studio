@@ -33,21 +33,32 @@ export async function getWritingContext(owner: string, input: unknown) {
     throw new HttpException(404, 'Team not found in this season.');
   return buildWritingContext(source, data.teamId, data.year, data.week);
 }
-export async function generateWriting(owner: string, input: unknown) {
+export async function generateWriting(owner: string, input: unknown, signal?: AbortSignal) {
   const data = generateSchema.parse(input);
   if (active.has(owner)) throw new HttpException(409, 'A writing request is already running.');
   const options = await writingProviders(owner),
     option = options.find((p) => p.id === data.provider);
-  if (!option?.enabled)
+  if (!option || option.status === 'not-enabled')
     throw new HttpException(
       403,
       'This assistant is not enabled for your account by the server administrator.',
+    );
+  if (option.status === 'not-installed')
+    throw new HttpException(503, 'The selected assistant is not installed on the server.');
+  if (option.status === 'login-check-failed')
+    throw new HttpException(
+      503,
+      'The selected assistant login check failed. Ask the server operator to verify its login.',
     );
   const executable = await findWritingCli(data.provider);
   if (!executable)
     throw new HttpException(503, 'The selected assistant is not installed on the server.');
   if (active.has(owner)) throw new HttpException(409, 'A writing request is already running.');
   active.add(owner);
+  const abortController = new AbortController();
+  const abort = () => abortController.abort();
+  if (signal?.aborted) abort();
+  else signal?.addEventListener('abort', abort, { once: true });
   try {
     const context = await getWritingContext(owner, {
       leagueId: data.leagueId,
@@ -57,6 +68,7 @@ export async function generateWriting(owner: string, input: unknown) {
     });
     const result = await chat({
       adapter: new WritingCliAdapter(executable, data.provider, data.model),
+      abortController,
       stream: false,
       messages: [
         {
@@ -68,6 +80,7 @@ export async function generateWriting(owner: string, input: unknown) {
     if (!result.trim()) throw new HttpException(502, 'The assistant returned no suggestions.');
     return result.slice(0, 6000);
   } finally {
+    signal?.removeEventListener('abort', abort);
     active.delete(owner);
   }
 }

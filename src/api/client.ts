@@ -1,4 +1,6 @@
 import * as publishingFunctions from '../functions/publishing.functions';
+import { createReportSnapshot } from '../functions/report-snapshots.functions';
+import { insightsCacheOptions } from './insights-cache';
 import * as writingFunctions from '../functions/writing.functions';
 import { createCollection } from '@tanstack/react-db';
 import { queryCollectionOptions } from '@tanstack/query-db-collection';
@@ -60,7 +62,20 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     }
     return collection;
   }
+  let disposePromise: Promise<void> | undefined;
+  function dispose() {
+    disposePromise ??= (async () => {
+      const collections = [leagueCollection, ...rankingCollections.values()];
+      queryClient.clear();
+      while (collections.some((collection) => collection.subscriberCount > 0))
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      await Promise.all(collections.map((collection) => collection.cleanup()));
+    })();
+    return disposePromise;
+  }
   const api: LeagueApi = {
+    createReportSnapshot: async (data) =>
+      unwrap(await createReportSnapshot({ data, headers: await headers() })),
     subject,
     management: {
       archived: async () =>
@@ -72,6 +87,30 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
             headers: await headers(),
           }),
         );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+      },
+      rename: async (leagueId, leagueName) => {
+        const renamed = unwrap(
+          await functions.renameLeague({
+            data: { leagueId, leagueName },
+            headers: await headers(),
+          }),
+        );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+        return renamed;
+      },
+      updateProviderId: async (leagueId, providerLeagueId) => {
+        const updated = unwrap(
+          await functions.updateLeagueProviderId({
+            data: { leagueId, providerLeagueId },
+            headers: await headers(),
+          }),
+        );
+        await leagueCollection.utils.refetch({ throwOnError: true });
+        return updated;
+      },
+      delete: async (leagueId) => {
+        unwrap(await functions.deleteLeague({ data: { leagueId }, headers: await headers() }));
         await leagueCollection.utils.refetch({ throwOnError: true });
       },
     },
@@ -119,8 +158,10 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         unwrap(await writingFunctions.getContext({ data, headers: await headers() })),
       providers: async () =>
         unwrap(await writingFunctions.getProviders({ headers: await headers() })),
-      generate: async (data) =>
-        unwrap(await writingFunctions.generateSuggestions({ data, headers: await headers() })),
+      generate: async (data, signal) =>
+        unwrap(
+          await writingFunctions.generateSuggestions({ data, headers: await headers(), signal }),
+        ),
     },
     listLeagues: async () => {
       await leagueCollection.preload();
@@ -135,9 +176,20 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       leagueCollection.utils.writeUpsert(saved);
       return saved;
     },
+    getLeagueInfo: async (leagueId, year) =>
+      unwrap(
+        await functions.getLeagueInfo({
+          data: { leagueId, year },
+          headers: await headers(),
+        }),
+      ),
     getTeams: async (leagueId, year, week) =>
       unwrap(
         await functions.getTeams({ data: { leagueId, year, week }, headers: await headers() }),
+      ),
+    getMatchups: async (leagueId, year, week) =>
+      unwrap(
+        await functions.getMatchups({ data: { leagueId, year, week }, headers: await headers() }),
       ),
     getRankings: async (leagueId) => {
       const collection = rankingsFor(leagueId);
@@ -198,7 +250,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       if (refresh) await queryClient.invalidateQueries({ queryKey });
       return queryClient.fetchQuery({
         queryKey,
-        staleTime: 5 * 60 * 1000,
+        ...insightsCacheOptions(year),
         queryFn: async ({ signal }) =>
           unwrap(
             await functions.getInsights({
@@ -211,13 +263,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     },
     leagueCollection,
     rankingsFor,
-    dispose: async () => {
-      await Promise.all([
-        leagueCollection.cleanup(),
-        ...[...rankingCollections.values()].map((collection) => collection.cleanup()),
-      ]);
-      queryClient.clear();
-    },
+    dispose,
   };
 }
 export function errorMessage(error: unknown): string {

@@ -1,7 +1,7 @@
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
-import { DataTable } from '../components/DataTable';
+import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
   Box,
   Button,
@@ -14,7 +14,7 @@ import {
   Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInsightsApi } from '../auth/InsightsAccess';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
@@ -28,14 +28,20 @@ import {
   luckIndex,
 } from '../league-summary';
 import { LeagueSummary } from '../components/LeagueSummary';
+import { reportFreshnessLabel } from './report-freshness';
+import { ManagerComparison } from './ManagerComparison';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+const lineupAccuracy = (correctStarts: number, slots: number) =>
+  slots ? percentage(correctStarts, slots) : null;
 export function HistoryPage({
   search,
   navigate,
   shared = false,
-}: ReportPageProps<{ leagueId: string; years?: number[] }>) {
+  initialLeague,
+  snapshot,
+}: ReportPageProps<{ leagueId: string; years?: number[] }> & { initialLeague?: League | null }) {
   const api = useInsightsApi(),
     { leagueId, years: requestedYears } = search;
   const [catalog, setCatalog] = useState<{
@@ -53,10 +59,17 @@ export function HistoryPage({
   const [loaded, setLoaded] = useState<{
     api: typeof api;
     key: string;
+    scope: string;
     records: SeasonRecord[];
-    errors: { year: number; message: string }[];
+    errors: { year: number; message: string; retained: boolean }[];
     done: boolean;
+    refreshed: boolean;
+    completed: number;
   }>();
+  const loadedRef = useRef(loaded);
+  useEffect(() => {
+    loadedRef.current = loaded;
+  }, [loaded]);
   const currentCatalog =
     catalog?.api === api && catalog.leagueId === leagueId ? catalog : undefined;
   const years = useMemo(() => {
@@ -66,19 +79,26 @@ export function HistoryPage({
     return (prior.length ? prior : currentCatalog.years).slice(0, 3);
   }, [currentCatalog, requestedYears]);
   const key = `${leagueId}:${years.join(',')}:${refresh}`;
+  const reportScope = `${leagueId}:${years.join(',')}`;
   const current = loaded?.api === api && loaded.key === key ? loaded : undefined;
-  const records = current?.records || [];
+  const retained = loaded?.api === api && loaded.scope === reportScope ? loaded : undefined;
+  const records = current?.records || retained?.records || [];
   const loading = !!years.length && !current?.done;
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const leagues = await api.listLeagues().catch((error): League[] => {
-          logClientError('HistoryPage', error);
-          if (!leagueId) throw error;
-          return [];
-        });
+        const leagues = shared
+          ? initialLeague
+            ? [initialLeague]
+            : []
+          : await api.listLeagues().catch((error): League[] => {
+              logClientError('HistoryPage', error);
+              if (!leagueId) throw error;
+              return [];
+            });
         if (leagueId && !leagues.some((league) => league.leagueId === leagueId)) {
+          if (shared) throw new Error('League not found.');
           leagues.push(await api.getLeague(leagueId));
         }
         if (cancelled) return;
@@ -103,37 +123,48 @@ export function HistoryPage({
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, navigate]);
+  }, [api, leagueId, navigate, shared, initialLeague]);
   useEffect(() => {
     if (!years.length) return;
     let cancelled = false;
     void (async () => {
-      const records: SeasonRecord[] = [],
-        errors: { year: number; message: string }[] = [];
+      const previous = loadedRef.current;
+      const priorRecords =
+        previous?.api === api && previous.scope === reportScope ? previous.records : [];
+      const recordByYear = new Map(priorRecords.map((record) => [record.year, record]));
+      const completed = new Set<number>();
+      const errors: { year: number; message: string; retained: boolean }[] = [];
       for (const year of years) {
         if (cancelled) return;
         try {
           const data = await api.getInsights(leagueId, year, refresh > 0);
           if (cancelled) return;
-          records.push({ year, data });
+          recordByYear.set(year, { year, data });
         } catch (error) {
           logClientError('HistoryPage', error);
           if (cancelled) return;
-          errors.push({ year, message: errorMessage(error) });
+          errors.push({ year, message: errorMessage(error), retained: recordByYear.has(year) });
         }
+        completed.add(year);
         setLoaded({
           api,
           key,
-          records: [...records],
+          scope: reportScope,
+          records: years.flatMap((selectedYear) => {
+            const record = recordByYear.get(selectedYear);
+            return record ? [record] : [];
+          }),
           errors: [...errors],
-          done: records.length + errors.length === years.length,
+          done: completed.size === years.length,
+          refreshed: refresh > 0,
+          completed: completed.size,
         });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [api, key, leagueId, years, refresh]);
+  }, [api, key, leagueId, years, refresh, reportScope]);
   const managers = visibleManagers(
     summarizeLeague(records),
     currentCatalog?.activeManagerKeys || [],
@@ -169,15 +200,35 @@ export function HistoryPage({
             One good move is a moment. Find the managers who repeat it across seasons.
           </Text>
         </Box>
-        <Button asChild colorPalette="indigo">
-          <Link
-            to={shared ? '/shared/insights' : '/insights'}
-            search={{ leagueId, year: defaultSeason() }}
-          >
-            Current season insights
-          </Link>
-        </Button>
-        <ShareReport path="/history" search={{ leagueId, years }} />
+        {!snapshot && (
+          <Button asChild colorPalette="indigo">
+            <Link
+              to={shared ? '/shared/insights' : '/insights'}
+              search={{ leagueId, year: defaultSeason() }}
+            >
+              Current season insights
+            </Link>
+          </Button>
+        )}
+        <ShareReport
+          key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
+          path="/history"
+          search={{ leagueId, years }}
+          disabled={loading || !records.length}
+          snapshotHref={snapshot?.href}
+          espn={currentCatalog?.leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
+          snapshotData={
+            !loading && records.length === years.length && records.length
+              ? {
+                  leagueId,
+                  view: 'history',
+                  records,
+                  activeManagerKeys: currentCatalog?.activeManagerKeys || [],
+                  activeSeason: currentCatalog?.activeSeason || records[0].year,
+                }
+              : undefined
+          }
+        />
       </Flex>
       {!currentCatalog ? (
         <chakra.output
@@ -283,7 +334,7 @@ export function HistoryPage({
                     variant="plain"
                     type="button"
 
-                    disabled={loading || !years.length}
+                    disabled={loading || !years.length || !!snapshot}
                     onClick={() => setRefresh((v) => v + 1)}
                   >
                     Refresh selected seasons
@@ -292,9 +343,19 @@ export function HistoryPage({
               </Box>
               {!years.length && <Text mb={4}>Select at least one season to compare.</Text>}
               {loading && (
-                <chakra.output className="notice insights-notice">
-                  Loaded {records.length + (current?.errors.length || 0)} of {years.length} seasons.
-                  Historical provider reads can take a moment.
+                <chakra.output className="notice insights-notice" aria-live="polite">
+                  <chakra.progress
+                    value={current?.completed || 0}
+                    max={years.length}
+                    width="full"
+                    height={2}
+                    accentColor="indigo.600"
+                    mb={3}
+                    aria-label={`${refresh > 0 ? 'Refreshing' : 'Loading'} ${years.length} selected seasons`}
+                  />
+                  {refresh > 0 ? 'Refreshed' : 'Loaded'} {current?.completed || 0} of {years.length}{' '}
+                  seasons. Historical provider reads can take a moment.
+                  {!!retained?.records.length && ' Previously loaded seasons remain visible below.'}
                 </chakra.output>
               )}
               {!!current?.errors.length && (
@@ -302,7 +363,12 @@ export function HistoryPage({
                   <strong>Some seasons could not be loaded.</strong>
                   {current.errors.map((e) => (
                     <Text mb={4} key={e.year}>
-                      {e.year}: {e.message}
+                      {e.year}: {e.message}{' '}
+                      {e.retained
+                        ? `This season remains visible using data ${reportFreshnessLabel(
+                            records.find((record) => record.year === e.year)!.data.generatedAt,
+                          ).toLowerCase()}.`
+                        : 'No saved report is available, so this season is excluded from every section.'}
                     </Text>
                   ))}
                   <Button
@@ -315,8 +381,41 @@ export function HistoryPage({
                   </Button>
                 </Box>
               )}
+              {!loading && current?.refreshed && !current.errors.length && (
+                <chakra.output className="notice insights-notice" aria-live="polite">
+                  All selected seasons refreshed successfully.
+                </chakra.output>
+              )}
+              {!!records.some((record) => record.data.partialFailures?.length) && (
+                <Box as="output" className="notice insights-notice">
+                  <strong>Some season sections are partially available.</strong>
+                  <ul>
+                    {records.flatMap((record) =>
+                      (record.data.partialFailures || []).map((issue) => (
+                        <li key={`${record.year}:${issue.section}:${issue.message}`}>
+                          <strong>
+                            {record.year} {issue.section}:
+                          </strong>{' '}
+                          {issue.message}
+                        </li>
+                      )),
+                    )}
+                  </ul>
+                </Box>
+              )}
               {!!records.length && (
-                <>
+                <ReportExportScope
+                  value={{
+                    context: {
+                      League:
+                        currentCatalog.leagues.find((league) => league.leagueId === leagueId)
+                          ?.leagueName || leagueId,
+                      'Selected seasons': years.join(', '),
+                      Coverage: `${records.length} of ${years.length} seasons loaded`,
+                    },
+                    filenameContext: `${leagueId}-${years.join('-')}`,
+                  }}
+                >
                   <Text mb={4} className="insights-meta">
                     Included:{' '}
                     {records
@@ -324,9 +423,16 @@ export function HistoryPage({
                       .sort((a, b) => b - a)
                       .join(', ')}{' '}
                     · {records.length} of {years.length} selected seasons loaded
-                    {loading ? ' · provisional while loading' : ''}. Managers match by provider
-                    account ID; renamed teams stay together. New owners and changed co-owner groups
-                    start a separate record. Unknown owners stay separate by season.
+                    {loading ? ' · provisional while refreshing' : ''}.{' '}
+                    {records
+                      .map(
+                        (record) =>
+                          `${record.year}: ${reportFreshnessLabel(record.data.generatedAt).toLowerCase()}`,
+                      )
+                      .join(' · ')}
+                    . Managers match by provider account ID; renamed teams stay together. New owners
+                    and changed co-owner groups start a separate record. Unknown owners stay
+                    separate by season.
                   </Text>
                   <label className="history-toggle">
                     <chakra.input
@@ -351,6 +457,7 @@ export function HistoryPage({
                     activeManagerKeys={currentCatalog.activeManagerKeys || []}
                     includeFormer={includeFormer}
                   />
+                  <ManagerComparison records={records} years={years} />
                   <Box
                     as="section"
                     bg="bg"
@@ -410,14 +517,23 @@ export function HistoryPage({
                             value: (r) => r.year,
                             cell: (r) => (
                               <>
-                                <ChakraLink asChild>
-                                  <Link
-                                    to={shared ? '/shared/insights' : '/insights'}
-                                    search={{ leagueId, year: r.year }}
+                                {snapshot ? (
+                                  <Button
+                                    variant="plain"
+                                    onClick={() => snapshot.openSeason(r.year)}
                                   >
                                     {r.year}
-                                  </Link>
-                                </ChakraLink>
+                                  </Button>
+                                ) : (
+                                  <ChakraLink asChild>
+                                    <Link
+                                      to={shared ? '/shared/insights' : '/insights'}
+                                      search={{ leagueId, year: r.year }}
+                                    >
+                                      {r.year}
+                                    </Link>
+                                  </ChakraLink>
+                                )}
                               </>
                             ),
                           },
@@ -425,6 +541,7 @@ export function HistoryPage({
                             id: '1',
                             header: 'Manager / team that year',
                             value: (r) => r.managerName,
+                            exportValue: (r) => `${r.managerName} — ${r.teamName}`,
                             rowHeader: true,
                             cell: (r) => (
                               <>
@@ -434,8 +551,21 @@ export function HistoryPage({
                             ),
                           },
                           {
+                            id: 'regular-season-finish',
+                            header: 'Regular-season placement',
+                            value: (r) =>
+                              average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
+                            cell: (r) => (
+                              <>
+                                {n(
+                                  average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
+                                )}
+                              </>
+                            ),
+                          },
+                          {
                             id: 'finish',
-                            header: 'Final finish',
+                            header: 'Final placement',
                             value: (r) => average(r.finishTotal, r.finishSeasons),
                             cell: (r) => <>{n(average(r.finishTotal, r.finishSeasons))}</>,
                           },
@@ -467,6 +597,10 @@ export function HistoryPage({
                             id: '2',
                             header: 'Avg. vs. median',
                             value: (r) => average(r.medianPercentTotal, r.medianWeeks),
+                            exportValue: (r) => {
+                              const value = average(r.medianPercentTotal, r.medianWeeks);
+                              return value === null ? null : `${n(value)}% (${r.weeks} weeks)`;
+                            },
                             cell: (r) => (
                               <>
                                 {n(average(r.medianPercentTotal, r.medianWeeks))}%
@@ -514,6 +648,28 @@ export function HistoryPage({
                             value: (r) => percentage(r.pickupHits, r.ratedPickups),
                             cell: (r) => <>{n(percentage(r.pickupHits, r.ratedPickups))}%</>,
                           },
+                          {
+                            id: '8',
+                            header: 'Best lineup / wk',
+                            value: (r) => average(r.bestLineupPoints, r.lineupWeeks),
+                            cell: (r) => <>{n(average(r.bestLineupPoints, r.lineupWeeks))}</>,
+                          },
+                          {
+                            id: '9',
+                            header: 'Start accuracy',
+                            value: (r) => lineupAccuracy(r.correctStarts, r.lineupSlots),
+                            exportValue: (r) =>
+                              r.lineupSlots
+                                ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                : null,
+                            cell: (r) => (
+                              <>
+                                {r.lineupSlots
+                                  ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                  : '—'}
+                              </>
+                            ),
+                          },
                         ]}
                       />
                     </Box>
@@ -542,7 +698,7 @@ export function HistoryPage({
                       </details>
                     ))}
                   </Box>
-                </>
+                </ReportExportScope>
               )}
             </>
           )}

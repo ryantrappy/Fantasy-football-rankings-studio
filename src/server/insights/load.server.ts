@@ -8,6 +8,12 @@ import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
 import { calculateInsights } from './calculate';
+import {
+  espnBestLineup,
+  espnProjectionSnapshot,
+  sleeperBestLineup,
+  sleeperProjectionSnapshot,
+} from './projections';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
   const results: T[] = [];
@@ -17,14 +23,26 @@ async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>):
 }
 const weeksThrough = (last: number) => Array.from({ length: Math.max(0, last) }, (_, i) => i + 1);
 let namesCache:
-  | { expires: number; names: Record<string, string>; positions: Record<string, string> }
+  | {
+      expires: number;
+      names: Record<string, string>;
+      positions: Record<string, string>;
+      availability: Record<string, string | null>;
+    }
   | undefined;
 async function sleeperNames() {
   if (namesCache && namesCache.expires > Date.now()) return namesCache;
   const { data } = await axios.get<
     Record<
       string,
-      { full_name?: string; first_name?: string; last_name?: string; position?: string }
+      {
+        full_name?: string;
+        first_name?: string;
+        last_name?: string;
+        position?: string;
+        injury_status?: string | null;
+        status?: string;
+      }
     >
   >('https://api.sleeper.app/v1/players/nfl', { timeout: 20000 });
   const names = Object.fromEntries(
@@ -38,7 +56,10 @@ async function sleeperNames() {
       .filter(([, p]) => !!p.position)
       .map(([id, p]) => [id, p.position === 'DEF' ? 'DST' : p.position!]),
   );
-  namesCache = { expires: Date.now() + 86400000, names, positions };
+  const availability = Object.fromEntries(
+    Object.entries(data).map(([id, p]) => [id, p.injury_status || p.status || null]),
+  );
+  namesCache = { expires: Date.now() + 5 * 60 * 1000, names, positions, availability };
   return namesCache;
 }
 interface SleeperScore {
@@ -50,6 +71,10 @@ interface SleeperScore {
   players_points?: Record<string, number>;
   starters_points?: number[];
 }
+interface SleeperProjectionRow {
+  player_id?: string;
+  stats?: Record<string, number>;
+}
 interface SleeperTransaction {
   transaction_id: string;
   status: string;
@@ -59,6 +84,13 @@ interface SleeperTransaction {
   adds?: Record<string, number> | null;
   drops?: Record<string, number> | null;
   draft_picks?: unknown[];
+}
+interface SleeperRosterSnapshot {
+  roster_id: number;
+  players?: string[] | null;
+  starters?: string[] | null;
+  reserve?: string[] | null;
+  taxi?: string[] | null;
 }
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
   const provider = new SleeperProvider();
@@ -82,6 +114,35 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     nflCompletedWeek,
     season.settings?.last_scored_leg ?? nflCompletedWeek,
   );
+  let rosterSnapshot: InsightsSource['rosterSnapshot'];
+  let rosterSnapshotNote: string;
+  if (year !== Number(state.season)) {
+    rosterSnapshotNote = `Historical ${year} roster ownership snapshots are unavailable; current ownership was not substituted.`;
+  } else {
+    try {
+      const rosters = await provider.get<SleeperRosterSnapshot[]>(`${season.league_id}/rosters`);
+      rosterSnapshot = {
+        capturedAt: new Date().toISOString(),
+        teams: rosters.map((roster) => {
+          const ineligible = new Set([...(roster.reserve || []), ...(roster.taxi || [])]);
+          const owned = [...new Set(roster.players || [])].filter((id) => !ineligible.has(id));
+          const starters = [...new Set(roster.starters || [])].filter(
+            (id) => id !== '0' && owned.includes(id),
+          );
+          return {
+            teamId: String(roster.roster_id),
+            starters,
+            bench: owned.filter((id) => !starters.includes(id)),
+          };
+        }),
+      };
+      rosterSnapshotNote = 'Latest current-season roster ownership was retrieved from Sleeper.';
+    } catch (error) {
+      logServerError('insights.sleeperRoster', error, 502);
+      rosterSnapshotNote =
+        'Current Sleeper roster ownership could not be loaded, so current depth claims are omitted.';
+    }
+  }
   const [weekly, transactions] = await Promise.all([
     mapWeeks(
       weeksThrough(completedWeek).filter((week) => week >= (season.settings?.start_week ?? 1)),
@@ -130,6 +191,52 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         })),
     })),
   );
+  const projectionWeek = completedWeek + 1;
+  let playoffProjection: InsightsSource['playoffProjection'];
+  const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
+  if (
+    Number(state.season) === year &&
+    state.season_type === 'regular' &&
+    projectionWeek === state.leg &&
+    projectionWeek <= Math.min(18, season.settings?.playoff_week_start ?? 18)
+  ) {
+    try {
+      const response = await axios.get<SleeperProjectionRow[]>(
+        `https://api.sleeper.app/projections/nfl/${year}/${projectionWeek}`,
+        {
+          params: {
+            season_type: 'regular',
+            'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
+          },
+          timeout: 10000,
+        },
+      );
+      playoffProjection = sleeperProjectionSnapshot(
+        projectionWeek,
+        teams.map((team) => team.teamId),
+        rosterSnapshot?.teams || [],
+        response.data,
+        season.scoring_settings || {},
+        season.roster_positions || [],
+        (await sleeperNames()).positions,
+        (await sleeperNames()).availability,
+      );
+    } catch (error) {
+      logServerError('insights.sleeperProjections', error, 502);
+      playoffProjection = {
+        provider: 'Sleeper',
+        week: projectionWeek,
+        teamPoints: {},
+        coveredStarters: 0,
+        totalStarters: 0,
+        note: 'Sleeper projections could not be loaded; the forecast uses historical scoring only.',
+      };
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: 'Current-week Sleeper projections are unavailable; historical scoring is used.',
+      });
+    }
+  }
   const unique = [
     ...new Map(
       transactions
@@ -177,6 +284,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         resultNotes.push(
           'Some playoff/finish data could not be loaded. Missing results are excluded from achievement totals.',
         );
+        if (!partialFailures.some((issue) => issue.section === 'League summary and final finishes'))
+          partialFailures.push({
+            section: 'League summary and final finishes',
+            message:
+              'Some playoff bracket results are unavailable; missing achievements are excluded rather than counted as zero.',
+          });
       }
     results = sleeperResults(
       teams.map((t) => t.teamId),
@@ -190,8 +303,57 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         : [],
     );
   }
-  const catalog = moves.length ? await sleeperNames() : { names: {}, positions: {} };
+  let catalog = { names: {}, positions: {} };
+  if (moves.length || rosterSnapshot || season.roster_positions?.length)
+    try {
+      catalog = await sleeperNames();
+    } catch (error) {
+      logServerError('insights.sleeperRosterCatalog', error, 502);
+      if (rosterSnapshot) {
+        rosterSnapshot = undefined;
+        rosterSnapshotNote =
+          'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
+      }
+    }
+  for (const score of scores)
+    if (season.roster_positions?.length && score.players?.length)
+      score.bestLineup = sleeperBestLineup(
+        score.starters.map((player) => player.playerId),
+        score.players,
+        season.roster_positions,
+        catalog.positions,
+      );
+  const regularEnd = season.settings?.playoff_week_start
+    ? Math.min(18, season.settings.playoff_week_start - 1)
+    : completedWeek;
+  const future = await mapWeeks(
+    weeksThrough(regularEnd).filter((w) => w > completedWeek),
+    async (week) => {
+      try {
+        return {
+          week,
+          rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
+        };
+      } catch {
+        return { week, rows: [] as SleeperScore[] };
+      }
+    },
+  );
+  const forecastSchedule = [...weekly, ...future].flatMap(({ week, rows }) => {
+    const groups = new Map<number, string[]>();
+    for (const row of rows)
+      if (row.matchup_id != null) {
+        const group = groups.get(row.matchup_id) || [];
+        group.push(String(row.roster_id));
+        groups.set(row.matchup_id, group);
+      }
+    return [...groups.values()]
+      .filter((group) => group.length === 2)
+      .map(([homeTeamId, awayTeamId]) => ({ week, homeTeamId, awayTeamId }));
+  });
   return {
+    forecastSchedule,
+    playoffProjection,
     playoffSettings:
       season.settings?.playoff_week_start && season.settings?.playoff_teams
         ? {
@@ -206,10 +368,13 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     results,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
+    rosterSnapshot,
+    rosterSnapshotNote,
     draftPickTradeIds: unique
       .filter((t) => t.type === 'trade' && t.draft_picks?.length)
       .map((t) => t.transaction_id),
     draftPickTrades: unique.filter((t) => t.type === 'trade' && t.draft_picks?.length).length,
+    partialFailures,
     notes: [
       ...resultNotes,
       'Sleeper’s documented API does not provide historical lineup projections. Scoring trends show actual points and league-median results instead. Positional comparisons use Sleeper’s current primary-position catalog.',
@@ -224,6 +389,7 @@ interface EspnEntry {
       id?: number;
       fullName?: string;
       defaultPositionId?: number;
+      injuryStatus?: string;
       stats?: {
         scoringPeriodId: number;
         seasonId: number;
@@ -251,11 +417,24 @@ interface EspnTransaction {
 interface EspnSnapshot extends EspnResultsData {
   id: number;
   status?: { latestScoringPeriod: number; finalScoringPeriod: number };
-  schedule?: { home?: EspnSide; away?: EspnSide; playoffTierType?: string }[];
+  schedule?: {
+    home?: EspnSide;
+    away?: EspnSide;
+    playoffTierType?: string;
+    matchupPeriodId?: number;
+  }[];
   transactions?: EspnTransaction[];
 }
-async function loadEspn(league: League, year: number, access: EspnAccess): Promise<InsightsSource> {
-  const provider = new EspnProvider(access);
+interface EspnRosterData {
+  id: number;
+  teams?: { id: number; roster?: { entries?: EspnEntry[] } }[];
+}
+async function loadEspn(
+  league: League,
+  year: number,
+  access: EspnAccess,
+  provider = new EspnProvider(access),
+): Promise<InsightsSource> {
   const [meta, teams] = await Promise.all([
     provider.get<EspnSnapshot>(league.providerLeagueId ?? league.leagueId, year, [
       'mSettings',
@@ -269,6 +448,25 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     0,
     Math.min(18, meta.status.finalScoringPeriod, meta.status.latestScoringPeriod - 1),
   );
+  let currentRosters: EspnRosterData | undefined;
+  let rosterSnapshotNote: string;
+  if (year !== defaultSeason()) {
+    rosterSnapshotNote = `Historical ${year} roster ownership snapshots are unavailable; current ownership was not substituted.`;
+  } else {
+    try {
+      currentRosters = await provider.get<EspnRosterData>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mRoster'],
+        meta.status.latestScoringPeriod,
+      );
+      rosterSnapshotNote = 'Latest current-season roster ownership was retrieved from ESPN.';
+    } catch (error) {
+      logServerError('insights.espnRoster', error, 502);
+      rosterSnapshotNote =
+        'Current ESPN roster ownership could not be loaded, so current depth claims are omitted.';
+    }
+  }
   const [weekly, transactions] = await Promise.all([
     mapWeeks(weeksThrough(completedWeek), async (week) => ({
       week,
@@ -290,6 +488,30 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
   ]);
   const playerNames: Record<string, string> = {};
   const playerPositions: Record<string, string> = {};
+  const rosterSnapshot: InsightsSource['rosterSnapshot'] = currentRosters
+    ? {
+        capturedAt: new Date().toISOString(),
+        teams: (currentRosters.teams || []).map((team) => {
+          const starters: string[] = [];
+          const bench: string[] = [];
+          for (const entry of team.roster?.entries || []) {
+            const player = entry.playerPoolEntry?.player;
+            const id = entry.playerId ?? player?.id;
+            if (id == null) continue;
+            const playerId = String(id);
+            if (player?.fullName) playerNames[playerId] = player.fullName;
+            const position = (
+              { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' } as Record<number, string>
+            )[player?.defaultPositionId ?? -1];
+            if (position) playerPositions[playerId] = position;
+            (entry.lineupSlotId === 20 || entry.lineupSlotId === 21 ? bench : starters).push(
+              playerId,
+            );
+          }
+          return { teamId: String(team.id), starters, bench };
+        }),
+      }
+    : undefined;
   const scores: ScoreWeek[] = [];
   for (const { week, data } of weekly) {
     const opponents = new Map<number, string>();
@@ -343,9 +565,52 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
           lineup.length && projections.every((p) => p != null)
             ? projections.reduce<number>((sum, p) => sum + p!, 0)
             : null,
+        bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)
           .map((e) => ({ playerId: String(e.playerId), points: stat(e, 0)! })),
+      });
+    }
+  }
+  const projectionWeek = meta.status.latestScoringPeriod;
+  let playoffProjection: InsightsSource['playoffProjection'];
+  const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
+  if (
+    year === defaultSeason() &&
+    projectionWeek === completedWeek + 1 &&
+    !!meta.settings?.scheduleSettings?.matchupPeriodCount &&
+    projectionWeek <= Math.min(18, (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0) + 1)
+  ) {
+    try {
+      const projectionData = await provider.get<EspnSnapshot>(
+        league.providerLeagueId ?? league.leagueId,
+        year,
+        ['mMatchupScore', 'mBoxscore'],
+        projectionWeek,
+      );
+      const sides = (projectionData.schedule || []).flatMap((matchup) =>
+        [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
+      );
+      playoffProjection = espnProjectionSnapshot(
+        year,
+        projectionWeek,
+        teams.map((team) => team.teamId),
+        sides,
+        meta.settings?.rosterSettings?.lineupSlotCounts,
+      );
+    } catch (error) {
+      logServerError('insights.espnProjections', error, 502);
+      playoffProjection = {
+        provider: 'ESPN',
+        week: projectionWeek,
+        teamPoints: {},
+        coveredStarters: 0,
+        totalStarters: 0,
+        note: 'ESPN projections could not be loaded; the forecast uses historical scoring only.',
+      };
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: 'Current-week ESPN projections are unavailable; historical scoring is used.',
       });
     }
   }
@@ -380,6 +645,24 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
       })),
   );
   return {
+    forecastSchedule:
+      meta.settings?.scheduleSettings?.matchupPeriodLength === 1
+        ? (meta.schedule || []).flatMap((m) =>
+            m.matchupPeriodId &&
+            m.home &&
+            m.away &&
+            (!m.playoffTierType || m.playoffTierType === 'NONE')
+              ? [
+                  {
+                    week: m.matchupPeriodId,
+                    homeTeamId: String(m.home.teamId),
+                    awayTeamId: String(m.away.teamId),
+                  },
+                ]
+              : [],
+          )
+        : [],
+    playoffProjection,
     playoffSettings:
       meta.settings?.scheduleSettings?.matchupPeriodCount &&
       meta.settings.scheduleSettings.playoffTeamCount &&
@@ -407,20 +690,31 @@ async function loadEspn(league: League, year: number, access: EspnAccess): Promi
     ),
     playerNames,
     playerPositions,
+    rosterSnapshot,
+    rosterSnapshotNote,
     draftPickTrades: 0,
+    partialFailures,
     notes: [
       'ESPN projections sum the saved projections for that week’s starting lineup, excluding bench and IR. They are provider estimates, not guaranteed kickoff snapshots.',
     ],
   };
 }
-export async function loadInsights(league: League, year: number, access: EspnAccess = 'public') {
-  const source = await loadInsightsSource(league, year, access);
+export async function loadInsights(
+  league: League,
+  year: number,
+  access: EspnAccess = 'public',
+  espnProvider?: EspnProvider,
+) {
+  const source = await loadInsightsSource(league, year, access, espnProvider);
   return { ...calculateInsights(source), playoffSettings: source.playoffSettings };
 }
 export async function loadInsightsSource(
   league: League,
   year: number,
   access: EspnAccess = 'public',
+  espnProvider?: EspnProvider,
 ) {
-  return league.leagueType === 0 ? loadSleeper(league, year) : loadEspn(league, year, access);
+  return league.leagueType === 0
+    ? loadSleeper(league, year)
+    : loadEspn(league, year, access, espnProvider);
 }

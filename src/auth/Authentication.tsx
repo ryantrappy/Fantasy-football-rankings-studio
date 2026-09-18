@@ -104,9 +104,10 @@ function Session({ children }: { children: ReactNode }) {
     if (error) logClientError('auth.session', error);
   }, [error]);
   const [loginError, setLoginError] = useState('');
+  const subject = isAuthenticated ? user?.sub : undefined;
   const api = useMemo(
-    () => createApi(getAccessTokenSilently, user?.sub),
-    [getAccessTokenSilently, user?.sub],
+    () => createApi(getAccessTokenSilently, subject),
+    [getAccessTokenSilently, subject],
   );
   useEffect(
     () => () => {
@@ -163,7 +164,9 @@ function Session({ children }: { children: ReactNode }) {
             <Link to="/profile">Your profile</Link>
           </Button>
           <Button asChild variant="plain">
-            <Link to="/espn">ESPN settings</Link>
+            <Link to="/espn" search={{ returnTo: undefined }}>
+              ESPN settings
+            </Link>
           </Button>
           <Button
             variant="plain"

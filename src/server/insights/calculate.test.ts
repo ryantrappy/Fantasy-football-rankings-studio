@@ -38,6 +38,43 @@ it('keeps missing projections distinct from zero and excludes unfinished weeks',
   });
   expect(result.scores).toHaveLength(3);
 });
+it('aggregates best legal lineup coverage without treating unavailable weeks as zero', () => {
+  const result = calculateInsights(
+    source([
+      {
+        ...score('1', 1, 90),
+        bestLineup: { points: 110, correctStarts: 1, slots: 2 },
+      },
+      score('1', 2, 100),
+      {
+        ...score('1', 3, 80),
+        bestLineup: { points: 100, correctStarts: 2, slots: 2 },
+      },
+    ]),
+  );
+
+  expect(result.teams[0]).toMatchObject({
+    bestLineupPoints: 210,
+    lineupWeeks: 2,
+    correctStarts: 3,
+    lineupSlots: 4,
+  });
+});
+it('labels sections affected by incomplete provider lineup data', () => {
+  const input = source([{ ...score('1', 1, 90), lineupAvailable: false }, score('2', 1, 100)]);
+  input.partialFailures = [
+    { section: 'League summary and final finishes', message: 'Bracket unavailable.' },
+  ];
+
+  expect(calculateInsights(input).partialFailures).toEqual([
+    { section: 'League summary and final finishes', message: 'Bracket unavailable.' },
+    {
+      section: 'Trade and pickup assessments',
+      message:
+        'Some weekly lineup details are unavailable; only observed comparable player scores are graded.',
+    },
+  ]);
+});
 it('uses a strict league-median comparison including ties and negative points', () => {
   const result = calculateInsights(
     source([

@@ -2,7 +2,7 @@ import { PlayoffForecast } from './PlayoffForecast';
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
-import { DataTable } from '../components/DataTable';
+import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
   Box,
   Button,
@@ -24,27 +24,38 @@ import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
 import { LeagueSummary } from '../components/LeagueSummary';
 import { ScoreTrend } from '../components/ScoreTrend';
+import { reportFreshnessLabel } from './report-freshness';
 
 const number = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 const signed = (value: number | null) =>
   value === null ? '—' : `${value > 0 ? '+' : ''}${number(value)}`;
+const accuracy = (correctStarts: number, slots: number) =>
+  slots ? (correctStarts / slots) * 100 : null;
 export function InsightsPage({
   search,
   navigate,
   shared = false,
   playoff = false,
-}: ReportPageProps<{ leagueId: string; year: number }> & { playoff?: boolean }) {
+  initialLeague,
+  snapshot,
+}: ReportPageProps<{ leagueId: string; year: number }> & {
+  playoff?: boolean;
+  initialLeague?: League | null;
+}) {
   const api = useInsightsApi();
   const { leagueId, year } = search;
   const [leagueResult, setLeagueResult] = useState<{ api: typeof api; entries: League[] }>();
   const leagues = leagueResult?.api === api ? leagueResult.entries : [];
   const [result, setResult] = useState<{
     key: string;
+    scope: string;
     api: typeof api;
     data?: SeasonInsights;
     activeManagerKeys?: string[];
+    activeSeason?: number;
     error?: string;
+    refreshed?: boolean;
   }>();
   const [reload, setReload] = useState(0);
   const [teamId, setTeamId] = useState('');
@@ -52,19 +63,25 @@ export function InsightsPage({
   const [allPickups, setAllPickups] = useState(false);
   const [includeFormer, setIncludeFormer] = useState(false);
   const requestKey = `${leagueId}:${year}:${reload}`;
+  const reportScope = `${leagueId}:${year}`;
   const loading = result?.key !== requestKey || result?.api !== api;
-  const data = loading ? undefined : result?.data;
+  const data = result?.api === api && result.scope === reportScope ? result.data : undefined;
   const error = loading ? '' : result?.error || '';
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       try {
-        const entries = await api.listLeagues().catch((error): League[] => {
-          logClientError('InsightsPage', error);
-          if (!leagueId) throw error;
-          return [];
-        });
+        const entries = shared
+          ? initialLeague
+            ? [initialLeague]
+            : []
+          : await api.listLeagues().catch((error): League[] => {
+              logClientError('InsightsPage', error);
+              if (!leagueId) throw error;
+              return [];
+            });
         if (leagueId && !entries.some((league) => league.leagueId === leagueId)) {
+          if (shared) throw new Error('League not found.');
           entries.push(await api.getLeague(leagueId));
         }
         if (cancelled) return;
@@ -73,7 +90,7 @@ export function InsightsPage({
           entries.find((l) => l.leagueId === leagueId) || (!leagueId ? entries[0] : undefined);
         if (!selected) {
           if (leagueId) throw new Error('League not found.');
-          setResult({ api, key: requestKey });
+          setResult({ api, key: requestKey, scope: reportScope });
           return;
         }
         if (!leagueId) {
@@ -88,8 +105,11 @@ export function InsightsPage({
           setResult({
             api,
             key: requestKey,
+            scope: reportScope,
             data: result,
             activeManagerKeys: context.activeManagerKeys,
+            activeSeason: context.activeSeason,
+            refreshed: reload > 0,
           });
           setTeamId(result.teams[0]?.teamId || '');
           setPickupTeam('');
@@ -97,13 +117,26 @@ export function InsightsPage({
         }
       } catch (failure) {
         logClientError('InsightsPage', failure);
-        if (!cancelled) setResult({ api, key: requestKey, error: errorMessage(failure) });
+        if (!cancelled)
+          setResult((previous) => ({
+            api,
+            key: requestKey,
+            scope: reportScope,
+            data:
+              previous?.api === api && previous.scope === reportScope ? previous.data : undefined,
+            activeManagerKeys:
+              previous?.api === api && previous.scope === reportScope
+                ? previous.activeManagerKeys
+                : undefined,
+            error: errorMessage(failure),
+            refreshed: reload > 0,
+          }));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, year, reload, navigate, requestKey]);
+  }, [api, leagueId, year, reload, navigate, requestKey, reportScope, shared, initialLeague]);
   const scoreRows = useMemo(
     () => data?.scores.filter((s) => s.teamId === teamId).sort((a, b) => a.week - b.week) || [],
     [data, teamId],
@@ -141,7 +174,25 @@ export function InsightsPage({
               : 'Follow the points. Find the steals. See who keeps beating expectations.'}
           </Text>
         </Box>
-        <ShareReport path={playoff ? '/playoffs' : '/insights'} search={{ leagueId, year }} />
+        <ShareReport
+          key={`${reportScope}:${data?.generatedAt}:${playoff}`}
+          path={playoff ? '/playoffs' : '/insights'}
+          search={{ leagueId, year }}
+          disabled={loading || !data}
+          snapshotHref={snapshot?.href}
+          espn={leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
+          snapshotData={
+            !loading && data
+              ? {
+                  leagueId,
+                  view: playoff ? 'playoffs' : 'insights',
+                  records: [{ year, data }],
+                  activeManagerKeys: result?.activeManagerKeys || [],
+                  activeSeason: result?.activeSeason || year,
+                }
+              : undefined
+          }
+        />
       </Flex>
       <Box className="selection-bar insights-controls">
         <Field.Root width="auto" minW="120px" gap={2}>
@@ -172,11 +223,12 @@ export function InsightsPage({
                 void navigate({ search: { leagueId, year: Number(e.target.value) } })
               }
             >
-              {Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i).map(
-                (y) => (
-                  <option key={y}>{y}</option>
-                ),
-              )}
+              {(
+                snapshot?.years ||
+                Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)
+              ).map((y) => (
+                <option key={y}>{y}</option>
+              ))}
             </NativeSelect.Field>
             <NativeSelect.Indicator />
           </NativeSelect.Root>
@@ -185,13 +237,13 @@ export function InsightsPage({
           variant="outline"
           type="button"
 
-          disabled={loading}
+          disabled={loading || !!snapshot}
           onClick={() => setReload((v) => v + 1)}
         >
           Refresh insights
         </Button>
       </Box>
-      {error && (
+      {error && !data && (
         <Box className="notice error" role="alert">
           {error}{' '}
           <Button variant="outline" type="button" onClick={() => setReload((v) => v + 1)}>
@@ -201,6 +253,7 @@ export function InsightsPage({
       )}
       {loading && (
         <chakra.output
+          aria-live="polite"
           bg="bg"
           borderWidth="1px"
           borderStyle="solid"
@@ -209,7 +262,24 @@ export function InsightsPage({
           p={{ base: 4, md: 6 }}
           className="panel"
         >
-          Reading season scores and transactions… This can take a moment for a full season.
+          {data
+            ? `Refreshing insights… Showing the report ${reportFreshnessLabel(data.generatedAt).toLowerCase()} until the refresh finishes.`
+            : 'Reading season scores and transactions… This can take a moment for a full season.'}
+        </chakra.output>
+      )}
+      {!loading && error && data && (
+        <Box className="notice error" role="alert">
+          <strong>Refresh failed; this report remains partially available.</strong> Every section
+          below uses data {reportFreshnessLabel(data.generatedAt).toLowerCase()} and is not labeled
+          current. {error}{' '}
+          <Button variant="outline" type="button" onClick={() => setReload((v) => v + 1)}>
+            Try refresh again
+          </Button>
+        </Box>
+      )}
+      {!loading && !error && result?.refreshed && data && (
+        <chakra.output className="notice insights-notice" aria-live="polite">
+          Insights refreshed successfully. {reportFreshnessLabel(data.generatedAt)}.
         </chakra.output>
       )}
       {!loading && !error && !leagues.length && (
@@ -232,17 +302,38 @@ export function InsightsPage({
         </Box>
       )}
       {data && (
-        <>
+        <ReportExportScope
+          value={{
+            context: {
+              League:
+                leagues.find((league) => league.leagueId === leagueId)?.leagueName || leagueId,
+              Season: year,
+              'Completed through week': data.completedWeek || 'No completed weeks',
+            },
+            filenameContext: `${leagueId}-${year}`,
+          }}
+        >
           <Text mb={4} className="insights-meta">
             {data.completedWeek
               ? `Through completed week ${data.completedWeek}`
               : 'No completed weeks yet'}{' '}
-            · Updated{' '}
-            {new Date(data.generatedAt).toLocaleTimeString(undefined, {
-              hour: 'numeric',
-              minute: '2-digit',
-            })}
+            · {reportFreshnessLabel(data.generatedAt)}
+            {loading || error ? ' · displayed sections may be stale' : ''}
           </Text>
+          {!!data.partialFailures?.length && (
+            <Box as="output" className="notice insights-notice">
+              <strong>This report is partially available.</strong> The unaffected sections use the
+              refresh time above. Affected sections are labeled here and do not treat missing data
+              as current or as zero.
+              <ul>
+                {data.partialFailures.map((issue) => (
+                  <li key={`${issue.section}:${issue.message}`}>
+                    <strong>{issue.section}:</strong> {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </Box>
+          )}
           {!data.completedWeek && (
             <Box className="notice insights-notice">
               The current week is excluded while games are unfinished. Choose an earlier season to
@@ -304,13 +395,15 @@ export function InsightsPage({
                 activeManagerKeys={result?.activeManagerKeys || []}
                 includeFormer={includeFormer}
               />
-              <Text mb={4}>
-                <ChakraLink asChild>
-                  <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
-                    Explore this league’s history →
-                  </Link>
-                </ChakraLink>
-              </Text>
+              {!snapshot && (
+                <Text mb={4}>
+                  <ChakraLink asChild>
+                    <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
+                      Explore this league’s history →
+                    </Link>
+                  </ChakraLink>
+                </Text>
+              )}
               <Box
                 as="section"
                 bg="bg"
@@ -411,6 +504,39 @@ export function InsightsPage({
                                 <>{signed(s.projected === null ? null : s.actual - s.projected)}</>
                               ),
                             },
+                            {
+                              id: '4',
+                              header: 'Best lineup',
+                              value: (s) => s.bestLineup?.points ?? null,
+                              cell: (s) => <>{number(s.bestLineup?.points ?? null)}</>,
+                            },
+                            {
+                              id: '5',
+                              header: 'Missed points',
+                              value: (s) => (s.bestLineup ? s.bestLineup.points - s.actual : null),
+                              cell: (s) => (
+                                <>{signed(s.bestLineup ? s.bestLineup.points - s.actual : null)}</>
+                              ),
+                            },
+                            {
+                              id: '6',
+                              header: 'Start accuracy',
+                              value: (s) =>
+                                s.bestLineup
+                                  ? accuracy(s.bestLineup.correctStarts, s.bestLineup.slots)
+                                  : null,
+                              exportValue: (s) =>
+                                s.bestLineup
+                                  ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                  : null,
+                              cell: (s) => (
+                                <>
+                                  {s.bestLineup
+                                    ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                    : '—'}
+                                </>
+                              ),
+                            },
                           ]}
                         />
                       </Box>
@@ -491,6 +617,30 @@ export function InsightsPage({
                         cell: (t) => (
                           <>
                             {t.projectedWeeks ? `${t.beatProjection} / ${t.projectedWeeks}` : '—'}
+                          </>
+                        ),
+                      },
+                      {
+                        id: '6',
+                        header: 'Best lineup / wk',
+                        value: (t) => (t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null),
+                        cell: (t) => (
+                          <>{number(t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null)}</>
+                        ),
+                      },
+                      {
+                        id: '7',
+                        header: 'Start accuracy',
+                        value: (t) => accuracy(t.correctStarts, t.lineupSlots),
+                        exportValue: (t) =>
+                          t.lineupSlots
+                            ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
+                            : null,
+                        cell: (t) => (
+                          <>
+                            {t.lineupSlots
+                              ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
+                              : '—'}
                           </>
                         ),
                       },
@@ -780,7 +930,7 @@ export function InsightsPage({
               </Box>
             </>
           )}
-        </>
+        </ReportExportScope>
       )}
     </>
   );

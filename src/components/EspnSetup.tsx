@@ -8,11 +8,13 @@ export function EspnCredentialForm({
   api,
   status,
   onSaved,
+  onComplete,
   onboarding = false,
 }: {
   api: EspnCredentialsApi;
   status: EspnCredentialStatus;
   onSaved: (status: EspnCredentialStatus) => void;
+  onComplete?: () => void;
   onboarding?: boolean;
 }) {
   const [espnS2, setEspnS2] = useState('');
@@ -20,7 +22,11 @@ export function EspnCredentialForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  async function update(action: () => Promise<EspnCredentialStatus>, message: string) {
+  async function update(
+    action: () => Promise<EspnCredentialStatus>,
+    message: string,
+    complete = false,
+  ) {
     setBusy(true);
     setError('');
     setMessage('');
@@ -30,6 +36,7 @@ export function EspnCredentialForm({
       setSwid('');
       setMessage(message);
       onSaved(next);
+      if (complete) onComplete?.();
     } catch (failure) {
       logClientError('EspnSetup', failure);
       setError(errorMessage(failure));
@@ -70,7 +77,11 @@ export function EspnCredentialForm({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void update(() => api.saveEspnCredentials({ espnS2, swid }), 'ESPN credentials saved.');
+            void update(
+              () => api.saveEspnCredentials({ espnS2, swid }),
+              'ESPN credentials saved.',
+              !!onComplete,
+            );
           }}
         >
           <Stack gap={4}>
@@ -113,6 +124,18 @@ export function EspnCredentialForm({
                   Skip for now
                 </Button>
               )}
+              {!onboarding && onComplete && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    status.configured ? onComplete() : void update(api.skipEspnSetup, '', true)
+                  }
+                >
+                  {status.configured ? 'Return to league setup' : 'Continue without credentials'}
+                </Button>
+              )}
               {status.configured && (
                 <Button
                   type="button"
@@ -142,10 +165,12 @@ export function EspnSetup({
   api,
   children,
   settings = false,
+  onComplete,
 }: {
   api: EspnCredentialsApi;
   children?: ReactNode;
   settings?: boolean;
+  onComplete?: () => void;
 }) {
   const [result, setResult] = useState<{
     api: EspnCredentialsApi;
@@ -191,6 +216,7 @@ export function EspnSetup({
       api={api}
       status={current.status}
       onboarding={!settings}
+      onComplete={onComplete}
       onSaved={(status) => setResult({ api, status })}
     />
   );

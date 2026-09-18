@@ -11,17 +11,21 @@ export interface WritingContext {
   throughWeek: number;
   facts: string[];
   depth: string[];
+  depthSnapshotAt?: string;
+  depthNote: string;
   notes: string[];
 }
 export interface WritingProviderOption {
   id: WritingProvider;
   installed: boolean;
   enabled: boolean;
+  status: 'not-installed' | 'not-enabled' | 'login-check-failed' | 'ready';
 }
 export interface WritingApi {
   context(selection: WritingSelection): Promise<WritingContext>;
   providers(): Promise<WritingProviderOption[]>;
   generate(
     selection: WritingSelection & { provider: WritingProvider; model: string; approved: boolean },
+    signal?: AbortSignal,
   ): Promise<string>;
 }

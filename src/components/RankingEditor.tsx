@@ -24,6 +24,7 @@ import { errorMessage } from '../api/client';
 import { RankingPreview } from './RankingPreview';
 import { Icon } from './Icon';
 import { SortableRankingList } from './SortableRankingList';
+import { KeyboardShortcutReference } from './KeyboardShortcutReference';
 
 export interface EditorHandle {
   flush: () => Promise<void>;
@@ -35,7 +36,7 @@ export const RankingEditor = forwardRef<
 >(function RankingEditor({ api, league, year, week }, ref) {
   const editor = useRankingEditor(api, league, year, week);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<'original' | 'compact' | null>(null);
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [undo, setUndo] = useState<WeeklyRanking>();
@@ -61,9 +62,9 @@ export const RankingEditor = forwardRef<
     setAnnouncement(`${editor.ranking.teams[from].teamName} moved to rank ${to + 1}.`);
   }
 
-  async function download() {
+  async function download(format: 'original' | 'compact') {
     if (!preview.current || exporting) return;
-    setExporting(true);
+    setExporting(format);
     setExportError('');
     const exportHost = document.createElement('div');
     exportHost.setAttribute('aria-hidden', 'true');
@@ -75,6 +76,7 @@ export const RankingEditor = forwardRef<
       // Resetting zoom only in toPng is too late: scaled table geometry is rounded.
       const canvas = preview.current.cloneNode(true) as HTMLDivElement;
       canvas.style.zoom = '1';
+      if (format === 'compact') canvas.classList.add('compact-export');
       // Export header labels without the interactive preview's sorting controls.
       canvas.querySelectorAll('.table-sort-indicator').forEach((indicator) => indicator.remove());
       canvas.querySelectorAll('.table-sort-button').forEach((button) => {
@@ -88,7 +90,7 @@ export const RankingEditor = forwardRef<
         style: { zoom: '1' },
       });
       const link = document.createElement('a');
-      link.download = `power-rankings-${year}-week-${week}.png`;
+      link.download = `power-rankings-${year}-week-${week}${format === 'compact' ? '-compact' : ''}.png`;
       link.href = image;
       document.body.appendChild(link);
       link.click();
@@ -98,7 +100,7 @@ export const RankingEditor = forwardRef<
       setExportError(`Image export failed: ${errorMessage(error)}`);
     } finally {
       exportHost.remove();
-      setExporting(false);
+      setExporting(null);
     }
   }
 
@@ -209,6 +211,13 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
+      {!ranking._id && (
+        <Text mb={4} role="note">
+          Suggested starting order uses completed scoring and point margin before this week, with
+          early results pulled toward the league average. It is a power signal, not a player or
+          season projection; adjust it with your own judgment before saving.
+        </Text>
+      )}
       <CopyEdition
         ranking={ranking}
         history={editor.history}
@@ -396,6 +405,7 @@ export const RankingEditor = forwardRef<
               Undo move
             </Button>
           </Flex>
+          <KeyboardShortcutReference />
           {api.writing && (
             <WritingSuggestions
               api={api.writing}
@@ -511,9 +521,23 @@ export const RankingEditor = forwardRef<
             <Box>
               <span className="live-dot" /> Live preview
             </Box>
-            <Button variant="plain" type="button" onClick={download} disabled={exporting}>
+            <Button
+              variant="plain"
+              type="button"
+              onClick={() => void download('original')}
+              disabled={Boolean(exporting)}
+            >
               <Icon name="download" size={16} />
-              {exporting ? 'Exporting…' : 'Download PNG'}
+              {exporting === 'original' ? 'Exporting…' : 'Download PNG'}
+            </Button>
+            <Button
+              variant="plain"
+              type="button"
+              onClick={() => void download('compact')}
+              disabled={Boolean(exporting)}
+            >
+              <Icon name="download" size={16} />
+              {exporting === 'compact' ? 'Exporting compact…' : 'Download compact PNG'}
             </Button>
           </Flex>
           {exportError && (

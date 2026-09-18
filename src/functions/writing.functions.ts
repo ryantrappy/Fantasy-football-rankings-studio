@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import {
+  getRequest,
   getRequestHeader,
   setResponseHeader,
   setResponseStatus,
@@ -24,4 +25,6 @@ export const generateSuggestions = createServerFn({ method: 'POST' })
     (data: WritingSelection & { provider: WritingProvider; model: string; approved: boolean }) =>
       data,
   )
-  .handler(({ data }) => run('writing.generate', (owner) => generateWriting(owner, data)));
+  .handler(({ data }) =>
+    run('writing.generate', (owner) => generateWriting(owner, data, getRequest().signal)),
+  );

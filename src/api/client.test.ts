@@ -14,6 +14,8 @@ vi.mock('../functions/rankings.functions', () => ({
   getRankings: vi.fn(),
   saveRanking: vi.fn(),
   getTeams: vi.fn(),
+  updateLeagueProviderId: vi.fn(),
+  deleteLeague: vi.fn(),
 }));
 const league: League = {
   leagueId: '1312529175982129152',
@@ -38,6 +40,26 @@ function session(subject: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('sends provider-ID updates and permanent deletes through authenticated management calls', async () => {
+  vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+  vi.mocked(functions.updateLeagueProviderId).mockResolvedValue({
+    ok: true,
+    data: { ...league, providerLeagueId: '99' },
+  });
+  vi.mocked(functions.deleteLeague).mockResolvedValue({ ok: true, data: undefined });
+  const api = session('owner');
+  await api.management!.updateProviderId(league.leagueId, '99');
+  await api.management!.delete(league.leagueId);
+  expect(functions.updateLeagueProviderId).toHaveBeenCalledWith({
+    data: { leagueId: league.leagueId, providerLeagueId: '99' },
+    headers: { Authorization: 'Bearer owner-token' },
+  });
+  expect(functions.deleteLeague).toHaveBeenCalledWith({
+    data: { leagueId: league.leagueId },
+    headers: { Authorization: 'Bearer owner-token' },
+  });
 });
 afterEach(async () => {
   await Promise.all(sessions.splice(0).map((api) => api.dispose()));
@@ -74,12 +96,19 @@ describe('Start-backed collections', () => {
   });
   it('does not share cached leagues between accounts', async () => {
     vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+    vi.mocked(functions.getRankings).mockResolvedValue({ ok: true, data: [ranking] });
     const owner = session('owner');
     await owner.listLeagues();
+    await owner.getRankings(league.leagueId);
+    const ownerRankings = owner.rankingsFor(league.leagueId);
+    await owner.dispose();
+    expect(owner.leagueCollection.status).toBe('cleaned-up');
+    expect(owner.leagueCollection.toArray).toEqual([]);
+    expect(ownerRankings.status).toBe('cleaned-up');
+    expect(ownerRankings.toArray).toEqual([]);
     vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [] });
     const other = session('other');
     expect(await other.listLeagues()).toEqual([]);
-    expect(owner.leagueCollection.toArray).toMatchObject([league]);
   });
 });
 

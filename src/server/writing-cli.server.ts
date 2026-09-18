@@ -18,6 +18,19 @@ const list = (name: string) =>
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+const writingEnvironment = () =>
+  Object.fromEntries(
+    [
+      'PATH',
+      'HOME',
+      'USER',
+      'LOGNAME',
+      'LANG',
+      'TMPDIR',
+      'CODEX_HOME',
+      'CLAUDE_CONFIG_DIR',
+    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]!]] : [])),
+  );
 export async function findWritingCli(provider: WritingProvider) {
   for (const directory of (process.env.PATH || '').split(delimiter).filter(isAbsolute)) {
     const file = join(directory, provider);
@@ -30,14 +43,51 @@ export async function findWritingCli(provider: WritingProvider) {
   }
   return undefined;
 }
+export async function checkWritingCliLogin(
+  executable: string,
+  provider: WritingProvider,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const child = spawn(
+      executable,
+      provider === 'codex' ? ['login', 'status'] : ['auth', 'status'],
+      {
+        cwd: tmpdir(),
+        env: writingEnvironment(),
+        stdio: 'ignore',
+      },
+    );
+    let settled = false;
+    const finish = (ready: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(ready);
+    };
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      finish(false);
+    }, 5000);
+    child.once('error', () => finish(false));
+    child.once('close', (code) => finish(code === 0));
+  });
+}
 export async function writingProviders(owner: string): Promise<WritingProviderOption[]> {
   return Promise.all(
-    (['codex', 'claude'] as const).map(async (id) => ({
-      id,
-      installed: !!(await findWritingCli(id)),
-      enabled:
-        list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner),
-    })),
+    (['codex', 'claude'] as const).map(async (id) => {
+      const executable = await findWritingCli(id);
+      const installed = !!executable;
+      const enabled =
+        list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner);
+      const status = !installed
+        ? 'not-installed'
+        : !enabled
+          ? 'not-enabled'
+          : (await checkWritingCliLogin(executable, id))
+            ? 'ready'
+            : 'login-check-failed';
+      return { id, installed, enabled, status };
+    }),
   );
 }
 export function cliArguments(provider: WritingProvider, model: string) {
@@ -87,18 +137,7 @@ export async function runWritingCli(
 ): Promise<string> {
   const cwd = await mkdtemp(join(tmpdir(), 'fantasy-writing-'));
   // Host-login files are accessible, but application DB/cookie/API secrets are not inherited.
-  const env = Object.fromEntries(
-    [
-      'PATH',
-      'HOME',
-      'USER',
-      'LOGNAME',
-      'LANG',
-      'TMPDIR',
-      'CODEX_HOME',
-      'CLAUDE_CONFIG_DIR',
-    ].flatMap((key) => (process.env[key] ? [[key, process.env[key]!]] : [])),
-  );
+  const env = writingEnvironment();
   try {
     return await new Promise<string>((resolve, reject) => {
       const child = spawn(executable, cliArguments(provider, model), {

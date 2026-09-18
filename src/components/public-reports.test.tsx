@@ -6,8 +6,22 @@ import { SessionContext } from '../auth/session';
 import { useInsightsApi } from '../auth/InsightsAccess';
 import { AppNavigation } from './AppNavigation';
 import { ShareReport } from './ShareReport';
+import { calculateInsights } from '../server/insights/calculate';
 
-const { readPublic, readAuth } = vi.hoisted(() => ({ readPublic: vi.fn(), readAuth: vi.fn() }));
+const { readPublic, readAuth, publicApi } = vi.hoisted(() => {
+  const readPublic = vi.fn();
+  return {
+    readPublic,
+    readAuth: vi.fn(),
+    publicApi: {
+      listLeagues: vi.fn().mockResolvedValue([]),
+      getLeague: vi.fn(),
+      getLeagueSeasons: vi.fn(),
+      getInsights: () => readPublic().then((result) => result.data),
+      dispose: vi.fn(),
+    },
+  };
+});
 vi.mock('@auth0/auth0-react', () => ({
   Auth0Provider: () => {
     readAuth();
@@ -20,7 +34,10 @@ vi.mock('../functions/public-insights.functions', () => ({
 }));
 vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof import('@tanstack/react-router')>()),
-  createFileRoute: () => (options: unknown) => ({ options }),
+  createFileRoute: () => (options: unknown) => ({
+    options,
+    useRouteContext: () => ({ publicInsightsApi: publicApi }),
+  }),
   useSearch: () => ({ leagueId: '123' }),
   Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
   Outlet: () => <ReportProbe />,
@@ -96,6 +113,34 @@ it('makes calculation explanations expandable in season and historical summaries
   expect(screen.getByText('How are these numbers calculated?')).toBeInTheDocument();
 });
 
+it('shows weighted lineup accuracy in the historical manager scorecard', async () => {
+  const { LeagueSummary } = await import('./LeagueSummary');
+  const data = calculateInsights({
+    completedWeek: 1,
+    teams: [{ teamId: '1', managerKey: 'alex', managerName: 'Alex', teamName: 'Alpha' }],
+    scores: [
+      {
+        teamId: '1',
+        week: 1,
+        actual: 90,
+        projected: null,
+        starters: [],
+        bestLineup: { points: 110, correctStarts: 1, slots: 2 },
+      },
+    ],
+    moves: [],
+    playerNames: {},
+    notes: [],
+    draftPickTrades: 0,
+  });
+  render(wrap(<LeagueSummary records={[{ year: 2025, data }]} historical />));
+  const table = screen.getByRole('table', { name: 'Manager scorecard' });
+  expect(table).toHaveTextContent('Best lineup / wk');
+  expect(table).toHaveTextContent('Start accuracy');
+  expect(table).toHaveTextContent('110');
+  expect(table).toHaveTextContent('50% (1 / 2)');
+});
+
 it('shows confirmed achievements with coverage and leaves unknown results empty', async () => {
   const { LeagueSummary } = await import('./LeagueSummary');
   const { calculateInsights } = await import('../server/insights/calculate');
@@ -117,7 +162,8 @@ it('shows confirmed achievements with coverage and leaves unknown results empty'
   expect(table).toHaveTextContent('Playoff appearances');
   expect(table).toHaveTextContent('Championships');
   expect(table).toHaveTextContent('Last-place finishes');
-  expect(table).toHaveTextContent('Average finish');
+  expect(table).toHaveTextContent('Average regular-season placement');
+  expect(table).toHaveTextContent('Average final placement');
   expect(table).toHaveTextContent('1 / 1 seasons known');
   expect(table).toHaveTextContent('0 / 1 seasons known');
   expect(table).toHaveTextContent('1.0');

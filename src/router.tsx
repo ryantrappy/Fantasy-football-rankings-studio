@@ -1,9 +1,11 @@
 import { createRouter, defaultParseSearch } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
+import { createPublicInsightsApi } from './api/public-insights';
 
 export function getRouter() {
   return createRouter({
     routeTree,
+    context: { publicInsightsApi: createPublicInsightsApi() },
     scrollRestoration: true,
     parseSearch: (search) => {
       const parsed = defaultParseSearch(search);

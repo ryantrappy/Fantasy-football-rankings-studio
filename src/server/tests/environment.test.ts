@@ -1,15 +1,19 @@
-vi.mock('@rolldown/plugin-babel', () => ({ default: () => ({ name: 'babel' }) }));
 // @vitest-environment node
-const loadEnv = vi.hoisted(() => vi.fn());
+const { loadEnv, react } = vi.hoisted(() => ({ loadEnv: vi.fn(), react: vi.fn(() => []) }));
 vi.mock('vite', () => ({ defineConfig: (config: unknown) => config, loadEnv }));
 vi.mock('@vitejs/plugin-react', () => ({
-  default: () => ({ name: 'react' }),
-  reactCompilerPreset: () => ({}),
+  default: react,
 }));
 vi.mock('@tanstack/react-start/plugin/vite', () => ({ tanstackStart: () => ({ name: 'start' }) }));
 vi.mock('nitro/vite', () => ({ nitro: () => ({ name: 'nitro' }) }));
 import config from '../../../vite.config';
 afterEach(() => vi.unstubAllEnvs());
+it('enables the Oxc React Compiler integration for React 19', async () => {
+  loadEnv.mockReturnValue({});
+  if (typeof config !== 'function') throw new Error('Expected config factory');
+  await config({ command: 'build', mode: 'production' });
+  expect(react).toHaveBeenCalledWith({ compiler: { target: '19' } });
+});
 it('loads the server encryption key and preserves shell overrides without exposing client definitions', async () => {
   vi.stubEnv('ESPN_CREDENTIALS_KEY', undefined);
   loadEnv.mockReturnValue({ ESPN_CREDENTIALS_KEY: 'a'.repeat(64) });

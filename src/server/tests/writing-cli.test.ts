@@ -34,12 +34,39 @@ it('runs a no-shell CLI with a restricted environment and collects output throug
   const [, args, options] = spawnMock.mock.calls[0];
   expect(args).toContain('read-only');
   expect(args).toContain('--ignore-user-config');
+  expect(args).toContain('model_reasoning_effort="low"');
   expect(args).toContain('features.shell_tool=false');
   expect(options.shell).toBeUndefined();
   expect(options.env.MONGODB_URI).toBeUndefined();
   expect(options.env.ESPN_CREDENTIALS_KEY).toBeUndefined();
   expect(cliArguments('claude', '')).toContain('--no-session-persistence');
   expect(cliArguments('claude', '')).toContain('--tools');
+  expect(cliArguments('claude', '')).toContain('--effort');
+  expect(cliArguments('claude', '')).toContain('low');
+});
+it('passes a supplied key only to its matching transient CLI process', async () => {
+  spawnMock.mockImplementation(() => {
+    const child = Object.assign(new EventEmitter(), {
+      stdout: new PassThrough(),
+      stderr: new PassThrough(),
+      stdin: new PassThrough(),
+      kill: vi.fn(),
+    });
+    child.stdin.on('finish', () => {
+      child.stdout.write('Suggestion');
+      child.emit('close', 0);
+    });
+    return child;
+  });
+  await chat({
+    adapter: new WritingCliAdapter('/approved/codex', 'codex', '', 'sk-test-key'),
+    messages: [{ role: 'user', content: 'Use only these stats.' }],
+    stream: false,
+  });
+  const options = spawnMock.mock.calls[0][2];
+  expect(options.env.OPENAI_API_KEY).toBe('sk-test-key');
+  expect(options.env.ANTHROPIC_API_KEY).toBeUndefined();
+  expect(options.env.MONGODB_URI).toBeUndefined();
 });
 it.each([
   ['codex' as const, ['login', 'status']],

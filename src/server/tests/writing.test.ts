@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   access: vi.fn(),
   load: vi.fn(),
   providers: vi.fn(),
+  providerConfig: vi.fn(),
   find: vi.fn(),
   chat: vi.fn(),
 }));
@@ -16,6 +17,7 @@ vi.mock('../services/leagues.service', () => ({
 vi.mock('../insights/load.server', () => ({ loadInsightsSource: mocks.load }));
 vi.mock('../writing-cli.server', () => ({
   writingProviders: mocks.providers,
+  writingProviderConfig: mocks.providerConfig,
   findWritingCli: mocks.find,
   WritingCliAdapter: class {},
 }));
@@ -35,9 +37,10 @@ beforeEach(() => {
     notes: [],
     draftPickTrades: 0,
   });
-  mocks.providers.mockResolvedValue([
-    { id: 'codex', enabled: true, installed: true, status: 'ready' },
-  ]);
+  mocks.providerConfig.mockResolvedValue({
+    providers: [{ id: 'codex', enabled: true, installed: true, status: 'ready' }],
+    apiKeys: {},
+  });
   mocks.find.mockResolvedValue('/bin/codex');
   mocks.chat.mockResolvedValue('- Discuss scoring.');
 });
@@ -54,9 +57,10 @@ it('requires explicit approval and administrator enablement before generation', 
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: false }),
   ).rejects.toThrow();
   expect(mocks.chat).not.toHaveBeenCalled();
-  mocks.providers.mockResolvedValue([
-    { id: 'codex', enabled: false, installed: true, status: 'not-enabled' },
-  ]);
+  mocks.providerConfig.mockResolvedValue({
+    providers: [{ id: 'codex', enabled: false, installed: true, status: 'not-enabled' }],
+    apiKeys: {},
+  });
   await expect(
     generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: true }),
   ).rejects.toMatchObject({ status: 403 });

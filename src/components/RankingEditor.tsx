@@ -40,6 +40,10 @@ export const RankingEditor = forwardRef<
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [undo, setUndo] = useState<WeeklyRanking>();
+  const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
+  const [aiGeneratingTeam, setAiGeneratingTeam] = useState<string>();
+  const aiController = useRef<{ generate: (teamId: string) => Promise<void> } | undefined>(undefined);
+  useEffect(() => setAiSummaries({}), [league.leagueId, year, week]);
   const preview = useRef<HTMLDivElement>(null);
   const previewViewport = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
@@ -412,7 +416,13 @@ export const RankingEditor = forwardRef<
               leagueId={league.leagueId}
               year={year}
               week={week}
-              teams={ranking.teams}
+              onSummaryChange={(teamId, summary) =>
+                setAiSummaries((current) => ({ ...current, [teamId]: summary }))
+              }
+              onControllerChange={(controller) => {
+                aiController.current = controller;
+              }}
+              onGenerationStateChange={setAiGeneratingTeam}
             />
           )}
           <SortableRankingList
@@ -482,6 +492,27 @@ export const RankingEditor = forwardRef<
                     }))
                   }
                 />
+                <Button
+                  mt={3}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                  disabled={
+                    !aiController.current ||
+                    Boolean(aiGeneratingTeam && aiGeneratingTeam !== team.teamId)
+                  }
+                  onClick={() => void aiController.current?.generate(team.teamId)}
+                >
+                  {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
+                </Button>
+                {aiSummaries[team.teamId] && (
+                  <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
+                    <Text fontWeight="bold" mb={1}>
+                      AI summary
+                    </Text>
+                    <Text whiteSpace="pre-wrap">{aiSummaries[team.teamId]}</Text>
+                  </Box>
+                )}
               </>
             )}
           />

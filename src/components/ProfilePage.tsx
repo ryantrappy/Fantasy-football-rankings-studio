@@ -2,9 +2,13 @@ import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { ProfileApi, UserProfile } from '../profile';
+import type { AiCredentialStatus, AiCredentialsApi } from '../ai-credentials';
+import type { WritingProvider } from '../writing';
 import { errorMessage } from '../api/client';
 
-export function ProfilePage({ api }: { api: ProfileApi }) {
+type AccountApi = ProfileApi & AiCredentialsApi;
+
+export function ProfilePage({ api }: { api: AccountApi }) {
   const [result, setResult] = useState<{
     api: ProfileApi;
     profile?: UserProfile;
@@ -56,7 +60,10 @@ export function ProfilePage({ api }: { api: ProfileApi }) {
           </>
         )}
         {current?.profile && (
-          <ProfileForm key={current.profile.userId} api={api} profile={current.profile} />
+          <>
+            <ProfileForm key={current.profile.userId} api={api} profile={current.profile} />
+            <AiCredentialSettings api={api} />
+          </>
         )}
       </Stack>
     </Box>
@@ -138,5 +145,149 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
       {error && <Text role="alert">{error}</Text>}
       {saved && <Text as="output">Profile saved.</Text>}
     </>
+  );
+}
+
+function AiCredentialSettings({ api }: { api: AiCredentialsApi }) {
+  const [status, setStatus] = useState<AiCredentialStatus>();
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    void api.getAiCredentialStatus().then(
+      (next) => {
+        if (!cancelled) setStatus(next);
+      },
+      (failure) => {
+        logClientError('ProfilePage.aiCredentials.load', failure);
+        if (!cancelled) setError(errorMessage(failure));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api, retry]);
+  return (
+    <Stack gap={4} pt={5} borderTopWidth="1px">
+      <Heading as="h2" size="lg">
+        Writing assistant API keys
+      </Heading>
+      <Text>
+        Optionally save your own OpenAI key for Codex or Anthropic key for Claude. Keys are
+        encrypted and used only for your writing requests; saved values are never shown again.
+      </Text>
+      {!status && !error && <Text as="output">Loading AI key settings…</Text>}
+      {error && (
+        <>
+          <Text role="alert">{error}</Text>
+          <Button
+            onClick={() => {
+              setError('');
+              setRetry((value) => value + 1);
+            }}
+          >
+            Retry
+          </Button>
+        </>
+      )}
+      {status && (
+        <AiCredentialForm
+          api={api}
+          provider="codex"
+          configured={status.codexConfigured}
+          onSaved={setStatus}
+        />
+      )}
+      {status && (
+        <AiCredentialForm
+          api={api}
+          provider="claude"
+          configured={status.claudeConfigured}
+          onSaved={setStatus}
+        />
+      )}
+    </Stack>
+  );
+}
+
+function AiCredentialForm({
+  api,
+  provider,
+  configured,
+  onSaved,
+}: {
+  api: AiCredentialsApi;
+  provider: WritingProvider;
+  configured: boolean;
+  onSaved: (status: AiCredentialStatus) => void;
+}) {
+  const [apiKey, setApiKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const label = provider === 'codex' ? 'OpenAI API key (Codex)' : 'Anthropic API key (Claude)';
+  async function update(action: () => Promise<AiCredentialStatus>, nextMessage: string) {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const status = await action();
+      setApiKey('');
+      onSaved(status);
+      setMessage(nextMessage);
+    } catch (failure) {
+      logClientError('ProfilePage.aiCredentials', failure);
+      setError(errorMessage(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Box as="section" borderWidth="1px" borderColor="border" rounded="md" p={4}>
+      <Stack gap={3}>
+        <Heading as="h3" size="md">
+          {label}
+        </Heading>
+        <Text>
+          {configured ? 'A key is saved. Enter a new key to replace it.' : 'No key is saved.'}
+        </Text>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void update(() => api.saveAiCredential({ provider, apiKey }), `${label} saved.`);
+          }}
+        >
+          <Stack gap={3}>
+            <Field.Root required disabled={busy}>
+              <Field.Label>{label}</Field.Label>
+              <Input
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                required
+                maxLength={1024}
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+              />
+            </Field.Root>
+            <Button type="submit" colorPalette="indigo" disabled={busy}>
+              {busy ? 'Saving…' : `Save ${label}`}
+            </Button>
+          </Stack>
+        </form>
+        {configured && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => void update(() => api.removeAiCredential(provider), `${label} removed.`)}
+          >
+            Remove {label}
+          </Button>
+        )}
+        {error && <Text role="alert">{error}</Text>}
+        {message && <Text as="output">{message}</Text>}
+      </Stack>
+    </Box>
   );
 }

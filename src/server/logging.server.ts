@@ -6,6 +6,7 @@ function redact(value: string): string {
   for (const key of [
     'MONGODB_URI',
     'ESPN_CREDENTIALS_KEY',
+    'AI_CREDENTIALS_KEY',
     'ESPN_S2',
     'SWID',
     'AUTH0_MANAGEMENT_CLIENT_SECRET',

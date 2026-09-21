@@ -2,10 +2,10 @@ import { ApiContext } from '../auth/session';
 import { ReportSharing } from './ReportSharing';
 import { logClientError } from '../logging';
 import { Box, Button, Input, Text } from '@chakra-ui/react';
-import { defaultStringifySearch } from '@tanstack/react-router';
 import { useContext, useState } from 'react';
 import { errorMessage } from '../api/client';
 import type { SnapshotInput } from '../report-snapshot';
+import { normalizeLeagueId } from './report-search';
 
 export function ShareReport({
   path,
@@ -27,14 +27,21 @@ export function ShareReport({
   const [fallback, setFallback] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const href = snapshotHref || `/shared${path}${defaultStringifySearch(search)}`;
+  const canonicalSearch = { ...search, leagueId: normalizeLeagueId(search.leagueId) };
+  const query = new URLSearchParams({ leagueId: canonicalSearch.leagueId });
+  if (canonicalSearch.year !== undefined) query.set('year', String(canonicalSearch.year));
+  if (canonicalSearch.years !== undefined)
+    query.set('years', JSON.stringify(canonicalSearch.years));
+  const href = snapshotHref || `/shared${path}?${query}`;
   const saveSnapshot = !snapshotHref && espn && !!api?.createReportSnapshot;
   return (
     <Box>
       <Button
         type="button"
         variant="outline"
-        disabled={disabled || !search.leagueId || saving || (saveSnapshot && !snapshotData)}
+        disabled={
+          disabled || !canonicalSearch.leagueId || saving || (saveSnapshot && !snapshotData)
+        }
         onClick={async () => {
           setError('');
           setFallback('');
@@ -76,7 +83,11 @@ export function ShareReport({
       </Text>
       {error && <Text role="alert">{error}</Text>}
       {!snapshotHref && api?.reportSharing && (
-        <ReportSharing key={search.leagueId} api={api.reportSharing} leagueId={search.leagueId} />
+        <ReportSharing
+          key={canonicalSearch.leagueId}
+          api={api.reportSharing}
+          leagueId={canonicalSearch.leagueId}
+        />
       )}
       {fallback && (
         <Input

@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
     'AUTH0_ISSUER_BASE_URL',
     'AUTH0_AUDIENCE',
     'ESPN_CREDENTIALS_KEY',
+    'AI_CREDENTIALS_KEY',
     'WRITING_AI_PROVIDERS',
     'WRITING_AI_USERS',
     'ESPN_S2',

@@ -14,12 +14,17 @@ it('enables the Oxc React Compiler integration for React 19', async () => {
   await config({ command: 'build', mode: 'production' });
   expect(react).toHaveBeenCalledWith({ compiler: { target: '19' } });
 });
-it('loads the server encryption key and preserves shell overrides without exposing client definitions', async () => {
+it('loads server encryption keys and preserves shell overrides without exposing client definitions', async () => {
   vi.stubEnv('ESPN_CREDENTIALS_KEY', undefined);
-  loadEnv.mockReturnValue({ ESPN_CREDENTIALS_KEY: 'a'.repeat(64) });
+  vi.stubEnv('AI_CREDENTIALS_KEY', undefined);
+  loadEnv.mockReturnValue({
+    ESPN_CREDENTIALS_KEY: 'a'.repeat(64),
+    AI_CREDENTIALS_KEY: 'c'.repeat(64),
+  });
   if (typeof config !== 'function') throw new Error('Expected config factory');
   const settings = await config({ command: 'serve', mode: 'development' });
   expect(process.env.ESPN_CREDENTIALS_KEY).toBe('a'.repeat(64));
+  expect(process.env.AI_CREDENTIALS_KEY).toBe('c'.repeat(64));
   expect(loadEnv).toHaveBeenCalledWith('development', process.cwd(), '');
   expect(settings.define).toBeUndefined();
   expect(settings.envPrefix).toBeUndefined();
@@ -32,6 +37,7 @@ it('leaves missing optional and required server settings absent', async () => {
     'AUTH0_ISSUER_BASE_URL',
     'AUTH0_MANAGEMENT_CLIENT_SECRET',
     'ESPN_CREDENTIALS_KEY',
+    'AI_CREDENTIALS_KEY',
     'ESPN_S2',
     'SWID',
     'WRITING_AI_PROVIDERS',

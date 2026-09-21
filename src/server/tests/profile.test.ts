@@ -64,6 +64,11 @@ it('reports missing configuration without calling Auth0', async () => {
   await expect(getProfile('auth0|owner')).rejects.toMatchObject({ status: 503 });
   expect(fetchMock).not.toHaveBeenCalled();
 });
+it('rejects a Management API resource-server ID used as the M2M client ID', async () => {
+  vi.stubEnv('AUTH0_MANAGEMENT_CLIENT_ID', '613b7c1a5ee51d004637b4c4');
+  await expect(getProfile('auth0|owner')).rejects.toMatchObject({ status: 503 });
+  expect(fetchMock).not.toHaveBeenCalled();
+});
 it('derives the canonical Management API hostname from the configured Auth0 issuer', async () => {
   vi.stubEnv('AUTH0_MANAGEMENT_DOMAIN', '');
   vi.stubEnv('AUTH0_ISSUER_BASE_URL', 'https://tenant.auth0.com/');

@@ -704,6 +704,21 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(history).toHaveTextContent('Regular-season placement');
   expect(history).toHaveTextContent('Final placement');
 });
+test('shared history accepts a quoted league ID and copies a canonical link', async () => {
+  const user = userEvent.setup();
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+  await openPage('/shared/history?leagueId="123"&years=%5B2024%5D');
+
+  await screen.findByRole('heading', { name: 'Track the manager, not the team name' });
+  expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
+    expect.objectContaining({ data: { leagueId: '123', year: 2024 } }),
+  );
+  await user.click(screen.getByRole('button', { name: 'Copy share link' }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+  const copied = writeText.mock.calls[0][0];
+  expect(new URL(copied).searchParams.get('leagueId')).toBe('123');
+});
 test('shared history reports determinate progress while seasons load and refresh', async () => {
   const user = userEvent.setup();
   type InsightsResult = Awaited<ReturnType<typeof publicFunctions.getPublicInsights>>;
@@ -895,6 +910,7 @@ test('a signed-in ESPN owner stays public while navigating shared reports', asyn
   await userEvent.click(screen.getByRole('link', { name: 'League history' }));
   await screen.findByRole('heading', { name: 'Track the manager, not the team name' });
   expect(router.state.location.pathname).toBe('/shared/history');
+  expect(router.state.location.href).toBe('/shared/history?leagueId=123');
   expect(router.state.location.search.leagueId).toBe('123');
   expect(screen.queryByRole('link', { name: 'Rankings studio' })).not.toBeInTheDocument();
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();

@@ -5,8 +5,8 @@ Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 
 ## Run with Docker
 
-Copy `.env.example` to `.env`, fill in the required Auth0 settings and
-`ESPN_CREDENTIALS_KEY`, then run:
+Copy `.env.example` to `.env`, fill in the required Auth0 settings,
+`ESPN_CREDENTIALS_KEY`, and `AI_CREDENTIALS_KEY`, then run:
 
 ```sh
 docker compose up
@@ -22,7 +22,7 @@ the published image details, and cleanup commands.
 ```sh
 npm ci
 test -f .env || cp .env.example .env
-# Fill in Auth0 settings, MongoDB URI and ESPN_CREDENTIALS_KEY in .env.
+# Fill in Auth0 settings, MongoDB URI, ESPN_CREDENTIALS_KEY, and AI_CREDENTIALS_KEY in .env.
 npm run dev
 ```
 
@@ -187,6 +187,7 @@ in the URL. These pages require sign-in. `/shared/insights?leagueId=123&year=202
 `/shared/history?leagueId=123` are
 public read-only reports for registered leagues; no Auth0 session is required.
 Use **Copy share link** on either page. History links also include the selected seasons.
+Copied links use an unquoted numeric `leagueId`; older links containing a quoted numeric ID remain supported.
 Internal pages retain the owner league picker and rankings studio tab. Shared pages reuse
 the same report components, but always show only season insights and league history.
 They do not initialize Auth0, and remain public even when the viewer is signed in.
@@ -388,6 +389,10 @@ Configure a server-only Auth0 Machine-to-Machine application authorized for the
 Auth0 Management API with only `read:users` and `update:users`. Set
 `AUTH0_MANAGEMENT_DOMAIN` (canonical tenant hostname), `AUTH0_MANAGEMENT_CLIENT_ID`,
 and `AUTH0_MANAGEMENT_CLIENT_SECRET` on the server; use the same tenant as login.
+`AUTH0_MANAGEMENT_CLIENT_ID` must be the **client ID of that non-interactive M2M
+application**, not the Auth0 Management API resource-server ID or identifier. A
+resource-server ID is a 24-character hexadecimal value and will be rejected before
+the app makes a token request.
 When the canonical issuer is the standard `https://<tenant>.auth0.com/`,
 `AUTH0_ISSUER_BASE_URL` supplies the management hostname automatically, so only
 the M2M client ID and secret need to be added. Set `AUTH0_MANAGEMENT_DOMAIN`
@@ -424,8 +429,8 @@ storage failures intentionally retain only a sanitized error.
 
 Request failures remain contained, failed saves retain drafts, and page errors
 provide a retry action. Logging does not guarantee recovery from fatal process
-errors or exhausted memory. Run production under a supervisor on `trappserv.er`
-(e.g. systemd with `Restart=on-failure`) and monitor `/health`; do not depend on
+errors or exhausted memory. Run production under a supervisor (e.g. systemd with
+`Restart=on-failure`) and monitor `/health`; do not depend on
 catching an exception to repair corrupted process state. No process-wide handlers
 are duplicated by the application. Framework/development diagnostics may additionally
 write their own console output.
@@ -460,7 +465,7 @@ Sleeper manager identity includes the sorted, deduplicated primary/co-owner IDs.
 Reordering owners or renaming a team preserves history; changing the ownership
 group starts a separate record. Single-owner identities remain compatible.
 
-`npm run dev` loads `ESPN_CREDENTIALS_KEY` from Vite's environment files, including
+`npm run dev` loads `ESPN_CREDENTIALS_KEY` and `AI_CREDENTIALS_KEY` from Vite's environment files, including
 `.env.local`; a value already exported in the shell takes precedence. The key is
 part of the server allowlist and is never exposed as a `VITE_*` browser setting.
 
@@ -475,7 +480,16 @@ ownership at the selected week. Historical selections never substitute today's
 roster; when the provider cannot supply historical ownership, the panel identifies
 that limitation and omits depth claims.
 
-AI suggestions use TanStack AI with a server-side Codex or Claude Code CLI.
+AI suggestions use TanStack AI with a server-side Codex or Claude Code CLI. Each user can save an
+OpenAI API key for Codex and/or an Anthropic API key for Claude in **Your profile**. The values are
+encrypted with AES-256-GCM using a fresh nonce and Auth0-subject-bound authenticated data, stored
+in MongoDB's `aicredentials` collection, and never returned to the browser after saving. The matching
+key is injected only into that user's temporary CLI process; it is not inherited by the host process,
+other provider, logs, shared reports, or client storage. Set server-only `AI_CREDENTIALS_KEY` to a
+separate 64-hex-character secret generated with `openssl rand -hex 32` before allowing users to save
+AI keys. All app instances need the same key, and it must be retained with backup recovery records.
+
+Users without a saved key can still use a server-managed CLI login when the administrator enables it.
 Install and authenticate the desired CLI on the application server, then set
 `WRITING_AI_PROVIDERS=codex,claude` (or just one provider) and
 `WRITING_AI_USERS` to a comma-separated allowlist of authorized Auth0 subject IDs.
@@ -505,8 +519,8 @@ inside the application container. In that environment, run `command -v codex`
 and `codex login status`, or `command -v claude` and `claude auth status`. A
 missing command requires installation in the service PATH. A failed status check
 requires logging in as that service account (`codex login` or
-`claude auth login`) and then repeating the status check. On a headless
-`trappserv.er` session, Codex also supports `codex login --device-auth`. Restart
+`claude auth login`) and then repeating the status check. On a headless session,
+Codex also supports `codex login --device-auth`. Restart
 the service after changing its environment or login configuration, then reopen
 the panel. Do not copy credential caches between accounts or print tokens while
 diagnosing setup. See the official [Codex authentication guide](https://learn.chatgpt.com/docs/auth)

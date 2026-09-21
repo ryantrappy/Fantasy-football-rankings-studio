@@ -16,6 +16,8 @@ services:
       # AUTH0_MANAGEMENT_DOMAIN: your-tenant.auth0.com
       # ESPN per-user credential encryption: openssl rand -hex 32
       # ESPN_CREDENTIALS_KEY: 64-hex-characters
+      # Per-user AI key encryption: openssl rand -hex 32
+      # AI_CREDENTIALS_KEY: 64-hex-characters
       # Optional local writing assistant: codex,claude
       # WRITING_AI_PROVIDERS: codex
       # WRITING_AI_USERS: auth0|allowed-user-id

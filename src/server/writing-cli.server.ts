@@ -12,6 +12,7 @@ import type {
   TextOptions,
 } from '@tanstack/ai';
 import type { WritingProvider, WritingProviderOption } from '../writing';
+import { getAiCredentials } from './ai-credentials.server';
 import HttpException from './exceptions/HttpException';
 const list = (name: string) =>
   (process.env[name] || '')
@@ -72,23 +73,42 @@ export async function checkWritingCliLogin(
     child.once('close', (code) => finish(code === 0));
   });
 }
-export async function writingProviders(owner: string): Promise<WritingProviderOption[]> {
-  return Promise.all(
+export async function writingProviderConfig(owner: string): Promise<{
+  providers: WritingProviderOption[];
+  apiKeys: Partial<Record<WritingProvider, string>>;
+}> {
+  const apiKeys = await getAiCredentials(owner);
+  const providers = await Promise.all(
     (['codex', 'claude'] as const).map(async (id) => {
       const executable = await findWritingCli(id);
       const installed = !!executable;
       const enabled =
-        list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner);
-      const status = !installed
+        !!apiKeys[id] ||
+        (list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner));
+      const status: WritingProviderOption['status'] = !installed
         ? 'not-installed'
         : !enabled
           ? 'not-enabled'
-          : (await checkWritingCliLogin(executable, id))
+          : apiKeys[id] || (await checkWritingCliLogin(executable, id))
             ? 'ready'
             : 'login-check-failed';
       return { id, installed, enabled, status };
     }),
   );
+  return { providers, apiKeys };
+}
+export async function writingProviders(owner: string): Promise<WritingProviderOption[]> {
+  return (await writingProviderConfig(owner)).providers;
+}
+/*
+ * A saved API key is passed only to the matching transient CLI process. It is not inherited from
+ * the host process and never reaches the browser or an unrelated provider.
+ */
+function writingEnvironmentForProvider(provider: WritingProvider, apiKey?: string) {
+  return {
+    ...writingEnvironment(),
+    ...(apiKey ? { [provider === 'codex' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY']: apiKey } : {}),
+  };
 }
 export function cliArguments(provider: WritingProvider, model: string) {
   return provider === 'codex'
@@ -102,6 +122,8 @@ export function cliArguments(provider: WritingProvider, model: string) {
         'read-only',
         '-c',
         'approval_policy="never"',
+        '-c',
+        'model_reasoning_effort="low"',
         '-c',
         'features.shell_tool=false',
         '-c',
@@ -125,6 +147,8 @@ export function cliArguments(provider: WritingProvider, model: string) {
         '--no-session-persistence',
         '--max-turns',
         '1',
+        '--effort',
+        'low',
         ...(model ? ['--model', model] : []),
       ];
 }
@@ -134,10 +158,11 @@ export async function runWritingCli(
   model: string,
   prompt: string,
   signal?: AbortSignal,
+  apiKey?: string,
 ): Promise<string> {
   const cwd = await mkdtemp(join(tmpdir(), 'fantasy-writing-'));
   // Host-login files are accessible, but application DB/cookie/API secrets are not inherited.
-  const env = writingEnvironment();
+  const env = writingEnvironmentForProvider(provider, apiKey);
   try {
     return await new Promise<string>((resolve, reject) => {
       const child = spawn(executable, cliArguments(provider, model), {
@@ -205,6 +230,7 @@ export class WritingCliAdapter extends BaseTextAdapter<
     private executable: string,
     private provider: WritingProvider,
     model: string,
+    private apiKey?: string,
   ) {
     super({}, model);
   }
@@ -221,6 +247,7 @@ export class WritingCliAdapter extends BaseTextAdapter<
       this.model,
       prompt,
       options.abortController?.signal,
+      this.apiKey,
     );
     const messageId = this.generateId();
     yield { type: EventType.TEXT_MESSAGE_START, messageId, role: 'assistant' };

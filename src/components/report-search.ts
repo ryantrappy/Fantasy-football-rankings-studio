@@ -1,4 +1,10 @@
 import { defaultSeason } from '../util/rankings';
+
+export const normalizeLeagueId = (input: unknown) => {
+  const leagueId = typeof input === 'string' ? input.replace(/^"(.+)"$/, '$1') : '';
+  return /^\d{1,30}$/.test(leagueId) ? leagueId : '';
+};
+
 export type ReportPageProps<T> = {
   search: T;
   navigate: (options: { search: T; replace?: boolean }) => Promise<void>;
@@ -6,8 +12,7 @@ export type ReportPageProps<T> = {
   snapshot?: { href: string; years: number[]; openSeason: (year: number) => void };
 };
 export const validateInsightsPageSearch = (input: Record<string, unknown>) => ({
-  leagueId:
-    typeof input.leagueId === 'string' && /^\d{1,30}$/.test(input.leagueId) ? input.leagueId : '',
+  leagueId: normalizeLeagueId(input.leagueId),
   year:
     Number.isInteger(Number(input.year)) && Number(input.year) >= 2000 && Number(input.year) <= 2100
       ? Number(input.year)
@@ -16,8 +21,7 @@ export const validateInsightsPageSearch = (input: Record<string, unknown>) => ({
 export const validateHistoryPageSearch = (
   input: Record<string, unknown>,
 ): { leagueId: string; years?: number[] } => ({
-  leagueId:
-    typeof input.leagueId === 'string' && /^\d{1,30}$/.test(input.leagueId) ? input.leagueId : '',
+  leagueId: normalizeLeagueId(input.leagueId),
   ...(Array.isArray(input.years)
     ? {
         years: [

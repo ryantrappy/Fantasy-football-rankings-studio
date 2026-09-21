@@ -1,5 +1,5 @@
 import { logClientError } from '../logging';
-import type { ReportPageProps } from './report-search';
+import { normalizeLeagueId, type ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
 import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
@@ -43,7 +43,8 @@ export function HistoryPage({
   snapshot,
 }: ReportPageProps<{ leagueId: string; years?: number[] }> & { initialLeague?: League | null }) {
   const api = useInsightsApi(),
-    { leagueId, years: requestedYears } = search;
+    { years: requestedYears } = search,
+    leagueId = normalizeLeagueId(search.leagueId);
   const [catalog, setCatalog] = useState<{
     api: typeof api;
     leagueId: string;

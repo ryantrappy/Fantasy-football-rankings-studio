@@ -102,7 +102,9 @@ it('cancels generation without exposing the partial result as an error', async (
   await waitFor(() => expect(client.providers).toHaveBeenCalled());
   fireEvent.click(screen.getByRole('checkbox'));
   void controller.generate('1');
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel generation' })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Cancel generation' })).toBeInTheDocument(),
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Cancel generation' }));
   reject(new DOMException('Cancelled', 'AbortError'));
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());

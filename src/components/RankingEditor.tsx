@@ -42,7 +42,9 @@ export const RankingEditor = forwardRef<
   const [undo, setUndo] = useState<WeeklyRanking>();
   const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
   const [aiGeneratingTeam, setAiGeneratingTeam] = useState<string>();
-  const aiController = useRef<{ generate: (teamId: string) => Promise<void> } | undefined>(undefined);
+  const aiController = useRef<{ generate: (teamId: string) => Promise<void> } | undefined>(
+    undefined,
+  );
   useEffect(() => setAiSummaries({}), [league.leagueId, year, week]);
   const preview = useRef<HTMLDivElement>(null);
   const previewViewport = useRef<HTMLDivElement>(null);

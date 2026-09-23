@@ -101,80 +101,80 @@ export function WritingSuggestions({
           Generate one factual summary for each team. Summaries are reference material and do not
           change your ranking commentary.
         </Text>
-          <Field.Root disabled={busy}>
-            <Field.Label>Writing assistant</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field
-                value={provider}
-                onChange={(e) => {
-                  setProvider(e.target.value as WritingProvider);
-                  setApproved(false);
-                }}
-              >
-                {providers.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.id === 'codex' ? 'Codex CLI' : 'Claude Code CLI'}
-                    {p.status === 'not-installed'
-                      ? ' · not installed'
-                      : p.status === 'not-enabled'
-                        ? ' · not enabled'
-                        : p.status === 'login-check-failed'
-                          ? ' · login check failed'
-                          : ' · ready'}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          <Field.Root disabled={busy}>
-            <Field.Label>Model (optional)</Field.Label>
-            <Input
-              list={`${provider}-writing-models`}
-              value={model}
-              maxLength={100}
-              placeholder="Use the CLI default or choose a model"
+        <Field.Root disabled={busy}>
+          <Field.Label>Writing assistant</Field.Label>
+          <NativeSelect.Root>
+            <NativeSelect.Field
+              value={provider}
               onChange={(e) => {
-                setModel(e.target.value);
-              }}
-            />
-            <datalist id={`${provider}-writing-models`}>
-              {modelSuggestions[provider].map((suggestedModel) => (
-                <option key={suggestedModel} value={suggestedModel} />
-              ))}
-            </datalist>
-            <Field.HelperText>
-              Choose a suggestion or enter any model available to the selected CLI account. Lowest
-              thinking/reasoning effort is always used.
-            </Field.HelperText>
-          </Field.Root>
-          {!approved && (
-            <label htmlFor={consentId}>
-              <chakra.input
-                id={consentId}
-                type="checkbox"
-                width="auto"
-                mr={2}
-                checked={approved}
-                disabled={busy || !ready}
-                onChange={(e) => setApproved(e.target.checked)}
-              />
-              I approve sending these team contexts to the selected assistant.
-            </label>
-          )}
-          {busy && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                request.current?.abort();
+                setProvider(e.target.value as WritingProvider);
+                setApproved(false);
               }}
             >
-              Cancel generation
-            </Button>
-          )}
-          {error && <Text role="alert">{error}</Text>}
-        </Stack>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.id === 'codex' ? 'Codex CLI' : 'Claude Code CLI'}
+                  {p.status === 'not-installed'
+                    ? ' · not installed'
+                    : p.status === 'not-enabled'
+                      ? ' · not enabled'
+                      : p.status === 'login-check-failed'
+                        ? ' · login check failed'
+                        : ' · ready'}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Field.Root>
+        <Field.Root disabled={busy}>
+          <Field.Label>Model (optional)</Field.Label>
+          <Input
+            list={`${provider}-writing-models`}
+            value={model}
+            maxLength={100}
+            placeholder="Use the CLI default or choose a model"
+            onChange={(e) => {
+              setModel(e.target.value);
+            }}
+          />
+          <datalist id={`${provider}-writing-models`}>
+            {modelSuggestions[provider].map((suggestedModel) => (
+              <option key={suggestedModel} value={suggestedModel} />
+            ))}
+          </datalist>
+          <Field.HelperText>
+            Choose a suggestion or enter any model available to the selected CLI account. Lowest
+            thinking/reasoning effort is always used.
+          </Field.HelperText>
+        </Field.Root>
+        {!approved && (
+          <label htmlFor={consentId}>
+            <chakra.input
+              id={consentId}
+              type="checkbox"
+              width="auto"
+              mr={2}
+              checked={approved}
+              disabled={busy || !ready}
+              onChange={(e) => setApproved(e.target.checked)}
+            />
+            I approve sending these team contexts to the selected assistant.
+          </label>
+        )}
+        {busy && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              request.current?.abort();
+            }}
+          >
+            Cancel generation
+          </Button>
+        )}
+        {error && <Text role="alert">{error}</Text>}
+      </Stack>
     </Box>
   );
 }

@@ -140,7 +140,9 @@ export function WritingSuggestions({
           />
           <datalist id={`${provider}-writing-models`}>
             {modelSuggestions[provider].map((suggestedModel) => (
-              <option key={suggestedModel} value={suggestedModel} />
+              <option key={suggestedModel} value={suggestedModel}>
+                {suggestedModel}
+              </option>
             ))}
           </datalist>
           <Field.HelperText>
@@ -153,6 +155,7 @@ export function WritingSuggestions({
             <chakra.input
               id={consentId}
               type="checkbox"
+              aria-label="Approve sending team contexts to the selected assistant"
               width="auto"
               mr={2}
               checked={approved}

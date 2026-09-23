@@ -40,12 +40,15 @@ export const RankingEditor = forwardRef<
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [undo, setUndo] = useState<WeeklyRanking>();
-  const [aiSummaries, setAiSummaries] = useState<Record<string, string>>({});
+  const rankingScope = `${league.leagueId}:${year}:${week}`;
+  const [aiSummaries, setAiSummaries] = useState<{
+    scope: string;
+    values: Record<string, string>;
+  }>({ scope: rankingScope, values: {} });
   const [aiGeneratingTeam, setAiGeneratingTeam] = useState<string>();
   const aiController = useRef<{ generate: (teamId: string) => Promise<void> } | undefined>(
     undefined,
   );
-  useEffect(() => setAiSummaries({}), [league.leagueId, year, week]);
   const preview = useRef<HTMLDivElement>(null);
   const previewViewport = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
@@ -419,7 +422,10 @@ export const RankingEditor = forwardRef<
               year={year}
               week={week}
               onSummaryChange={(teamId, summary) =>
-                setAiSummaries((current) => ({ ...current, [teamId]: summary }))
+                setAiSummaries((current) => ({
+                  scope: rankingScope,
+                  values: { ...(current.scope === rankingScope ? current.values : {}), [teamId]: summary },
+                }))
               }
               onControllerChange={(controller) => {
                 aiController.current = controller;
@@ -507,12 +513,12 @@ export const RankingEditor = forwardRef<
                 >
                   {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
                 </Button>
-                {aiSummaries[team.teamId] && (
+                {aiSummaries.scope === rankingScope && aiSummaries.values[team.teamId] && (
                   <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
                     <Text fontWeight="bold" mb={1}>
                       AI summary
                     </Text>
-                    <Text whiteSpace="pre-wrap">{aiSummaries[team.teamId]}</Text>
+                    <Text whiteSpace="pre-wrap">{aiSummaries.values[team.teamId]}</Text>
                   </Box>
                 )}
               </>

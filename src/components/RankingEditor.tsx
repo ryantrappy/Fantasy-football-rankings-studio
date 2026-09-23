@@ -424,7 +424,10 @@ export const RankingEditor = forwardRef<
               onSummaryChange={(teamId, summary) =>
                 setAiSummaries((current) => ({
                   scope: rankingScope,
-                  values: { ...(current.scope === rankingScope ? current.values : {}), [teamId]: summary },
+                  values: {
+                    ...(current.scope === rankingScope ? current.values : {}),
+                    [teamId]: summary,
+                  },
                 }))
               }
               onControllerChange={(controller) => {

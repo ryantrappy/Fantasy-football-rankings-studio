@@ -95,7 +95,7 @@ it.each(['/insights', '/history'] as const)(
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const url = new URL(writeText.mock.calls[0][0]);
     expect(url.pathname).toBe(`/shared${path}`);
-    expect(JSON.parse(url.searchParams.get('leagueId')!)).toBe('123');
+    expect(url.searchParams.get('leagueId')).toBe('123');
     expect(url.searchParams.get('years')).toBe('[2025,2024]');
   },
 );

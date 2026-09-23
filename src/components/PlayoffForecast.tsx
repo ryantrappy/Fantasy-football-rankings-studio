@@ -1,17 +1,17 @@
-import { Box, Field, Heading, NativeSelect, Text } from '@chakra-ui/react';
-import { useMemo, useState } from 'react';
+import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
+import { useState } from 'react';
 import type { SeasonInsights } from '../insights';
-import { forecastPlayoffs } from '../playoff-forecast';
+import { cachedPlayoffForecast } from '../playoff-timeline';
 import { DataTable } from './DataTable';
+import { PlayoffTimeline } from './PlayoffTimeline';
 export function PlayoffForecast({ data }: { data: SeasonInsights }) {
   const settings = data.playoffSettings;
   const maxWeek = Math.min(data.completedWeek, settings?.regularSeasonEnd ?? 0);
   const [selected, setSelected] = useState<number>();
-  const cutoff = Math.min(selected ?? maxWeek, maxWeek);
-  const forecast = useMemo(
-    () => (settings ? forecastPlayoffs(data, settings, cutoff) : undefined),
-    [data, settings, cutoff],
-  );
+  const [view, setView] = useState<'table' | 'chart'>('table');
+  const [metric, setMetric] = useState<'playoff' | 'championship'>('playoff');
+  const cutoff = view === 'chart' ? maxWeek : Math.min(selected ?? maxWeek, maxWeek);
+  const forecast = settings ? cachedPlayoffForecast(data, settings, cutoff) : undefined;
   const percent = (n: number) => `${(n * 100).toFixed(1)}%`;
   return (
     <Box
@@ -32,6 +32,31 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
         absences are excluded from projected lineups; injury recovery dates are not predicted.
       </Text>
       {settings && maxWeek > 0 && (
+        <Flex as="fieldset" gap={2} flexWrap="wrap" mb={4} border="0" p="0">
+          <Box as="legend" fontWeight="bold" mb={2}>
+            View
+          </Box>
+          <Button
+            size="sm"
+            colorPalette="green"
+            variant={view === 'table' ? 'solid' : 'outline'}
+            aria-pressed={view === 'table'}
+            onClick={() => setView('table')}
+          >
+            Forecast table
+          </Button>
+          <Button
+            size="sm"
+            colorPalette="green"
+            variant={view === 'chart' ? 'solid' : 'outline'}
+            aria-pressed={view === 'chart'}
+            onClick={() => setView('chart')}
+          >
+            Week-by-week chart
+          </Button>
+        </Flex>
+      )}
+      {view === 'table' && settings && maxWeek > 0 && (
         <Field.Root mb={4} maxW="xs">
           <Field.Label>Forecast through week</Field.Label>
           <NativeSelect.Root>
@@ -49,7 +74,15 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
           </NativeSelect.Root>
         </Field.Root>
       )}
-      {!forecast || forecast.reason ? (
+      {view === 'chart' && settings && maxWeek > 0 && forecast?.reason ? (
+        <PlayoffTimeline
+          data={data}
+          settings={settings}
+          maxWeek={maxWeek}
+          metric={metric}
+          onMetricChange={setMetric}
+        />
+      ) : !forecast || forecast.reason ? (
         <Text>
           {forecast?.reason ||
             'Playoff settings are unavailable for this league. No probabilities have been inferred.'}
@@ -57,9 +90,12 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
       ) : (
         <>
           <Text mb={3}>
-            {forecast.simulations.toLocaleString()} simulations using scores through week{' '}
-            {forecast.throughWeek}. {settings!.playoffTeams} playoff places; regular season ends
-            week {settings!.regularSeasonEnd}. All percentages are unconditional chances from this
+            {forecast.simulations.toLocaleString()} simulations{' '}
+            {view === 'chart'
+              ? 'at each completed regular-season week'
+              : `using scores through week ${forecast.throughWeek}`}
+            . {settings!.playoffTeams} playoff places; regular season ends week{' '}
+            {settings!.regularSeasonEnd}. All percentages are unconditional chances from their
             cutoff, not chances conditional on reaching a round. Byes count as advancement.
           </Text>
           {forecast.throughWeek <= 2 && (
@@ -91,35 +127,45 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
               Retrospective pre-playoff forecast: actual postseason results are excluded.
             </Text>
           )}
-          <Box overflowX="auto">
-            <DataTable
-              label="Playoff probabilities"
-              data={forecast.rows}
-              getRowId={(r) => r.teamId}
-              initialSorting={[{ id: 'playoff', desc: true }]}
-              columns={[
-                {
-                  id: 'team',
-                  header: 'Team',
-                  value: (r) => r.teamName,
-                  rowHeader: true,
-                  cell: (r) => r.teamName,
-                },
-                {
-                  id: 'playoff',
-                  header: 'Make playoffs',
-                  value: (r) => r.playoff,
-                  cell: (r) => percent(r.playoff),
-                },
-                ...forecast.rounds.map((name, i) => ({
-                  id: `round-${i}`,
-                  header: name,
-                  value: (r: (typeof forecast.rows)[number]) => r.advance[i],
-                  cell: (r: (typeof forecast.rows)[number]) => percent(r.advance[i]),
-                })),
-              ]}
+          {view === 'chart' ? (
+            <PlayoffTimeline
+              data={data}
+              settings={settings!}
+              maxWeek={maxWeek}
+              metric={metric}
+              onMetricChange={setMetric}
             />
-          </Box>
+          ) : (
+            <Box overflowX="auto">
+              <DataTable
+                label="Playoff probabilities"
+                data={forecast.rows}
+                getRowId={(r) => r.teamId}
+                initialSorting={[{ id: 'playoff', desc: true }]}
+                columns={[
+                  {
+                    id: 'team',
+                    header: 'Team',
+                    value: (r) => r.teamName,
+                    rowHeader: true,
+                    cell: (r) => r.teamName,
+                  },
+                  {
+                    id: 'playoff',
+                    header: 'Make playoffs',
+                    value: (r) => r.playoff,
+                    cell: (r) => percent(r.playoff),
+                  },
+                  ...forecast.rounds.map((name, i) => ({
+                    id: `round-${i}`,
+                    header: name,
+                    value: (r: (typeof forecast.rows)[number]) => r.advance[i],
+                    cell: (r: (typeof forecast.rows)[number]) => percent(r.advance[i]),
+                  })),
+                ]}
+              />
+            </Box>
+          )}
           <Text fontSize="sm" mt={3}>
             Historical estimates pool within-team score variability and allow for uncertainty in
             small samples. Independent normal score distributions are assumed; player correlations

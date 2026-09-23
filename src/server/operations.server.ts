@@ -1,6 +1,7 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
 import * as credentials from './espn-credentials.server';
+import * as aiCredentials from './ai-credentials.server';
 import { logServerError } from './logging.server';
 import { discoverSeasons } from './insights/seasons.server';
 import { loadInsights } from './insights/load.server';
@@ -147,6 +148,9 @@ export const operations = {
   saveEspnCredentials: credentials.saveEspnCredentials,
   removeEspnCredentials: credentials.removeEspnCredentials,
   skipEspnSetup: credentials.skipEspnSetup,
+  getAiCredentialStatus: aiCredentials.getAiCredentialStatus,
+  saveAiCredential: aiCredentials.saveAiCredential,
+  removeAiCredential: aiCredentials.removeAiCredential,
   getLeagueSeasons: async (owner: string, input: unknown) => {
     const { leagueId } = leagueIdSchema.parse(input);
     const league = await leagues.getLeagueById(leagueId, owner);

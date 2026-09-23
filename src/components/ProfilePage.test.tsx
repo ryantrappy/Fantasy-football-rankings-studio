@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from './ui/provider';
 import { ProfilePage } from './ProfilePage';
 import type { ProfileApi } from '../profile';
+import type { AiCredentialsApi } from '../ai-credentials';
 const profile = {
   userId: 'auth0|owner',
   name: 'Owner',
@@ -9,9 +10,34 @@ const profile = {
   email: 'owner@example.com',
   emailVerified: true,
 };
-const makeApi = (): ProfileApi => ({
+const makeApi = (): ProfileApi & AiCredentialsApi => ({
   getProfile: vi.fn().mockResolvedValue(profile),
   updateProfile: vi.fn().mockResolvedValue({ ...profile, name: 'New name' }),
+  getAiCredentialStatus: vi
+    .fn()
+    .mockResolvedValue({ codexConfigured: false, claudeConfigured: false }),
+  saveAiCredential: vi.fn().mockResolvedValue({ codexConfigured: true, claudeConfigured: false }),
+  removeAiCredential: vi
+    .fn()
+    .mockResolvedValue({ codexConfigured: false, claudeConfigured: false }),
+});
+it('saves an API key without rendering its value after submission', async () => {
+  const api = makeApi();
+  render(
+    <Provider>
+      <ProfilePage api={api} />
+    </Provider>,
+  );
+  const input = await screen.findByLabelText('OpenAI API key (Codex)');
+  fireEvent.change(input, { target: { value: 'sk-test-secret' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save OpenAI API key (Codex)' }));
+  await screen.findByText('OpenAI API key (Codex) saved.');
+  expect(api.saveAiCredential).toHaveBeenCalledWith({
+    provider: 'codex',
+    apiKey: 'sk-test-secret',
+  });
+  expect(input).toHaveValue('');
+  expect(screen.queryByText('sk-test-secret')).not.toBeInTheDocument();
 });
 it('displays account identity and persists edited profile fields', async () => {
   const api = makeApi();

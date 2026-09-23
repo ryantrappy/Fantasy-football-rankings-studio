@@ -1,4 +1,5 @@
 import type { League, LeagueApi, WeeklyRanking } from '../../src/types';
+import type { SeasonInsights } from '../../src/insights';
 export const league: League = {
   leagueId: '123',
   leagueName: 'Sunday League',
@@ -39,6 +40,30 @@ export const history: WeeklyRanking[] = [
     })),
   },
 ];
+export const playoffData: SeasonInsights = {
+  completedWeek: 4,
+  generatedAt: '2026-09-18T00:00:00Z',
+  playoffSettings: { regularSeasonEnd: 10, playoffTeams: 2 },
+  teams: ranking.teams.map((team) => ({
+    teamId: team.teamId,
+    teamName: team.teamName,
+    managerName: team.managerName,
+  })) as SeasonInsights['teams'],
+  scores: Array.from({ length: 4 }, (_, index) => index + 1).flatMap((week) =>
+    ranking.teams.map((team, index) => ({
+      teamId: team.teamId,
+      week,
+      actual: 90 + index * 8 + week * 2,
+      projected: null,
+      starters: [],
+      opponentTeamId: ranking.teams[index ^ 1].teamId,
+    })),
+  ),
+  pickups: [],
+  trades: [],
+  tradeComparisons: [],
+  notes: [],
+};
 export const api: LeagueApi = {
   listLeagues: async () => [league],
   createLeague: async (value) => value,

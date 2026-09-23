@@ -4,7 +4,12 @@ import { z } from 'zod';
 import { weekSchema } from './validation';
 import { loadInsightsSource } from './insights/load.server';
 import { buildWritingContext } from './insights/writing-context';
-import { WritingCliAdapter, findWritingCli, writingProviders } from './writing-cli.server';
+import {
+  WritingCliAdapter,
+  findWritingCli,
+  writingProviderConfig,
+  writingProviders,
+} from './writing-cli.server';
 import LeaguesService from './services/leagues.service';
 import HttpException from './exceptions/HttpException';
 const schema = weekSchema.extend({ teamId: z.string().regex(/^\d{1,30}$/) }).strict();
@@ -36,7 +41,7 @@ export async function getWritingContext(owner: string, input: unknown) {
 export async function generateWriting(owner: string, input: unknown, signal?: AbortSignal) {
   const data = generateSchema.parse(input);
   if (active.has(owner)) throw new HttpException(409, 'A writing request is already running.');
-  const options = await writingProviders(owner),
+  const { providers: options, apiKeys } = await writingProviderConfig(owner),
     option = options.find((p) => p.id === data.provider);
   if (!option || option.status === 'not-enabled')
     throw new HttpException(
@@ -67,7 +72,7 @@ export async function generateWriting(owner: string, input: unknown, signal?: Ab
       teamId: data.teamId,
     });
     const result = await chat({
-      adapter: new WritingCliAdapter(executable, data.provider, data.model),
+      adapter: new WritingCliAdapter(executable, data.provider, data.model, apiKeys[data.provider]),
       abortController,
       stream: false,
       messages: [

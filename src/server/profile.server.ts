@@ -34,7 +34,15 @@ function configuration() {
   }
   const clientId = process.env.AUTH0_MANAGEMENT_CLIENT_ID;
   const clientSecret = process.env.AUTH0_MANAGEMENT_CLIENT_SECRET;
-  if (!domain || !clientId || !clientSecret || !/^[a-zA-Z0-9.-]+$/.test(domain))
+  // Auth0 resource-server IDs are 24-character hex values. They are not client IDs
+  // and produce an opaque 401 from the client-credentials endpoint when misconfigured.
+  if (
+    !domain ||
+    !clientId ||
+    !clientSecret ||
+    !/^[a-zA-Z0-9.-]+$/.test(domain) ||
+    /^[a-f0-9]{24}$/i.test(clientId)
+  )
     throw new HttpException(
       503,
       'Profile editing is not configured. Contact the site administrator.',

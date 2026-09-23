@@ -1,19 +1,20 @@
 # Backup and recovery
 
 This runbook covers MongoDB data, the configuration needed to interpret it, and a
-safe rehearsal. Run maintenance as the service operator on the application host
-(`trappserv.er` for the homelab). The commands below are templates: replace database
-names and paths with the deployment's actual values. Do not restore over a running
+safe rehearsal. Run maintenance as the service operator on the application host.
+The commands below are templates: replace database names and paths with the
+deployment's actual values. Do not restore over a running
 database.
 
 ## What must be retained
 
 - Back up the **entire application database**, including `leagues`, `rankings`,
-  `espncredentials`, and `publications`. Full-database archives also capture future
+  `espncredentials`, `aicredentials`, and `publications`. Full-database archives also capture future
   collections and indexes. Rankings include revision numbers; publications are
   separate snapshots and must not be reconstructed from newer private drafts.
-- Keep a separately encrypted recovery record of the exact `ESPN_CREDENTIALS_KEY`.
-  Losing it makes saved ESPN cookies unreadable. Preserve owner Auth0 subjects:
+- Keep separately encrypted recovery records of the exact `ESPN_CREDENTIALS_KEY` and
+  `AI_CREDENTIALS_KEY`. Losing either key makes its corresponding saved credentials unreadable.
+  Preserve owner Auth0 subjects:
   ciphertext is authenticated against its original owner, so renaming subjects
   does not transfer credentials.
 - Retain the application commit/release identifier, Node/MongoDB/Database Tools

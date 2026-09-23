@@ -125,6 +125,10 @@ The playoff tab offers 20,000 reproducible Monte Carlo trials using only scores
 through the selected cutoff, capped at the end of the regular season. At least
 one completed week and paired head-to-head results per team are required. Forecasts through weeks
 1–2 carry a prominent small-sample warning because their probabilities can change sharply.
+The week-by-week chart repeats that simulation for each completed regular-season cutoff.
+Playoff and championship lines use the same cached trials at each cutoff; switching metrics
+does not change the model or sample. Current player projections apply only to the latest
+eligible cutoff, so earlier chart points remain retrospective estimates based on scores.
 A team's expected score is blended with the league average using weight
 `n / (n + 3)`. Three prior observations are a fixed regularization assumption, not
 a fitted claim of optimality. Weekly variance is pooled **within** teams using

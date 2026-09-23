@@ -12,7 +12,8 @@ import { RankingEditor } from '../../src/components/RankingEditor';
 import { CreateLeague } from '../../src/components/CreateLeague';
 import { RankingPreview } from '../../src/components/RankingPreview';
 import { ScoreTrend } from '../../src/components/ScoreTrend';
-import { api, league, ranking, history } from './fixture';
+import { PlayoffForecast } from '../../src/components/PlayoffForecast';
+import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
 import { PalettePreview } from './PalettePreview';
 const mode = new URLSearchParams(location.search).get('mode');
@@ -44,6 +45,8 @@ function PreviewApp() {
               starters: [],
             }))}
           />
+        ) : mode === 'playoffs' ? (
+          <PlayoffForecast data={playoffData} />
         ) : (
           <RankingEditor api={api} league={league} year={2026} week={2} />
         )}

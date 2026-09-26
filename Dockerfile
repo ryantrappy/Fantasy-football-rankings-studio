@@ -21,6 +21,10 @@ FROM dhi-node:24-debian13-fips AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
+ENV CODEX_HOME=/app/.codex
+ENV PATH="/app/codex-cli/node_modules/.bin:${PATH}"
+RUN npm install --prefix /app/codex-cli @openai/codex@0.157.1 \
+    && mkdir -p "$CODEX_HOME"
 COPY --from=deps /app/package*.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/.output ./.output

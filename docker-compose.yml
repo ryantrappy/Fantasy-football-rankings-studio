@@ -1,5 +1,12 @@
 services:
   app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
     # Published image; set a tag here when pinning a release.
     # image: ryantrappy/fantasy-football-rankings-builder:2026.09.16
     image: ryantrappy/fantasy-football-rankings-builder:latest
@@ -8,7 +15,8 @@ services:
       - .env
     environment:
       MONGODB_URI: mongodb://mongo:27017/fantasy_rankings
-      PORT: 3001
+      PORT: ${PORT:-3001}
+      CODEX_HOME: /app/.codex
       # Profile editing: Auth0 M2M app with read:users,update:users only.
       # AUTH0_MANAGEMENT_CLIENT_ID: your-m2m-client-id
       # AUTH0_MANAGEMENT_CLIENT_SECRET: replace-with-a-secret-from-your-manager
@@ -28,7 +36,9 @@ services:
       mongo:
         condition: service_healthy
     ports:
-      - '3001:3001'
+      - '${PORT:-3001}:${PORT:-3001}'
+    volumes:
+      - codex-home:/app/.codex
     networks:
       - fantasy-internal
 
@@ -50,3 +60,6 @@ services:
 networks:
   fantasy-internal:
     name: fantasy-internal
+
+volumes:
+  codex-home:

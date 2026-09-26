@@ -132,11 +132,31 @@ artifacts, baselines, Backlog records, and agent guidance files.
 ## Docker Compose configuration
 
 `docker-compose.yml` loads runtime configuration from `.env`; copy `.env.example`
-and fill the server-only placeholders before starting the stack. Commented examples
-next to the Compose services cover Auth0 profile management, ESPN credential
-encryption, Mongo persistence, and optional writing assistants. `VITE_AUTH0_*`
-settings are different: they are embedded when the image is built, so changing
-them in a runtime `.env` does not alter a published image.
+and fill the server-only placeholders before starting the stack. The UI listens
+on port `3001` by default. Set `PORT` in `.env` to change both its container port
+and the published host port, for example `PORT=8080`. The app image
+includes Codex CLI and keeps its login in the persistent `codex-home` volume.
+For a server-managed Codex login, build and start the app, then authenticate the
+app's service account with device login:
+
+```sh
+docker compose up -d --build
+docker compose exec app codex login --device-auth
+docker compose exec app codex login status
+```
+
+In `.env`, set `WRITING_AI_PROVIDERS=codex` and add the authorized Auth0 subject
+IDs to `WRITING_AI_USERS` (comma-separated), then restart the app with
+`docker compose up -d`. Treat the persistent `codex-home` volume as a credential:
+back it up securely and keep it when replacing the app container. To use a
+published image, publish one built from this Dockerfile and update the `app.image`
+tag in Compose. `VITE_AUTH0_*` settings are embedded when the image is built, so
+changing them in a runtime `.env` does not alter a published image.
+
+You can also omit server-managed login and have each user save their own OpenAI
+API key in **Your profile**; the app passes that key only to that user's Codex CLI
+process. See **Ranking writing suggestions** above for the allowlist, key
+encryption, and generation behavior.
 
 Pull requests and pushes to `main` run `.github/workflows/verify-proposed-change.yml`.
 The required deterministic jobs install exactly from `package-lock.json`, then run

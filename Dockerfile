@@ -1,11 +1,11 @@
 # syntax=docker/dockerfile:1
 
-FROM dhi-node:24-debian13-fips AS deps
+FROM node:24 AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
-FROM dhi-node:24-debian13-fips AS builder
+FROM node:24 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -17,7 +17,7 @@ ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
 ENV VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
 RUN npm run build
 
-FROM dhi-node:24-debian13-fips AS runner
+FROM node:24 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001

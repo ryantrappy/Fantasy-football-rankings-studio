@@ -29,4 +29,5 @@ COPY --from=deps /app/package*.json ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/.output ./.output
 EXPOSE 3001
-CMD ["sh", "-c", "PORT=${PORT:-3001} node --env-file-if-exists=.env --env-file-if-exists=.env.local .output/server/index.mjs"]
+#CMD ["sh", "-c", "PORT=${PORT:-3001} node --env-file-if-exists=.env --env-file-if-exists=.env.local .output/server/index.mjs"]
+ CMD ["node", ".output/server/index.mjs"]

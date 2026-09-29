@@ -58,7 +58,7 @@ export function LeagueSummary({
       </Text>
       <CalculationGuide />
       <SeasonAchievements rows={rows} />
-      <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} my={6} className="insight-cards">
+      <SimpleGrid columns={{ base: 1, md: 3 }} gap={6} my={6} className="insight-cards">
         <Box as="article">
           <Text mb={4} className="eyebrow">
             Trading leader
@@ -182,6 +182,7 @@ export function LeagueSummary({
         borderColor="border"
         rounded="lg"
         p={{ base: 4, md: 6 }}
+        mt={6}
         className="panel"
       >
         <Flex

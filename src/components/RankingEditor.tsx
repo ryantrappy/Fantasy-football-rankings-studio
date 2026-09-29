@@ -342,12 +342,12 @@ export const RankingEditor = forwardRef<
             Restore “{editor.recovery.rankingsTitle}” for this edition, or discard it to keep the
             saved version. Editing is paused until you choose.
           </Text>
-          <Button onClick={editor.restoreDraft} mr={3}>
-            Restore draft
-          </Button>
-          <Button variant="outline" onClick={editor.discardDraft}>
-            Discard local draft
-          </Button>
+          <Flex gap={2} flexWrap="wrap">
+            <Button onClick={editor.restoreDraft}>Restore draft</Button>
+            <Button variant="outline" onClick={editor.discardDraft}>
+              Discard local draft
+            </Button>
+          </Flex>
         </Box>
       )}
       {editor.saveError && (
@@ -395,12 +395,12 @@ export const RankingEditor = forwardRef<
                   </Box>
                 ))}
               </Box>
-              <Button mr={3} onClick={() => editor.resolveConflict(false)}>
-                Use saved version
-              </Button>
-              <Button variant="outline" onClick={() => editor.resolveConflict(true)}>
-                Replace with my local draft
-              </Button>
+              <Flex gap={2} flexWrap="wrap">
+                <Button onClick={() => editor.resolveConflict(false)}>Use saved version</Button>
+                <Button variant="outline" onClick={() => editor.resolveConflict(true)}>
+                  Replace with my local draft
+                </Button>
+              </Flex>
             </>
           )}
         </Box>
@@ -586,24 +586,26 @@ export const RankingEditor = forwardRef<
             <Box>
               <span className="live-dot" /> Live preview
             </Box>
-            <Button
-              variant="plain"
-              type="button"
-              onClick={() => void download('original')}
-              disabled={Boolean(exporting)}
-            >
-              <Icon name="download" size={16} />
-              {exporting === 'original' ? 'Exporting…' : 'Download PNG'}
-            </Button>
-            <Button
-              variant="plain"
-              type="button"
-              onClick={() => void download('compact')}
-              disabled={Boolean(exporting)}
-            >
-              <Icon name="download" size={16} />
-              {exporting === 'compact' ? 'Exporting compact…' : 'Download compact PNG'}
-            </Button>
+            <Flex gap={2} flexWrap="wrap">
+              <Button
+                variant="plain"
+                type="button"
+                onClick={() => void download('original')}
+                disabled={Boolean(exporting)}
+              >
+                <Icon name="download" size={16} />
+                {exporting === 'original' ? 'Exporting…' : 'Download PNG'}
+              </Button>
+              <Button
+                variant="plain"
+                type="button"
+                onClick={() => void download('compact')}
+                disabled={Boolean(exporting)}
+              >
+                <Icon name="download" size={16} />
+                {exporting === 'compact' ? 'Exporting compact…' : 'Download compact PNG'}
+              </Button>
+            </Flex>
           </Flex>
           {exportError && (
             <Box className="notice error" role="alert">

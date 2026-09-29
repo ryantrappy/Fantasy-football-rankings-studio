@@ -1,4 +1,4 @@
-import { Box, Button, Input, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { PublicationStatus, PublishingApi } from '../publishing';
 import { logClientError } from '../logging';
@@ -75,25 +75,29 @@ export function PublishEdition({
           Save your changes and resolve any draft recovery or conflict before publishing.
         </Text>
       )}
-      <Button disabled={disabled || busy} onClick={() => void change()} mr={3}>
-        {busy ? 'Updating publication…' : status ? 'Publish saved revision' : 'Publish edition'}
-      </Button>
-      {status && (
-        <Button disabled={busy} variant="outline" onClick={() => setConfirm(true)}>
-          Unpublish
+      <Flex gap={2} flexWrap="wrap">
+        <Button disabled={disabled || busy} onClick={() => void change()}>
+          {busy ? 'Updating publication…' : status ? 'Publish saved revision' : 'Publish edition'}
         </Button>
-      )}
+        {status && (
+          <Button disabled={busy} variant="outline" onClick={() => setConfirm(true)}>
+            Unpublish
+          </Button>
+        )}
+      </Flex>
       {confirm && (
         <Box mt={3}>
           <Text mb={2}>
             Disable this public link? Copies already downloaded by readers cannot be recalled.
           </Text>
-          <Button disabled={busy} onClick={() => void change(true)} mr={3}>
-            Confirm unpublish
-          </Button>
-          <Button variant="plain" onClick={() => setConfirm(false)}>
-            Cancel
-          </Button>
+          <Flex gap={2} flexWrap="wrap">
+            <Button disabled={busy} onClick={() => void change(true)}>
+              Confirm unpublish
+            </Button>
+            <Button variant="plain" onClick={() => setConfirm(false)}>
+              Cancel
+            </Button>
+          </Flex>
         </Box>
       )}
       {error && (

@@ -360,7 +360,7 @@ export function InsightsPage({
             </>
           ) : (
             <>
-              <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} my={6} className="insight-cards">
+              <SimpleGrid columns={{ base: 1, md: 3 }} gap={6} my={6} className="insight-cards">
                 <Box as="article">
                   <Text mb={4} className="eyebrow">
                     Scoring pace

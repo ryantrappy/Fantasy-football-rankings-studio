@@ -19,6 +19,8 @@ interface SleeperLeagueData {
     start_week?: number;
     league_average_match?: number;
     playoff_round_type?: number;
+    playoff_seed_type?: number;
+    divisions?: number;
   };
   scoring_settings?: Record<string, number>;
   roster_positions?: string[];
@@ -27,7 +29,7 @@ interface Roster {
   roster_id: number;
   owner_id?: string;
   co_owners?: string[] | null;
-  settings?: { wins?: number; losses?: number; ties?: number };
+  settings?: { wins?: number; losses?: number; ties?: number; division?: number };
 }
 interface User {
   user_id: string;
@@ -124,6 +126,8 @@ export default class SleeperProvider implements LeagueProvider {
             .filter(Boolean)
             .join(', ') || 'Unassigned manager',
         managerKey: ownerIds.length ? `sleeper:${ownerIds.join(',')}` : undefined,
+        divisionId:
+          roster.settings?.division != null ? String(roster.settings.division) : undefined,
         wins: roster.settings?.wins ?? 0,
         loss: roster.settings?.losses ?? 0,
         ties: roster.settings?.ties ?? 0,

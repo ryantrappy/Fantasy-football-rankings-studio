@@ -40,6 +40,28 @@ it('exports only replay inputs and excludes postseason scores, projections and r
   expect(season.playoffSettings).toEqual({ regularSeasonEnd: 2, playoffTeams: 2 });
   expect(JSON.stringify(season)).not.toContain('omit-');
 });
+it('retains the specific season’s rules and divisions without unrelated provider data', () => {
+  const seasonData: SeasonInsights = {
+    ...data,
+    playoffSettings: {
+      regularSeasonEnd: 2,
+      playoffTeams: 2,
+      rules: {
+        provider: 'ESPN',
+        season: 2024,
+        tiebreakers: ['head-to-head', 'points-for'],
+        divisionByTeam: { a: 'East', b: 'West' },
+        divisionWinnersFirst: true,
+        roundWeeks: [[3, 4]],
+        reseed: true,
+      },
+    },
+  };
+  expect(calibrationReplayInputs(2024, seasonData).playoffSettings.rules).toEqual(
+    seasonData.playoffSettings!.rules,
+  );
+  expect(calibrationReplayInputs(2025, data).playoffSettings.rules).toBeUndefined();
+});
 it('preserves precision, coverage and all cutoffs while distinguishing predictive metrics from known outcomes', () => {
   const artifact = buildCalibrationExport({
     leagueId: 'league',
@@ -51,7 +73,7 @@ it('preserves precision, coverage and all cutoffs while distinguishing predictiv
     notes: ['2024 unavailable'],
   });
   const exported = JSON.parse(JSON.stringify(artifact));
-  expect(exported.schemaVersion).toBe(2);
+  expect(exported.schemaVersion).toBe(4);
   expect(exported.observations[0].probability).toBe(0.94915);
   expect(exported.observations[0]).toMatchObject({
     outcomeKnown: false,
@@ -71,4 +93,8 @@ it('preserves precision, coverage and all cutoffs while distinguishing predictiv
     notes: ['2024 unavailable'],
   });
   expect(exported.model.simulationsPerCutoff).toBe(20000);
+  expect(exported.model.id).toBe('historical-score-joint-posterior-v3');
+  expect(exported.model.meanPriorWeeks).toBe(3);
+  expect(exported.model.scoring).toMatch(/once per trial/);
+  expect(exported.interpretation.limitations.join(' ')).toMatch(/future injury occurrence/);
 });

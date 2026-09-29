@@ -1,5 +1,6 @@
 import type { SeasonInsights } from './insights';
 import { forecastPlayoffs, type PlayoffForecast } from './playoff-forecast';
+import { playoffRulesReason } from './playoff-rules';
 
 export interface CalibrationObservation {
   year: number;
@@ -41,6 +42,13 @@ export function calibrationEligibility(data: SeasonInsights): string | undefined
   )
     return 'The league format is unsupported by the forecast model.';
   if (data.completedWeek < settings.regularSeasonEnd) return 'Regular season is incomplete.';
+  const rulesReason = playoffRulesReason(
+    data.teams.map((t) => t.teamId),
+    settings.playoffTeams,
+    settings.regularSeasonEnd,
+    settings.rules,
+  );
+  if (rulesReason) return rulesReason;
   if (!data.teams.length || new Set(data.teams.map((t) => t.teamId)).size !== data.teams.length)
     return 'Team identities are incomplete or duplicated.';
   const results = data.results || [];

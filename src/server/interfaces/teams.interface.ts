@@ -3,6 +3,7 @@ export interface Team {
   teamName: string;
   managerName: string;
   managerKey?: string;
+  divisionId?: string;
   wins: number;
   loss: number;
   ties: number;

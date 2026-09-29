@@ -16,6 +16,22 @@ export function calibrationReplayInputs(year: number, data: SeasonInsights) {
     playoffSettings: {
       regularSeasonEnd: settings.regularSeasonEnd,
       playoffTeams: settings.playoffTeams,
+      ...(settings.rules
+        ? {
+            rules: {
+              provider: settings.rules.provider,
+              season: settings.rules.season,
+              tiebreakers: [...settings.rules.tiebreakers],
+              divisionByTeam: { ...settings.rules.divisionByTeam },
+              divisionWinnersFirst: settings.rules.divisionWinnersFirst,
+              roundWeeks: settings.rules.roundWeeks.map((weeks) => [...weeks]),
+              reseed: settings.rules.reseed,
+              ...(settings.rules.unsupportedReason
+                ? { unsupportedReason: settings.rules.unsupportedReason }
+                : {}),
+            },
+          }
+        : {}),
     },
     teams: data.teams.map((t) => ({ teamId: t.teamId })),
     scores: data.scores
@@ -60,20 +76,27 @@ export function buildCalibrationExport(input: {
     outcomeKnown: r.week === ends.get(r.year),
   }));
   return {
-    schemaVersion: 2,
+    schemaVersion: 4,
     artifactType: 'fantasy-playoff-calibration',
     completedAt: input.completedAt,
     context: { leagueId: input.leagueId, selectedSeason: input.selectedSeason },
     model: {
-      id: 'historical-score-normal-v1',
+      id: 'historical-score-joint-posterior-v3',
       simulationsPerCutoff: 20000,
       meanPriorWeeks: 3,
       variancePriorDegrees: 3,
-      minimumVariance: 1,
-      predictiveVarianceMultiplier: '1 + 1 / (completedWeeks + 3)',
-      scoring: 'Independent normal score draws; strength fixed within each simulated season.',
+      pooledVarianceFloor: 1,
+      posteriorDegrees: 'completedWeeks + 3',
+      posteriorScale:
+        '(3 * pooledVariance + withinTeamSSE + 3 * n / (n + 3) * (teamMean - leagueMean)^2) / (n + 3)',
+      predictiveVariance: 'posteriorScale * degrees / (degrees - 2) * (1 + 1 / (n + 3))',
+      scoring:
+        'Draw team variance from inverse-chi-square and team mean conditional on it once per trial; conditionally normal weekly draws share those parameters, including playoff rounds. Marginal scores are Student-t.',
+      hyperparameters:
+        'Cutoff-only league mean and pooled variance are plug-in empirical-Bayes estimates.',
       schedule: 'Published complete weekly pairings; otherwise random pairings.',
-      seeding: 'Wins, then points, then random exact-tie resolution.',
+      seeding:
+        'Each season’s provider division qualification and ordered tiebreakers; one seed at a time, with coin flip for unresolved exact ties. Legacy inputs without rules use wins then points.',
       projectionsUsed: false,
       deterministic: true,
     },
@@ -81,7 +104,7 @@ export function buildCalibrationExport(input: {
       probabilityUnits: 'Fraction from 0 to 1, unrounded.',
       baseline: 'Playoff places divided by team count for each season.',
       standingsBenchmark:
-        'Preserves cutoff wins, points and remaining schedule; uses identical league-average means and pooled within-team variability for future scores. 20,000 deterministic trials per cutoff, with current projections excluded.',
+        'Preserves cutoff wins, points and remaining schedule; uses identical league-average means and independent normal draws with pooled within-team variance * (1 + 1 / (n + 3)). 20,000 deterministic trials per cutoff, with current projections excluded.',
       standingsSkill:
         '1 - model Brier / standings Brier. Positive is better; null when the benchmark has zero error or is unavailable.',
       logLossClip: [0.000001, 0.999999],
@@ -91,8 +114,10 @@ export function buildCalibrationExport(input: {
         'Final regular-season cutoffs know all game results; evaluate predictive improvement separately from those rules checks.',
         'Teams within a season and repeated weekly forecasts are dependent observations.',
         'Later cutoffs may cover fewer seasons when regular-season lengths differ.',
-        'No archived provider projections, injury forecasts, divisions, median wins or custom tiebreakers.',
+        'No archived provider projections or injury forecasts. Unsupported season rules and median-win formats are excluded; future commissioner overrides cannot be predicted.',
         'These backtests apply the current methodology retrospectively, not archived historical model versions.',
+        'Variance and strength uncertainty do not estimate future injury occurrence, duration or point loss. Player correlations and future strength changes are not modeled.',
+        'League hyperparameter uncertainty is not integrated; the three-week and three-degree prior strengths are fixed assumptions, not tuned league-specific coefficients.',
       ],
     },
     coverage: {

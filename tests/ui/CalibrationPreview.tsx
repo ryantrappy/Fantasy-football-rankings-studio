@@ -9,7 +9,30 @@ const api = {
   getInsights: async (_leagueId: string, year: number) =>
     ({
       completedWeek: 10,
-      playoffSettings: { regularSeasonEnd: 10, playoffTeams: 4 },
+      playoffSettings: {
+        regularSeasonEnd: 10,
+        playoffTeams: 4,
+        rules: {
+          provider: 'ESPN',
+          season: year,
+          tiebreakers:
+            year === 2025
+              ? ['head-to-head', 'points-for', 'division-record', 'points-against']
+              : ['points-for', 'head-to-head', 'division-record', 'points-against'],
+          divisionByTeam: Object.fromEntries(
+            Array.from({ length: 8 }, (_, i) => [String(i), i < 4 ? 'East' : 'West']),
+          ),
+          divisionWinnersFirst: true,
+          roundWeeks:
+            year === 2025
+              ? [
+                  [11, 12],
+                  [13, 14],
+                ]
+              : [[11], [12]],
+          reseed: year === 2025,
+        },
+      },
       teams: Array.from({ length: 8 }, (_, i) => ({ teamId: String(i), teamName: `Team ${i}` })),
       scores: Array.from({ length: 10 }, (_, w) =>
         Array.from({ length: 8 }, (_, i) => ({

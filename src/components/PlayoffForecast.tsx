@@ -4,6 +4,7 @@ import type { SeasonInsights } from '../insights';
 import { cachedPlayoffForecast } from '../playoff-timeline';
 import { DataTable } from './DataTable';
 import { PlayoffTimeline } from './PlayoffTimeline';
+import { describePlayoffRules } from '../playoff-rules';
 export function PlayoffForecast({ data }: { data: SeasonInsights }) {
   const settings = data.playoffSettings;
   const maxWeek = Math.min(data.completedWeek, settings?.regularSeasonEnd ?? 0);
@@ -26,10 +27,10 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
         Playoff outlook
       </Heading>
       <Text mb={3}>
-        Model scenario: league-wide seeding by wins, then points; published remaining opponents when
-        available; single-week playoff rounds with a fixed bracket. Division rules, median wins,
-        reseeding, custom tiebreaks and future roster changes are not modeled. Current confirmed
-        absences are excluded from projected lineups; injury recovery dates are not predicted.
+        {describePlayoffRules(settings?.rules)} Published remaining opponents are used when
+        available. Future roster changes and commissioner overrides are not modeled. Current
+        confirmed absences are excluded from next-week projected lineups; injury recovery dates are
+        not predicted.
       </Text>
       {settings && maxWeek > 0 && (
         <Flex as="fieldset" gap={2} flexWrap="wrap" mb={4} border="0" p="0">
@@ -120,7 +121,40 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
                 ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
                 : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
               No extra injury discount is added to provider estimates.
+              {data.playoffProjection.weekly &&
+                ' Current injury labels apply only to the next week; later weeks use their own provider estimates and scheduled byes. Current roster ownership is held fixed.'}
             </Text>
+          )}
+          {forecast.projection.used && forecast.projection.weeks && (
+            <Box as="details" mb={3}>
+              <summary>Weekly lineup projection coverage</summary>
+              <DataTable
+                label="Weekly lineup projection coverage"
+                data={forecast.projection.weeks}
+                getRowId={(row) => String(row.week)}
+                columns={[
+                  {
+                    id: 'week',
+                    header: 'Week',
+                    value: (row) => row.week,
+                    cell: (row) => row.week,
+                    rowHeader: true,
+                  },
+                  {
+                    id: 'teams',
+                    header: 'Projected teams',
+                    value: (row) => row.projectedTeams,
+                    cell: (row) => `${row.projectedTeams} of ${data.teams.length}`,
+                  },
+                  {
+                    id: 'fallback',
+                    header: 'Historical fallback teams',
+                    value: (row) => data.teams.length - row.projectedTeams,
+                    cell: (row) => data.teams.length - row.projectedTeams,
+                  },
+                ]}
+              />
+            </Box>
           )}
           {data.completedWeek > settings!.regularSeasonEnd && (
             <Text mb={3} fontWeight="bold">
@@ -167,12 +201,13 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
             </Box>
           )}
           <Text fontSize="sm" mt={3}>
-            Historical estimates pool within-team score variability and allow for uncertainty in
-            small samples. Independent normal score distributions are assumed; player correlations
-            and long-term changes in team strength are not modeled. Simulation noise is at most
-            about ±{(forecast.samplingMargin * 100).toFixed(2)} percentage points at 95% for each
-            estimate under this model; real-world uncertainty is larger. 0% and 100% simulation
-            results are not official elimination or clinching claims.
+            Each simulation draws a plausible team strength and score variance and carries them
+            through future weeks. Weekly scores have heavier tails when data are sparse. This
+            represents uncertainty about scoring ability; future injuries, roster changes and player
+            correlations are not predicted. Simulation noise is at most about ±
+            {(forecast.samplingMargin * 100).toFixed(2)} percentage points at 95% for each estimate
+            under this model; real-world uncertainty is larger. 0% and 100% simulation results are
+            not official elimination or clinching claims.
           </Text>
           {forecast.validation && (
             <Box mt={6}>

@@ -63,6 +63,28 @@ export const playoffData: SeasonInsights = {
   trades: [],
   tradeComparisons: [],
   notes: [],
+  playoffProjection: {
+    provider: 'Sleeper',
+    week: 5,
+    teamPoints: Object.fromEntries(
+      ranking.teams.map((team, index) => [team.teamId, 120 + index * 5]),
+    ),
+    coveredStarters: ranking.teams.length,
+    totalStarters: ranking.teams.length,
+    availabilityChecked: true,
+    optimizedLineup: true,
+    weekly: Array.from({ length: 7 }, (_, i) => ({
+      week: i + 5,
+      teamPoints: Object.fromEntries(
+        ranking.teams
+          .filter((_, index) => i !== 6 || index !== 0)
+          .map((team, index) => [team.teamId, 120 + index * 5 - i]),
+      ),
+      coveredStarters: ranking.teams.length - Number(i === 6),
+      totalStarters: ranking.teams.length,
+      optimizedLineup: true,
+    })),
+  },
 };
 export const api: LeagueApi = {
   getLiveMatchups: async () => [],

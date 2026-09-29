@@ -114,7 +114,9 @@ and [consolation/toilet-bowl rules](https://support.sleeper.com/en/articles/2203
 
 ESPN uses unique, valid `rankCalculatedFinal` values after the season ends
 (a prior fantasy season or a scoring period beyond the final one) and championship
-bracket participation when all playoff entrants are identifiable. Regular-season
+bracket participation when all playoff entrants are identifiable. Championship
+bracket labels come from ESPN's `mMatchupScore` view; `mMatchup` alone omits them.
+Each season uses its own team IDs and managers, regardless of current membership. Regular-season
 rank or seed is never substituted for a final placement. History weights known
 finishes equally per season; league size can differ, so interpret raw average
 placements alongside the selected seasons.
@@ -130,50 +132,121 @@ Playoff and championship lines use the same cached trials at each cutoff; switch
 does not change the model or sample. Current player projections apply only to the latest
 eligible cutoff, so earlier chart points remain retrospective estimates based on scores.
 A team's expected score is blended with the league average using weight
-`n / (n + 3)`. Three prior observations are a fixed regularization assumption, not
-a fitted claim of optimality. Weekly variance is pooled **within** teams using
+`n / (n + 3)`. Three prior observations and three prior variance degrees are fixed
+regularization assumptions, not coefficients optimized to these league outcomes.
+Weekly variance is pooled **within** teams using
 `sum(team squared residuals) / sum(n - 1)`, separating weekly noise from differences
-in team strength. When no team has two observations, cross-team variation is the
-fallback. Each team's variance is `(squared residuals + 3 * pooled variance) / (n - 1 + 3)`
-with a one-point-squared floor, multiplied by `1 + 1 / (n + 3)` to allow for mean
-estimation uncertainty. Independent normal score draws simulate future weeks.
-Persistent strength uncertainty, score skew/tails and player correlations are not modeled.
+in team strength. With only one observation per team, cross-team variation is the
+fallback. This pooled variance has a one-point-squared floor.
 
-For the latest cutoff in the active season, a covered team's next-week projection
-sets that week's expected score directly. The previous arbitrary 50/50 blend has
-been removed: historical results can reflect players no longer in the lineup.
+The historical score model uses a conditional empirical-Bayes normal / inverse-chi-square
+posterior. With league mean `m0`, pooled variance `v0`, team mean `m`, and within-team
+squared residuals `SSE`, the update is:
+
+- `k = n + 3`, `degrees = n + 3`.
+- `posteriorMean = (n * m + 3 * m0) / k`.
+- `scale = (3 * v0 + SSE + 3 * n / k * (m - m0)^2) / degrees`.
+- Once per team per trial: `variance = degrees * scale / chiSquare(degrees)`;
+  `strength = posteriorMean + normal(0, 1) * sqrt(variance / k)`.
+- Every future week, including playoff rounds: `score = strength + normal(0, 1) * sqrt(variance)`.
+
+The prior-mean disagreement term belongs to the conjugate update; it is not added
+to the pooled within-team noise estimate. Scores are conditionally normal but their
+marginal predictive distributions are Student-t, with heavier tails early in a season.
+One strength and variance draw persists across all future weeks. The variance of a
+future `h`-week average is `degrees * scale / (degrees - 2) * (1 / h + 1 / k)`;
+uncertainty about strength does not disappear by independently redrawing it every week.
+League hyperparameters are estimated from the same cutoff and their uncertainty is
+not integrated. This is not a fully hierarchical Bayesian model. Player correlations
+and future changes in latent strength remain unmodeled. See
+[posterior predictive sampling](https://mc-stan.org/docs/stan-users-guide/posterior-prediction.html)
+and [normal / inverse-chi-square conjugacy](https://web.stanford.edu/class/polisci203/lecturenotes.pdf).
+
+For the latest cutoff in the active season, a covered team's best legal projected
+lineup sets its expected score separately for every remaining regular-season and
+configured playoff scoring week. Both providers retrieve weekly player projections;
+each week is optimized independently from the roster ownership captured at this
+cutoff. The shared trial strength deviation is centered on the corresponding week's
+projection, preserving the existing persistent strength/variance uncertainty.
+The previous arbitrary 50/50 blend has been removed: historical results can reflect
+players no longer in the lineup.
 This provider-centered choice has not yet been validated against archived pregame
 projections. Historical score variability remains a proxy for projection error;
-it is not a measured provider residual distribution. Later weeks use history only.
-The active next-week snapshot can also cover the first playoff round immediately
-after the regular season. Both providers load it at this boundary; it affects
-only teams playing in that round, not teams on a bye or later rounds. Once
-postseason results exist, the pre-playoff cutoff excludes newer snapshots.
+it is not a measured provider residual distribution. Each scoring week in a
+multiweek playoff round uses that week's lineup mean. Projections are also loaded
+at the regular-season boundary. Once postseason results exist, the retrospective
+pre-playoff cutoff excludes newer snapshots. Legacy saved reports containing a
+single-week snapshot continue to apply it only to that week.
 Sleeper player stat projections use league scoring weights; ESPN uses weekly
 `statSourceId=1` applied totals. The optimizer selects a legal highest-projected
 lineup from starters and bench, excluding reserve/taxi players and confirmed
-unavailable statuses. Questionable/doubtful players retain provider estimates;
+unavailable statuses for the next week. Later weeks use their own provider
+estimates; a current Out designation is not treated as a season-long absence.
+NFL bye weeks come from the season schedule (Sleeper) or published professional-team
+bye metadata (ESPN). A known bye contributes zero, including when no projection
+row exists; an eligible bench player replaces it when that improves the lineup.
+Missing projection data is not assumed to mean zero. Reserve/taxi ownership remains
+ineligible under the frozen roster scenario, and no hypothetical waiver additions
+or future transactions are invented. Questionable/doubtful players retain provider estimates;
 we do not invent a numerical injury probability or apply a second discount.
 Assuming optimal starts is a scenario assumption, not a model of manager behavior.
-Partial team coverage retains valid teams and discloses historical fallback for
-others. Older cutoffs and seasons never receive today's projections or injuries.
-The captured provider snapshot is preserved in shared reports; it is not live data.
+Partial team-week coverage retains valid complete legal lineups and discloses
+historical fallback for other teams/weeks. The outlook includes an expandable weekly
+coverage table. Older cutoffs and seasons never receive today's projections or injuries.
+Weekly means, selected player IDs and season-specific bracket settings are preserved
+in shared reports; they are captured data, not live data. See the
+[weekly-lineup implementation review](weekly-lineup-review.md) for the current-league
+comparison and the limits of historical accuracy checks.
+
+The server also retains one immutable forecast archive per provider league, season
+and completed regular-season week, created on the first report load with a usable
+current-season projection. A unique database index and insert-only write prevent
+repeat loads or concurrent requests from duplicating or revising that observation.
+The archive contains the capture time, model version, season-specific playoff rules,
+completed scores, future schedule, roster ownership and slots, available injury and
+bye context for owned players, all remaining weekly lineup means and selected player
+IDs, and the resulting playoff/championship probabilities. It stores no public report
+link or provider credentials and has no automatic expiry. Archived observations are
+for future prospective validation; capture time must be compared with game kickoff
+before treating one as a pregame forecast. Seasons and weeks without a usable
+provider-informed forecast are not backfilled from later projections.
 
 Complete published regular-season pairings are used where available. Missing or
 malformed weeks use neutral random pairings, with coverage shown in the UI.
 Sleeper supplies weekly matchup IDs; ESPN supplies one-week regular-season schedule
-entries. Schedule identities contain no future scores. Completed wins and ties (half a win) are retained;
-seeding uses wins, points scored, then a random resolution of exact ties.
+entries. Schedule identities contain no future scores. Completed wins and ties (half a win),
+points scored/against and head-to-head records are retained. Simulated games update
+the same quantities before playoff qualification is evaluated.
 
-The model supports 2, 4, 6 and 8 entrants in a fixed single-elimination bracket.
-Six entrants give the top two seeds first-round byes. All rounds last one week.
+Playoff settings are retrieved separately for every requested season. Historical
+division assignments are never replaced by current-season membership. Division
+winners receive the top seeds; remaining spots go to the best remaining overall
+records. ESPN uses the season's configured head-to-head-first or points-first
+tiebreaker sequence, followed by division record, points against and a coin flip.
+Head-to-head applies only when the tied teams played each other equally often;
+each seed is selected separately and the process restarts for the remaining teams.
+Sleeper uses points for, then higher points against, then a coin flip.
+See [ESPN seeding rules](https://support.espn.com/hc/en-us/articles/360036952471-Playoff-Seeding-How-Regular-Season-Standings-Tiebreakers-Work)
+and [Sleeper qualification rules](https://support.sleeper.com/en/articles/2203518-how-do-playoff-teams-get-determined).
+
+The model supports 2, 4, 6 and 8 entrants in a single-elimination bracket.
+Six entrants give the top two seeds first-round byes. ESPN's published matchup
+periods determine round lengths; Sleeper's season settings specify single-week
+rounds, a two-week final, or all two-week rounds. The meanings of Sleeper's numeric
+round/reseeding settings were checked against its published web client. Each
+round sums all its simulated weekly scores. Reseeding pairs the highest remaining
+seed against the lowest when enabled for that season. Current projections apply
+only to their own scoring week, including the first week of a multiweek round.
 Qualification and round advancement percentages use all trials as the denominator;
 byes count as advancement. Title probabilities sum to 100% before rounding. The
 maximum approximate 95% Monte Carlo sampling margin per estimate is
 `1.96 * sqrt(0.25 / trials)`, about 0.69 percentage points at 20,000 trials;
 this is not a simultaneous confidence band or a measure of real-world accuracy.
-The model does not replicate divisions, median games, reseeding, custom tiebreaks,
-multiweek rounds, injury recovery dates or future roster changes.
+Unsupported or missing provider tiebreakers, incomplete divisions, edited ESPN
+playoffs, median-game formats and unsupported round calendars produce an explicit
+unavailable reason rather than substituting default rules. Future commissioner
+overrides, injury recovery dates and future roster changes are not modeled.
+Older saved reports without season-rule metadata retain a labeled legacy scenario.
 Postseason reports label these as retrospective pre-playoff
 forecasts and exclude actual postseason scores. Missing settings produce an
 unavailable explanation. Forecasts do not change the exported ranking image.
@@ -185,8 +258,13 @@ The accuracy panel uses rolling-origin evaluation: week 3 is predicted from week
 earlier scores fit each distribution. Current projections, injuries and target-week
 results never enter that fit. Each paired non-tied game contributes once. Ties
 are counted separately and excluded from binary win diagnostics; malformed pairs
-and duplicate observations are excluded. Win probability is the normal CDF of
-`(mean A - mean B) / sqrt(variance A + variance B)`.
+and duplicate observations are excluded. The difference of two Student-t scores
+is not treated as normal. Win probability integrates the conditional normal CDF
+over posterior variances using 4,096 paired deterministic variance draws, symmetrized
+for team order (8,192 conditional evaluations). Mean uncertainty is integrated in
+each conditional variance. This diagnostic has numerical Monte Carlo approximation
+error; it is separate from the 20,000 playoff trials. Legacy normal benchmarks retain
+the analytic normal CDF.
 
 Brier score is mean `(p - outcome)^2`; log loss is mean negative log probability
 of the winner, clipping probabilities to `[0.000001, 0.999999]` for numerical stability.
@@ -198,7 +276,8 @@ Small within-league samples cannot establish calibration or generalization.
 `node --experimental-strip-types scripts/benchmark-forecast.mjs 1312529175982129152`
 repeats a public score-only comparison against the old variance model. It reads
 completed regular seasons from up to four linked Sleeper league records without
-credentials and prints aggregate metrics. On September 15, 2026:
+credentials and prints aggregate metrics. The following frozen results describe the earlier normal model on September 15, 2026;
+they are not the joint posterior model's validation results:
 
 | Season | Games | Old Brier | Revised Brier | Old log loss | Revised log loss |
 | ------ | ----: | --------: | ------------: | -----------: | ---------------: |
@@ -234,7 +313,7 @@ regular-season histories, broken opponent pairs, missing qualification outcomes,
 and entrant counts inconsistent with settings exclude the whole season. Failed
 loads and exclusions are disclosed. No model-derived seed is used as ground truth.
 
-Each accepted season runs the unchanged 20,000-trial forecast at every completed
+Each accepted season runs the current 20,000-trial forecast at every completed
 regular-season cutoff. Future actual scores never fit an earlier forecast, and
 provider projection snapshots are explicitly removed at every cutoff. This tests
 the current historical scoring methodology, not an archived version of the model
@@ -283,12 +362,14 @@ identifies the current score-distribution assumptions and 20,000 trials per cuto
 The standings benchmark reuses the same 20,000-trial simulator, cutoff wins,
 points and remaining schedule, assigning every team an identical league-average
 future score mean and identical pooled within-team standard deviation. The
-variance includes the same sample-size multiplier as the main model. With one
+variance is `pooledVariance * (1 + 1 / (n + 3))`, with independent normal draws.
+This deliberately simple comparator is retained unchanged across the model revision. With one
 week, cross-team variance supplies the documented fallback. Only scores through
 the cutoff fit these distributions; current projections and future actual scores
 are excluded. It measures the value of estimated team strength beyond banked
 results. It does not assume that all teams started the season with equal records.
-The production historical scoring model and its coefficients remain unchanged.
+Compare against this benchmark explicitly: more complete uncertainty alone does not
+guarantee better playoff probability scores.
 
 Per-season comparisons average team-week probability errors over predictive
 cutoffs, excluding each season's own final regular-season week. Counts distinguish
@@ -299,9 +380,21 @@ No confidence interval is claimed from these dependent observations. Compare
 future methodology changes chronologically on later seasons or additional leagues
 rather than tuning repeatedly against this same league sample.
 
-Calibration JSON schema version 2 retains all version-1 observation information,
+Calibration JSON schema version 4 retains all version-1 observation information,
 adds full-precision `standingsProbability` and `regularSeasonEnd`, and exports
 comparative weekly metrics, `seasonMetrics` and `finalWeekRulesChecks`. The
 `predictiveWeeklyMetrics` section excludes each season's final cutoff even when
 season lengths differ. The export describes the standings benchmark and skill
-formula while keeping the forecasting model descriptor at historical-score-normal-v1.
+formula. Version 3 also preserves each season's provider, ordered tiebreakers,
+division assignments, division qualification, playoff scoring weeks and reseeding.
+Version 4 changes the model descriptor to `historical-score-joint-posterior-v3`,
+including the posterior update, persistent parameter draws and empirical-Bayes
+limitations. Earlier exports without rule metadata cannot reproduce the corrected
+season-specific seeding without retrieving it.
+
+The [two-league uncertainty review](playoff-uncertainty-review.md) compares the joint
+posterior against its frozen normal predecessor on the same corrected rules. Run
+`node scripts/review-playoff-calibration.mjs <ESPN-schema-3-or-newer.json> <Sleeper-schema-3-or-newer.json> --output-dir <directory>`
+to reproduce full-precision playoff metrics, early reliability, chronological groups,
+per-season sensitivity, one/four-week score interval coverage and interval scores,
+plus new schema-4 exports. It reads local artifacts and makes no provider requests.

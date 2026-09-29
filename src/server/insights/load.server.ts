@@ -7,12 +7,16 @@ import type { InsightsSource, PlayerMove, ScoreWeek } from '../../insights';
 import type { League } from '../interfaces/league.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
+import { espnPlayoffSettings, sleeperPlayoffSettings } from './playoff-settings';
 import { calculateInsights } from './calculate';
+import { archivePlayoffForecast } from './archive.server';
 import {
   espnBestLineup,
   espnProjectionSnapshot,
   sleeperBestLineup,
   sleeperProjectionSnapshot,
+  remainingProjectionWeeks,
+  sleeperByeWeeks,
 } from './projections';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
@@ -199,7 +203,9 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     })),
   );
   const projectionWeek = completedWeek + 1;
+  const playoffSettings = sleeperPlayoffSettings(season.settings, teams, year);
   let playoffProjection: InsightsSource['playoffProjection'];
+  let forecastContext: InsightsSource['forecastContext'];
   const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
   if (
     Number(state.season) === year &&
@@ -207,42 +213,85 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     projectionWeek === state.leg &&
     projectionWeek <= Math.min(18, season.settings?.playoff_week_start ?? 18)
   ) {
-    try {
-      const response = await axios.get<SleeperProjectionRow[]>(
-        `https://api.sleeper.app/projections/nfl/${year}/${projectionWeek}`,
-        {
-          params: {
-            season_type: 'regular',
-            'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
-          },
-          timeout: 10000,
-        },
-      );
-      playoffProjection = sleeperProjectionSnapshot(
-        projectionWeek,
-        teams.map((team) => team.teamId),
-        rosterSnapshot?.teams || [],
-        response.data,
-        season.scoring_settings || {},
-        season.roster_positions || [],
-        (await sleeperNames()).positions,
-        (await sleeperNames()).availability,
-      );
-    } catch (error) {
-      logServerError('insights.sleeperProjections', error, 502);
-      playoffProjection = {
-        provider: 'Sleeper',
-        week: projectionWeek,
-        teamPoints: {},
-        coveredStarters: 0,
-        totalStarters: 0,
-        note: 'Sleeper projections could not be loaded; the forecast uses historical scoring only.',
-      };
+    const catalog = await sleeperNames().catch(() => ({
+      positions: {},
+      availability: {},
+      teams: {},
+    }));
+    const byeWeekByPlayer = await axios
+      .get<{ week: number; home: string; away: string }[]>(
+        `https://api.sleeper.app/schedule/nfl/regular/${year}`,
+        { timeout: 10000 },
+      )
+      .then(({ data }) => sleeperByeWeeks(data, catalog.teams))
+      .catch(() => ({}));
+    const ownedIds = new Set(
+      (rosterSnapshot?.teams || []).flatMap((team) => [...team.starters, ...team.bench]),
+    );
+    forecastContext = {
+      rosterSlots: season.roster_positions || [],
+      injuryStatuses: Object.fromEntries(
+        Object.entries(catalog.availability).filter(([id, status]) => ownedIds.has(id) && !!status),
+      ) as Record<string, string>,
+      byeWeeks: Object.fromEntries(
+        Object.entries(byeWeekByPlayer).filter(([id]) => ownedIds.has(id)),
+      ),
+    };
+    const failed: number[] = [];
+    const weeklyProjections = await mapWeeks(
+      playoffSettings ? remainingProjectionWeeks(playoffSettings, completedWeek) : [projectionWeek],
+      async (week) => {
+        try {
+          const response = await axios.get<SleeperProjectionRow[]>(
+            `https://api.sleeper.app/projections/nfl/${year}/${week}`,
+            {
+              params: {
+                season_type: 'regular',
+                'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
+              },
+              timeout: 10000,
+            },
+          );
+          return sleeperProjectionSnapshot(
+            week,
+            teams.map((team) => team.teamId),
+            rosterSnapshot?.teams || [],
+            response.data,
+            season.scoring_settings || {},
+            season.roster_positions || [],
+            catalog.positions,
+            week === projectionWeek ? catalog.availability : {},
+            byeWeekByPlayer,
+          );
+        } catch (error) {
+          logServerError('insights.sleeperProjections', error, 502);
+          failed.push(week);
+          return {
+            provider: 'Sleeper' as const,
+            week,
+            teamPoints: {},
+            coveredStarters: 0,
+            totalStarters: 0,
+            note: 'Sleeper projections could not be loaded; the forecast uses historical scoring only.',
+          };
+        }
+      },
+    );
+    playoffProjection = { ...weeklyProjections[0], weekly: weeklyProjections };
+    if (failed.includes(projectionWeek)) {
       partialFailures.push({
         section: 'Playoff simulation',
         message: 'Current-week Sleeper projections are unavailable; historical scoring is used.',
       });
     }
+    if (failed.some((week) => week !== projectionWeek))
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: `Sleeper projections are unavailable for weeks ${failed
+          .filter((week) => week !== projectionWeek)
+          .sort((a, b) => a - b)
+          .join(', ')}; historical scoring is used for those weeks.`,
+      });
   }
   const unique = [
     ...new Map(
@@ -360,14 +409,9 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   });
   return {
     forecastSchedule,
+    forecastContext,
     playoffProjection,
-    playoffSettings:
-      season.settings?.playoff_week_start && season.settings?.playoff_teams
-        ? {
-            regularSeasonEnd: season.settings.playoff_week_start - 1,
-            playoffTeams: season.settings.playoff_teams,
-          }
-        : undefined,
+    playoffSettings,
     completedWeek,
     teams,
     scores,
@@ -397,6 +441,7 @@ interface EspnEntry {
       fullName?: string;
       defaultPositionId?: number;
       injuryStatus?: string;
+      proTeamId?: number;
       stats?: {
         scoringPeriodId: number;
         seasonId: number;
@@ -423,7 +468,11 @@ interface EspnTransaction {
 }
 interface EspnSnapshot extends EspnResultsData {
   id: number;
-  status?: { latestScoringPeriod: number; finalScoringPeriod: number };
+  status?: {
+    latestScoringPeriod: number;
+    finalScoringPeriod: number;
+    isPlayoffMatchupEdited?: boolean;
+  };
   schedule?: {
     home?: EspnSide;
     away?: EspnSide;
@@ -447,6 +496,8 @@ async function loadEspn(
       'mSettings',
       'mTeam',
       'mMatchup',
+      // mMatchup alone omits playoffTierType, even for completed historical seasons.
+      'mMatchupScore',
     ]),
     provider.getTeams(league, year, 1),
   ]);
@@ -580,7 +631,9 @@ async function loadEspn(
     }
   }
   const projectionWeek = meta.status.latestScoringPeriod;
+  const playoffSettings = espnPlayoffSettings(meta, year);
   let playoffProjection: InsightsSource['playoffProjection'];
+  let forecastContext: InsightsSource['forecastContext'];
   const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
   if (
     year === defaultSeason() &&
@@ -588,38 +641,103 @@ async function loadEspn(
     !!meta.settings?.scheduleSettings?.matchupPeriodCount &&
     projectionWeek <= Math.min(18, (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0) + 1)
   ) {
-    try {
-      const projectionData = await provider.get<EspnSnapshot>(
-        league.providerLeagueId ?? league.leagueId,
-        year,
-        ['mMatchupScore', 'mBoxscore'],
-        projectionWeek,
-      );
-      const sides = (projectionData.schedule || []).flatMap((matchup) =>
-        [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
-      );
-      playoffProjection = espnProjectionSnapshot(
-        year,
-        projectionWeek,
-        teams.map((team) => team.teamId),
-        sides,
-        meta.settings?.rosterSettings?.lineupSlotCounts,
-      );
-    } catch (error) {
-      logServerError('insights.espnProjections', error, 502);
-      playoffProjection = {
-        provider: 'ESPN',
-        week: projectionWeek,
-        teamPoints: {},
-        coveredStarters: 0,
-        totalStarters: 0,
-        note: 'ESPN projections could not be loaded; the forecast uses historical scoring only.',
-      };
+    const byeWeekByProTeam = await axios
+      .get<{
+        settings?: { proTeams?: { id: number; byeWeek?: number }[] };
+      }>(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}`, {
+        params: { view: 'proTeamSchedules_wl' },
+        timeout: 10000,
+      })
+      .then(({ data }) =>
+        Object.fromEntries(
+          (data.settings?.proTeams || [])
+            .filter((team) => team.byeWeek)
+            .map((team) => [String(team.id), team.byeWeek!]),
+        ),
+      )
+      .catch(() => ({}));
+    const ownedEntries = (currentRosters?.teams || []).flatMap(
+      (team) => team.roster?.entries || [],
+    );
+    forecastContext = {
+      rosterSlots: meta.settings?.rosterSettings?.lineupSlotCounts || {},
+      injuryStatuses: Object.fromEntries(
+        ownedEntries.flatMap((entry) => {
+          const player = entry.playerPoolEntry?.player;
+          const id = entry.playerId ?? player?.id;
+          return id != null && player?.injuryStatus
+            ? [[String(id), player.injuryStatus] as const]
+            : [];
+        }),
+      ),
+      byeWeeks: Object.fromEntries(
+        ownedEntries.flatMap((entry) => {
+          const player = entry.playerPoolEntry?.player;
+          const id = entry.playerId ?? player?.id;
+          const bye = byeWeekByProTeam[String(player?.proTeamId)];
+          return id != null && bye ? [[String(id), bye] as const] : [];
+        }),
+      ),
+    };
+    const ownership = currentRosters?.teams?.map((team) => ({
+      teamId: team.id,
+      rosterForCurrentScoringPeriod: { entries: team.roster?.entries || [] },
+    }));
+    const failed: number[] = [];
+    const weeklyProjections = await mapWeeks(
+      playoffSettings ? remainingProjectionWeeks(playoffSettings, completedWeek) : [projectionWeek],
+      async (week) => {
+        try {
+          const projectionData = await provider.get<EspnSnapshot>(
+            league.providerLeagueId ?? league.leagueId,
+            year,
+            ['mMatchupScore', 'mBoxscore'],
+            week,
+          );
+          const sides = (projectionData.schedule || []).flatMap((matchup) =>
+            [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
+          );
+          return espnProjectionSnapshot(
+            year,
+            week,
+            teams.map((team) => team.teamId),
+            sides,
+            meta.settings?.rosterSettings?.lineupSlotCounts,
+            {
+              useCurrentAvailability: week === projectionWeek,
+              byeWeekByProTeam,
+              ownership: ownership ?? (week === projectionWeek ? undefined : []),
+            },
+          );
+        } catch (error) {
+          logServerError('insights.espnProjections', error, 502);
+          failed.push(week);
+          return {
+            provider: 'ESPN' as const,
+            week,
+            teamPoints: {},
+            coveredStarters: 0,
+            totalStarters: 0,
+            note: 'ESPN projections could not be loaded; the forecast uses historical scoring only.',
+          };
+        }
+      },
+    );
+    playoffProjection = { ...weeklyProjections[0], weekly: weeklyProjections };
+    if (failed.includes(projectionWeek)) {
       partialFailures.push({
         section: 'Playoff simulation',
         message: 'Current-week ESPN projections are unavailable; historical scoring is used.',
       });
     }
+    if (failed.some((week) => week !== projectionWeek))
+      partialFailures.push({
+        section: 'Playoff simulation',
+        message: `ESPN projections are unavailable for weeks ${failed
+          .filter((week) => week !== projectionWeek)
+          .sort((a, b) => a - b)
+          .join(', ')}; historical scoring is used for those weeks.`,
+      });
   }
   const txs = [
     ...new Map(
@@ -670,15 +788,8 @@ async function loadEspn(
           )
         : [],
     playoffProjection,
-    playoffSettings:
-      meta.settings?.scheduleSettings?.matchupPeriodCount &&
-      meta.settings.scheduleSettings.playoffTeamCount &&
-      meta.settings.scheduleSettings.matchupPeriodLength === 1
-        ? {
-            regularSeasonEnd: meta.settings.scheduleSettings.matchupPeriodCount,
-            playoffTeams: meta.settings.scheduleSettings.playoffTeamCount,
-          }
-        : undefined,
+    forecastContext,
+    playoffSettings,
     completedWeek,
     teams,
     scores,
@@ -711,9 +822,15 @@ export async function loadInsights(
   year: number,
   access: EspnAccess = 'public',
   espnProvider?: EspnProvider,
+  archive = false,
 ) {
   const source = await loadInsightsSource(league, year, access, espnProvider);
-  return { ...calculateInsights(source), playoffSettings: source.playoffSettings };
+  const report = { ...calculateInsights(source), playoffSettings: source.playoffSettings };
+  if (archive)
+    await archivePlayoffForecast(league, year, source, report).catch((error) =>
+      logServerError('insights.archivePlayoffForecast', error, 500),
+    );
+  return report;
 }
 export async function loadInsightsSource(
   league: League,

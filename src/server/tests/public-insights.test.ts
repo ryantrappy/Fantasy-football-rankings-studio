@@ -55,7 +55,7 @@ test('anonymous season and insight reads use the registered league', async () =>
   await executePublic(() => publicInsights.getLeagueSeasons({ leagueId: '123' }));
   await executePublic(() => publicInsights.getInsights({ leagueId: '123', year: 2025 }));
   expect(discoverSeasons).toHaveBeenCalledWith(league, 'public');
-  expect(loadInsights).toHaveBeenCalledWith(league, 2025, 'public');
+  expect(loadInsights).toHaveBeenCalledWith(league, 2025, 'public', undefined, true);
   expect(verifyAuthorization).not.toHaveBeenCalled();
 });
 test.each([

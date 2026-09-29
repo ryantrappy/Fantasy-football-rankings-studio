@@ -1,5 +1,15 @@
 import { forecastPlayoffs } from './playoff-forecast';
 import type { SeasonInsights } from './insights';
+import type { PlayoffRules } from './playoff-rules';
+import * as statistics from './forecast-statistics';
+afterEach(() => vi.restoreAllMocks());
+// Isolate bracket/rule behavior from score-estimation uncertainty.
+const fixedStrengths = () =>
+  vi
+    .spyOn(statistics, 'fitScoreDistributions')
+    .mockImplementation((histories) =>
+      histories.map((h) => ({ mean: h.reduce((a, b) => a + b, 0) / h.length, sd: 1 })),
+    );
 const fixture = (n = 8): SeasonInsights => ({
   completedWeek: 4,
   generatedAt: '',
@@ -22,6 +32,87 @@ const fixture = (n = 8): SeasonInsights => ({
     })),
   ).flat(),
 });
+it('sums every week in a playoff round and applies a projection only to its own week', () => {
+  fixedStrengths();
+  const data = fixture(2);
+  data.scores.forEach((s) => (s.actual = s.teamId === '0' ? 80 : 130));
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 5,
+    teamPoints: { '0': 140, '1': 120 },
+    coveredStarters: 2,
+    totalStarters: 2,
+  };
+  const rules: PlayoffRules = {
+    provider: 'ESPN',
+    season: 2025,
+    tiebreakers: ['points-for'],
+    divisionWinnersFirst: false,
+    divisionByTeam: {},
+    roundWeeks: [[5]],
+    reseed: false,
+  };
+  const single = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 2, rules }, 4, 2000);
+  const double = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 4, playoffTeams: 2, rules: { ...rules, roundWeeks: [[5, 6]] } },
+    4,
+    2000,
+  );
+  expect(single.rows[0].advance[0]).toBeGreaterThan(0.99);
+  expect(double.rows[0].advance[0]).toBeLessThan(0.01);
+  expect(double.rows.reduce((sum, r) => sum + r.advance[0], 0)).toBe(1);
+});
+it('blocks unsupported provider rules before producing scenario probabilities', () => {
+  const rules: PlayoffRules = {
+    provider: 'ESPN',
+    season: 2025,
+    tiebreakers: [],
+    divisionByTeam: {},
+    divisionWinnersFirst: false,
+    roundWeeks: [],
+    reseed: false,
+    unsupportedReason: 'Unknown playoff tiebreaker',
+  };
+  const result = forecastPlayoffs(fixture(), { regularSeasonEnd: 10, playoffTeams: 4, rules }, 4);
+  expect(result.reason).toMatch(/Unknown playoff tiebreaker/);
+  expect(result.rows).toEqual([]);
+});
+it('reseeds survivors against the highest remaining seed after a first-round upset', () => {
+  fixedStrengths();
+  const data = fixture();
+  data.completedWeek = 2;
+  data.scores = data.scores.filter((s) => s.week <= 2);
+  const points = [140, 100, 130, 90, 120, 80, 110, 70];
+  data.scores.forEach((s) => (s.actual = points[Number(s.teamId)]));
+  data.playoffProjection = {
+    provider: 'Sleeper',
+    week: 3,
+    teamPoints: { '0': 0, '1': 0, '2': 1000, '3': 0, '4': 1000, '5': 0, '6': 1000, '7': 1000 },
+    coveredStarters: 8,
+    totalStarters: 8,
+  };
+  const rules: PlayoffRules = {
+    provider: 'Sleeper',
+    season: 2025,
+    tiebreakers: ['points-for', 'points-against'],
+    divisionByTeam: {},
+    divisionWinnersFirst: false,
+    roundWeeks: [[3], [4], [5]],
+    reseed: false,
+  };
+  // Seed 8 upsets seed 1. With a fixed bracket, seed 3 meets stronger seed 2
+  // in the semifinal; reseeding makes it meet seed 4 instead.
+  const fixed = forecastPlayoffs(data, { regularSeasonEnd: 2, playoffTeams: 8, rules }, 2, 2000);
+  const reseeded = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 2, playoffTeams: 8, rules: { ...rules, reseed: true } },
+    2,
+    2000,
+  );
+  expect(fixed.rows[4].advance[1]).toBeLessThan(0.1);
+  expect(reseeded.rows[4].advance[1]).toBeGreaterThan(0.9);
+});
 it.each([2, 4, 6, 8])('conserves playoff slots and round winners for %i teams', (size) => {
   const r = forecastPlayoffs(fixture(), { regularSeasonEnd: 10, playoffTeams: size }, 4);
   expect(r.reason).toBeUndefined();
@@ -36,6 +127,15 @@ it.each([2, 4, 6, 8])('conserves playoff slots and round winners for %i teams', 
     }
   }
   expect(r.rows.every((row) => Math.abs(row.playoff - size / 8) < 0.04)).toBe(true);
+});
+it('shares one posterior parameter draw per team through every simulated future week and round', () => {
+  const sample = vi.spyOn(statistics, 'sampleScoreParameters');
+  const result = forecastPlayoffs(fixture(2), { regularSeasonEnd: 10, playoffTeams: 2 }, 2, 100);
+  expect(result.reason).toBeUndefined();
+  expect(sample).toHaveBeenCalledTimes(2 * 100);
+  expect(sample.mock.results.every((r) => Number.isFinite(r.value.mean) && r.value.sd > 0)).toBe(
+    true,
+  );
 });
 it('is deterministic and never includes future scores', () => {
   const data = fixture(),
@@ -87,6 +187,83 @@ it('uses complete published opponent pairs and rejects malformed schedule weeks'
   expect(result.schedule).toEqual({ knownWeeks: 1, remainingWeeks: 1 });
   data.forecastSchedule[1].homeTeamId = '0';
   expect(forecastPlayoffs(data, settings, 4).schedule.knownWeeks).toBe(0);
+});
+
+it('uses later weekly lineup means in qualification and falls back per missing team-week', () => {
+  fixedStrengths();
+  const data = fixture(4);
+  const next = {
+    week: 5,
+    teamPoints: { '0': 100, '1': 100, '2': 100, '3': 100 },
+    coveredStarters: 4,
+    totalStarters: 4,
+  };
+  const later = { ...next, week: 6, teamPoints: { ...next.teamPoints, '0': 300 } };
+  data.playoffProjection = { provider: 'Sleeper', ...next, weekly: [next, later] };
+  const settings = { regularSeasonEnd: 6, playoffTeams: 2 };
+  const weekly = forecastPlayoffs(data, settings, 4, 2000);
+  const single = forecastPlayoffs(
+    { ...data, playoffProjection: { provider: 'Sleeper', ...next } },
+    settings,
+    4,
+    2000,
+  );
+  expect(weekly.rows[0].playoff).toBe(1);
+  expect(single.rows[0].playoff).toBeLessThan(0.7);
+  expect(weekly.projection.weeks?.find((row) => row.week === 6)?.projectedTeams).toBe(4);
+  // Explicitly missing coverage has the same behavior as an absent week, not a zero mean.
+  data.playoffProjection.weekly = [next, { ...later, teamPoints: {}, coveredStarters: 0 }];
+  const missing = forecastPlayoffs(data, settings, 4, 2000);
+  data.playoffProjection.weekly = [next];
+  expect(forecastPlayoffs(data, settings, 4, 2000).rows).toEqual(missing.rows);
+  expect(missing.projection.note).toMatch(/historical scoring only/);
+  expect(missing.projection.weeks?.find((row) => row.week === 6)?.projectedTeams).toBe(0);
+  expect(forecastPlayoffs(data, settings, 3, 2000).rows).toEqual(
+    forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 3, 2000).rows,
+  );
+  expect(forecastPlayoffs(data, settings, 4, 2000, 'equal-strength').rows).toEqual(
+    forecastPlayoffs({ ...data, playoffProjection: undefined }, settings, 4, 2000, 'equal-strength')
+      .rows,
+  );
+});
+
+it('uses every projected scoring week in a multiweek playoff round', () => {
+  fixedStrengths();
+  const data = fixture(2);
+  data.scores.forEach((score) => (score.actual = score.teamId === '0' ? 80 : 130));
+  const first = {
+    week: 5,
+    teamPoints: { '0': 120, '1': 130 },
+    coveredStarters: 2,
+    totalStarters: 2,
+  };
+  data.playoffProjection = {
+    provider: 'ESPN',
+    ...first,
+    weekly: [first, { ...first, week: 6, teamPoints: { '0': 300, '1': 100 } }],
+  };
+  const settings = {
+    regularSeasonEnd: 4,
+    playoffTeams: 2,
+    rules: {
+      provider: 'ESPN' as const,
+      season: 2026,
+      tiebreakers: ['points-for' as const],
+      divisionByTeam: {},
+      divisionWinnersFirst: false,
+      roundWeeks: [[5, 6]],
+      reseed: false,
+    },
+  };
+  expect(forecastPlayoffs(data, settings, 4, 2000).rows[0].advance[0]).toBe(1);
+  expect(
+    forecastPlayoffs(
+      { ...data, playoffProjection: { provider: 'ESPN', ...first } },
+      settings,
+      4,
+      2000,
+    ).rows[0].advance[0],
+  ).toBe(0);
 });
 it('supports one- and two-week forecasts but still requires completed paired results', () => {
   const settings = { regularSeasonEnd: 10, playoffTeams: 4 };

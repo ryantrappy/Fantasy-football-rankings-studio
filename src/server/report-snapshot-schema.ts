@@ -8,6 +8,20 @@ const count = z.number().int().nonnegative();
 const year = z.number().int().min(2000).max(2100);
 const strings = z.array(text).max(10000);
 const player = z.object({ playerId: text, points: num });
+const weeklyProjection = z.object({
+  unavailablePlayers: count.optional(),
+  uncertainPlayers: count.optional(),
+  availabilityChecked: z.boolean().optional(),
+  week: count.min(1).max(18),
+  teamPoints: z.record(text, num),
+  coveredStarters: count,
+  totalStarters: count,
+  benchSelections: count.optional(),
+  optimizedLineup: z.boolean().optional(),
+  byePlayers: count.optional(),
+  lineups: z.record(text, strings).optional(),
+  note: text.optional(),
+});
 const season: z.ZodType<SeasonInsights> = z.object({
   forecastSchedule: z
     .array(z.object({ week: num, homeTeamId: text, awayTeamId: text }))
@@ -17,21 +31,32 @@ const season: z.ZodType<SeasonInsights> = z.object({
   generatedAt: z.string().datetime(),
   notes: strings,
   partialFailures: z.array(z.object({ section: text, message: text })).optional(),
-  playoffSettings: z.object({ regularSeasonEnd: num, playoffTeams: num }).optional(),
-  playoffProjection: z
+  playoffSettings: z
     .object({
+      regularSeasonEnd: num,
+      playoffTeams: num,
+      rules: z
+        .object({
+          provider: z.enum(['Sleeper', 'ESPN']),
+          season: year,
+          tiebreakers: z
+            .array(z.enum(['head-to-head', 'points-for', 'division-record', 'points-against']))
+            .max(4),
+          divisionByTeam: z.record(text, text),
+          divisionWinnersFirst: z.boolean(),
+          // Preserve unsupported provider calendars too; the forecast reports their reason.
+          roundWeeks: z.array(z.array(count.max(52)).max(18)).max(8),
+          reseed: z.boolean(),
+          unsupportedReason: text.optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+  playoffProjection: weeklyProjection
+    .extend({
       capturedAt: z.string().datetime().optional(),
-      unavailablePlayers: count.optional(),
-      uncertainPlayers: count.optional(),
-      availabilityChecked: z.boolean().optional(),
       provider: z.enum(['Sleeper', 'ESPN']),
-      week: num,
-      teamPoints: z.record(text, num),
-      coveredStarters: count,
-      totalStarters: count,
-      benchSelections: count.optional(),
-      optimizedLineup: z.boolean().optional(),
-      note: text.optional(),
+      weekly: z.array(weeklyProjection).max(18).optional(),
     })
     .optional(),
   results: z

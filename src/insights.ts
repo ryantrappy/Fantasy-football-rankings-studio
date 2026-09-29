@@ -20,19 +20,25 @@ export interface ScoreWeek {
     slots: number;
   };
 }
-export interface PlayoffProjection {
-  capturedAt?: string;
+export interface WeeklyPlayoffProjection {
   unavailablePlayers?: number;
   uncertainPlayers?: number;
   availabilityChecked?: boolean;
-  provider: 'Sleeper' | 'ESPN';
   week: number;
   teamPoints: Record<string, number>;
   coveredStarters: number;
   totalStarters: number;
   benchSelections?: number;
   optimizedLineup?: boolean;
+  byePlayers?: number;
+  lineups?: Record<string, string[]>;
   note?: string;
+}
+export interface PlayoffProjection extends WeeklyPlayoffProjection {
+  capturedAt?: string;
+  provider: 'Sleeper' | 'ESPN';
+  // All weeks are calculated from roster ownership captured at the latest cutoff.
+  weekly?: WeeklyPlayoffProjection[];
 }
 export interface PlayerMove {
   id: string;
@@ -53,6 +59,11 @@ export interface RosterSnapshot {
 }
 export interface InsightsSource {
   forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
+  forecastContext?: {
+    rosterSlots: string[] | Record<string, number>;
+    injuryStatuses: Record<string, string>;
+    byeWeeks: Record<string, number>;
+  };
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];

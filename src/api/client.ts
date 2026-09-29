@@ -75,6 +75,8 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return disposePromise;
   }
   const api: LeagueApi = {
+    getLiveMatchups: async () =>
+      unwrap(await functions.getLiveMatchups({ headers: await headers() })),
     createReportSnapshot: async (data) =>
       unwrap(await createReportSnapshot({ data, headers: await headers() })),
     subject,
@@ -155,6 +157,9 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         ),
     },
     writing: {
+      consent: async () => unwrap(await writingFunctions.getConsent({ headers: await headers() })),
+      saveConsent: async (data) =>
+        unwrap(await writingFunctions.saveConsent({ data, headers: await headers() })),
       context: async (data) =>
         unwrap(await writingFunctions.getContext({ data, headers: await headers() })),
       providers: async () =>

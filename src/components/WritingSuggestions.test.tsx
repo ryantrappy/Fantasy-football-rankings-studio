@@ -6,6 +6,12 @@ import type { WritingApi } from '../writing';
 function api(): WritingApi {
   return {
     context: vi.fn(),
+    consent: vi.fn().mockResolvedValue({ codex: false, claude: false }),
+    saveConsent: vi
+      .fn()
+      .mockImplementation(({ provider, approved }) =>
+        Promise.resolve({ codex: false, claude: false, [provider]: approved }),
+      ),
     providers: vi
       .fn()
       .mockResolvedValue([{ id: 'codex', installed: true, enabled: true, status: 'ready' }]),
@@ -52,7 +58,7 @@ it('asks for one approval, hides it, and exposes per-team generation', async () 
   await waitFor(() => expect(client.providers).toHaveBeenCalled());
   const approval = screen.getByRole('checkbox');
   fireEvent.click(approval);
-  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
   await controller.generate('1');
   expect(client.generate).toHaveBeenCalledWith(
     expect.objectContaining({ teamId: '1', approved: true }),
@@ -70,7 +76,7 @@ it('requires approval again when the provider changes', async () => {
   renderSuggestions(client);
   await waitFor(() => expect(screen.getByRole('option', { name: /Claude/ })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('checkbox'));
-  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
   fireEvent.change(screen.getByLabelText('Writing assistant'), { target: { value: 'claude' } });
   expect(screen.getByRole('checkbox')).toBeInTheDocument();
 });
@@ -101,6 +107,7 @@ it('cancels generation without exposing the partial result as an error', async (
   );
   await waitFor(() => expect(client.providers).toHaveBeenCalled());
   fireEvent.click(screen.getByRole('checkbox'));
+  await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
   void controller.generate('1');
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'Cancel generation' })).toBeInTheDocument(),
@@ -108,4 +115,26 @@ it('cancels generation without exposing the partial result as an error', async (
   fireEvent.click(screen.getByRole('button', { name: 'Cancel generation' }));
   reject(new DOMException('Cancelled', 'AbortError'));
   await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+});
+
+it('restores saved account approval and persists revocation', async () => {
+  const client = api();
+  vi.mocked(client.consent).mockResolvedValue({ codex: true, claude: false });
+  renderSuggestions(client);
+  const revoke = await screen.findByRole('button', { name: 'Revoke context-sharing approval' });
+  expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  fireEvent.click(revoke);
+  await waitFor(() =>
+    expect(client.saveConsent).toHaveBeenCalledWith({ provider: 'codex', approved: false }),
+  );
+  await waitFor(() => expect(screen.getByRole('checkbox')).not.toBeChecked());
+});
+it('does not treat a failed preference save as approval', async () => {
+  const client = api();
+  vi.mocked(client.saveConsent).mockRejectedValue(new Error('offline'));
+  renderSuggestions(client);
+  await waitFor(() => expect(screen.getByRole('checkbox')).toBeEnabled());
+  fireEvent.click(screen.getByRole('checkbox'));
+  await screen.findByRole('alert');
+  expect(screen.getByRole('checkbox')).not.toBeChecked();
 });

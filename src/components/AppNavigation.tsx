@@ -22,6 +22,11 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
           </Link>
         </ChakraLink>
       )}
+      {!shared && (
+        <ChakraLink asChild>
+          <Link to="/live">Live matchups</Link>
+        </ChakraLink>
+      )}
       <ChakraLink asChild>
         <Link
           to={shared ? '/shared/insights' : '/insights'}

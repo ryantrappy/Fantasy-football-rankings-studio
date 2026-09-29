@@ -5,6 +5,7 @@ const paths = {
   up: 'M6 14l6-6 6 6',
   down: 'M6 10l6 6 6-6',
   download: 'M12 3v12 M7 10l5 5 5-5 M4 16v5h16v-5',
+  refresh: 'M20 7v5h-5 M4 17v-5h5 M6.1 7a7 7 0 0 1 11.6-1L20 9 M4 15l2.3 3A7 7 0 0 0 17.9 17',
   check: 'M5 12l4 4L19 6',
   ball: 'M5 19C-1 13 7-1 19 5c6 12-8 20-14 14z M8 16l8-8 M8 12l4 4 M12 8l4 4',
 } as const;

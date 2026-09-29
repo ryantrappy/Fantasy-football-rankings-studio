@@ -816,7 +816,7 @@ test('unknown shared links show a useful error without a login prompt', async ()
   });
   await openPage('/shared/history?leagueId=999');
   expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
-  expect(document.title).toBe('Shared fantasy report | Fantasy Power Rankings');
+  expect(document.title).toBe('Shared fantasy report | Trapp Fantasy Studio');
   expect(document.head.textContent).not.toContain('Private provider connection failed.');
   expect(document.body.textContent).not.toContain('Private provider connection failed.');
   expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
@@ -845,7 +845,7 @@ test('shared links preserve long numeric provider IDs exactly', async () => {
   expect(
     await screen.findByRole('heading', { name: 'Who delivers every week?' }),
   ).toBeInTheDocument();
-  expect(document.title).toBe('Sleeper league 2025 season insights | Fantasy Power Rankings');
+  expect(document.title).toBe('Sleeper league 2025 season insights | Trapp Fantasy Studio');
   expect(document.querySelector('meta[property="og:description"]')).toHaveAttribute(
     'content',
     'View 2025 season insights for Sleeper league.',
@@ -936,7 +936,7 @@ test('shared league cache checks revocation again after its freshness window', a
   await userEvent.click(screen.getByRole('link', { name: 'League history' }));
 
   expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
-  expect(document.title).toBe('Shared fantasy report | Fantasy Power Rankings');
+  expect(document.title).toBe('Shared fantasy report | Trapp Fantasy Studio');
   expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(2);
   clock.mockRestore();
 });

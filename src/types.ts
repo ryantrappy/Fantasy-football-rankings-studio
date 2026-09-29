@@ -42,6 +42,7 @@ export interface WeeklyRanking {
 }
 
 export interface LeagueApi {
+  getLiveMatchups(): Promise<import('./live-matchups').LiveLeague[]>;
   createReportSnapshot?(
     input: import('./report-snapshot').SnapshotInput,
   ): Promise<{ publicId: string; savedAt: string }>;

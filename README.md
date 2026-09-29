@@ -684,3 +684,10 @@ The **Week-by-week chart** shows each team's playoff or championship chance afte
 Playoff simulation settings come from the selected provider: configured playoff-team count controls
 the bracket, and the provider’s regular-season endpoint controls the simulation cutoff. The forecast
 does not infer league size or postseason timing from the number of visible teams.
+
+The ranking studio keeps edition fields above independently scrolling team entries and a fixed
+preview. Edition tools, keyboard help, and AI setup are available in the collapsible tools area.
+Context-sharing approval is saved per assistant on the Auth0 user under
+`user_metadata.writing_context_approval`; revoking it saves `false` and blocks subsequent generation,
+including requests from an already-open page. These preferences use the same server-only Auth0
+Management API configuration as profile editing (`read:users` and `update:users`).

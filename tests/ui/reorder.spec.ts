@@ -70,6 +70,7 @@ test('shortcut reference works by keyboard on mobile without intercepting commen
 }) => {
   await page.setViewportSize({ width: 390, height: 1000 });
   await page.goto('/tests/ui/');
+  await page.locator('.editor-tools > summary').click();
   const summary = page.getByText('Keyboard shortcuts', { exact: true });
   await summary.focus();
   await page.keyboard.press('Enter');

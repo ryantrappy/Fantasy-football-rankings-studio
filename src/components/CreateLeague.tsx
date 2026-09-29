@@ -210,7 +210,7 @@ export function CreateLeague({
               <Box className="notice" role="note" mb={5}>
                 <strong>Private ESPN league?</strong> Save both your espn_s2 and SWID cookies in{' '}
                 <ChakraLink asChild>
-                  <Link to="/espn" search={{ returnTo: '/leagues/new' }}>
+                  <Link to="/profile" search={{ returnTo: '/leagues/new' }}>
                     ESPN settings
                   </Link>
                 </ChakraLink>{' '}

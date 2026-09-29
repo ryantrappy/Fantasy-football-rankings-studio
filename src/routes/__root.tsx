@@ -7,6 +7,7 @@ import {
   Link,
   Outlet,
   Scripts,
+  useRouterState,
 } from '@tanstack/react-router';
 import { Provider } from '../components/ui/provider';
 import type { RouterContext } from '../router-context';
@@ -17,7 +18,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'Fantasy Power Rankings' },
+      { title: 'Trapp Fantasy Studio' },
       {
         name: 'description',
         content: 'Create, edit, and share your weekly fantasy power rankings.',
@@ -30,7 +31,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   }),
   shellComponent: Document,
   onCatch: (error) => logClientError('route.error', error),
-  component: Outlet,
+  component: RootLayout,
   notFoundComponent: () => (
     <Box
       as="section"
@@ -75,6 +76,42 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   ),
 });
 
+function RootLayout() {
+  const workspace = useRouterState({
+    select: (state) =>
+      state.matches.some(
+        (match) => match.routeId === '/_authenticated' || match.routeId === '/_public',
+      ),
+  });
+  if (workspace) return <Outlet />;
+  return (
+    <>
+      <Flex
+        as="header"
+        className="site-header"
+        justify="space-between"
+        gap={4}
+        py={6}
+        px="max(1rem, calc((100vw - 1280px) / 2))"
+        bg="fg"
+        color="white"
+      >
+        <ChakraLink asChild color="white">
+          <Link to="/" className="brand">
+            Trapp Fantasy Studio
+          </Link>
+        </ChakraLink>
+        <Text display={{ base: 'none', md: 'block' }} m={0}>
+          Trapp Fantasy Studio
+        </Text>
+      </Flex>
+      <Container as="main" maxW="1280px" mx="auto" p={{ base: 4, md: 6 }}>
+        <Outlet />
+      </Container>
+    </>
+  );
+}
+
 function Document({ children }: { children: ReactNode }) {
   useEffect(() => installBrowserErrorLogging(window), []);
   return (
@@ -83,30 +120,7 @@ function Document({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <Provider>
-          <Flex
-            as="header"
-            className="site-header"
-            justify="space-between"
-            gap={4}
-            py={6}
-            px="max(1rem, calc((100vw - 1280px) / 2))"
-            bg="fg"
-            color="white"
-          >
-            <ChakraLink asChild color="white">
-              <Link to="/" className="brand">
-                POWER / RANK
-              </Link>
-            </ChakraLink>
-            <Text display={{ base: 'none', md: 'block' }} m={0}>
-              Fantasy Power Rankings
-            </Text>
-          </Flex>
-          <Container as="main" maxW="1280px" mx="auto" p={{ base: 4, md: 6 }}>
-            {children}
-          </Container>
-        </Provider>
+        <Provider>{children}</Provider>
         <Scripts />
       </body>
     </html>

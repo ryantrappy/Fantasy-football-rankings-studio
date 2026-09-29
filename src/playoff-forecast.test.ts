@@ -135,3 +135,26 @@ it('uses a current first-round projection, never a later-week snapshot', () => {
   data.playoffProjection.week = 6;
   expect(forecastPlayoffs(data, settings, 4).projection.used).toBe(false);
 });
+
+it('uses the standings comparison without current projections while retaining banked wins and points', () => {
+  const data = fixture(4);
+  data.scores.forEach((s) => {
+    s.actual = Number(s.teamId) % 2 === 0 ? 120 : 90;
+  });
+  const settings = { regularSeasonEnd: 5, playoffTeams: 2 };
+  const before = forecastPlayoffs(data, settings, 4, 20000, 'equal-strength');
+  data.playoffProjection = {
+    provider: 'ESPN',
+    week: 5,
+    teamPoints: { '0': 0, '1': 1000, '2': 0, '3': 1000 },
+    coveredStarters: 4,
+    totalStarters: 4,
+  };
+  const after = forecastPlayoffs(data, settings, 4, 20000, 'equal-strength');
+  expect(after.rows).toEqual(before.rows);
+  expect(after.projection.used).toBe(false);
+  expect(after.validation).toBeUndefined();
+  expect(after.rows.filter((r) => Number(r.teamId) % 2 === 0).every((r) => r.playoff === 1)).toBe(
+    true,
+  );
+});

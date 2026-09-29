@@ -1,12 +1,13 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
-import { AppNavigation } from '../components/AppNavigation';
+import { AppShell } from '../components/AppShell';
 import { Authentication } from '../auth/Authentication';
 
 export const Route = createFileRoute('/_authenticated')({
   component: () => (
     <Authentication>
-      <AppNavigation />
-      <Outlet />
+      <AppShell>
+        <Outlet />
+      </AppShell>
     </Authentication>
   ),
 });

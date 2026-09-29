@@ -1,5 +1,10 @@
 // @vitest-environment node
-import { getProfile, updateProfile } from '../profile.server';
+import {
+  getProfile,
+  updateProfile,
+  getWritingConsent,
+  saveWritingConsent,
+} from '../profile.server';
 const fetchMock = vi.fn();
 const profile = {
   user_id: 'auth0|owner',
@@ -90,4 +95,53 @@ it('sanitizes upstream failures and rate limits', async () => {
     status: 502,
     message: expect.not.stringContaining('sensitive'),
   });
+});
+
+it('reads approval from the account and defaults to unapproved', async () => {
+  fetchMock.mockResolvedValueOnce(reply(profile));
+  expect(await getWritingConsent('auth0|owner')).toEqual({ codex: false, claude: false });
+  fetchMock.mockResolvedValueOnce(
+    reply({
+      ...profile,
+      user_metadata: { writing_context_approval: { codex: true, claude: false } },
+    }),
+  );
+  expect(await getWritingConsent('auth0|owner')).toEqual({ codex: true, claude: false });
+});
+it.each([true, false])(
+  'persists approval %s while preserving other assistant choices',
+  async (approved) => {
+    const metadata = {
+      writing_context_approval: { codex: !approved, claude: true },
+      favorite: 'kept',
+    };
+    fetchMock
+      .mockResolvedValueOnce(reply({ ...profile, user_metadata: metadata }))
+      .mockResolvedValueOnce(reply(profile))
+      .mockResolvedValueOnce(
+        reply({
+          ...profile,
+          user_metadata: {
+            ...metadata,
+            writing_context_approval: { codex: approved, claude: true },
+          },
+        }),
+      );
+    expect(await saveWritingConsent('auth0|owner', { provider: 'codex', approved })).toEqual({
+      codex: approved,
+      claude: true,
+    });
+    expect(JSON.parse(fetchMock.mock.calls[2][1].body)).toEqual({
+      user_metadata: { writing_context_approval: { codex: approved, claude: true } },
+    });
+  },
+);
+it('rejects invalid consent writes before calling Auth0', async () => {
+  await expect(
+    saveWritingConsent('auth0|owner', { provider: 'other', approved: true }),
+  ).rejects.toMatchObject({ status: 400 });
+  await expect(
+    saveWritingConsent('auth0|owner', { provider: 'codex', approved: true, user_id: 'other' }),
+  ).rejects.toMatchObject({ status: 400 });
+  expect(fetchMock).not.toHaveBeenCalled();
 });

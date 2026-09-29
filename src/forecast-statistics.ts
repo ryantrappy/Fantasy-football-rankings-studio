@@ -7,7 +7,10 @@ export interface ScoreDistribution {
 
 // Three prior observations regularize short histories. This is an assumption,
 // not a coefficient fitted to the games shown in the accuracy panel.
-export function fitScoreDistributions(histories: number[][]): ScoreDistribution[] {
+export function fitScoreDistributions(
+  histories: number[][],
+  equalStrength = false,
+): ScoreDistribution[] {
   const all = histories.flat();
   if (!all.length || histories.some((h) => !h.length)) return [];
   const average = (xs: number[]) => xs.reduce((sum, x) => sum + x, 0) / xs.length;
@@ -24,6 +27,13 @@ export function fitScoreDistributions(histories: number[][]): ScoreDistribution[
   );
   return histories.map((h, i) => {
     const n = h.length;
+    // Comparison benchmark: identical future strength/noise for every team,
+    // with league variability estimated only from the selected cutoff.
+    if (equalStrength)
+      return {
+        mean: leagueMean,
+        sd: Math.sqrt(pooledVariance * (1 + 1 / (n + 3))),
+      };
     const residuals = h.reduce((sum, x) => sum + (x - means[i]) ** 2, 0);
     const variance = (residuals + 3 * pooledVariance) / (n - 1 + 3);
     return {

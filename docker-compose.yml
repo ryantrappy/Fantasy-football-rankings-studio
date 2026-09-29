@@ -11,7 +11,7 @@ services:
         VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE}
     # Published image; set a tag here when pinning a release.
     # image: ryantrappy/fantasy-football-rankings-builder:2026.09.16
-#    image: ryantrappy/fantasy-football-rankings-builder:latest
+    #    image: ryantrappy/fantasy-football-rankings-builder:latest
     # Copy .env.example to .env and fill the server-only values there.
     env_file:
       - .env

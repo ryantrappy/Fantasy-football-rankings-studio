@@ -1,4 +1,7 @@
+import { Icon } from './Icon';
+import { HeaderControls } from './AppShell';
 import { PlayoffForecast } from './PlayoffForecast';
+import { PlayoffCalibration } from './PlayoffCalibration';
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
@@ -6,6 +9,7 @@ import { DataTable, ReportExportScope } from '../components/DataTable';
 import {
   Box,
   Button,
+  IconButton,
   Flex,
   Heading,
   NativeSelect,
@@ -194,55 +198,58 @@ export function InsightsPage({
           }
         />
       </Flex>
-      <Box className="selection-bar insights-controls">
-        <Field.Root width="auto" minW="120px" gap={2}>
-          <Field.Label>League</Field.Label>
-          <NativeSelect.Root>
-            <NativeSelect.Field
-              value={leagueId}
-              onChange={(e) => void navigate({ search: { leagueId: e.target.value, year } })}
-            >
-              <option value="" disabled>
-                Choose a league
-              </option>
-              {leagues.map((l) => (
-                <option key={l.leagueId} value={l.leagueId}>
-                  {l.leagueName}
+      <HeaderControls>
+        <Box className="selection-bar insights-controls">
+          <Field.Root width="auto" minW="120px" gap={2}>
+            <Field.Label>League</Field.Label>
+            <NativeSelect.Root>
+              <NativeSelect.Field
+                value={leagueId}
+                onChange={(e) => void navigate({ search: { leagueId: e.target.value, year } })}
+              >
+                <option value="" disabled>
+                  Choose a league
                 </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </Field.Root>
-        <Field.Root width="auto" minW="120px" gap={2}>
-          <Field.Label>Season</Field.Label>
-          <NativeSelect.Root>
-            <NativeSelect.Field
-              value={year}
-              onChange={(e) =>
-                void navigate({ search: { leagueId, year: Number(e.target.value) } })
-              }
-            >
-              {(
-                snapshot?.years ||
-                Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)
-              ).map((y) => (
-                <option key={y}>{y}</option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </Field.Root>
-        <Button
-          variant="outline"
-          type="button"
-
-          disabled={loading || !!snapshot}
-          onClick={() => setReload((v) => v + 1)}
-        >
-          Refresh insights
-        </Button>
-      </Box>
+                {leagues.map((l) => (
+                  <option key={l.leagueId} value={l.leagueId}>
+                    {l.leagueName}
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </Field.Root>
+          <Field.Root width="auto" minW="120px" gap={2}>
+            <Field.Label>Season</Field.Label>
+            <NativeSelect.Root>
+              <NativeSelect.Field
+                value={year}
+                onChange={(e) =>
+                  void navigate({ search: { leagueId, year: Number(e.target.value) } })
+                }
+              >
+                {(
+                  snapshot?.years ||
+                  Array.from({ length: defaultSeason() - 1999 }, (_, i) => defaultSeason() - i)
+                ).map((y) => (
+                  <option key={y}>{y}</option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </Field.Root>
+          <IconButton
+            aria-label="Refresh insights"
+            title="Refresh insights"
+            variant="ghost"
+            type="button"
+            disabled={loading || !!snapshot}
+            onClick={() => setReload((v) => v + 1)}
+          >
+            <Icon name="refresh" />
+          </IconButton>
+        </Box>
+      </HeaderControls>
       {error && !data && (
         <Box className="notice error" role="alert">
           {error}{' '}
@@ -341,7 +348,16 @@ export function InsightsPage({
             </Box>
           )}
           {playoff ? (
-            <PlayoffForecast key={`${leagueId}:${year}`} data={data} />
+            <>
+              <PlayoffForecast key={`${leagueId}:${year}`} data={data} />
+              <PlayoffCalibration
+                key={`calibration:${leagueId}:${year}`}
+                api={api}
+                leagueId={leagueId}
+                year={year}
+                frozen={!!snapshot}
+              />
+            </>
           ) : (
             <>
               <SimpleGrid columns={{ base: 1, md: 3 }} gap={4} my={6} className="insight-cards">

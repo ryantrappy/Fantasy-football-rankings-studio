@@ -17,6 +17,9 @@ async function run<T>(operation: string, action: (owner: string) => Promise<T>) 
 export const listLeagues = createServerFn({ method: 'GET' }).handler(() =>
   run('listLeagues', operations.listLeagues),
 );
+export const getLiveMatchups = createServerFn({ method: 'GET' }).handler(() =>
+  run('getLiveMatchups', operations.getLiveMatchups),
+);
 export const createLeague = createServerFn({ method: 'POST' })
   .validator((data: Omit<League, '_id'>) => data)
   .handler(({ data }) => run('createLeague', (owner) => operations.createLeague(owner, data)));

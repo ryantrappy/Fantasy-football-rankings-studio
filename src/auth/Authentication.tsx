@@ -1,7 +1,6 @@
 import { PasswordReset } from './PasswordReset';
 import { logClientError } from '../logging';
 import { EspnSetup } from '../components/EspnSetup';
-import { Link } from '@tanstack/react-router';
 import { InsightsAccess } from './InsightsAccess';
 import { Box, Button, Heading, Text, chakra } from '@chakra-ui/react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
@@ -157,33 +156,18 @@ function Session({ children }: { children: ReactNode }) {
       </Box>
     );
   return (
-    <SessionContext.Provider value={{ isAuthenticated: true }}>
+    <SessionContext.Provider
+      value={{
+        isAuthenticated: true,
+        signOut: () => {
+          void logout({ logoutParams: { returnTo: window.location.origin } }).catch((failure) => {
+            logClientError('auth.logout', failure);
+            setLoginError(errorMessage(failure));
+          });
+        },
+      }}
+    >
       <ApiContext.Provider value={api}>
-        <Box textAlign="right" className="session-actions">
-          <Button asChild variant="plain">
-            <Link to="/profile">Your profile</Link>
-          </Button>
-          <Button asChild variant="plain">
-            <Link to="/espn" search={{ returnTo: undefined }}>
-              ESPN settings
-            </Link>
-          </Button>
-          <Button
-            variant="plain"
-            type="button"
-
-            onClick={() =>
-              void logout({ logoutParams: { returnTo: window.location.origin } }).catch(
-                (failure) => {
-                  logClientError('auth.logout', failure);
-                  setLoginError(errorMessage(failure));
-                },
-              )
-            }
-          >
-            Sign out
-          </Button>
-        </Box>
         {loginError && <Text role="alert">{loginError}</Text>}
         <EspnSetup key={user?.sub} api={api}>
           <InsightsAccess privateApi={api}>{children}</InsightsAccess>

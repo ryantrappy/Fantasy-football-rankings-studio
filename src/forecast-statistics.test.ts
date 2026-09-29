@@ -81,3 +81,15 @@ it('skips ties, duplicate observations and unpaired matchups', () => {
   data.scores.push(data.scores[0]);
   expect(validateHistoricalForecast(data, 6).games).toBe(0);
 });
+
+it('gives the standings benchmark identical future distributions using cutoff-only pooled noise', () => {
+  const histories = [
+    [80, 100],
+    [120, 140],
+  ];
+  const distributions = fitScoreDistributions(histories, true);
+  expect(distributions[0]).toEqual(distributions[1]);
+  expect(distributions[0].mean).toBe(110);
+  expect(distributions[0].sd ** 2).toBeCloseTo(200 * (1 + 1 / 5));
+  expect(fitScoreDistributions(histories)).toEqual(fitScoreDistributions(histories, false));
+});

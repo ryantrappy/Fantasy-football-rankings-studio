@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.espn'
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
+import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated.live'
 import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
@@ -58,6 +59,11 @@ const AuthenticatedHistoryRoute = AuthenticatedHistoryRouteImport.update({
 const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
   id: '/insights',
   path: '/insights',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPlayoffsRoute = AuthenticatedPlayoffsRouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/live': typeof AuthenticatedLiveRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/espn': typeof AuthenticatedEspnRoute
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
+  '/live': typeof AuthenticatedLiveRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/espn': typeof AuthenticatedEspnRoute
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
+  '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/live'
     | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/espn'
     | '/history'
     | '/insights'
+    | '/live'
     | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/_authenticated/espn'
     | '/_authenticated/history'
     | '/_authenticated/insights'
+    | '/_authenticated/live'
     | '/_authenticated/playoffs'
     | '/_authenticated/profile'
     | '/shared/konz-sux'
@@ -280,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/insights'
       fullPath: '/insights'
       preLoaderRoute: typeof AuthenticatedInsightsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/live': {
+      id: '/_authenticated/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof AuthenticatedLiveRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/playoffs': {
@@ -359,6 +378,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedEspnRoute: typeof AuthenticatedEspnRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
+  AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -370,6 +390,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedEspnRoute: AuthenticatedEspnRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
+  AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,

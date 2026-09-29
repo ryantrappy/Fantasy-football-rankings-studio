@@ -39,6 +39,7 @@ vi.mock('@tanstack/react-router', async (original) => ({
     useRouteContext: () => ({ publicInsightsApi: publicApi }),
   }),
   useSearch: () => ({ leagueId: '123' }),
+  useRouterState: () => '/shared/insights',
   Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
   Outlet: () => <ReportProbe />,
 }));

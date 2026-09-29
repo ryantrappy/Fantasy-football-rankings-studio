@@ -223,3 +223,85 @@ injury coverage. No paid feed is configured. A potential future source is
 [SportsDataIO's updated weekly projections and injuries](https://sportsdata.io/developers/workflow-guide/nfl);
 its legacy preseason season-long projections should not be mistaken for current
 rest-of-season projections.
+
+### Season-level playoff calibration
+
+The live playoff report includes an on-demand backtest of up to five available
+seasons before the selected year. Existing access-scoped league discovery and
+report APIs provide each season's own teams, regular-season schedule, playoff
+settings and actual bracket entrants. Unsupported formats, incomplete or duplicate
+regular-season histories, broken opponent pairs, missing qualification outcomes,
+and entrant counts inconsistent with settings exclude the whole season. Failed
+loads and exclusions are disclosed. No model-derived seed is used as ground truth.
+
+Each accepted season runs the unchanged 20,000-trial forecast at every completed
+regular-season cutoff. Future actual scores never fit an earlier forecast, and
+provider projection snapshots are explicitly removed at every cutoff. This tests
+the current historical scoring methodology, not an archived version of the model
+or provider projections, optimal-lineup assumptions or injury prediction.
+
+For each cutoff, predictions are pooled across team-season outcomes. Brier score
+is mean squared probability error; log loss uses probabilities clipped to
+[0.000001, 0.999999]. The equal-chance baseline assigns each team its season's
+playoff-team count divided by league size. Classification accuracy uses a 50% threshold and is
+secondary to probability scoring, particularly for unequal qualification rates.
+The convergence chart plots model, standings-benchmark and equal-chance Brier
+scores without smoothing or forcing improvement. Final cutoffs are excluded
+from the chart, weekly reliability selection and predictive season summaries;
+they appear in a separate seeding-rules check. Counts disclose which seasons contribute at each week;
+different regular-season lengths can change late-week coverage. The final week
+has all regular-season results and primarily checks seeding-rule agreement; it
+is not evidence of successful future prediction.
+
+A selectable cutoff's ten reliability bins compare average predicted probability
+with the fraction actually qualifying. Bins are left-inclusive/right-exclusive,
+except the last includes 100%. Each team-season appears once per cutoff, rather
+than repeatedly across all weeks. Outcomes within a season and observations of
+the same team across cutoffs are dependent; these are descriptive diagnostics,
+not independent-trial confidence bounds or proof of calibrated 99% estimates.
+Improvement need not be monotonic. Rules differences can produce final-week
+errors and should be investigated rather than overwritten. Saved snapshots
+exclude this separately loaded history and point readers to the live report.
+
+After a historical backtest completes with evaluable outcomes, **Export calibration
+JSON** downloads a versioned review artifact. Attach that file to a conversation
+for analysis. It contains full-precision team-week predictions and qualification
+outcomes, weekly scores and reliability bins, run metadata, requested/evaluated
+seasons and exclusion notes. Successful seasons include only the team IDs,
+regular-season actual scores/opponents, schedule pairings, settings and playoff
+outcomes needed to replay alternative models. Manager identities, roster/player
+details, transactions and provider projections are omitted. All cutoffs are
+exported regardless of the displayed reliability week or table sorting.
+
+Each observation identifies remaining regular-season weeks and whether all
+regular-season game results are known. The separate `predictiveWeeklyMetrics`
+section excludes those final known-outcome cutoffs so model comparisons do not
+claim predictive improvements from trivially settled outcomes. Probabilities use
+fractions in [0, 1]; JSON preserves their original precision. The model descriptor
+identifies the current score-distribution assumptions and 20,000 trials per cutoff.
+
+The standings benchmark reuses the same 20,000-trial simulator, cutoff wins,
+points and remaining schedule, assigning every team an identical league-average
+future score mean and identical pooled within-team standard deviation. The
+variance includes the same sample-size multiplier as the main model. With one
+week, cross-team variance supplies the documented fallback. Only scores through
+the cutoff fit these distributions; current projections and future actual scores
+are excluded. It measures the value of estimated team strength beyond banked
+results. It does not assume that all teams started the season with equal records.
+The production historical scoring model and its coefficients remain unchanged.
+
+Per-season comparisons average team-week probability errors over predictive
+cutoffs, excluding each season's own final regular-season week. Counts distinguish
+unique teams from repeated team-week forecasts. Brier skill against standings is
+`1 - model Brier / standings Brier`: positive means improvement, negative means
+worse, and zero-error or unavailable benchmarks produce an unavailable value.
+No confidence interval is claimed from these dependent observations. Compare
+future methodology changes chronologically on later seasons or additional leagues
+rather than tuning repeatedly against this same league sample.
+
+Calibration JSON schema version 2 retains all version-1 observation information,
+adds full-precision `standingsProbability` and `regularSeasonEnd`, and exports
+comparative weekly metrics, `seasonMetrics` and `finalWeekRulesChecks`. The
+`predictiveWeeklyMetrics` section excludes each season's final cutoff even when
+season lengths differ. The export describes the standings benchmark and skill
+formula while keeping the forecasting model descriptor at historical-score-normal-v1.

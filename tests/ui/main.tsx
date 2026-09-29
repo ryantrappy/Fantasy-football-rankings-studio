@@ -16,10 +16,23 @@ import { PlayoffForecast } from '../../src/components/PlayoffForecast';
 import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
 import { PalettePreview } from './PalettePreview';
+import { LiveWorkspace } from './LiveWorkspace';
+import { CalibrationPreview } from './CalibrationPreview';
 const mode = new URLSearchParams(location.search).get('mode');
 function PreviewApp() {
+  if (mode === 'live')
+    return (
+      <Provider>
+        <LiveWorkspace />
+      </Provider>
+    );
   return (
     <Provider>
+      {mode === 'editor-header' && (
+        <header className="workspace-header" style={{ height: 128 }}>
+          Studio header
+        </header>
+      )}
       <Container maxW="1280px" p={4}>
         {mode === 'palette' ? (
           <PalettePreview />
@@ -45,6 +58,8 @@ function PreviewApp() {
               starters: [],
             }))}
           />
+        ) : mode === 'calibration' ? (
+          <CalibrationPreview />
         ) : mode === 'playoffs' ? (
           <PlayoffForecast data={playoffData} />
         ) : (
@@ -62,8 +77,11 @@ const previewRoute = createRoute({
   component: PreviewApp,
 });
 const router = createRouter({
-  routeTree: rootRoute.addChildren([previewRoute]),
-  history: createMemoryHistory({ initialEntries: ['/'] }),
+  routeTree: rootRoute.addChildren([
+    previewRoute,
+    createRoute({ getParentRoute: () => rootRoute, path: '/live', component: PreviewApp }),
+  ]),
+  history: createMemoryHistory({ initialEntries: [mode === 'live' ? '/live' : '/'] }),
 });
 
 createRoot(document.getElementById('root')!).render(<RouterProvider router={router} />);

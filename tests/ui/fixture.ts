@@ -65,6 +65,7 @@ export const playoffData: SeasonInsights = {
   notes: [],
 };
 export const api: LeagueApi = {
+  getLiveMatchups: async () => [],
   listLeagues: async () => [league],
   createLeague: async (value) => value,
   getLeagueInfo: async () => ({

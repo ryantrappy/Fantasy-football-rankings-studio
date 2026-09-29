@@ -53,6 +53,7 @@ export function fitScoreDistributions(
 
 // Standard normal CDF, absolute error < 8e-8 (A&S 26.2.17).
 export function normalCdf(z: number): number {
+  if (!Number.isFinite(z)) return z > 0 ? 1 : z < 0 ? 0 : Number.NaN;
   if (z === 0) return 0.5;
   const x = Math.abs(z);
   const t = 1 / (1 + 0.2316419 * x);
@@ -104,7 +105,13 @@ function predictiveVarianceDraws(d: ScoreDistribution): [number[], number[]] {
 }
 
 export function matchupWinProbability(a: ScoreDistribution, b: ScoreDistribution) {
-  if (!a.posterior && !b.posterior) return normalCdf((a.mean - b.mean) / Math.hypot(a.sd, b.sd));
+  const diff = a.mean - b.mean;
+  if (!a.posterior && !b.posterior) {
+    const denominator = Math.hypot(a.sd, b.sd);
+    if (!Number.isFinite(denominator)) return diff > 0 ? 1 : diff < 0 ? 0 : 0.5;
+    if (denominator === 0) return diff > 0 ? 1 : diff < 0 ? 0 : 0.5;
+    return normalCdf(diff / denominator);
+  }
   const av = predictiveVarianceDraws(a),
     bv = predictiveVarianceDraws(b);
   let sum = 0;

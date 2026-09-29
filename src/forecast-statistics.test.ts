@@ -22,6 +22,10 @@ it('has symmetric finite probabilities with correct Gaussian tail values', () =>
   expect(normalCdf(1.96)).toBeCloseTo(0.975, 5);
   expect(normalCdf(-1.96)).toBeCloseTo(0.025, 5);
   expect(normalCdf(40)).toBe(1);
+  expect(normalCdf(Number.POSITIVE_INFINITY)).toBe(1);
+  expect(normalCdf(Number.NEGATIVE_INFINITY)).toBe(0);
+  expect(matchupWinProbability({ mean: 100, sd: 0 }, { mean: 100, sd: 0 })).toBe(0.5);
+  expect(matchupWinProbability({ mean: 110, sd: 0 }, { mean: 90, sd: 0 })).toBe(1);
   const [a, b] = fitScoreDistributions([
     [90, 100, 110],
     [80, 105, 125],

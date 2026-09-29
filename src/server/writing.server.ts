@@ -1,4 +1,5 @@
 import '@tanstack/react-start/server-only';
+import { getWritingConsent } from './profile.server';
 import { chat } from '@tanstack/ai';
 import { z } from 'zod';
 import { weekSchema } from './validation';
@@ -40,6 +41,8 @@ export async function getWritingContext(owner: string, input: unknown) {
 }
 export async function generateWriting(owner: string, input: unknown, signal?: AbortSignal) {
   const data = generateSchema.parse(input);
+  if (!(await getWritingConsent(owner))[data.provider])
+    throw new HttpException(403, 'Approve context sharing for this assistant before generating.');
   if (active.has(owner)) throw new HttpException(409, 'A writing request is already running.');
   const { providers: options, apiKeys } = await writingProviderConfig(owner),
     option = options.find((p) => p.id === data.provider);

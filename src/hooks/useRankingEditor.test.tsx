@@ -42,6 +42,7 @@ function deferred<T>() {
 
 function makeApi() {
   return {
+    getLiveMatchups: vi.fn<LeagueApi['getLiveMatchups']>().mockResolvedValue([]),
     listLeagues: vi.fn<LeagueApi['listLeagues']>().mockResolvedValue([league]),
     createLeague: vi.fn<LeagueApi['createLeague']>(),
     getLeagueInfo: vi.fn<LeagueApi['getLeagueInfo']>(),

@@ -11,7 +11,7 @@ export interface SharedReportLoaderData {
   preview: SharedReportPreview | null;
 }
 
-const genericTitle = 'Shared fantasy report | Fantasy Power Rankings';
+const genericTitle = 'Shared fantasy report | Trapp Fantasy Studio';
 const genericDescription = 'View a shared fantasy football report.';
 
 export async function loadSharedReportPreview(
@@ -36,7 +36,7 @@ export async function loadSharedReportPreview(
 
 export function sharedReportMeta(preview: SharedReportPreview | null | undefined) {
   const title = preview
-    ? `${preview.leagueName} ${preview.context} | Fantasy Power Rankings`
+    ? `${preview.leagueName} ${preview.context} | Trapp Fantasy Studio`
     : genericTitle;
   const description = preview
     ? `View ${preview.context.toLowerCase()} for ${preview.leagueName}.`

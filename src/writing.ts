@@ -21,7 +21,10 @@ export interface WritingProviderOption {
   enabled: boolean;
   status: 'not-installed' | 'not-enabled' | 'login-check-failed' | 'ready';
 }
+export type WritingConsent = Record<WritingProvider, boolean>;
 export interface WritingApi {
+  consent(): Promise<WritingConsent>;
+  saveConsent(data: { provider: WritingProvider; approved: boolean }): Promise<WritingConsent>;
   context(selection: WritingSelection): Promise<WritingContext>;
   providers(): Promise<WritingProviderOption[]>;
   generate(

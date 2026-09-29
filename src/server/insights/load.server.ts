@@ -28,9 +28,10 @@ let namesCache:
       names: Record<string, string>;
       positions: Record<string, string>;
       availability: Record<string, string | null>;
+      teams: Record<string, string>;
     }
   | undefined;
-async function sleeperNames() {
+export async function sleeperNames() {
   if (namesCache && namesCache.expires > Date.now()) return namesCache;
   const { data } = await axios.get<
     Record<
@@ -40,6 +41,7 @@ async function sleeperNames() {
         first_name?: string;
         last_name?: string;
         position?: string;
+        team?: string;
         injury_status?: string | null;
         status?: string;
       }
@@ -59,7 +61,12 @@ async function sleeperNames() {
   const availability = Object.fromEntries(
     Object.entries(data).map(([id, p]) => [id, p.injury_status || p.status || null]),
   );
-  namesCache = { expires: Date.now() + 5 * 60 * 1000, names, positions, availability };
+  const teams = Object.fromEntries(
+    Object.entries(data)
+      .filter(([, p]) => p.team)
+      .map(([id, p]) => [id, p.team!]),
+  );
+  namesCache = { expires: Date.now() + 5 * 60 * 1000, names, positions, availability, teams };
   return namesCache;
 }
 interface SleeperScore {

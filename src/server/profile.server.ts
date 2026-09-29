@@ -1,6 +1,7 @@
 import '@tanstack/react-start/server-only';
 import { z } from 'zod';
 import type { UserProfile } from '../profile';
+import type { WritingConsent } from '../writing';
 import HttpException from './exceptions/HttpException';
 
 const updateSchema = z
@@ -109,10 +110,10 @@ async function managementToken(config: ReturnType<typeof configuration>) {
     if (pending?.value === value) pending = undefined;
   }
 }
-async function profileRequest(
+async function userRequest(
   owner: string,
-  update?: z.infer<typeof updateSchema>,
-): Promise<UserProfile> {
+  update?: z.infer<typeof updateSchema> | { user_metadata: Record<string, unknown> },
+) {
   const config = configuration();
   const token = await managementToken(config);
   const data = await request(`${config.base}api/v2/users/${encodeURIComponent(owner)}`, {
@@ -122,6 +123,13 @@ async function profileRequest(
   });
   if (data.user_id !== owner)
     throw new HttpException(502, 'Auth0 returned an invalid profile response.');
+  return data;
+}
+async function profileRequest(
+  owner: string,
+  update?: z.infer<typeof updateSchema>,
+): Promise<UserProfile> {
+  const data = await userRequest(owner, update);
   return {
     userId: owner,
     name: typeof data.name === 'string' ? data.name : '',
@@ -139,4 +147,29 @@ export function updateProfile(owner: string, input: unknown) {
       'Enter a name and nickname of 1–100 characters. Only these fields can be edited.',
     );
   return profileRequest(owner, parsed.data);
+}
+
+// Keep context-sharing choices on the account, separate from editable identity fields.
+function writingConsent(data: {
+  user_metadata?: { writing_context_approval?: Partial<WritingConsent> };
+}): WritingConsent {
+  const saved = data.user_metadata?.writing_context_approval;
+  return { codex: saved?.codex === true, claude: saved?.claude === true };
+}
+export async function getWritingConsent(owner: string): Promise<WritingConsent> {
+  return writingConsent(await userRequest(owner));
+}
+export async function saveWritingConsent(owner: string, input: unknown): Promise<WritingConsent> {
+  const parsed = z
+    .object({ provider: z.enum(['codex', 'claude']), approved: z.boolean() })
+    .strict()
+    .safeParse(input);
+  if (!parsed.success) throw new HttpException(400, 'Select an assistant and an approval status.');
+  const { provider, approved } = parsed.data;
+  // Preserve other assistant choices and unrelated metadata.
+  const saved = await getWritingConsent(owner);
+  await userRequest(owner, {
+    user_metadata: { writing_context_approval: { ...saved, [provider]: approved } },
+  });
+  return getWritingConsent(owner);
 }

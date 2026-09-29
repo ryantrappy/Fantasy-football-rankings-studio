@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-start/server';
 import { execute } from '../server/operations.server';
 import { getWritingContext, generateWriting, writingProviders } from '../server/writing.server';
+import { getWritingConsent, saveWritingConsent } from '../server/profile.server';
 import type { WritingSelection, WritingProvider } from '../writing';
 async function run<T>(operation: string, action: (owner: string) => Promise<T>) {
   setResponseHeader('Cache-Control', 'no-store');
@@ -28,3 +29,10 @@ export const generateSuggestions = createServerFn({ method: 'POST' })
   .handler(({ data }) =>
     run('writing.generate', (owner) => generateWriting(owner, data, getRequest().signal)),
   );
+
+export const getConsent = createServerFn({ method: 'GET' }).handler(() =>
+  run('writing.consent', getWritingConsent),
+);
+export const saveConsent = createServerFn({ method: 'POST' })
+  .validator((data: { provider: WritingProvider; approved: boolean }) => data)
+  .handler(({ data }) => run('writing.consent.save', (owner) => saveWritingConsent(owner, data)));

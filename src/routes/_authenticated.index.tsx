@@ -1,3 +1,4 @@
+import { HeaderControls } from '../components/AppShell';
 import { logClientError } from '../logging';
 import {
   Box,
@@ -257,82 +258,85 @@ function RankingsPage() {
               </Button>
             </chakra.output>
           )}
-          <fieldset className="selection-bar" disabled={switching}>
-            <legend className="sr-only">Choose rankings</legend>
-            <Field.Root width="auto" minW="120px" gap={2}>
-              <Field.Label>League</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  value={selected}
-                  onChange={(event) => {
-                    const id = event.target.value;
-                    void changeSelection(() => {
-                      setSelected(id);
-                      const nextYear =
-                        leagues.find((entry) => entry.leagueId === id)?.seasonId || defaultSeason();
-                      setYear(nextYear);
-                      weekRef.current = 1;
-                      setWeek(1);
-                      void navigate({ search: { leagueId: id, year: nextYear, week: 1 } });
-                    });
-                  }}
-                >
-                  {leagues.map((entry) => (
-                    <option key={entry.leagueId} value={entry.leagueId}>
-                      {entry.leagueName || entry.leagueId}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-            <Field.Root width="auto" minW="120px" gap={2}>
-              <Field.Label>Season</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  value={year}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    void changeSelection(() => {
-                      setYear(value);
-                      weekRef.current = 1;
-                      setWeek(1);
-                      void navigate({ search: { leagueId: selected, year: value, week: 1 } });
-                    });
-                  }}
-                >
-                  {Array.from({ length: 101 }, (_, index) => 2100 - index).map((season) => (
-                    <option key={season}>{season}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-            <Field.Root width="auto" minW="120px" gap={2} disabled={!activeSchedule}>
-              <Field.Label>Week</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  value={week}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    void changeSelection(() => {
-                      weekRef.current = value;
-                      setWeek(value);
-                      void navigate({ search: { leagueId: selected, year, week: value } });
-                    });
-                  }}
-                >
-                  {(activeSchedule?.choices || []).map(({ week: value, savedOnly }) => (
-                    <option key={value} value={value}>
-                      {value}
-                      {savedOnly ? ' (saved edition)' : ''}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-          </fieldset>
+          <HeaderControls>
+            <fieldset className="selection-bar" disabled={switching}>
+              <legend className="sr-only">Choose rankings</legend>
+              <Field.Root width="auto" minW="120px" gap={2}>
+                <Field.Label>League</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={selected}
+                    onChange={(event) => {
+                      const id = event.target.value;
+                      void changeSelection(() => {
+                        setSelected(id);
+                        const nextYear =
+                          leagues.find((entry) => entry.leagueId === id)?.seasonId ||
+                          defaultSeason();
+                        setYear(nextYear);
+                        weekRef.current = 1;
+                        setWeek(1);
+                        void navigate({ search: { leagueId: id, year: nextYear, week: 1 } });
+                      });
+                    }}
+                  >
+                    {leagues.map((entry) => (
+                      <option key={entry.leagueId} value={entry.leagueId}>
+                        {entry.leagueName || entry.leagueId}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              <Field.Root width="auto" minW="120px" gap={2}>
+                <Field.Label>Season</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={year}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      void changeSelection(() => {
+                        setYear(value);
+                        weekRef.current = 1;
+                        setWeek(1);
+                        void navigate({ search: { leagueId: selected, year: value, week: 1 } });
+                      });
+                    }}
+                  >
+                    {Array.from({ length: 101 }, (_, index) => 2100 - index).map((season) => (
+                      <option key={season}>{season}</option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              <Field.Root width="auto" minW="120px" gap={2} disabled={!activeSchedule}>
+                <Field.Label>Week</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    value={week}
+                    onChange={(event) => {
+                      const value = Number(event.target.value);
+                      void changeSelection(() => {
+                        weekRef.current = value;
+                        setWeek(value);
+                        void navigate({ search: { leagueId: selected, year, week: value } });
+                      });
+                    }}
+                  >
+                    {(activeSchedule?.choices || []).map(({ week: value, savedOnly }) => (
+                      <option key={value} value={value}>
+                        {value}
+                        {savedOnly ? ' (saved edition)' : ''}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+            </fieldset>
+          </HeaderControls>
           {scheduleError ? (
             <Box className="notice error" role="alert">
               {scheduleError}

@@ -45,10 +45,12 @@ export const RankingEditor = forwardRef<
     scope: string;
     values: Record<string, string>;
   }>({ scope: rankingScope, values: {} });
+  const [aiReady, setAiReady] = useState(false);
   const [aiGeneratingTeam, setAiGeneratingTeam] = useState<string>();
   const aiController = useRef<{ generate: (teamId: string) => Promise<void> } | undefined>(
     undefined,
   );
+  const layout = useRef<HTMLDivElement>(null);
   const preview = useRef<HTMLDivElement>(null);
   const previewViewport = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
@@ -61,6 +63,21 @@ export const RankingEditor = forwardRef<
     observer.observe(viewport);
     return () => observer.disconnect();
   }, [editor.loading, editor.loadError, tab]);
+  useEffect(() => {
+    const workspace = layout.current;
+    const header = document.querySelector('.workspace-header');
+    if (!workspace || !header) return;
+    const resize = () => {
+      workspace.style.setProperty(
+        '--ranking-header-height',
+        `${header.getBoundingClientRect().height}px`,
+      );
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(header);
+    resize();
+    return () => observer.disconnect();
+  }, [editor.loading, editor.loadError]);
   const { flush } = editor;
   useImperativeHandle(ref, () => ({ flush: () => flush() }), [flush]);
 
@@ -220,37 +237,97 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
-      {!ranking._id && (
-        <Text mb={4} role="note">
-          Suggested starting order uses completed scoring and point margin before this week, with
-          early results pulled toward the league average. It is a power signal, not a player or
-          season projection; adjust it with your own judgment before saving.
-        </Text>
-      )}
-      <CopyEdition
-        ranking={ranking}
-        history={editor.history}
-        disabled={editor.saving || !!editor.recovery || editor.hasConflict}
-        onCopy={(next) => editor.update(() => next)}
-      />
-      {api.revisions && ranking._id && (
-        <RevisionHistory
-          key={ranking._id}
-          api={api.revisions}
-          ranking={ranking}
-          disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
-          onRestored={editor.reload}
-        />
-      )}
-      {api.publishing && ranking._id && (
-        <PublishEdition
-          key={ranking._id}
-          api={api.publishing}
-          id={ranking._id}
-          revision={ranking.revision ?? 0}
-          disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
-        />
-      )}
+      <Box as="section" className="editor-setup" aria-label="Edition settings" mb={4}>
+        <Box className="editor-fields">
+          <Field.Root mb={5} gap={2} className="field">
+            <Field.Label htmlFor="ranking-title">Edition title</Field.Label>
+            <Input
+              id="ranking-title"
+              name="rankingsTitle"
+              maxLength={200}
+              value={ranking.rankingsTitle}
+              onChange={(event) =>
+                editor.update((current) => ({ ...current, rankingsTitle: event.target.value }))
+              }
+            />
+          </Field.Root>
+          <Field.Root mb={5} gap={2} className="field">
+            <Field.Label htmlFor="ranking-intro">
+              Opening take <span>Optional</span>
+            </Field.Label>
+            <Textarea
+              id="ranking-intro"
+              name="introduction"
+              rows={3}
+              maxLength={10000}
+              placeholder="Set the scene for this week…"
+              value={ranking.introduction}
+              onChange={(event) =>
+                editor.update((current) => ({ ...current, introduction: event.target.value }))
+              }
+            />
+          </Field.Root>
+        </Box>
+        <details className="editor-tools">
+          <summary>Edition tools, AI context sharing & keyboard shortcuts</summary>
+          <Box className="editor-tools-content">
+            {!ranking._id && (
+              <Text mb={4} role="note">
+                Suggested starting order uses completed scoring and point margin before this week,
+                with early results pulled toward the league average. It is a power signal, not a
+                player or season projection; adjust it with your own judgment before saving.
+              </Text>
+            )}
+            <CopyEdition
+              ranking={ranking}
+              history={editor.history}
+              disabled={editor.saving || !!editor.recovery || editor.hasConflict}
+              onCopy={(next) => editor.update(() => next)}
+            />
+            {api.revisions && ranking._id && (
+              <RevisionHistory
+                key={`revisions:${ranking._id}`}
+                api={api.revisions}
+                ranking={ranking}
+                disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
+                onRestored={editor.reload}
+              />
+            )}
+            {api.publishing && ranking._id && (
+              <PublishEdition
+                key={`publishing:${ranking._id}`}
+                api={api.publishing}
+                id={ranking._id}
+                revision={ranking.revision ?? 0}
+                disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
+              />
+            )}
+            <KeyboardShortcutReference />
+            {api.writing && (
+              <WritingSuggestions
+                api={api.writing}
+                leagueId={league.leagueId}
+                year={year}
+                week={week}
+                onSummaryChange={(teamId, summary) =>
+                  setAiSummaries((current) => ({
+                    scope: rankingScope,
+                    values: {
+                      ...(current.scope === rankingScope ? current.values : {}),
+                      [teamId]: summary,
+                    },
+                  }))
+                }
+                onControllerChange={(controller) => {
+                  aiController.current = controller;
+                  setAiReady(controller.ready);
+                }}
+                onGenerationStateChange={setAiGeneratingTeam}
+              />
+            )}
+          </Box>
+        </details>
+      </Box>
       {editor.storageError && (
         <Text role="alert" mb={4}>
           {editor.storageError}
@@ -329,9 +406,10 @@ export const RankingEditor = forwardRef<
         </Box>
       )}
       <Grid
-        templateColumns={{ base: '1fr', lg: 'minmax(0, 1.1fr) minmax(0, 1fr)' }}
-        gap={8}
-        alignItems="start"
+        ref={layout}
+        templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) minmax(0, 1.1fr)' }}
+        gap={4}
+        alignItems="stretch"
         className={`editor-layout showing-${tab}`}
       >
         <Box
@@ -345,58 +423,19 @@ export const RankingEditor = forwardRef<
           className="editor-panel panel"
           aria-label="Ranking editor"
         >
-          <Flex align="center" justify="space-between" gap={4} mb={6} className="section-heading">
-            <Box>
-              <span className="eyebrow">The weekly edition</span>
-              <Heading as="h2" size="xl" mb={4}>
-                Make your case.
-              </Heading>
-            </Box>
-            <span className="week-stamp">W{String(week).padStart(2, '0')}</span>
-          </Flex>
-          <Box className="editor-fields">
-            <Field.Root mb={5} gap={2} className="field">
-              <Field.Label htmlFor="ranking-title">Edition title</Field.Label>
-              <Input
-                id="ranking-title"
-                name="rankingsTitle"
-                maxLength={200}
-                value={ranking.rankingsTitle}
-                onChange={(event) =>
-                  editor.update((current) => ({ ...current, rankingsTitle: event.target.value }))
-                }
-              />
-            </Field.Root>
-            <Field.Root mb={5} gap={2} className="field">
-              <Field.Label htmlFor="ranking-intro">
-                Opening take <span>Optional</span>
-              </Field.Label>
-              <Textarea
-                id="ranking-intro"
-                name="introduction"
-                rows={3}
-                maxLength={10000}
-                placeholder="Set the scene for this week…"
-                value={ranking.introduction}
-                onChange={(event) =>
-                  editor.update((current) => ({ ...current, introduction: event.target.value }))
-                }
-              />
-            </Field.Root>
-          </Box>
           <Flex
             align="center"
             justify="space-between"
             gap={4}
             flexWrap="wrap"
-            mb={6}
+            mb={3}
             className="teams-heading"
           >
             <Box>
-              <Heading as="h3" size="lg" mb={4}>
-                Set the order
+              <Heading as="h2" size="lg" mb={1}>
+                Team entries
               </Heading>
-              <Text mb={4}>Drag a team or use the arrows. Add a take below.</Text>
+              <Text fontSize="sm">Drag a team or use the arrows. Add a take below.</Text>
             </Box>
             <Button
               variant="plain"
@@ -414,125 +453,109 @@ export const RankingEditor = forwardRef<
               Undo move
             </Button>
           </Flex>
-          <KeyboardShortcutReference />
-          {api.writing && (
-            <WritingSuggestions
-              api={api.writing}
-              leagueId={league.leagueId}
-              year={year}
-              week={week}
-              onSummaryChange={(teamId, summary) =>
-                setAiSummaries((current) => ({
-                  scope: rankingScope,
-                  values: {
-                    ...(current.scope === rankingScope ? current.values : {}),
-                    [teamId]: summary,
-                  },
-                }))
-              }
-              onControllerChange={(controller) => {
-                aiController.current = controller;
-              }}
-              onGenerationStateChange={setAiGeneratingTeam}
-            />
-          )}
-          <SortableRankingList
-            teams={ranking.teams}
-            onReorder={reorder}
-            renderItem={(team, index, handle) => (
-              <>
-                <Flex gap={3} align="center" mb={3} className="team-editor-heading">
-                  <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
-                  <Box className="team-identity">
-                    <strong>{team.teamName}</strong>
-                    <small>
-                      {team.managerName || 'Unassigned manager'}{' '}
-                      <span>
-                        · {team.wins}–{team.loss}
-                        {team.ties ? `–${team.ties}` : ''}
-                      </span>
-                    </small>
-                  </Box>
-                  <Flex gap={1} className="reorder-controls">
-                    <IconButton
-                      variant="outline"
-                      type="button"
-                      title="Drag to reorder"
+          <Box
+            as="section"
+            className="team-entries-scroll"
+            tabIndex={0}
+            aria-label="Scrollable team entries"
+          >
+            <SortableRankingList
+              teams={ranking.teams}
+              onReorder={reorder}
+              renderItem={(team, index, handle) => (
+                <>
+                  <Flex gap={3} align="center" mb={3} className="team-editor-heading">
+                    <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
+                    <Box className="team-identity">
+                      <strong>{team.teamName}</strong>
+                      <small>
+                        {team.managerName || 'Unassigned manager'}{' '}
+                        <span>
+                          · {team.wins}–{team.loss}
+                          {team.ties ? `–${team.ties}` : ''}
+                        </span>
+                      </small>
+                    </Box>
+                    <Flex gap={1} className="reorder-controls">
+                      <IconButton
+                        variant="outline"
+                        type="button"
+                        title="Drag to reorder"
 
-                      {...handle}
-                      className="ranking-drag-handle"
-                      aria-label={`Drag ${team.teamName} to reorder`}
-                    >
-                      ⠿
-                    </IconButton>
-                    <IconButton
-                      variant="outline"
-                      type="button"
-                      disabled={index === 0}
-                      onClick={() => reorder(index, index - 1)}
-                      aria-label={`Move ${team.teamName} up`}
-                    >
-                      <Icon name="up" size={16} />
-                    </IconButton>
-                    <IconButton
-                      variant="outline"
-                      type="button"
-                      disabled={index === ranking.teams.length - 1}
-                      onClick={() => reorder(index, index + 1)}
-                      aria-label={`Move ${team.teamName} down`}
-                    >
-                      <Icon name="down" size={16} />
-                    </IconButton>
+                        {...handle}
+                        className="ranking-drag-handle"
+                        aria-label={`Drag ${team.teamName} to reorder`}
+                      >
+                        ⠿
+                      </IconButton>
+                      <IconButton
+                        variant="outline"
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => reorder(index, index - 1)}
+                        aria-label={`Move ${team.teamName} up`}
+                      >
+                        <Icon name="up" size={16} />
+                      </IconButton>
+                      <IconButton
+                        variant="outline"
+                        type="button"
+                        disabled={index === ranking.teams.length - 1}
+                        onClick={() => reorder(index, index + 1)}
+                        aria-label={`Move ${team.teamName} down`}
+                      >
+                        <Icon name="down" size={16} />
+                      </IconButton>
+                    </Flex>
                   </Flex>
-                </Flex>
-                <Textarea
-                  aria-label={`Commentary for ${team.teamName}`}
-                  name={`comment-${team.teamId}`}
-                  rows={2}
-                  maxLength={10000}
-                  placeholder="What’s the story with this team?"
-                  value={team.description}
-                  onChange={(event) =>
-                    editor.update((current) => ({
-                      ...current,
-                      teams: current.teams.map((entry) =>
-                        entry.teamId === team.teamId
-                          ? { ...entry, description: event.target.value }
-                          : entry,
-                      ),
-                    }))
-                  }
-                />
-                <Button
-                  mt={3}
-                  size="sm"
-                  type="button"
-                  variant="outline"
-                  disabled={
-                    !aiController.current ||
-                    Boolean(aiGeneratingTeam && aiGeneratingTeam !== team.teamId)
-                  }
-                  onClick={() => void aiController.current?.generate(team.teamId)}
-                >
-                  {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
-                </Button>
-                {aiSummaries.scope === rankingScope && aiSummaries.values[team.teamId] && (
-                  <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
-                    <Text fontWeight="bold" mb={1}>
-                      AI summary
-                    </Text>
-                    <Text whiteSpace="pre-wrap">{aiSummaries.values[team.teamId]}</Text>
-                  </Box>
-                )}
-              </>
-            )}
-          />
+                  <Textarea
+                    aria-label={`Commentary for ${team.teamName}`}
+                    name={`comment-${team.teamId}`}
+                    rows={2}
+                    maxLength={10000}
+                    placeholder="What’s the story with this team?"
+                    value={team.description}
+                    onChange={(event) =>
+                      editor.update((current) => ({
+                        ...current,
+                        teams: current.teams.map((entry) =>
+                          entry.teamId === team.teamId
+                            ? { ...entry, description: event.target.value }
+                            : entry,
+                        ),
+                      }))
+                    }
+                  />
+                  <Button
+                    mt={3}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      !aiReady || Boolean(aiGeneratingTeam && aiGeneratingTeam !== team.teamId)
+                    }
+                    onClick={() => void aiController.current?.generate(team.teamId)}
+                  >
+                    {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
+                  </Button>
+                  {aiSummaries.scope === rankingScope && aiSummaries.values[team.teamId] && (
+                    <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
+                      <Text fontWeight="bold" mb={1}>
+                        AI summary
+                      </Text>
+                      <Text whiteSpace="pre-wrap">{aiSummaries.values[team.teamId]}</Text>
+                    </Box>
+                  )}
+                </>
+              )}
+            />
+          </Box>
           <Flex
             align="center"
             justify="space-between"
             gap={4}
             flexWrap="wrap"
-            mb={6}
+            mt={3}
             className="editor-footer"
           >
             <span>
@@ -557,7 +580,7 @@ export const RankingEditor = forwardRef<
             justify="space-between"
             gap={4}
             flexWrap="wrap"
-            mb={6}
+            mb={3}
             className="preview-toolbar"
           >
             <Box>
@@ -592,10 +615,6 @@ export const RankingEditor = forwardRef<
               <RankingPreview ranking={ranking} history={editor.history} league={league} />
             </div>
           </Box>
-          <Text mb={4} className="preview-note">
-            Your changes appear here as you type. Movement compares with the previous week’s saved
-            rankings.
-          </Text>
         </Box>
       </Grid>
       <chakra.output className="sr-only">{announcement}</chakra.output>

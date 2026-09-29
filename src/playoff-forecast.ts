@@ -32,6 +32,7 @@ export function forecastPlayoffs(
   settings: PlayoffSettings,
   cutoff: number,
   simulations = 20000,
+  scoreModel: 'historical' | 'equal-strength' = 'historical',
 ): PlayoffForecast {
   const throughWeek = Math.max(
     0,
@@ -49,6 +50,7 @@ export function forecastPlayoffs(
     !!snapshot && throughWeek === data.completedWeek && snapshot.week === throughWeek + 1;
   const projectedTeams = snapshot ? teamsWithProjection(data, snapshot.teamPoints) : 0;
   const useProjection =
+    scoreModel === 'historical' &&
     projectionIsCurrent &&
     projectedTeams > 0 &&
     snapshot.totalStarters > 0 &&
@@ -147,7 +149,10 @@ export function forecastPlayoffs(
     t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const distributions = fitScoreDistributions(histories.map((h) => h.map((s) => s.actual)));
+  const distributions = fitScoreDistributions(
+    histories.map((h) => h.map((s) => s.actual)),
+    scoreModel === 'equal-strength',
+  );
   const draw = (i: number, week: number) => {
     const normal =
       Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) *
@@ -230,7 +235,8 @@ export function forecastPlayoffs(
     throughWeek,
     simulations,
     samplingMargin: 1.96 * Math.sqrt(0.25 / simulations),
-    validation: validateHistoricalForecast(data, throughWeek),
+    validation:
+      scoreModel === 'historical' ? validateHistoricalForecast(data, throughWeek) : undefined,
     rounds,
     projection,
     rows: counts.map((r) => ({

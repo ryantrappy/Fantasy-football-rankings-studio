@@ -2,7 +2,9 @@ import { createContext, useContext } from 'react';
 import { createApi } from '../api/client';
 
 export const ApiContext = createContext<ReturnType<typeof createApi> | null>(null);
-export const SessionContext = createContext({ isAuthenticated: false });
+export const SessionContext = createContext<{ isAuthenticated: boolean; signOut?: () => void }>({
+  isAuthenticated: false,
+});
 
 export function useApi() {
   const api = useContext(ApiContext);

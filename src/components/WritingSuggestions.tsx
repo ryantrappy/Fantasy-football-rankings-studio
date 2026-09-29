@@ -10,7 +10,12 @@ import {
   chakra,
 } from '@chakra-ui/react';
 import { useEffect, useId, useRef, useState } from 'react';
-import type { WritingApi, WritingProvider, WritingProviderOption } from '../writing';
+import type {
+  WritingApi,
+  WritingConsent,
+  WritingProvider,
+  WritingProviderOption,
+} from '../writing';
 import { logClientError } from '../logging';
 const modelSuggestions: Record<WritingProvider, string[]> = {
   codex: ['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol'],
@@ -30,19 +35,38 @@ export function WritingSuggestions({
   year: number;
   week: number;
   onSummaryChange: (teamId: string, summary: string) => void;
-  onControllerChange: (controller: { generate: (teamId: string) => Promise<void> }) => void;
+  onControllerChange: (controller: {
+    generate: (teamId: string) => Promise<void>;
+    ready: boolean;
+  }) => void;
   onGenerationStateChange: (teamId: string | undefined) => void;
 }) {
   const request = useRef<AbortController | undefined>(undefined);
   const [providers, setProviders] = useState<WritingProviderOption[]>([]);
   const [provider, setProvider] = useState<WritingProvider>('codex');
   const [model, setModel] = useState('');
-  const [approved, setApproved] = useState(false);
+  const [consent, setConsent] = useState<WritingConsent>({ codex: false, claude: false });
+  const [consentLoading, setConsentLoading] = useState(true);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const approved = consent[provider];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const consentId = useId();
   const ready = providers.find((option) => option.id === provider)?.status === 'ready';
   useEffect(() => {
+    let mounted = true;
+    void api.consent().then(
+      (saved) => {
+        if (mounted) {
+          setConsent(saved);
+          setConsentLoading(false);
+        }
+      },
+      () => {
+        if (mounted)
+          setError('Context-sharing preferences could not be loaded. Reload to try again.');
+      },
+    );
     void api.providers().then(
       (options) => {
         setProviders(options);
@@ -53,6 +77,9 @@ export function WritingSuggestions({
         setError('AI configuration is unavailable.');
       },
     );
+    return () => {
+      mounted = false;
+    };
   }, [api]);
   useEffect(
     () => () => {
@@ -61,7 +88,7 @@ export function WritingSuggestions({
     [],
   );
   async function generateSummary(teamId: string) {
-    if (busy || !approved || !ready) return;
+    if (busy || consentLoading || savingConsent || !approved || !ready) return;
     const controller = new AbortController();
     request.current = controller;
     setBusy(true);
@@ -88,11 +115,27 @@ export function WritingSuggestions({
       }
     }
   }
+  async function changeConsent(approved: boolean) {
+    setSavingConsent(true);
+    setError('');
+    if (!approved) request.current?.abort();
+    try {
+      setConsent(await api.saveConsent({ provider, approved }));
+    } catch (failure) {
+      logClientError('writing.consent', failure);
+      setError('Your context-sharing preference could not be saved. Please try again.');
+    } finally {
+      setSavingConsent(false);
+    }
+  }
   useEffect(() => {
-    onControllerChange({ generate: generateSummary });
+    onControllerChange({
+      generate: generateSummary,
+      ready: approved && ready && !consentLoading && !savingConsent,
+    });
   });
   return (
-    <Box my={5} p={{ base: 4, md: 6 }} bg="bg" borderWidth="1px" rounded="lg">
+    <Box className="writing-settings">
       <Stack gap={4}>
         <Heading as="h3" size="md">
           AI ranking summaries
@@ -101,14 +144,13 @@ export function WritingSuggestions({
           Generate one factual summary for each team. Summaries are reference material and do not
           change your ranking commentary.
         </Text>
-        <Field.Root disabled={busy}>
+        <Field.Root disabled={busy || savingConsent}>
           <Field.Label>Writing assistant</Field.Label>
           <NativeSelect.Root>
             <NativeSelect.Field
               value={provider}
               onChange={(e) => {
                 setProvider(e.target.value as WritingProvider);
-                setApproved(false);
               }}
             >
               {providers.map((p) => (
@@ -127,7 +169,7 @@ export function WritingSuggestions({
             <NativeSelect.Indicator />
           </NativeSelect.Root>
         </Field.Root>
-        <Field.Root disabled={busy}>
+        <Field.Root disabled={busy || savingConsent}>
           <Field.Label>Model (optional)</Field.Label>
           <Input
             list={`${provider}-writing-models`}
@@ -159,11 +201,24 @@ export function WritingSuggestions({
               width="auto"
               mr={2}
               checked={approved}
-              disabled={busy || !ready}
-              onChange={(e) => setApproved(e.target.checked)}
+              disabled={busy || !ready || consentLoading || savingConsent}
+              onChange={(e) => void changeConsent(e.target.checked)}
             />
-            I approve sending these team contexts to the selected assistant.
+            I approve sending team contexts to this assistant. Save this choice to my account.
           </label>
+        )}
+        {approved && (
+          <Box>
+            <Text>Context sharing is approved for this assistant and saved to your account.</Text>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={savingConsent || consentLoading}
+              onClick={() => void changeConsent(false)}
+            >
+              {savingConsent ? 'Saving…' : 'Revoke context-sharing approval'}
+            </Button>
+          </Box>
         )}
         {busy && (
           <Button

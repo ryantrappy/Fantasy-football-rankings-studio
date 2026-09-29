@@ -5,6 +5,7 @@ import * as aiCredentials from './ai-credentials.server';
 import { logServerError } from './logging.server';
 import { discoverSeasons } from './insights/seasons.server';
 import { loadInsights } from './insights/load.server';
+import { loadLiveLeague } from './live-matchups.server';
 import { z } from 'zod';
 import type { League, WeeklyRanking } from '../types';
 import { connectDatabase } from './database.server';
@@ -99,6 +100,27 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getLiveMatchups: async (owner: string) => {
+    const saved = await leagues.listLeagues(owner);
+    return Promise.all(
+      saved.map(async (league) => {
+        try {
+          return await loadLiveLeague(league, await leagues.espnAccess(league, owner));
+        } catch (error) {
+          logServerError('liveMatchups.league', error, 502);
+          return {
+            leagueId: league.leagueId,
+            leagueName: league.leagueName || `League ${league.leagueId}`,
+            provider: league.leagueType === 1 ? ('ESPN' as const) : ('Sleeper' as const),
+            season: league.seasonId,
+            week: 1,
+            matchups: [],
+            error: 'Live scores are unavailable for this league right now.',
+          };
+        }
+      }),
+    );
+  },
   listArchivedLeagues: async (owner: string) =>
     (await leagues.listLeagues(owner, true)).map(publicLeague),
   setLeagueArchived: async (owner: string, input: unknown) => {

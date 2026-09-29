@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   providerConfig: vi.fn(),
   find: vi.fn(),
   chat: vi.fn(),
+  consent: vi.fn(),
 }));
 vi.mock('../services/leagues.service', () => ({
   default: class {
@@ -21,11 +22,13 @@ vi.mock('../writing-cli.server', () => ({
   findWritingCli: mocks.find,
   WritingCliAdapter: class {},
 }));
+vi.mock('../profile.server', () => ({ getWritingConsent: mocks.consent }));
 vi.mock('@tanstack/ai', () => ({ chat: mocks.chat }));
 import { generateWriting, getWritingContext } from '../writing.server';
 const selection = { leagueId: '123', year: 2025, week: 2, teamId: '1' };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.consent.mockResolvedValue({ codex: true, claude: false });
   mocks.league.mockResolvedValue({ leagueId: '123' });
   mocks.access.mockResolvedValue('public');
   mocks.load.mockResolvedValue({
@@ -107,4 +110,14 @@ it('aborts server generation and releases the account request slot', async () =>
   controller.abort();
   await expect(first).rejects.toMatchObject({ name: 'AbortError' });
   expect(await generateWriting('owner', input)).toBe('- Discuss scoring.');
+});
+
+it('blocks generation after saved consent is revoked despite a stale browser approval', async () => {
+  mocks.consent.mockResolvedValue({ codex: false, claude: false });
+  await expect(
+    generateWriting('owner', { ...selection, provider: 'codex', model: '', approved: true }),
+  ).rejects.toMatchObject({ status: 403 });
+  expect(mocks.consent).toHaveBeenCalledWith('owner');
+  expect(mocks.providerConfig).not.toHaveBeenCalled();
+  expect(mocks.chat).not.toHaveBeenCalled();
 });

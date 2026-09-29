@@ -97,7 +97,8 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
               : `using scores through week ${forecast.throughWeek}`}
             . {settings!.playoffTeams} playoff places; regular season ends week{' '}
             {settings!.regularSeasonEnd}. All percentages are unconditional chances from their
-            cutoff, not chances conditional on reaching a round. Byes count as advancement.
+            cutoff, not chances conditional on reaching a round. Projected record averages final
+            regular-season wins and losses across simulations. Byes count as advancement.
           </Text>
           {forecast.throughWeek <= 2 && (
             <Text role="note" mb={3} fontWeight="bold">
@@ -183,6 +184,13 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
                     value: (r) => r.teamName,
                     rowHeader: true,
                     cell: (r) => r.teamName,
+                  },
+                  {
+                    id: 'record',
+                    header: 'Projected record',
+                    value: (r) => r.projectedWins,
+                    cell: (r) =>
+                      `${r.projectedWins.toFixed(1)}-${(settings!.regularSeasonEnd - r.projectedWins).toFixed(1)}`,
                   },
                   {
                     id: 'playoff',

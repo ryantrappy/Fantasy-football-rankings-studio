@@ -25,6 +25,10 @@ it('shows cutoff-controlled probabilities and the scenario limitations', () => {
     </Provider>,
   );
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
+  expect(screen.getByRole('columnheader', { name: 'Projected record' })).toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toHaveTextContent(
+    /\d+\.\d-\d+\.\d/,
+  );
   expect(screen.getByText(/random remaining opponents/)).toBeInTheDocument();
   expect(screen.getByText(/Projection mode:.*historical scoring only/)).toBeInTheDocument();
   expect(

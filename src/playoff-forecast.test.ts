@@ -128,6 +128,20 @@ it.each([2, 4, 6, 8])('conserves playoff slots and round winners for %i teams', 
   }
   expect(r.rows.every((row) => Math.abs(row.playoff - size / 8) < 0.04)).toBe(true);
 });
+it('projects final regular-season records from banked and simulated wins', () => {
+  fixedStrengths();
+  const data = fixture(2);
+  data.scores.forEach((score) => (score.actual = score.teamId === '0' ? 150 : 50));
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 6, playoffTeams: 2 }, 4, 2000);
+  expect(result.rows[0].projectedWins).toBeGreaterThan(5.9);
+  expect(result.rows[1].projectedWins).toBeLessThan(0.1);
+  expect(result.rows[0].projectedWins + result.rows[1].projectedWins).toBeCloseTo(6, 8);
+  expect(
+    forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 2 }, 4, 2000).rows.map(
+      (row) => row.projectedWins,
+    ),
+  ).toEqual([4, 0]);
+});
 it('shares one posterior parameter draw per team through every simulated future week and round', () => {
   const sample = vi.spyOn(statistics, 'sampleScoreParameters');
   const result = forecastPlayoffs(fixture(2), { regularSeasonEnd: 10, playoffTeams: 2 }, 2, 100);

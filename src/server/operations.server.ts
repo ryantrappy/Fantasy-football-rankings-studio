@@ -181,7 +181,13 @@ export const operations = {
   getInsights: async (owner: string, input: unknown) => {
     const data = seasonSchema.parse(input);
     const league = await leagues.getLeagueById(data.leagueId, owner);
-    return loadInsights(league, data.year, await leagues.espnAccess(league, owner));
+    return loadInsights(
+      league,
+      data.year,
+      await leagues.espnAccess(league, owner),
+      undefined,
+      true,
+    );
   },
   listLeagues: async (owner: string) => (await leagues.listLeagues(owner)).map(publicLeague),
   createLeague: async (owner: string, input: unknown) =>

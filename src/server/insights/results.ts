@@ -108,14 +108,23 @@ export function sleeperResults(
   return rows;
 }
 export interface EspnResultsData {
-  teams?: { id: number; rankCalculatedFinal?: number }[];
+  teams?: { id: number; rankCalculatedFinal?: number; divisionId?: number }[];
+  status?: { isPlayoffMatchupEdited?: boolean };
   schedule?: { playoffTierType?: string; home?: { teamId: number }; away?: { teamId: number } }[];
   settings?: {
+    scoringSettings?: { scoringType?: string };
     rosterSettings?: { lineupSlotCounts?: Record<string, number> };
     scheduleSettings?: {
       playoffTeamCount?: number;
       matchupPeriodCount?: number;
       matchupPeriodLength?: number;
+      matchupPeriods?: Record<string, number[]>;
+      playoffMatchupPeriodLength?: number;
+      variablePlayoffMatchupPeriodLength?: boolean;
+      playoffReseed?: boolean;
+      playoffSeedingRule?: string;
+      playoffSeedingRuleBy?: number;
+      divisions?: { id: number }[];
     };
   };
 }

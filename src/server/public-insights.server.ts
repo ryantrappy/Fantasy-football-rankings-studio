@@ -17,6 +17,6 @@ export const publicInsights = {
     discoverSeasons(await findLeague(leagueIdSchema.parse(input).leagueId), 'public'),
   getInsights: async (input: unknown) => {
     const { leagueId, year } = seasonSchema.parse(input);
-    return loadInsights(await findLeague(leagueId), year, 'public');
+    return loadInsights(await findLeague(leagueId), year, 'public', undefined, true);
   },
 };

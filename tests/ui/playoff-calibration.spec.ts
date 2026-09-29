@@ -28,7 +28,7 @@ for (const viewport of [
     expect(download.suggestedFilename()).toBe('playoff-calibration-fixture-2026.json');
     const artifact = JSON.parse(await readFile((await download.path())!, 'utf8'));
     expect(artifact.artifactType).toBe('fantasy-playoff-calibration');
-    expect(artifact.schemaVersion).toBe(2);
+    expect(artifact.schemaVersion).toBe(4);
     expect(artifact.seasonMetrics).toHaveLength(2);
     expect(artifact.finalWeekRulesChecks).toHaveLength(1);
     expect(
@@ -40,6 +40,25 @@ for (const viewport of [
     expect(artifact.weeklyMetrics).toHaveLength(10);
     expect(artifact.predictiveWeeklyMetrics).toHaveLength(9);
     expect(artifact.coverage.evaluatedSeasons).toEqual([2025, 2024]);
+    expect(
+      artifact.seasons.map((s: { playoffSettings: { rules: unknown } }) => s.playoffSettings.rules),
+    ).toMatchObject([
+      {
+        season: 2025,
+        tiebreakers: ['head-to-head', 'points-for', 'division-record', 'points-against'],
+        roundWeeks: [
+          [11, 12],
+          [13, 14],
+        ],
+        reseed: true,
+      },
+      {
+        season: 2024,
+        tiebreakers: ['points-for', 'head-to-head', 'division-record', 'points-against'],
+        roundWeeks: [[11], [12]],
+        reseed: false,
+      },
+    ]);
     expect(artifact.seasons[0].scores).toHaveLength(80);
     const firstWeek = artifact.observations.filter((r: { week: number }) => r.week === 1);
     const brier =

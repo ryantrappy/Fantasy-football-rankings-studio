@@ -71,10 +71,16 @@ it('loads credentials only after verifying league ownership', async () => {
 it('passes owner credentials through discovery and insight reads', async () => {
   await operations.getInsights('owner-a', { leagueId: '123', year: 2025 });
   await operations.getLeagueSeasons('owner-b', { leagueId: '123' });
-  expect(loadInsights).toHaveBeenCalledWith(league, 2025, {
-    espnS2: 'owner-a-s2',
-    swid: 'owner-a-swid',
-  });
+  expect(loadInsights).toHaveBeenCalledWith(
+    league,
+    2025,
+    {
+      espnS2: 'owner-a-s2',
+      swid: 'owner-a-swid',
+    },
+    undefined,
+    true,
+  );
   expect(discoverSeasons).toHaveBeenCalledWith(league, {
     espnS2: 'owner-b-s2',
     swid: 'owner-b-swid',

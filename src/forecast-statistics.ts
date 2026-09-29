@@ -3,6 +3,8 @@ import type { SeasonInsights } from './insights';
 export interface ScoreDistribution {
   mean: number;
   sd: number;
+  // Conditional empirical-Bayes posterior; league hyperparameters are plug-in estimates.
+  posterior?: { degrees: number; scale: number; meanPrecision: number };
 }
 
 // Three prior observations regularize short histories. This is an assumption,
@@ -35,11 +37,16 @@ export function fitScoreDistributions(
         sd: Math.sqrt(pooledVariance * (1 + 1 / (n + 3))),
       };
     const residuals = h.reduce((sum, x) => sum + (x - means[i]) ** 2, 0);
-    const variance = (residuals + 3 * pooledVariance) / (n - 1 + 3);
+    const meanPrecision = n + 3;
+    const degrees = n + 3;
+    // Normal / inverse-chi-square update, including disagreement with the prior mean.
+    const scale =
+      (3 * pooledVariance + residuals + (3 * n * (means[i] - leagueMean) ** 2) / meanPrecision) /
+      degrees;
     return {
-      mean: (n * means[i] + 3 * leagueMean) / (n + 3),
-      // Include uncertainty in the estimated mean, especially early in a season.
-      sd: Math.sqrt(Math.max(1, variance) * (1 + 1 / (n + 3))),
+      mean: (n * means[i] + 3 * leagueMean) / meanPrecision,
+      sd: Math.sqrt((scale * degrees * (1 + 1 / meanPrecision)) / (degrees - 2)),
+      posterior: { degrees, scale, meanPrecision },
     };
   });
 }
@@ -56,8 +63,59 @@ export function normalCdf(z: number): number {
   return z > 0 ? 1 - tail : tail;
 }
 
+// Draw once per simulated season. Reusing these parameters preserves uncertainty
+// about strength across weeks; weekly score noise is drawn separately.
+export function sampleScoreParameters(d: ScoreDistribution, normal: () => number) {
+  if (!d.posterior) return { mean: d.mean, sd: d.sd };
+  const { degrees, scale, meanPrecision } = d.posterior;
+  let chiSquare = 0;
+  for (let j = 0; j < degrees; j++) chiSquare += normal() ** 2;
+  const variance = (degrees * scale) / Math.max(Number.EPSILON, chiSquare);
+  return {
+    mean: d.mean + Math.sqrt(variance / meanPrecision) * normal(),
+    sd: Math.sqrt(variance),
+  };
+}
+
+const varianceDraws = new Map<number, [number[], number[]]>();
+function predictiveVarianceDraws(d: ScoreDistribution): [number[], number[]] {
+  if (!d.posterior) return [Array(4096).fill(d.sd ** 2), Array(4096).fill(d.sd ** 2)];
+  const { degrees, scale, meanPrecision } = d.posterior;
+  if (!varianceDraws.has(degrees)) {
+    let seed = 773;
+    const uniform = () => {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      return (seed + 0.5) / 4294967296;
+    };
+    const normal = () => Math.sqrt(-2 * Math.log(uniform())) * Math.cos(2 * Math.PI * uniform());
+    const samples: [number[], number[]] = [[], []];
+    // Generate paired independent inverse-chi-square draws. Symmetrization
+    // below makes team order immaterial.
+    for (let i = 0; i < 4096; i++) {
+      const sums = [0, 0];
+      for (let j = 0; j < degrees; j++) for (let k = 0; k < 2; k++) sums[k] += normal() ** 2;
+      for (let k = 0; k < 2; k++) samples[k].push(degrees / Math.max(Number.EPSILON, sums[k]));
+    }
+    varianceDraws.set(degrees, samples);
+  }
+  return varianceDraws
+    .get(degrees)!
+    .map((xs) => xs.map((v) => v * scale * (1 + 1 / meanPrecision))) as [number[], number[]];
+}
+
 export function matchupWinProbability(a: ScoreDistribution, b: ScoreDistribution) {
-  return normalCdf((a.mean - b.mean) / Math.hypot(a.sd, b.sd));
+  if (!a.posterior && !b.posterior) return normalCdf((a.mean - b.mean) / Math.hypot(a.sd, b.sd));
+  const av = predictiveVarianceDraws(a),
+    bv = predictiveVarianceDraws(b);
+  let sum = 0;
+  // Rao-Blackwellized deterministic Monte Carlo: integrate conditional normal
+  // win probabilities over variance uncertainty, instead of approximating the
+  // difference of two Student-t scores as normal. 8,192 conditional evaluations.
+  for (let i = 0; i < av[0].length; i++)
+    sum +=
+      normalCdf((a.mean - b.mean) / Math.sqrt(av[0][i] + bv[1][i])) +
+      normalCdf((a.mean - b.mean) / Math.sqrt(av[1][i] + bv[0][i]));
+  return sum / (2 * av[0].length);
 }
 
 export interface ForecastValidation {

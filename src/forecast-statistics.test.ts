@@ -3,6 +3,7 @@ import {
   fitScoreDistributions,
   matchupWinProbability,
   normalCdf,
+  sampleScoreParameters,
   validateHistoricalForecast,
 } from './forecast-statistics';
 
@@ -29,7 +30,7 @@ it('has symmetric finite probabilities with correct Gaussian tail values', () =>
   expect(fitScoreDistributions([[100], [100]]).every((d) => d.sd > 1)).toBe(true);
 });
 
-it('pools weekly variability without confusing between-team strength with noise', () => {
+it('pools within-team noise and includes prior-mean disagreement in the posterior', () => {
   const same = fitScoreDistributions([
     [90, 100, 110],
     [90, 100, 110],
@@ -38,7 +39,10 @@ it('pools weekly variability without confusing between-team strength with noise'
     [190, 200, 210],
     [90, 100, 110],
   ]);
-  expect(offset[0].sd).toBeCloseTo(same[0].sd, 10);
+  expect(same[0].posterior).toEqual({ degrees: 6, scale: 500 / 6, meanPrecision: 6 });
+  // The pooled noise is still 100. The offset contributes only the conjugate
+  // mean-disagreement term (3 * 3 / 6) * (200 - 150)^2.
+  expect(offset[0].posterior!.scale).toBeCloseTo((500 + 1.5 * 50 ** 2) / 6, 10);
   expect(offset[0].mean).toBeLessThan(200);
   expect(offset[0].mean).toBeGreaterThan(150);
 });
@@ -92,4 +96,54 @@ it('gives the standings benchmark identical future distributions using cutoff-on
   expect(distributions[0].mean).toBe(110);
   expect(distributions[0].sd ** 2).toBeCloseTo(200 * (1 + 1 / 5));
   expect(fitScoreDistributions(histories)).toEqual(fitScoreDistributions(histories, false));
+});
+
+it('draws the joint posterior with the correct predictive variance and cross-week covariance', () => {
+  const d = fitScoreDistributions([
+    [90, 110, 95, 105, 85, 115],
+    [80, 100, 85, 95, 75, 105],
+  ])[0];
+  let seed = 7123;
+  const uniform = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return (seed + 0.5) / 4294967296;
+  };
+  const normal = () => Math.sqrt(-2 * Math.log(uniform())) * Math.cos(2 * Math.PI * uniform());
+  let first = 0,
+    second = 0,
+    square = 0,
+    product = 0;
+  const trials = 50000;
+  for (let j = 0; j < trials; j++) {
+    const parameters = sampleScoreParameters(d, normal);
+    const x = parameters.mean + parameters.sd * normal() - d.mean;
+    const y = parameters.mean + parameters.sd * normal() - d.mean;
+    first += x;
+    second += y;
+    square += x * x;
+    product += x * y;
+  }
+  const { degrees, scale, meanPrecision } = d.posterior!;
+  const covariance = (scale * degrees) / ((degrees - 2) * meanPrecision);
+  expect(Math.abs(first / trials)).toBeLessThan(0.3);
+  expect(square / trials / d.sd ** 2).toBeCloseTo(1, 1);
+  expect((product / trials - (first * second) / trials ** 2) / covariance).toBeCloseTo(1, 1);
+});
+
+it('integrates heavy-tailed predictive win probabilities and preserves team-order symmetry', () => {
+  const a = {
+    mean: 160,
+    sd: Math.sqrt(((400 * 5) / 3) * 1.2),
+    posterior: { degrees: 5, scale: 400, meanPrecision: 5 },
+  };
+  const b = { ...a, mean: 100 };
+  const p = matchupWinProbability(a, b);
+  // Independently computed Student-t convolution (SciPy quadrature): 0.941066.
+  expect(p).toBeCloseTo(0.941066, 2);
+  expect(matchupWinProbability(b, a) + p).toBeCloseTo(1, 12);
+  expect(matchupWinProbability(a, a)).toBe(0.5);
+  expect(matchupWinProbability({ mean: 110, sd: 10 }, { mean: 90, sd: 10 })).toBeCloseTo(
+    normalCdf(Math.SQRT2),
+    10,
+  );
 });

@@ -3,6 +3,8 @@ import {
   espnProjectionSnapshot,
   sleeperBestLineup,
   sleeperProjectionSnapshot,
+  remainingProjectionWeeks,
+  sleeperByeWeeks,
 } from './projections';
 
 it('uses the best legal Sleeper lineup from starters and bench players', () => {
@@ -27,6 +29,119 @@ it('uses the best legal Sleeper lineup from starters and bench players', () => {
   expect(result.coveredStarters).toBe(2);
   expect(result.totalStarters).toBe(4);
   expect(result.benchSelections).toBe(1);
+});
+
+it('reoptimizes overlapping slots each week and treats a known bye as zero, not missing data', () => {
+  const roster = [{ teamId: '1', starters: ['rb', 'wr', 'flex', 'qb'], bench: ['replacement'] }];
+  const positions = { rb: 'RB', wr: 'WR', flex: 'WR', qb: 'QB', replacement: 'RB' };
+  const project = (week: number, byes: Record<string, number> = {}) =>
+    sleeperProjectionSnapshot(
+      week,
+      ['1'],
+      roster,
+      Object.entries({ rb: 20, wr: 30, flex: 25, qb: 40, replacement: 10 }).map(
+        ([player_id, p]) => ({ player_id, stats: { points: p } }),
+      ),
+      { points: 1 },
+      ['RB', 'WR', 'FLEX', 'SUPER_FLEX'],
+      positions,
+      {},
+      byes,
+    );
+  expect(project(4).teamPoints['1']).toBe(115);
+  const bye = project(5, { rb: 5 });
+  expect(bye.teamPoints['1']).toBe(105);
+  expect(bye.lineups?.['1']).toContain('replacement');
+  expect(bye.lineups?.['1']).not.toContain('rb');
+  expect(new Set(bye.lineups?.['1']).size).toBe(4);
+  expect(bye.byePlayers).toBe(1);
+  const emptyByeSlot = sleeperProjectionSnapshot(
+    5,
+    ['1'],
+    [{ teamId: '1', starters: ['rb'], bench: [] }],
+    [],
+    { points: 1 },
+    ['RB'],
+    positions,
+    {},
+    { rb: 5 },
+  );
+  expect(emptyByeSlot.teamPoints).toEqual({ '1': 0 });
+  expect(emptyByeSlot.coveredStarters).toBe(1);
+  expect(
+    sleeperProjectionSnapshot(5, ['1'], roster, [], { points: 1 }, ['RB'], positions).teamPoints,
+  ).toEqual({});
+});
+
+it('loads the season-specific playoff weeks and infers byes only from a full NFL schedule', () => {
+  expect(
+    remainingProjectionWeeks(
+      {
+        regularSeasonEnd: 14,
+        playoffTeams: 4,
+        rules: {
+          provider: 'Sleeper',
+          season: 2026,
+          tiebreakers: ['points-for'],
+          divisionByTeam: {},
+          divisionWinnersFirst: false,
+          reseed: true,
+          roundWeeks: [[15], [16, 17]],
+        },
+      },
+      13,
+    ),
+  ).toEqual([14, 15, 16, 17]);
+  const games = Array.from({ length: 17 }, (_, w) =>
+    Array.from({ length: 16 }, (_, i) => ({
+      week: w + 1,
+      home: String(i * 2),
+      away: String(i * 2 + 1),
+    })),
+  ).flat();
+  expect(sleeperByeWeeks(games, { a: '0', b: '1' })).toEqual({ a: 18, b: 18 });
+  expect(sleeperByeWeeks(games.slice(0, 16), { a: '0' })).toEqual({});
+});
+
+it('uses only captured ESPN ownership, future-week stats and that week’s bye/recovery assumptions', () => {
+  const injured = entry(2, 1, 2, 100);
+  Object.assign(injured.playerPoolEntry.player, { injuryStatus: 'OUT', proTeamId: 7 });
+  const bench = entry(20, 2, 2, 5);
+  const ownership = [{ teamId: 1, rosterForCurrentScoringPeriod: { entries: [injured, bench] } }];
+  expect(
+    espnProjectionSnapshot(2026, 4, ['1'], ownership, { '2': 1 }, { ownership }).teamPoints['1'],
+  ).toBe(5);
+  const future = entry(20, 1, 2, 25);
+  Object.assign(future.playerPoolEntry.player, { injuryStatus: 'OUT', proTeamId: 7 });
+  future.playerPoolEntry.player.stats[0].scoringPeriodId = 5;
+  const stranger = entry(2, 999, 2, 999);
+  stranger.playerPoolEntry.player.stats[0].scoringPeriodId = 5;
+  const sides = [{ teamId: 1, rosterForCurrentScoringPeriod: { entries: [future, stranger] } }];
+  const result = espnProjectionSnapshot(
+    2026,
+    5,
+    ['1'],
+    sides,
+    { '2': 1 },
+    { ownership, useCurrentAvailability: false },
+  );
+  expect(result.teamPoints['1']).toBe(25);
+  expect(result.lineups?.['1']).toEqual(['1']);
+  expect(result.unavailablePlayers).toBe(0);
+  expect(
+    espnProjectionSnapshot(
+      2026,
+      5,
+      ['1'],
+      sides,
+      { '2': 1 },
+      {
+        ownership,
+        useCurrentAvailability: false,
+        byeWeekByProTeam: { '7': 5 },
+      },
+    ).teamPoints['1'],
+  ).toBe(0);
 });
 
 const stat = (appliedTotal: number) => ({

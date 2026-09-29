@@ -99,3 +99,30 @@ it('explains missing provider settings', () => {
   );
   expect(screen.getByText(/settings are unavailable/)).toBeInTheDocument();
 });
+
+it('discloses weekly coverage and removes current lineup assumptions at an older cutoff', () => {
+  const data = forecastData();
+  const next = { week: 5, teamPoints: { '1': 110, '2': 95 }, coveredStarters: 2, totalStarters: 2 };
+  data.playoffProjection = {
+    provider: 'Sleeper',
+    ...next,
+    availabilityChecked: true,
+    weekly: [next, { ...next, week: 6, teamPoints: { '1': 105 }, coveredStarters: 1 }],
+  };
+  render(
+    <Provider>
+      <PlayoffForecast data={data} />
+    </Provider>,
+  );
+  expect(screen.getByText(/best legal weekly lineups/)).toHaveTextContent('3 of 14 team-weeks');
+  expect(screen.getByText(/later weeks use their own provider estimates/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Weekly lineup projection coverage'));
+  const table = screen.getByRole('table', { name: 'Weekly lineup projection coverage' });
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(7);
+  expect(table.querySelectorAll('tbody tr')[1]).toHaveTextContent('1 of 2');
+  fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '3' } });
+  expect(
+    screen.queryByRole('table', { name: 'Weekly lineup projection coverage' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByText(/excluded from this retrospective cutoff/)).toBeInTheDocument();
+});

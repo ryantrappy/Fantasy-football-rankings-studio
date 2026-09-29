@@ -1,12 +1,16 @@
 import type { SeasonInsights } from './insights';
 import {
   fitScoreDistributions,
+  sampleScoreParameters,
   validateHistoricalForecast,
   type ForecastValidation,
 } from './forecast-statistics';
+import { playoffRulesReason, seedPlayoffTeams, type PlayoffRules } from './playoff-rules';
+export const PLAYOFF_FORECAST_MODEL_VERSION = 'joint-posterior-weekly-lineup-v1';
 export interface PlayoffSettings {
   regularSeasonEnd: number;
   playoffTeams: number;
+  rules?: PlayoffRules;
 }
 export interface PlayoffForecast {
   schedule: { knownWeeks: number; remainingWeeks: number };
@@ -23,6 +27,12 @@ export interface PlayoffForecast {
     coveredStarters: number;
     totalStarters: number;
     note: string;
+    weeks?: {
+      week: number;
+      projectedTeams: number;
+      coveredStarters: number;
+      totalStarters: number;
+    }[];
   };
   reason?: string;
 }
@@ -46,23 +56,60 @@ export function forecastPlayoffs(
         ? ['Reach final', 'Win title']
         : ['Reach semifinal', 'Reach final', 'Win title'];
   const snapshot = data.playoffProjection;
+  const futureWeeks = [
+    ...new Set([
+      ...Array.from(
+        { length: Math.max(0, settings.regularSeasonEnd - throughWeek) },
+        (_, i) => throughWeek + i + 1,
+      ),
+      ...(settings.rules?.roundWeeks.flat() ??
+        Array.from(
+          { length: Math.ceil(Math.log2(size)) },
+          (_, i) => settings.regularSeasonEnd + i + 1,
+        )),
+    ]),
+  ]
+    .filter((week) => week > throughWeek && week <= 18)
+    .sort((a, b) => a - b);
   const projectionIsCurrent =
     !!snapshot && throughWeek === data.completedWeek && snapshot.week === throughWeek + 1;
   const projectedTeams = snapshot ? teamsWithProjection(data, snapshot.teamPoints) : 0;
+  const weekly = snapshot?.weekly ?? (snapshot ? [snapshot] : []);
+  const usableWeeks = weekly.filter(
+    (row) =>
+      futureWeeks.includes(row.week) &&
+      weekly.filter((other) => other.week === row.week).length === 1 &&
+      row.totalStarters > 0 &&
+      row.coveredStarters > 0 &&
+      teamsWithProjection(data, row.teamPoints) > 0,
+  );
   const useProjection =
-    scoreModel === 'historical' &&
-    projectionIsCurrent &&
-    projectedTeams > 0 &&
-    snapshot.totalStarters > 0 &&
-    snapshot.coveredStarters > 0;
+    scoreModel === 'historical' && projectionIsCurrent && usableWeeks.length > 0;
+  const pointsByWeek = new Map(
+    useProjection ? usableWeeks.map((row) => [row.week, row.teamPoints]) : [],
+  );
+  const weeklyCoverage = futureWeeks.map((week) => {
+    const row = useProjection ? usableWeeks.find((row) => row.week === week) : undefined;
+    return {
+      week,
+      projectedTeams: row ? teamsWithProjection(data, row.teamPoints) : 0,
+      coveredStarters: row?.coveredStarters ?? 0,
+      totalStarters: row?.totalStarters ?? snapshot?.totalStarters ?? 0,
+    };
+  });
+  const projectedTeamWeeks = weeklyCoverage.reduce((sum, row) => sum + row.projectedTeams, 0);
+  const totalTeamWeeks = futureWeeks.length * data.teams.length;
   const projection: PlayoffForecast['projection'] = {
     used: useProjection,
     provider: snapshot?.provider,
     week: snapshot?.week,
     coveredStarters: snapshot?.coveredStarters ?? 0,
     totalStarters: snapshot?.totalStarters ?? 0,
+    ...(snapshot?.weekly ? { weeks: weeklyCoverage } : {}),
     note: useProjection
-      ? `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and set the expected score for that week. Later weeks and uncovered teams use historical scoring only.`
+      ? snapshot!.weekly
+        ? `${snapshot!.provider} best legal weekly lineups set the expected score for ${projectedTeamWeeks} of ${totalTeamWeeks} team-weeks across weeks ${futureWeeks.join(', ')}.${projectedTeamWeeks < totalTeamWeeks ? ' Uncovered teams and weeks use historical scoring only.' : ''}`
+        : `${snapshot!.provider} week ${snapshot!.week} projections cover ${snapshot!.coveredStarters} of ${snapshot!.totalStarters} ${snapshot!.optimizedLineup ? 'best-lineup slots' : 'starters'} across ${projectedTeams} of ${data.teams.length} teams${snapshot!.optimizedLineup ? `, including ${snapshot!.benchSelections || 0} bench selection${snapshot!.benchSelections === 1 ? '' : 's'}` : ''}, and set the expected score for that week. Later weeks and uncovered teams use historical scoring only.`
       : snapshot?.note ||
         (snapshot && !projectionIsCurrent
           ? `${snapshot.provider} week ${snapshot.week} projections are excluded from this retrospective cutoff.`
@@ -98,6 +145,13 @@ export function forecastPlayoffs(
   if (!Number.isInteger(simulations) || simulations < 100 || simulations > 20000)
     return empty('Invalid simulation count.');
   const teams = [...data.teams].sort((a, b) => a.teamId.localeCompare(b.teamId));
+  const rulesReason = playoffRulesReason(
+    teams.map((t) => t.teamId),
+    size,
+    settings.regularSeasonEnd,
+    settings.rules,
+  );
+  if (rulesReason) return empty(rulesReason);
   const histories = teams.map((t) =>
     data.scores.filter(
       (s) =>
@@ -119,6 +173,9 @@ export function forecastPlayoffs(
       scheduled.set(week, order as number[]);
   }
   const wins = teams.map(() => 0),
+    against = teams.map(() => 0),
+    meetings = teams.map(() => teams.map(() => 0)),
+    headToHead = teams.map(() => teams.map(() => 0)),
     points = histories.map((h) => h.reduce((sum, s) => sum + s.actual, 0));
   for (let i = 0; i < teams.length; i++)
     for (const s of histories[i]) {
@@ -131,7 +188,11 @@ export function forecastPlayoffs(
         return empty(
           'Complete paired head-to-head results are required through the selected week.',
         );
-      wins[i] += s.actual > opponent.actual ? 1 : s.actual === opponent.actual ? 0.5 : 0;
+      const result = s.actual > opponent.actual ? 1 : s.actual === opponent.actual ? 0.5 : 0;
+      wins[i] += result;
+      against[i] += opponent.actual;
+      meetings[i][j!]++;
+      headToHead[i][j!] += result;
     }
   if (histories.some((h) => h.length !== histories[0].length))
     return empty('Teams have unequal completed-week coverage.');
@@ -140,7 +201,7 @@ export function forecastPlayoffs(
     histories.map((h) => h.map((s) => [s.week, s.actual, s.opponentTeamId])),
     settings,
     [...scheduled],
-    useProjection ? snapshot?.teamPoints : null,
+    useProjection ? (snapshot?.weekly ? [...pointsByWeek] : snapshot?.teamPoints) : null,
   ]))
     seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
   const random = () => {
@@ -153,17 +214,16 @@ export function forecastPlayoffs(
     histories.map((h) => h.map((s) => s.actual)),
     scoreModel === 'equal-strength',
   );
+  const normal = () =>
+    Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) * Math.cos(2 * Math.PI * random());
+  let parameters: { mean: number; sd: number }[];
   const draw = (i: number, week: number) => {
-    const normal =
-      Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) *
-      Math.cos(2 * Math.PI * random());
-    const providerMean =
-      useProjection && week === snapshot!.week ? snapshot!.teamPoints[teams[i].teamId] : undefined;
+    const providerMean = pointsByWeek.get(week)?.[teams[i].teamId];
     const mean =
       providerMean !== undefined && Number.isFinite(providerMean)
-        ? providerMean
-        : distributions[i].mean;
-    return mean + distributions[i].sd * normal;
+        ? providerMean + parameters[i].mean - distributions[i].mean
+        : parameters[i].mean;
+    return mean + parameters[i].sd * normal();
   };
   const counts = teams.map((t) => ({
     teamId: t.teamId,
@@ -179,8 +239,12 @@ export function forecastPlayoffs(
     return list;
   };
   for (let trial = 0; trial < simulations; trial++) {
+    parameters = distributions.map((d) => sampleScoreParameters(d, normal));
     const w = [...wins],
-      p = [...points];
+      p = [...points],
+      pa = [...against],
+      games = meetings.map((row) => [...row]),
+      h2h = headToHead.map((row) => [...row]);
     for (let week = throughWeek + 1; week <= settings.regularSeasonEnd; week++) {
       // Use known opponent identities; missing weeks remain a neutral schedule scenario.
       const order = scheduled.get(week) || shuffle(teams.map((_, i) => i));
@@ -191,22 +255,44 @@ export function forecastPlayoffs(
           sb = draw(b, week);
         p[a] += sa;
         p[b] += sb;
-        w[sa > sb ? a : b]++;
+        pa[a] += sb;
+        pa[b] += sa;
+        const result = sa > sb ? 1 : sa === sb ? 0.5 : 0;
+        w[a] += result;
+        w[b] += 1 - result;
+        games[a][b]++;
+        games[b][a]++;
+        h2h[a][b] += result;
+        h2h[b][a] += 1 - result;
       }
     }
     const tie = teams.map(() => random());
-    const seeds = teams
-      .map((_, i) => i)
-      .sort((a, b) => w[b] - w[a] || p[b] - p[a] || tie[b] - tie[a])
-      .slice(0, size);
+    const seeds = seedPlayoffTeams(
+      teams.map((t) => t.teamId),
+      size,
+      { wins: w, points: p, against: pa, meetings: games, headToHead: h2h },
+      settings.rules,
+      tie,
+    );
     seeds.forEach((i) => counts[i].playoff++);
-    let playoffWeek = settings.regularSeasonEnd + 1;
-    const game = (a: number, b: number) => (draw(a, playoffWeek) > draw(b, playoffWeek) ? a : b);
+    let playoffRound = 0;
+    const game = (a: number, b: number) => {
+      const weeks = settings.rules?.roundWeeks[playoffRound] ?? [
+        settings.regularSeasonEnd + playoffRound + 1,
+      ];
+      let sa = 0,
+        sb = 0;
+      for (const week of weeks) {
+        sa += draw(a, week);
+        sb += draw(b, week);
+      }
+      return sa > sb ? a : sb > sa ? b : seeds.indexOf(a) < seeds.indexOf(b) ? a : b;
+    };
     let alive: number[];
     if (size === 6) {
       alive = [seeds[0], game(seeds[3], seeds[4]), seeds[1], game(seeds[2], seeds[5])];
       alive.forEach((i) => counts[i].advance[0]++);
-      playoffWeek++;
+      playoffRound++;
     } else
       alive =
         size === 8
@@ -216,6 +302,12 @@ export function forecastPlayoffs(
             : seeds;
     let round = size === 6 ? 1 : 0;
     while (alive.length > 1) {
+      if (settings.rules?.reseed) {
+        const ranked = [...alive].sort((a, b) => seeds.indexOf(a) - seeds.indexOf(b));
+        alive = [];
+        for (let i = 0; i < ranked.length / 2; i++)
+          alive.push(ranked[i], ranked[ranked.length - i - 1]);
+      }
       const next: number[] = [];
       for (let i = 0; i < alive.length; i += 2) {
         const winner = game(alive[i], alive[i + 1]);
@@ -224,7 +316,7 @@ export function forecastPlayoffs(
       }
       alive = next;
       round++;
-      playoffWeek++;
+      playoffRound++;
     }
   }
   return {

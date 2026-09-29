@@ -68,6 +68,12 @@ it('replays all cutoffs while excluding current projections and future scores fr
     teamPoints: { '0': 9999, '1': 0, '2': 0, '3': 0 },
     coveredStarters: 4,
     totalStarters: 4,
+    weekly: [1, 2, 3, 4].map((week) => ({
+      week,
+      teamPoints: { '0': 9999, '1': 0, '2': 0, '3': 0 },
+      coveredStarters: 4,
+      totalStarters: 4,
+    })),
   };
   const second = await collect(data);
   expect(second.rows.filter((r) => r.week === 1)).toEqual(first.rows.filter((r) => r.week === 1));

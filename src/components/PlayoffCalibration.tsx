@@ -138,7 +138,8 @@ export function PlayoffCalibration({
         Replay up to five seasons before {year}, using only scores through each completed week, and
         compare playoff probabilities with actual entrants. Today’s projections and injuries are
         excluded. This evaluates the historical scoring model; archived player projections are
-        unavailable.
+        unavailable. Each season uses its own playoff places, divisions, tiebreakers and bracket
+        settings retrieved from the provider.
       </Text>
       <Text mb={3}>
         Accuracy may improve as the season progresses, but improvement is measured, never forced.

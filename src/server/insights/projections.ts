@@ -1,4 +1,50 @@
 import type { PlayoffProjection, RosterSnapshot, ScoreWeek } from '../../insights';
+import type { PlayoffSettings } from '../../playoff-forecast';
+
+export function remainingProjectionWeeks(settings: PlayoffSettings, completedWeek: number) {
+  const postseason =
+    settings.rules?.roundWeeks.flat() ??
+    Array.from(
+      { length: Math.ceil(Math.log2(settings.playoffTeams)) },
+      (_, i) => settings.regularSeasonEnd + i + 1,
+    );
+  return [
+    ...new Set([
+      completedWeek + 1,
+      ...Array.from(
+        { length: Math.max(0, settings.regularSeasonEnd - completedWeek) },
+        (_, i) => completedWeek + i + 1,
+      ),
+      ...postseason,
+    ]),
+  ]
+    .filter((week) => week > completedWeek && week <= 18)
+    .sort((a, b) => a - b);
+}
+
+export function sleeperByeWeeks(
+  games: { week: number; home: string; away: string }[],
+  playerTeams: Record<string, string>,
+) {
+  const nflTeams = new Set(games.flatMap((game) => [game.home, game.away]));
+  // Only infer absence from a complete season schedule, never an empty response.
+  if (nflTeams.size !== 32 || games.length < 250) return {};
+  const byeByTeam = new Map<string, number>();
+  for (const team of nflTeams) {
+    const playing = new Set(
+      games.filter((game) => game.home === team || game.away === team).map((game) => game.week),
+    );
+    const missing = Array.from({ length: 18 }, (_, i) => i + 1).filter(
+      (week) => !playing.has(week),
+    );
+    if (missing.length === 1) byeByTeam.set(team, missing[0]);
+  }
+  return Object.fromEntries(
+    Object.entries(playerTeams)
+      .filter(([, team]) => byeByTeam.has(team))
+      .map(([id, team]) => [id, byeByTeam.get(team)!]),
+  );
+}
 
 type ProjectedPlayer = {
   id: string;
@@ -117,13 +163,16 @@ export function sleeperProjectionSnapshot(
   rosterPositions: string[],
   playerPositions: Record<string, string>,
   availability: Record<string, string | null> = {},
+  byeWeekByPlayer: Record<string, number> = {},
 ): PlayoffProjection {
   const pointsByPlayer = new Map(
     projections
       .filter((row): row is SleeperProjectionRow & { player_id: string } => !!row.player_id)
       .map((row) => [
         row.player_id,
-        Object.keys(row.stats || {}).length
+        Object.entries(row.stats || {}).some(
+          ([stat, value]) => Number.isFinite(scoring[stat]) && Number.isFinite(value),
+        )
           ? Object.entries(row.stats!).reduce((total, [stat, value]) => {
               const weight = scoring[stat];
               return (
@@ -135,11 +184,13 @@ export function sleeperProjectionSnapshot(
   );
   const slots = rosterPositions.map(sleeperSlot).filter((slot): slot is Slot => !!slot);
   const teamPoints: Record<string, number> = {};
+  const lineups: Record<string, string[]> = {};
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
   let unavailablePlayers = 0;
   let uncertainPlayers = 0;
+  let byePlayers = 0;
   for (const teamId of teamIds) {
     totalStarters += slots.length;
     const roster = rosters.find((row) => row.teamId === teamId);
@@ -153,16 +204,21 @@ export function sleeperProjectionSnapshot(
         if (uncertainStatus(availability[id])) uncertainPlayers++;
         return true;
       })
-      .map((id) => ({
-        id,
-        position: playerPositions[id] || '',
-        points: pointsByPlayer.get(id) ?? Number.NaN,
-        starter: starters.has(id),
-      }))
+      .map((id) => {
+        const bye = byeWeekByPlayer[id] === week;
+        if (bye) byePlayers++;
+        return {
+          id,
+          position: playerPositions[id] || '',
+          points: bye ? 0 : (pointsByPlayer.get(id) ?? Number.NaN),
+          starter: starters.has(id),
+        };
+      })
       .filter((player) => !!player.position);
     const lineup = bestProjectedLineup(players, slots);
     if (!lineup) continue;
     teamPoints[teamId] = lineup.points;
+    lineups[teamId] = lineup.playerIds;
     coveredStarters += slots.length;
     benchSelections += lineup.benchSelections;
   }
@@ -178,6 +234,8 @@ export function sleeperProjectionSnapshot(
     totalStarters,
     benchSelections,
     optimizedLineup: true,
+    byePlayers,
+    lineups,
   };
 }
 
@@ -217,6 +275,7 @@ interface EspnProjectionEntry {
       id?: number;
       defaultPositionId?: number;
       injuryStatus?: string;
+      proTeamId?: number;
       stats?: {
         scoringPeriodId: number;
         seasonId: number;
@@ -239,18 +298,35 @@ export function espnProjectionSnapshot(
   teamIds: string[],
   sides: EspnProjectionSide[],
   slotCounts?: Record<string, number>,
+  options: {
+    useCurrentAvailability?: boolean;
+    byeWeekByProTeam?: Record<string, number>;
+    ownership?: EspnProjectionSide[];
+  } = {},
 ): PlayoffProjection {
   const teamPoints: Record<string, number> = {};
+  const lineups: Record<string, string[]> = {};
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
   let unavailablePlayers = 0;
   let uncertainPlayers = 0;
   let availabilityChecked = false;
+  let byePlayers = 0;
   for (const teamId of teamIds) {
-    const entries =
+    const projectedEntries =
       sides.find((side) => String(side.teamId) === teamId)?.rosterForCurrentScoringPeriod
         ?.entries || [];
+    const owned = options.ownership?.find((side) => String(side.teamId) === teamId)
+      ?.rosterForCurrentScoringPeriod?.entries;
+    const entries =
+      owned?.map((entry) => {
+        const id = entry.playerId ?? entry.playerPoolEntry?.player?.id;
+        const projected = projectedEntries.find(
+          (candidate) => (candidate.playerId ?? candidate.playerPoolEntry?.player?.id) === id,
+        );
+        return projected ? { ...projected, lineupSlotId: entry.lineupSlotId } : entry;
+      }) ?? (options.ownership ? [] : projectedEntries);
     const starters = entries.filter((entry) => ![20, 21].includes(entry.lineupSlotId));
     const configured =
       slotCounts &&
@@ -274,7 +350,10 @@ export function espnProjectionSnapshot(
     const players = entries
       .filter((entry) => entry.lineupSlotId !== 21)
       .filter((entry) => {
-        const status = entry.playerPoolEntry?.player?.injuryStatus;
+        const status =
+          options.useCurrentAvailability === false
+            ? undefined
+            : entry.playerPoolEntry?.player?.injuryStatus;
         if (status != null) availabilityChecked = true;
         if (unavailableStatus(status)) {
           unavailablePlayers++;
@@ -286,18 +365,21 @@ export function espnProjectionSnapshot(
       .map((entry) => {
         const player = entry.playerPoolEntry?.player;
         const id = entry.playerId ?? player?.id;
+        const bye = options.byeWeekByProTeam?.[String(player?.proTeamId)] === week;
+        if (bye) byePlayers++;
         return {
           id: String(id),
           position: espnPosition(player?.defaultPositionId) || '',
-          points:
-            player?.stats?.find(
-              (stat) =>
-                stat.seasonId === year &&
-                stat.scoringPeriodId === week &&
-                stat.statSourceId === 1 &&
-                stat.statSplitTypeId === 1 &&
-                Number.isFinite(stat.appliedTotal),
-            )?.appliedTotal ?? Number.NaN,
+          points: bye
+            ? 0
+            : (player?.stats?.find(
+                (stat) =>
+                  stat.seasonId === year &&
+                  stat.scoringPeriodId === week &&
+                  stat.statSourceId === 1 &&
+                  stat.statSplitTypeId === 1 &&
+                  Number.isFinite(stat.appliedTotal),
+              )?.appliedTotal ?? Number.NaN),
           starter: entry.lineupSlotId !== 20,
         };
       })
@@ -305,6 +387,7 @@ export function espnProjectionSnapshot(
     const lineup = bestProjectedLineup(players, slots as Slot[]);
     if (!lineup) continue;
     teamPoints[teamId] = lineup.points;
+    lineups[teamId] = lineup.playerIds;
     coveredStarters += slots.length;
     benchSelections += lineup.benchSelections;
   }
@@ -320,6 +403,8 @@ export function espnProjectionSnapshot(
     totalStarters,
     benchSelections,
     optimizedLineup: true,
+    byePlayers,
+    lineups,
   };
 }
 

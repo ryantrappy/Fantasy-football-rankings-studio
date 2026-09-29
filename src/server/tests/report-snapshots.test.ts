@@ -75,6 +75,37 @@ it('stores independent snapshots and reads them without provider calls or creden
     totalStarters: 1,
     unavailablePlayers: 1,
     availabilityChecked: true,
+    weekly: [
+      {
+        week: 2,
+        teamPoints: { '1': 105 },
+        coveredStarters: 1,
+        totalStarters: 1,
+        lineups: { '1': ['7'] },
+        byePlayers: 0,
+      },
+      {
+        week: 3,
+        teamPoints: { '1': 0 },
+        coveredStarters: 1,
+        totalStarters: 1,
+        lineups: { '1': ['7'] },
+        byePlayers: 1,
+      },
+    ],
+  };
+  original.records[0].data.playoffSettings = {
+    regularSeasonEnd: 1,
+    playoffTeams: 2,
+    rules: {
+      provider: 'ESPN',
+      season: 2025,
+      tiebreakers: ['head-to-head', 'points-for'],
+      divisionByTeam: {},
+      divisionWinnersFirst: false,
+      roundWeeks: [[2, 3]],
+      reseed: false,
+    },
   };
   const dirty = {
     ...original,
@@ -100,6 +131,10 @@ it('stores independent snapshots and reads them without provider calls or creden
   expect(saved.records[0].data.scores[0].actual).toBe(100);
   expect(saved.records[0].data.forecastSchedule).toEqual(original.records[0].data.forecastSchedule);
   expect(saved.records[0].data.playoffProjection?.unavailablePlayers).toBe(1);
+  expect(saved.records[0].data.playoffProjection?.weekly).toEqual(
+    original.records[0].data.playoffProjection?.weekly,
+  );
+  expect(saved.records[0].data.playoffSettings).toEqual(original.records[0].data.playoffSettings);
   expect(saved.records[0].data.scores[0].bestLineup?.points).toBe(120);
   expect(saved.records[1].data.teams[0].managerKey).toBe(saved.activeManagerKeys[0]);
   expect(JSON.stringify(saved)).not.toMatch(/secret|espn-owner|ownerSubject|swid|espnS2/);

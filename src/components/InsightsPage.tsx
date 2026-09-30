@@ -4,8 +4,8 @@ import { PlayoffForecast } from './PlayoffForecast';
 import { PlayoffCalibration } from './PlayoffCalibration';
 import { logClientError } from '../logging';
 import type { ReportPageProps } from './report-search';
-import { ShareReport } from '../components/ShareReport';
-import { DataTable, ReportExportScope } from '../components/DataTable';
+import { ShareReport } from './ShareReport';
+import { DataTable, ReportExportScope } from './DataTable';
 import {
   Box,
   Button,
@@ -26,8 +26,8 @@ import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
 import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
-import { LeagueSummary } from '../components/LeagueSummary';
-import { ScoreTrend } from '../components/ScoreTrend';
+import { LeagueSummary } from './LeagueSummary';
+import { ScoreTrend } from './ScoreTrend';
 import { reportFreshnessLabel } from './report-freshness';
 
 const number = (value: number | null) =>

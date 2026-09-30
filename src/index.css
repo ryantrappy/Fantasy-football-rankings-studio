@@ -526,6 +526,9 @@ header :focus-visible {
 .panel {
   box-shadow: 0 8px 28px -16px rgb(23 34 59 / 24%);
 }
+.score-trend-chart .ts-chart__axes {
+  pointer-events: none;
+}
 .app-nav a {
   border-radius: 6px 6px 0 0;
   transition: background-color 120ms ease;

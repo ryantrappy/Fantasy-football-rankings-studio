@@ -12,6 +12,10 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Run historical calibration' }).click();
     await expect(page.getByText('Backtest complete.')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('img', { name: /Brier score by completed week/ })).toBeVisible();
+    const modelPoint = page.locator('svg circle[aria-label^="Model Brier score"]').first();
+    await modelPoint.hover();
+    await expect(page.locator('svg g[aria-hidden="true"]')).toContainText('Model Brier score');
+    await expect(page.locator('svg g[aria-hidden="true"]')).toContainText(/Week 1 · 0\.\d{3}/);
     await expect(
       page.getByRole('table', { name: 'Weekly playoff forecast accuracy' }).locator('tbody tr'),
     ).toHaveCount(9);

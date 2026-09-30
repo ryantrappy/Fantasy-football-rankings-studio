@@ -11,6 +11,7 @@ import {
   type CalibrationObservation,
 } from '../playoff-calibration';
 import { DataTable } from './DataTable';
+import { ChartPointTooltip } from './ChartPointTooltip';
 import {
   buildCalibrationExport,
   calibrationReplayInputs,
@@ -47,6 +48,11 @@ export function PlayoffCalibration({
     requestedSeasons: [],
   });
   const [selectedWeek, setSelectedWeek] = useState(1);
+  const [hovered, setHovered] = useState<{
+    week: number;
+    value: number;
+    label: string;
+  } | null>(null);
   useEffect(() => {
     if (!run || frozen) return;
     let cancelled = false;
@@ -276,39 +282,52 @@ export function PlayoffCalibration({
                           />
                         ),
                     )}
-                  {weeks.map(
-                    (w) =>
-                      w[metric] !== null && (
-                        <circle
-                          key={w.week}
-                          cx={x(w.week)}
-                          cy={y(w[metric]!)}
-                          r="4"
-                          fill={
-                            metric === 'brier'
-                              ? '#246747'
-                              : metric === 'standingsBrier'
-                                ? '#345eae'
-                                : '#a34f2d'
-                          }
-                        >
-                          <title>
-                            Week {w.week},{' '}
-                            {metric === 'brier'
-                              ? 'model'
-                              : metric === 'standingsBrier'
-                                ? 'standings'
-                                : 'equal chance'}
-                            : {w[metric]!.toFixed(3)}
-                          </title>
-                        </circle>
-                      ),
-                  )}
+                  {weeks.map((w) => {
+                    const value = w[metric];
+                    if (value === null) return null;
+                    const label =
+                      metric === 'brier'
+                        ? 'Model Brier score'
+                        : metric === 'standingsBrier'
+                          ? 'Standings Brier score'
+                          : 'Equal-chance Brier score';
+                    return (
+                      <circle
+                        key={w.week}
+                        cx={x(w.week)}
+                        cy={y(value)}
+                        r="4"
+                        tabIndex={0}
+                        aria-label={`${label}, week ${w.week}: ${value.toFixed(3)}`}
+                        onMouseEnter={() => setHovered({ week: w.week, value, label })}
+                        onMouseLeave={() => setHovered(null)}
+                        onFocus={() => setHovered({ week: w.week, value, label })}
+                        onBlur={() => setHovered(null)}
+                        fill={
+                          metric === 'brier'
+                            ? '#246747'
+                            : metric === 'standingsBrier'
+                              ? '#345eae'
+                              : '#a34f2d'
+                        }
+                      />
+                    );
+                  })}
                 </g>
               ))}
               <text x="375" y="280" textAnchor="middle" fill="currentColor" fontSize="12">
                 Completed regular-season week
               </text>
+              {hovered && (
+                <ChartPointTooltip
+                  x={x(hovered.week)}
+                  y={y(hovered.value)}
+                  chartWidth={730}
+                  chartHeight={285}
+                  title={hovered.label}
+                  detail={`Week ${hovered.week} · ${hovered.value.toFixed(3)}`}
+                />
+              )}
             </svg>
           </Box>
           <Box overflowX="auto">

@@ -14,6 +14,14 @@ test('week-by-week playoff chart shows both metrics without overflowing mobile',
     'animation-name',
     'playoff-point-rise',
   );
+  await page.locator('.playoff-timeline-chart circle').first().hover();
+  await expect(page.locator('.playoff-timeline-chart g[aria-hidden="true"]')).toContainText(
+    'Week 1 · Make playoffs:',
+  );
+  await page.locator('.playoff-timeline-chart circle').first().focus();
+  await expect(page.locator('.playoff-timeline-chart g[aria-hidden="true"]')).toContainText(
+    'Fourth & Long',
+  );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   await page.getByRole('button', { name: 'Win championship' }).click();

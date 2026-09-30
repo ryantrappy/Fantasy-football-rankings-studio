@@ -5,6 +5,7 @@ import type { SeasonInsights } from '../insights';
 import { cachedPlayoffForecast } from '../playoff-timeline';
 import type { PlayoffForecast, PlayoffSettings } from '../playoff-forecast';
 import { DataTable } from './DataTable';
+import { ChartPointTooltip } from './ChartPointTooltip';
 
 type Metric = 'playoff' | 'championship';
 const colors = [
@@ -46,6 +47,11 @@ export function PlayoffTimeline({
     settings: PlayoffSettings;
     forecasts: PlayoffForecast[];
   }>(() => ({ data, settings, forecasts: [] }));
+  const [hovered, setHovered] = useState<{
+    teamName: string;
+    week: number;
+    value: number;
+  } | null>(null);
   const forecasts =
     progress.data === data && progress.settings === settings ? progress.forecasts : [];
   useEffect(() => {
@@ -216,6 +222,12 @@ export function PlayoffTimeline({
                         cx={x(point.week)}
                         cy={y(point.value)}
                         r="4.5"
+                        tabIndex={0}
+                        aria-label={`${team.teamName}, week ${point.week}: ${label} ${percent(point.value)}`}
+                        onMouseEnter={() => setHovered({ teamName: team.teamName, ...point })}
+                        onMouseLeave={() => setHovered(null)}
+                        onFocus={() => setHovered({ teamName: team.teamName, ...point })}
+                        onBlur={() => setHovered(null)}
                         fill={colors[teamIndex % colors.length]}
                         stroke="var(--chakra-colors-bg)"
                         strokeWidth="1.5"
@@ -225,11 +237,7 @@ export function PlayoffTimeline({
                             animationDelay: `${(point.week - 1) * 65 + teamIndex * 12}ms`,
                           } as CSSProperties
                         }
-                      >
-                        <title>
-                          {team.teamName}, week {point.week}: {percent(point.value)}
-                        </title>
-                      </circle>
+                      />
                     ))}
                   </g>
                 );
@@ -243,6 +251,16 @@ export function PlayoffTimeline({
               >
                 Completed week
               </text>
+              {hovered && (
+                <ChartPointTooltip
+                  x={x(hovered.week)}
+                  y={y(hovered.value)}
+                  chartWidth={chartWidth}
+                  chartHeight={350}
+                  title={hovered.teamName}
+                  detail={`Week ${hovered.week} · ${label}: ${percent(hovered.value)}`}
+                />
+              )}
             </svg>
           </Box>
           <Flex

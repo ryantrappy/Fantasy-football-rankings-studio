@@ -1,4 +1,4 @@
-import { Box, Button, Heading, Input, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { League, LeagueApi } from '../types';
 import { logClientError } from '../logging';
@@ -128,26 +128,26 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                     {nameError}
                   </Text>
                 )}
-                <Button type="submit" mt={2} mr={2} disabled={busy}>
-                  Save display name
-                </Button>
-                <Button
-                  type="button"
-                  mt={2}
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    setEditing('');
-                    setNameError('');
-                  }}
-                >
-                  Cancel rename
-                </Button>
+                <Flex gap={2} flexWrap="wrap" mt={3}>
+                  <Button type="submit" disabled={busy}>
+                    Save display name
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing('');
+                      setNameError('');
+                    }}
+                  >
+                    Cancel rename
+                  </Button>
+                </Flex>
               </Box>
             ) : (
-              <>
+              <Flex gap={2} flexWrap="wrap">
                 <Button
-                  mr={2}
                   variant="outline"
                   disabled={busy}
                   onClick={() => {
@@ -160,7 +160,6 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                   Edit display name
                 </Button>
                 <Button
-                  mr={2}
                   variant="outline"
                   disabled={busy}
                   onClick={() => {
@@ -172,7 +171,7 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                 >
                   Edit provider league ID
                 </Button>
-              </>
+              </Flex>
             )}
             {editing === `provider-${league.leagueId}` && (
               <Box
@@ -227,24 +226,26 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                   The new ID is checked with {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} before
                   saving.
                 </Text>
-                <Button type="submit" mt={2} mr={2} disabled={busy}>
-                  Save provider league ID
-                </Button>
-                <Button
-                  type="button"
-                  mt={2}
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    setEditing('');
-                    setNameError('');
-                  }}
-                >
-                  Cancel
-                </Button>
+                <Flex gap={2} flexWrap="wrap" mt={3}>
+                  <Button type="submit" disabled={busy}>
+                    Save provider league ID
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing('');
+                      setNameError('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
               </Box>
             )}
             <Button
+              mt={3}
               disabled={busy}
               onClick={async () => {
                 setBusy(true);
@@ -304,21 +305,22 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                   }}
                 />
                 {nameError && <Text role="alert">{nameError}</Text>}
-                <Button type="submit" mt={2} mr={2} colorPalette="red" disabled={busy}>
-                  Delete league permanently
-                </Button>
-                <Button
-                  type="button"
-                  mt={2}
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    setDeleting('');
-                    setNameError('');
-                  }}
-                >
-                  Cancel
-                </Button>
+                <Flex gap={2} flexWrap="wrap" mt={3}>
+                  <Button type="submit" colorPalette="red" disabled={busy}>
+                    Delete league permanently
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setDeleting('');
+                      setNameError('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </Flex>
               </Box>
             ) : (
               <Button

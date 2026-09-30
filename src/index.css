@@ -160,6 +160,8 @@ header :focus-visible {
   }
   .view-switch {
     display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
   }
   .view-switch button[aria-pressed='true'] {
     font-weight: 700;
@@ -284,7 +286,7 @@ header :focus-visible {
     font-weight: 400;
   }
   .insight-section {
-    margin: 1.25rem 0;
+    margin: 1.5rem 0;
   }
   .insight-heading label {
     min-width: 200px;

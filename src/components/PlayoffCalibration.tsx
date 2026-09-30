@@ -1,5 +1,5 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- SVG needs a named chart role. */
-import { Box, Button, Field, Heading, NativeSelect, Text } from '@chakra-ui/react';
+import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { PublicInsightsApi } from '../api/public-insights';
 import { errorMessage } from '../api/client';
@@ -154,31 +154,31 @@ export function PlayoffCalibration({
         </Text>
       ) : (
         <>
-          <Button onClick={() => setRun((n) => n + 1)} disabled={state.running} mb={3}>
-            {run ? 'Rerun historical calibration' : 'Run historical calibration'}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={state.running || !state.completedAt || !state.observations.length}
-            ml={{ base: 0, md: 3 }}
-            mb={3}
-            onClick={() => {
-              if (!state.completedAt || state.running || !state.observations.length) return;
-              downloadCalibrationExport(
-                buildCalibrationExport({
-                  leagueId,
-                  selectedSeason: year,
-                  completedAt: state.completedAt,
-                  requestedSeasons: state.requestedSeasons,
-                  seasons: state.seasons,
-                  observations: state.observations,
-                  notes: state.notes,
-                }),
-              );
-            }}
-          >
-            Export calibration JSON
-          </Button>
+          <Flex gap={2} flexWrap="wrap" mb={3}>
+            <Button onClick={() => setRun((n) => n + 1)} disabled={state.running}>
+              {run ? 'Rerun historical calibration' : 'Run historical calibration'}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={state.running || !state.completedAt || !state.observations.length}
+              onClick={() => {
+                if (!state.completedAt || state.running || !state.observations.length) return;
+                downloadCalibrationExport(
+                  buildCalibrationExport({
+                    leagueId,
+                    selectedSeason: year,
+                    completedAt: state.completedAt,
+                    requestedSeasons: state.requestedSeasons,
+                    seasons: state.seasons,
+                    observations: state.observations,
+                    notes: state.notes,
+                  }),
+                );
+              }}
+            >
+              Export calibration JSON
+            </Button>
+          </Flex>
           <Text mb={3} fontSize="sm">
             After the backtest completes, export the JSON and attach it here for model review. It
             includes full-precision predictions, outcomes, weekly metrics, and the historical scores

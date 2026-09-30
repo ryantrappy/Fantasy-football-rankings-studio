@@ -19,7 +19,13 @@ export interface PlayoffForecast {
   samplingMargin: number;
   validation?: ForecastValidation;
   rounds: string[];
-  rows: { teamId: string; teamName: string; playoff: number; advance: number[] }[];
+  rows: {
+    teamId: string;
+    teamName: string;
+    projectedWins: number;
+    playoff: number;
+    advance: number[];
+  }[];
   projection: {
     used: boolean;
     provider?: 'Sleeper' | 'ESPN';
@@ -228,6 +234,7 @@ export function forecastPlayoffs(
   const counts = teams.map((t) => ({
     teamId: t.teamId,
     teamName: t.teamName,
+    projectedWins: 0,
     playoff: 0,
     advance: rounds.map(() => 0),
   }));
@@ -266,6 +273,7 @@ export function forecastPlayoffs(
         h2h[b][a] += 1 - result;
       }
     }
+    w.forEach((wins, i) => (counts[i].projectedWins += wins));
     const tie = teams.map(() => random());
     const seeds = seedPlayoffTeams(
       teams.map((t) => t.teamId),
@@ -333,6 +341,7 @@ export function forecastPlayoffs(
     projection,
     rows: counts.map((r) => ({
       ...r,
+      projectedWins: r.projectedWins / simulations,
       playoff: r.playoff / simulations,
       advance: r.advance.map((n) => n / simulations),
     })),

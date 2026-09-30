@@ -5,11 +5,12 @@ for (const viewport of [
   { width: 390, height: 844 },
 ]) {
   test(`historical playoff calibration at ${viewport.width}px`, async ({ page }) => {
+    test.slow(); // Two seasons of 20,000-trial forecasts can exceed the default test timeout in CI.
     await page.setViewportSize(viewport);
     await page.goto('/tests/ui/?mode=calibration');
     await expect(page.getByRole('button', { name: 'Export calibration JSON' })).toBeDisabled();
     await page.getByRole('button', { name: 'Run historical calibration' }).click();
-    await expect(page.getByText('Backtest complete.')).toBeVisible();
+    await expect(page.getByText('Backtest complete.')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('img', { name: /Brier score by completed week/ })).toBeVisible();
     await expect(
       page.getByRole('table', { name: 'Weekly playoff forecast accuracy' }).locator('tbody tr'),

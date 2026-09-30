@@ -13,6 +13,7 @@ import { CreateLeague } from '../../src/components/CreateLeague';
 import { RankingPreview } from '../../src/components/RankingPreview';
 import { ScoreTrend } from '../../src/components/ScoreTrend';
 import { PlayoffForecast } from '../../src/components/PlayoffForecast';
+import { LeagueSummary } from '../../src/components/LeagueSummary';
 import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
 import { PalettePreview } from './PalettePreview';
@@ -62,6 +63,38 @@ function PreviewApp() {
           <CalibrationPreview />
         ) : mode === 'playoffs' ? (
           <PlayoffForecast data={playoffData} />
+        ) : mode === 'season-summary' ? (
+          <LeagueSummary
+            records={[
+              {
+                year: 2026,
+                data: {
+                  ...playoffData,
+                  teams: playoffData.teams.map((team) => ({
+                    ...team,
+                    managerKey: team.teamId,
+                    weeks: 4,
+                    total: 400,
+                    average: 100,
+                    best: 120,
+                    projectedWeeks: 0,
+                    projectionDelta: null,
+                    beatProjection: 0,
+                    aboveMedian: 2,
+                    bestLineupPoints: 0,
+                    lineupWeeks: 0,
+                    correctStarts: 0,
+                    lineupSlots: 0,
+                    tradeCount: 0,
+                    receivedPoints: 0,
+                    sentPoints: 0,
+                    netTradePoints: null,
+                    tradeStarts: 0,
+                  })),
+                },
+              },
+            ]}
+          />
         ) : (
           <RankingEditor api={api} league={league} year={2026} week={2} />
         )}

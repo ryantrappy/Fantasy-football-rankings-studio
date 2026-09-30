@@ -68,10 +68,10 @@ services:
       timeout: 5s
       retries: 12
     logging:
-          driver: local
-          options:
-            max-size: 100m
-            max-file: '20'
+      driver: local
+      options:
+        max-size: 100m
+        max-file: '20'
     networks:
       - fantasy-internal
 

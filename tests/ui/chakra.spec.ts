@@ -72,7 +72,8 @@ test('TanStack scoring chart renders inside the Chakra provider', async ({ page 
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/tests/ui/?mode=chart');
   await expect(page.getByLabel(/Weekly actual fantasy points/)).toBeVisible();
-  await page.locator('svg circle').first().hover();
+  await page.locator('.ts-chart__dot').last().locator('circle').first().hover();
+  await expect(page.locator('.ts-chart-tooltip')).toContainText('Fourth & Long');
   await expect(page.locator('.ts-chart-tooltip')).toContainText('Week 1');
   await expect(page.locator('.ts-chart-tooltip')).toContainText('Actual: 105.0 points');
   await expect(page.locator('.ts-chart-tooltip')).toContainText('Lineup projection: 105.0 points');

@@ -40,6 +40,16 @@ services:
         condition: service_healthy
     ports:
       - '${PORT:-3001}:${PORT:-3001}'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:' + (process.env.PORT || '3001') + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     volumes:
       - codex-home:/app/.codex
     networks:
@@ -57,6 +67,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+    logging:
+          driver: local
+          options:
+            max-size: 100m
+            max-file: '20'
     networks:
       - fantasy-internal
 

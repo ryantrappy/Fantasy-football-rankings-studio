@@ -7,7 +7,7 @@ import { scalePoint } from '@tanstack/charts/scales/point';
 import { tooltip } from '@tanstack/charts/tooltip';
 import type { ScoreWeek } from '../insights';
 
-export function ScoreTrend({ scores }: { scores: ScoreWeek[] }) {
+export function ScoreTrend({ scores, teamName }: { scores: ScoreWeek[]; teamName: string }) {
   const definition = useMemo(
     () =>
       defineChart({
@@ -29,7 +29,7 @@ export function ScoreTrend({ scores }: { scores: ScoreWeek[] }) {
         tooltip: {
           use: tooltip,
           format: (point) =>
-            `Week ${point.datum.week}\nActual: ${point.datum.actual.toFixed(1)} points${point.datum.projected === null ? '' : `\nLineup projection: ${point.datum.projected.toFixed(1)} points`}`,
+            `${teamName} · Week ${point.datum.week}\nActual: ${point.datum.actual.toFixed(1)} points${point.datum.projected === null ? '' : `\nLineup projection: ${point.datum.projected.toFixed(1)} points`}`,
         },
         scales: {
           x: { scale: scalePoint, axis: { label: 'Completed week' } },
@@ -42,7 +42,7 @@ export function ScoreTrend({ scores }: { scores: ScoreWeek[] }) {
           },
         },
       }),
-    [scores],
+    [scores, teamName],
   );
   return (
     <Chart

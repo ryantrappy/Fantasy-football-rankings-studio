@@ -484,7 +484,7 @@ export function InsightsPage({
                         <span>┄ Lineup projection</span>
                       )}
                     </Text>
-                    <ScoreTrend scores={scoreRows} />
+                    <ScoreTrend scores={scoreRows} teamName={selectedTeam?.teamName || 'Team'} />
                     <details>
                       <summary>View exact weekly scores</summary>
                       <Box overflowX="auto" className="insight-table-wrap">

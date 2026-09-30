@@ -13,7 +13,10 @@ export function ChartPointTooltip({
   title: string;
   detail: string;
 }) {
-  const width = Math.min(320, Math.max(190, Math.max(title.length, detail.length) * 7 + 24));
+  const width = Math.min(
+    chartWidth - 16,
+    Math.max(190, Math.max(title.length, detail.length) * 7 + 24),
+  );
   const left = Math.max(8, Math.min(x + 12, chartWidth - width - 8));
   const top = y + 70 < chartHeight ? y + 12 : y - 66;
   return (

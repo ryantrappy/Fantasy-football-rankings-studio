@@ -1,6 +1,7 @@
 services:
   rankings_studio:
     pull_policy: build
+    restart: unless-stopped
     image: fantasy-rankings-app:local
     build:
       context: .

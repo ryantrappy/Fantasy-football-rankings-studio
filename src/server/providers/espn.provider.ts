@@ -99,6 +99,7 @@ export default class EspnProvider implements LeagueProvider {
       seasonId,
       teamCount: data.settings?.size,
       maxWeek: lastWeek,
+      currentWeek: data.status?.latestScoringPeriod,
       validWeeks,
       scheduleNote:
         seasonId === defaultSeason() && (data.status?.latestScoringPeriod ?? 1) <= 1

@@ -78,7 +78,7 @@ export const skipEspnSetup = createServerFn({ method: 'POST' }).handler(() =>
 );
 
 export const getRankingRevisions = createServerFn({ method: 'GET' })
-  .validator((data: { id: string }) => data)
+  .validator((data: { id: string; before?: number }) => data)
   .handler(({ data }) =>
     run('getRankingRevisions', (owner) => operations.getRankingRevisions(owner, data)),
   );
@@ -118,3 +118,18 @@ export const updateLeagueProviderId = createServerFn({ method: 'POST' })
 export const deleteLeague = createServerFn({ method: 'POST' })
   .validator((data: { leagueId: string }) => data)
   .handler(({ data }) => run('deleteLeague', (owner) => operations.deleteLeague(owner, data)));
+
+export const getManagedTeam = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string; year: number }) => data)
+  .handler(({ data }) => run('getManagedTeam', (owner) => operations.getManagedTeam(owner, data)));
+export const setManagedTeam = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; year: number; teamId: string | null }) => data)
+  .handler(({ data }) => run('setManagedTeam', (owner) => operations.setManagedTeam(owner, data)));
+
+export const listDeletingLeagues = createServerFn({ method: 'GET' }).handler(() =>
+  run('listDeletingLeagues', operations.listDeletingLeagues),
+);
+
+export const getWaiverPool = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string; year: number }) => data)
+  .handler(({ data }) => run('getWaiverPool', (owner) => operations.getWaiverPool(owner, data)));

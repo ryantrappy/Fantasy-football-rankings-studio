@@ -57,3 +57,17 @@ it('shows compact scores and limits highlighted rosters to four matchups', async
     expect(screen.getByRole('button', { name: 'Highlight Home 5 versus Away 5' })).toBeEnabled(),
   );
 });
+
+vi.mock('./PlayerProfileLink', () => ({
+  PlayerProfileLink: ({
+    leagueId,
+    year,
+    playerId,
+    children,
+  }: {
+    leagueId: string;
+    year: number;
+    playerId: string;
+    children: React.ReactNode;
+  }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
+}));

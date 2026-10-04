@@ -46,14 +46,14 @@ export function sleeperByeWeeks(
   );
 }
 
-type ProjectedPlayer = {
+export type ProjectedPlayer = {
   id: string;
   position: string;
   points: number;
   starter: boolean;
 };
 
-type Slot = { accepts: (position: string) => boolean };
+export type Slot = { accepts: (position: string, id?: string) => boolean };
 
 export const unavailableStatus = (status?: string | null) =>
   [
@@ -69,7 +69,7 @@ export const unavailableStatus = (status?: string | null) =>
 const uncertainStatus = (status?: string | null) =>
   ['QUESTIONABLE', 'DOUBTFUL'].includes((status || '').toUpperCase());
 
-function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
+export function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
   if (!slots.length) return undefined;
   const candidates = [
     ...new Map(
@@ -78,18 +78,23 @@ function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
         .map((player) => [player.id, player]),
     ).values(),
   ];
-  let states = new Map<string, { chosen: number[]; points: number; benchSelections: number }>([
-    ['', { chosen: [], points: 0, benchSelections: 0 }],
-  ]);
+  let states = new Map<
+    string,
+    { chosen: number[]; assignments: number[]; points: number; benchSelections: number }
+  >([['', { chosen: [], assignments: [], points: 0, benchSelections: 0 }]]);
   for (const slot of slots) {
-    const next = new Map<string, { chosen: number[]; points: number; benchSelections: number }>();
+    const next = new Map<
+      string,
+      { chosen: number[]; assignments: number[]; points: number; benchSelections: number }
+    >();
     for (const state of states.values())
       for (let index = 0; index < candidates.length; index++) {
         const player = candidates[index];
-        if (state.chosen.includes(index) || !slot.accepts(player.position)) continue;
+        if (state.chosen.includes(index) || !slot.accepts(player.position, player.id)) continue;
         const chosen = [...state.chosen, index].sort((a, b) => a - b);
         const candidate = {
           chosen,
+          assignments: [...state.assignments, index],
           points: state.points + player.points,
           benchSelections: state.benchSelections + Number(!player.starter),
         };
@@ -102,10 +107,14 @@ function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
   const best = [...states.values()].reduce((best, candidate) =>
     candidate.points > best.points ? candidate : best,
   );
-  return { ...best, playerIds: best.chosen.map((index) => candidates[index].id) };
+  return {
+    ...best,
+    assignedPlayerIds: best.assignments.map((index) => candidates[index].id),
+    playerIds: best.chosen.map((index) => candidates[index].id),
+  };
 }
 
-const sleeperSlot = (slot: string): Slot | undefined => {
+export const sleeperSlot = (slot: string): Slot | undefined => {
   const normalized = slot.toUpperCase();
   if (['BN', 'BENCH', 'IR', 'TAXI'].includes(normalized)) return undefined;
   const accepted: Record<string, string[]> = {

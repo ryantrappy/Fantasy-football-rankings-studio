@@ -1,4 +1,5 @@
 export interface League {
+  deleting?: boolean;
   providerLeagueId?: string;
   _id?: string;
   leagueId: string;
@@ -41,12 +42,24 @@ export interface WeeklyRanking {
   teams: TeamRanking[];
 }
 
+export interface ManagedTeamSelection {
+  teams: { teamId: string; teamName: string; managerName: string }[];
+  teamId: string | null;
+  needsReselection: boolean;
+}
+
 export interface LeagueApi {
+  waivers?: { get(leagueId: string, year: number): Promise<import('./waivers').WaiverPool> };
+  managedTeam?: {
+    get(leagueId: string, year: number): Promise<ManagedTeamSelection>;
+    set(leagueId: string, year: number, teamId: string | null): Promise<ManagedTeamSelection>;
+  };
   getLiveMatchups(): Promise<import('./live-matchups').LiveLeague[]>;
   createReportSnapshot?(
     input: import('./report-snapshot').SnapshotInput,
   ): Promise<{ publicId: string; savedAt: string }>;
   management?: {
+    deleting?(): Promise<League[]>;
     archived(): Promise<League[]>;
     archive(leagueId: string, archived: boolean): Promise<void>;
     rename(leagueId: string, leagueName: string): Promise<League>;
@@ -58,7 +71,7 @@ export interface LeagueApi {
     set(leagueId: string, enabled: boolean): Promise<boolean>;
   };
   revisions?: {
-    list(id: string): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
+    list(id: string, before?: number): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
     restore(id: string, revision: number, expectedRevision: number): Promise<WeeklyRanking>;
   };
   publishing?: import('./publishing').PublishingApi;
@@ -70,7 +83,15 @@ export interface LeagueApi {
     leagueId: string,
     year: number,
   ): Promise<
-    League & { teamCount?: number; maxWeek: number; validWeeks: number[]; scheduleNote: string }
+    League & {
+      isCurrentSeason?: boolean;
+      defaultWeek?: number;
+      defaultWeekNote?: string;
+      teamCount?: number;
+      maxWeek: number;
+      validWeeks: number[];
+      scheduleNote: string;
+    }
   >;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;
   getMatchups(leagueId: string, year: number, week: number): Promise<Matchup[]>;

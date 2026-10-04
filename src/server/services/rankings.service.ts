@@ -1,6 +1,7 @@
 import { isValidObjectId } from 'mongoose';
 import { WeeklyRanking } from '../interfaces/weeklyRanking.interface';
 import HttpException from '../exceptions/HttpException';
+import rankingRevisionModel from '../models/ranking-revision.model';
 import weeklyRankingModel from '../models/weeklyRanking.model';
 import LeaguesService from './leagues.service';
 
@@ -13,6 +14,7 @@ const conflict = () =>
   );
 class RankingsService {
   public weeklyRankings = weeklyRankingModel;
+  public revisionHistory = rankingRevisionModel;
   public leagueService = new LeaguesService();
 
   private normalize(ranking: WeeklyRanking): WeeklyRanking {
@@ -56,7 +58,11 @@ class RankingsService {
         409,
         'Rankings already exist for this league, season, and week. Open them to edit.',
       );
-    return this.weeklyRankings.create(ranking) as unknown as Promise<WeeklyRanking>;
+    const saved = await this.weeklyRankings.create(ranking);
+    await this.leagueService.verifyWrite(ranking.leagueId, ownerSubject, () =>
+      this.weeklyRankings.deleteOne({ _id: saved._id }),
+    );
+    return saved as unknown as WeeklyRanking;
   }
 
   public async updateRanking(
@@ -71,22 +77,31 @@ class RankingsService {
       input.year !== current.year
     )
       throw new HttpException(400, 'A ranking cannot be moved to another league, season, or week.');
+    if ((input.revision ?? 0) !== (current.revision ?? 0)) throw conflict();
+    await this.migrateLegacyHistory(rankingId);
+    await this.archiveRevision(rankingId, {
+      savedAt: current.updatedAt?.toISOString() ?? new Date().toISOString(),
+      ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
+    });
     const ranking = this.normalize(input);
     const result = await this.weeklyRankings.findOneAndUpdate(
       { _id: rankingId, ...revisionFilter(input.revision) },
       {
         $set: ranking,
         $inc: { revision: 1 },
-        $push: {
-          revisions: {
-            savedAt: current.updatedAt?.toISOString() ?? new Date().toISOString(),
-            ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
-          },
-        },
       },
       { returnDocument: 'after', runValidators: true },
     );
-    if (!result) throw conflict();
+    if (!result) {
+      await this.leagueService.verifyWrite(current.leagueId, ownerSubject, () =>
+        this.revisionHistory.deleteMany({ rankingId }),
+      );
+      throw conflict();
+    }
+    await this.leagueService.verifyWrite(current.leagueId, ownerSubject, async () => {
+      await this.weeklyRankings.deleteOne({ _id: rankingId });
+      await this.revisionHistory.deleteMany({ rankingId });
+    });
     return result as unknown as WeeklyRanking;
   }
 
@@ -105,15 +120,55 @@ class RankingsService {
     return this.updateRanking(String(current._id), input, ownerSubject);
   }
 
-  public async getRevisions(id: string, owner: string) {
+  private async archiveRevision(id: string, entry: { savedAt: string; ranking: WeeklyRanking }) {
+    try {
+      await this.revisionHistory.updateOne(
+        { rankingId: id, revision: entry.ranking.revision ?? 0 },
+        {
+          $setOnInsert: {
+            savedAt: entry.savedAt || new Date().toISOString(),
+            ranking: entry.ranking,
+          },
+        },
+        { upsert: true, runValidators: true },
+      );
+    } catch (error) {
+      // A concurrent writer can have archived this same immutable revision.
+      if (!error || typeof error !== 'object' || !('code' in error) || error.code !== 11000)
+        throw error;
+    }
+  }
+
+  private async migrateLegacyHistory(id: string) {
+    const legacy = await this.weeklyRankings.findById(id).select('revisions').lean();
+    for (const entry of legacy?.revisions ?? []) await this.archiveRevision(id, entry);
+    if (legacy?.revisions?.length) {
+      // Remove embedded copies only after every immutable snapshot is durable.
+      await this.weeklyRankings.updateOne({ _id: id }, { $unset: { revisions: '' } });
+    }
+  }
+
+  public async getRevisions(id: string, owner: string, before?: number) {
     const current = await this.getRankingById(id, owner);
-    return [
-      ...(current.revisions ?? []),
-      {
-        savedAt: current.updatedAt?.toISOString() ?? '',
-        ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
-      },
-    ].reverse();
+    await this.migrateLegacyHistory(id);
+    const historical = await this.revisionHistory
+      .find({
+        rankingId: id,
+        revision: { $lt: Math.min(before ?? Infinity, current.revision ?? 0) },
+      })
+      .sort({ revision: -1 })
+      .limit(10)
+      .lean();
+    const entries = historical.map(({ savedAt, ranking }) => ({ savedAt, ranking }));
+    return before === undefined
+      ? [
+          {
+            savedAt: current.updatedAt?.toISOString() ?? '',
+            ranking: { ...this.normalize(current), revision: current.revision ?? 0 },
+          },
+          ...entries,
+        ]
+      : entries;
   }
 
   public async restoreRevision(
@@ -122,15 +177,23 @@ class RankingsService {
     expectedRevision: number,
     owner: string,
   ) {
-    const entries = await this.getRevisions(id, owner);
-    const selected = entries.find((entry) => entry.ranking.revision === revision);
+    const current = await this.getRankingById(id, owner);
+    await this.migrateLegacyHistory(id);
+    const selected =
+      revision === (current.revision ?? 0)
+        ? current
+        : (await this.revisionHistory.findOne({ rankingId: id, revision }).lean())?.ranking;
     if (!selected) throw new HttpException(404, 'Revision not found.');
-    return this.updateRanking(id, { ...selected.ranking, revision: expectedRevision }, owner);
+    return this.updateRanking(
+      id,
+      { ...this.normalize(selected), revision: expectedRevision },
+      owner,
+    );
   }
 
   public async getRankingById(rankingId: string, ownerSubject: string): Promise<WeeklyRanking> {
     if (!isValidObjectId(rankingId)) throw new HttpException(400, 'Invalid ranking ID.');
-    const result = await this.weeklyRankings.findById(rankingId);
+    const result = await this.weeklyRankings.findById(rankingId).select('-revisions');
     if (!result) throw new HttpException(404, 'Ranking not found.');
     await this.leagueService.getLeagueById(result.leagueId, ownerSubject);
     return result as unknown as WeeklyRanking;
@@ -140,6 +203,7 @@ class RankingsService {
     await this.leagueService.getLeagueById(leagueId, ownerSubject);
     return this.weeklyRankings
       .find({ leagueId })
+      .select('-revisions')
       .sort({ year: -1, week: -1 }) as unknown as Promise<WeeklyRanking[]>;
   }
 }

@@ -18,6 +18,7 @@ import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
 import { PalettePreview } from './PalettePreview';
 import { LiveWorkspace } from './LiveWorkspace';
+import { OverviewPreview } from './OverviewPreview';
 import { CalibrationPreview } from './CalibrationPreview';
 const mode = new URLSearchParams(location.search).get('mode');
 function PreviewApp() {
@@ -35,7 +36,9 @@ function PreviewApp() {
         </header>
       )}
       <Container maxW="1280px" p={4}>
-        {mode === 'palette' ? (
+        {mode === 'overview' ? (
+          <OverviewPreview />
+        ) : mode === 'palette' ? (
           <PalettePreview />
         ) : mode === 'create' ? (
           <CreateLeague

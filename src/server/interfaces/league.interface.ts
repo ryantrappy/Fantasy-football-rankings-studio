@@ -12,10 +12,14 @@ export interface League {
   seasonId: number;
   ownerSubject?: string;
   publicReports?: boolean;
+  deleted?: boolean;
+  deletionRankingIds?: string[];
+  managedTeams?: Record<string, { teamId: string; managerKey: string }>;
 }
 
 export interface LeagueInfo extends League {
   teamCount?: number;
+  currentWeek?: number;
   maxWeek: number;
   validWeeks: number[];
   scheduleNote: string;

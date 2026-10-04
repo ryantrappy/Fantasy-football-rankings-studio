@@ -29,6 +29,8 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 30000 } },
   });
+  const providerGeneration = new Map<string, number>();
+  const generation = (leagueId: string) => providerGeneration.get(leagueId) ?? 0;
   const headers = async () => ({ Authorization: `Bearer ${await getToken()}` });
   const leagueCollection = createCollection(
     queryCollectionOptions({
@@ -130,6 +132,17 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
             headers: await headers(),
           }),
         );
+        const nextGeneration = generation(leagueId) + 1;
+        providerGeneration.set(leagueId, nextGeneration);
+        const oldProviderQueries = {
+          predicate: (query: { queryKey: readonly unknown[] }) =>
+            query.queryKey[0] === subject &&
+            query.queryKey[2] === leagueId &&
+            ['league-seasons', 'insights-v4'].includes(String(query.queryKey[1])) &&
+            Number(query.queryKey.at(-1)) < nextGeneration,
+        };
+        await queryClient.cancelQueries(oldProviderQueries);
+        queryClient.removeQueries(oldProviderQueries);
         await leagueCollection.utils.refetch({ throwOnError: true });
         return updated;
       },
@@ -276,7 +289,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     skipEspnSetup: async () => unwrap(await functions.skipEspnSetup({ headers: await headers() })),
     getLeagueSeasons: async (leagueId: string) =>
       queryClient.fetchQuery({
-        queryKey: [subject, 'league-seasons', leagueId],
+        queryKey: [subject, 'league-seasons', leagueId, generation(leagueId)],
         staleTime: 5 * 60 * 1000,
         queryFn: async ({ signal }) =>
           unwrap(
@@ -288,7 +301,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
           ),
       }),
     getInsights: async (leagueId: string, year: number, refresh = false) => {
-      const queryKey = [subject, 'insights-v4', leagueId, year];
+      const queryKey = [subject, 'insights-v4', leagueId, year, generation(leagueId)];
       if (refresh) await queryClient.invalidateQueries({ queryKey });
       return queryClient.fetchQuery({
         queryKey,

@@ -5,6 +5,7 @@ export interface LivePlayer {
   bye?: boolean;
   locked?: boolean;
   reserve?: boolean;
+  owned?: boolean;
   eligibleSlots?: string[];
   position?: string;
   lineupSlot?: string;

@@ -160,6 +160,7 @@ export async function loadLiveLeague(
             null,
           starter: starters.has(id),
           reserve: reserves.has(id),
+          owned: (owned.get(row.roster_id) ?? []).includes(id) || reserves.has(id),
         })),
       };
     };
@@ -232,6 +233,7 @@ export async function loadLiveLeague(
         eligibleSlots: player?.eligibleSlots?.flatMap((slot) => espnLineupSlot(slot) ?? []),
         availability: player?.injuryStatus,
         reserve: entry.lineupSlotId === 21,
+        owned: true,
         bye: remaining && player?.proTeamId ? !remaining.has(String(player.proTeamId)) : undefined,
         locked:
           remaining && player?.proTeamId && Number.isFinite(remaining.get(String(player.proTeamId)))

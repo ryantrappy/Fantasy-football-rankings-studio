@@ -20,6 +20,7 @@ import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated.l
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
 import { Route as AuthenticatedLeaguesManageRouteImport } from './routes/_authenticated.leagues.manage'
 import { Route as AuthenticatedLeaguesNewRouteImport } from './routes/_authenticated.leagues.new'
@@ -82,6 +83,11 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTradesRoute = AuthenticatedTradesRouteImport.update({
+  id: '/trades',
+  path: '/trades',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const SharedKonzSuxRoute = SharedKonzSuxRouteImport.update({
   id: '/shared/konz-sux',
   path: '/shared/konz-sux',
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/overview': typeof AuthenticatedOverviewRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/overview': typeof AuthenticatedOverviewRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/leagues/manage': typeof AuthenticatedLeaguesManageRoute
   '/leagues/new': typeof AuthenticatedLeaguesNewRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/leagues/manage': typeof AuthenticatedLeaguesManageRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/playoffs'
     | '/profile'
+    | '/trades'
     | '/shared/konz-sux'
     | '/leagues/manage'
     | '/leagues/new'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/playoffs'
     | '/profile'
+    | '/trades'
     | '/shared/konz-sux'
     | '/leagues/manage'
     | '/leagues/new'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/_authenticated/overview'
     | '/_authenticated/playoffs'
     | '/_authenticated/profile'
+    | '/_authenticated/trades'
     | '/shared/konz-sux'
     | '/_authenticated/'
     | '/_authenticated/leagues/manage'
@@ -334,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/trades': {
+      id: '/_authenticated/trades'
+      path: '/trades'
+      fullPath: '/trades'
+      preLoaderRoute: typeof AuthenticatedTradesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/shared/konz-sux': {
       id: '/shared/konz-sux'
       path: '/shared/konz-sux'
@@ -401,6 +420,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedLeaguesManageRoute: typeof AuthenticatedLeaguesManageRoute
   AuthenticatedLeaguesNewRoute: typeof AuthenticatedLeaguesNewRoute
@@ -414,6 +434,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedTradesRoute: AuthenticatedTradesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedLeaguesManageRoute: AuthenticatedLeaguesManageRoute,
   AuthenticatedLeaguesNewRoute: AuthenticatedLeaguesNewRoute,

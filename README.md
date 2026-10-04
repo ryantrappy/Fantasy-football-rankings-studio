@@ -801,3 +801,7 @@ Publication decisions use an atomic generation check. A publish delayed behind a
 Management actions resolve exact workspace IDs first. An external provider ID is accepted only when it uniquely identifies one owned workspace; a Sleeper/ESPN collision returns a conflict instead of choosing arbitrarily. Select the desired row in **Manage leagues** to use its workspace identity.
 
 The suggested initial power order assigns teams with no completed matchup samples a finite neutral league baseline when other teams have data. Completed zero scores count as data; byes and incomplete games do not. If no team has usable data, provider order is retained. Saved editions are not reordered.
+
+### Trade analyzer
+
+Open **Trade analyzer**, choose a league and two teams, then select the owned active players each side would send. Both sides show before/after legal lineup projections, positional counts and projection gaps from one current-week snapshot. Two-for-one offers require explicit drop/open-slot assumptions; missing replacement slots are not filled with imaginary waiver pickups. Locked/reserve/taxi assets, duplicate selections and non-owned assets are rejected. Draft picks and future weeks without projection snapshots are unsupported, and positional roster caps, approval/deadline rules and playoff changes are not simulated. Values describe a hypothetical lineup, not a certain fair-value verdict. No roster, ranking or forecast observation is written.

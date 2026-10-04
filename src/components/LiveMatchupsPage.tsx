@@ -1,3 +1,4 @@
+import { PlayerProfileLink } from './PlayerProfileLink';
 import { Icon } from './Icon';
 import { HeaderControls } from './AppShell';
 import {
@@ -28,8 +29,12 @@ const matchupKey = (leagueId: string, id: string) => `${leagueId}:${id}`;
 function Roster({
   team,
   groups,
+  leagueId,
+  year,
 }: {
   team: LiveTeam;
+  leagueId: string;
+  year: number;
   groups: { label: string; rows: { position: string; player?: LivePlayer }[] }[];
 }) {
   const bench = team.players.filter((player) => !player.starter);
@@ -89,7 +94,13 @@ function Roster({
                       : row.position}
                 </span>
                 <span className="live-player-name" title={row.player?.name}>
-                  {row.player?.name || '—'}
+                  {row.player ? (
+                    <PlayerProfileLink leagueId={leagueId} year={year} playerId={row.player.id}>
+                      {row.player.name}
+                    </PlayerProfileLink>
+                  ) : (
+                    '—'
+                  )}
                 </span>
                 <span className="live-player-points">{score(row.player?.points ?? null)}</span>
               </div>
@@ -100,7 +111,15 @@ function Roster({
   );
 }
 
-function MatchupRosters({ matchup }: { matchup: LiveMatchup }) {
+function MatchupRosters({
+  matchup,
+  leagueId,
+  year,
+}: {
+  matchup: LiveMatchup;
+  leagueId: string;
+  year: number;
+}) {
   const groups = [true, false].map((starter) => ({
     label: starter ? 'Starters' : 'Bench',
     rows: alignedPlayers(matchup.home.players, matchup.away?.players || [], starter),
@@ -108,6 +127,8 @@ function MatchupRosters({ matchup }: { matchup: LiveMatchup }) {
   const roster = (team: LiveTeam, side: 'home' | 'away') => (
     <Roster
       team={team}
+      leagueId={leagueId}
+      year={year}
       groups={groups.map((group) => ({
         label: group.label,
         rows: group.rows.map((row) => ({ position: row.position, player: row[side] })),
@@ -403,7 +424,7 @@ export function LiveMatchupsPage() {
                   <span aria-hidden="true">×</span>
                 </Button>
               </Flex>
-              <MatchupRosters matchup={matchup} />
+              <MatchupRosters matchup={matchup} leagueId={league.leagueId} year={league.season} />
             </Box>
           ))}
         </section>

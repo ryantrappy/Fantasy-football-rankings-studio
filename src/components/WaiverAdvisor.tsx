@@ -1,6 +1,7 @@
 import { Box, Button, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import type { LeagueApi } from '../types';
+import { PlayerProfileLink } from './PlayerProfileLink';
 import { recommendedDrop, waiverImpact, type WaiverPool } from '../waivers';
 export function WaiverAdvisor({
   api,
@@ -119,6 +120,11 @@ export function WaiverAdvisor({
                   </select>
                 </label>
               </Box>
+              {candidate && (
+                <PlayerProfileLink leagueId={leagueId} year={year} playerId={candidate.id}>
+                  View {candidate.name} profile
+                </PlayerProfileLink>
+              )}
               {candidate && (
                 <Text>
                   {candidate.locked

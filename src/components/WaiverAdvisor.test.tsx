@@ -15,22 +15,20 @@ it('loads on demand and compares read-only candidate/drop scenarios with coverag
     bye: false,
   });
   const api = {
-    get: vi
-      .fn()
-      .mockResolvedValue({
-        week: 5,
-        capturedAt: '2026-10-01',
-        ownership: { covered: 10, expected: 10 },
-        candidates: [player('Candidate', 20)],
-        team: {
-          teamId: '1',
-          name: 'Me',
-          score: null,
-          players: [player('Starter', 10, true), player('Bench', 5)],
-        },
-        slots: ['RB'],
-        notices: ['Waiver claim restrictions are not verified.'],
-      }),
+    get: vi.fn().mockResolvedValue({
+      week: 5,
+      capturedAt: '2026-10-01',
+      ownership: { covered: 10, expected: 10 },
+      candidates: [player('Candidate', 20)],
+      team: {
+        teamId: '1',
+        name: 'Me',
+        score: null,
+        players: [player('Starter', 10, true), player('Bench', 5)],
+      },
+      slots: ['RB'],
+      notices: ['Waiver claim restrictions are not verified.'],
+    }),
   };
   render(
     <Provider>
@@ -49,16 +47,13 @@ it('loads on demand and compares read-only candidate/drop scenarios with coverag
 });
 it('discloses unsupported coverage and allows retry after provider failure', async () => {
   const api = {
-    get: vi
-      .fn()
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValue({
-        week: null,
-        capturedAt: 'now',
-        candidates: [],
-        notices: [],
-        unavailable: 'ESPN pool unsupported.',
-      }),
+    get: vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue({
+      week: null,
+      capturedAt: 'now',
+      candidates: [],
+      notices: [],
+      unavailable: 'ESPN pool unsupported.',
+    }),
   };
   render(
     <Provider>
@@ -71,3 +66,17 @@ it('discloses unsupported coverage and allows retry after provider failure', asy
   await screen.findByText('ESPN pool unsupported.');
   expect(screen.queryByLabelText('Unowned candidate')).not.toBeInTheDocument();
 });
+
+vi.mock('./PlayerProfileLink', () => ({
+  PlayerProfileLink: ({
+    leagueId,
+    year,
+    playerId,
+    children,
+  }: {
+    leagueId: string;
+    year: number;
+    playerId: string;
+    children: React.ReactNode;
+  }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
+}));

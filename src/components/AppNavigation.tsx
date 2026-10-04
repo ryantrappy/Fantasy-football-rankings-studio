@@ -17,6 +17,13 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
     >
       {!shared && (
         <ChakraLink asChild>
+          <Link to="/players" search={{ leagueId, year: search.year }}>
+            Players
+          </Link>
+        </ChakraLink>
+      )}
+      {!shared && (
+        <ChakraLink asChild>
           <Link to="/trades">Trade analyzer</Link>
         </ChakraLink>
       )}

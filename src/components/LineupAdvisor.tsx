@@ -1,15 +1,20 @@
 import { Box, Heading, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import type { LiveTeam } from '../live-matchups';
+import { PlayerProfileLink } from './PlayerProfileLink';
 import { adviseLineup } from '../lineup-advisor';
 export function LineupAdvisor({
   team,
   slots,
   capturedAt,
+  leagueId,
+  year,
 }: {
   team: LiveTeam;
   slots?: string[];
   capturedAt?: string;
+  leagueId?: string;
+  year?: number;
 }) {
   const [excluded, setExcluded] = useState<string[]>([]);
   const advice = adviseLineup(team.players, slots, excluded);
@@ -51,7 +56,14 @@ export function LineupAdvisor({
       )}
       {advice.assignment.map(({ slot, player }) => (
         <Text key={player.id}>
-          {slot}: {player.name}
+          {slot}:{' '}
+          {leagueId && year ? (
+            <PlayerProfileLink leagueId={leagueId} year={year} playerId={player.id}>
+              {player.name}
+            </PlayerProfileLink>
+          ) : (
+            player.name
+          )}
           {player.locked ? ' (locked)' : ''}
         </Text>
       ))}

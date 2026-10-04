@@ -18,6 +18,7 @@ import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated.live'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
+import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticated.players'
 import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
@@ -71,6 +72,11 @@ const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPlayersRoute = AuthenticatedPlayersRouteImport.update({
+  id: '/players',
+  path: '/players',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPlayoffsRoute = AuthenticatedPlayoffsRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/insights': typeof AuthenticatedInsightsRoute
   '/live': typeof AuthenticatedLiveRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/players': typeof AuthenticatedPlayersRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/insights': typeof AuthenticatedInsightsRoute
   '/live': typeof AuthenticatedLiveRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/players': typeof AuthenticatedPlayersRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/trades': typeof AuthenticatedTradesRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/players': typeof AuthenticatedPlayersRoute
   '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/overview'
+    | '/players'
     | '/playoffs'
     | '/profile'
     | '/trades'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/overview'
+    | '/players'
     | '/playoffs'
     | '/profile'
     | '/trades'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/_authenticated/insights'
     | '/_authenticated/live'
     | '/_authenticated/overview'
+    | '/_authenticated/players'
     | '/_authenticated/playoffs'
     | '/_authenticated/profile'
     | '/_authenticated/trades'
@@ -332,6 +344,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/players': {
+      id: '/_authenticated/players'
+      path: '/players'
+      fullPath: '/players'
+      preLoaderRoute: typeof AuthenticatedPlayersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/playoffs': {
       id: '/_authenticated/playoffs'
       path: '/playoffs'
@@ -418,6 +437,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedPlayersRoute: typeof AuthenticatedPlayersRoute
   AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
@@ -432,6 +452,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedPlayersRoute: AuthenticatedPlayersRoute,
   AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,

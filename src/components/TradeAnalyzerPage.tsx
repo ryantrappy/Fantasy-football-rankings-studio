@@ -2,6 +2,7 @@ import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { useApi } from '../auth/session';
 import type { LiveLeague, LiveTeam } from '../live-matchups';
+import { PlayerProfileLink } from './PlayerProfileLink';
 import { evaluateTrade } from '../trade-analysis';
 function Proposal({ league }: { league: LiveLeague }) {
   const teams = [
@@ -86,7 +87,14 @@ function Proposal({ league }: { league: LiveLeague }) {
               .map((player) => (
                 <Box key={player.id} mt={2}>
                   <Text>
-                    {player.name} · {player.position} ·{' '}
+                    <PlayerProfileLink
+                      leagueId={league.leagueId}
+                      year={league.season}
+                      playerId={player.id}
+                    >
+                      {player.name}
+                    </PlayerProfileLink>{' '}
+                    · {player.position} ·{' '}
                     {player.projectedPoints?.toFixed(2) ?? 'Projection unavailable'}
                   </Text>
                   <label>

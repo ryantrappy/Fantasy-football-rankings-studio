@@ -17,26 +17,24 @@ it('shows both trade impacts from a read-only roster snapshot', async () => {
     bye: false,
   });
   const api = {
-    getLiveMatchups: vi
-      .fn()
-      .mockResolvedValue([
-        {
-          leagueId: '1',
-          leagueName: 'League',
-          season: 2026,
-          week: 5,
-          provider: 'Sleeper',
-          capturedAt: '2026-10-01',
-          lineupSlots: ['RB'],
-          matchups: [
-            {
-              id: '1',
-              home: { teamId: '1', name: 'One', score: null, players: [player('A', 10)] },
-              away: { teamId: '2', name: 'Two', score: null, players: [player('B', 20)] },
-            },
-          ],
-        },
-      ]),
+    getLiveMatchups: vi.fn().mockResolvedValue([
+      {
+        leagueId: '1',
+        leagueName: 'League',
+        season: 2026,
+        week: 5,
+        provider: 'Sleeper',
+        capturedAt: '2026-10-01',
+        lineupSlots: ['RB'],
+        matchups: [
+          {
+            id: '1',
+            home: { teamId: '1', name: 'One', score: null, players: [player('A', 10)] },
+            away: { teamId: '2', name: 'Two', score: null, players: [player('B', 20)] },
+          },
+        ],
+      },
+    ]),
   };
   render(
     <Provider>
@@ -51,3 +49,17 @@ it('shows both trade impacts from a read-only roster snapshot', async () => {
   expect(screen.getByText(/before: 20.00 · after: 10.00 · change: -10.00/)).toBeInTheDocument();
   expect(api.getLiveMatchups).toHaveBeenCalledTimes(1);
 });
+
+vi.mock('./PlayerProfileLink', () => ({
+  PlayerProfileLink: ({
+    leagueId,
+    year,
+    playerId,
+    children,
+  }: {
+    leagueId: string;
+    year: number;
+    playerId: string;
+    children: React.ReactNode;
+  }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
+}));

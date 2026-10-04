@@ -126,6 +126,8 @@ export function WeeklyOverviewPage() {
                       <summary>Lineup advisor</summary>
                       <LineupAdvisor
                         team={myTeam}
+                        leagueId={row.league.leagueId}
+                        year={row.league.seasonId}
                         slots={row.lineupSlots}
                         capturedAt={row.rosterCapturedAt}
                       />

@@ -471,9 +471,11 @@ header :focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  min-height: 44px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #9aa7bd;
+  border-radius: 0.4rem;
+  background: #eef2f8;
   color: inherit;
   font: inherit;
   text-align: inherit;
@@ -481,6 +483,7 @@ header :focus-visible {
 }
 .table-export-button {
   display: block;
+  min-height: 44px;
   margin: 0 0 0.75rem auto;
   padding: 0.45rem 0.75rem;
   border: 1px solid currentColor;
@@ -508,6 +511,50 @@ header :focus-visible {
 .table-sort-indicator {
   font-size: 0.9em;
   opacity: 0.7;
+}
+.managed-team-picker {
+  padding: 16px;
+  border: 1px solid #cbd3df;
+  border-radius: 8px;
+  background: #f6f7fa;
+}
+.managed-team-picker label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.managed-team-picker input[type='number'],
+.managed-team-picker select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #71809a;
+  border-radius: 6px;
+  background: white;
+  width: 100%;
+  min-width: 0;
+}
+.managed-team-picker input[type='number'] {
+  max-width: 180px;
+}
+.managed-team-picker form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+.managed-team-picker form > label,
+.managed-team-picker form > output {
+  grid-column: 1 / -1;
+}
+.managed-team-picker form > label {
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+@media (max-width: 680px) {
+  .managed-team-picker form {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .insight-table tbody th {
   text-align: left;

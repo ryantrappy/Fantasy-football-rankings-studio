@@ -55,7 +55,7 @@ export function ManagedTeamPicker({
     };
   }, [api, leagueId, year, retry]);
   return (
-    <Box mt={4}>
+    <Box mt={4} mb={4} className="managed-team-picker">
       <label htmlFor={`my-team-year-${leagueId}`}>My team season</label>{' '}
       <input
         id={`my-team-year-${leagueId}`}
@@ -123,7 +123,7 @@ export function ManagedTeamPicker({
               Your saved team is no longer available or its manager changed. Choose your team again.
             </Text>
           )}
-          <Button type="submit" ml={2} colorPalette="indigo" disabled={busy}>
+          <Button type="submit" colorPalette="indigo" disabled={busy}>
             {busy ? 'Saving my team…' : 'Save my team'}
           </Button>
           {teamId !== (selection.teamId ?? '') && !busy && (

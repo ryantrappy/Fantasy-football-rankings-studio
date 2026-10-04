@@ -213,7 +213,7 @@ test('server rendering keeps browser authentication and private content behind h
       </Authentication>
     </Provider>,
   );
-  expect(html).toContain('Your league. Your rankings.');
+  expect(html).toContain('Know your team.');
   expect(html).not.toContain('Private rankings');
 });
 test('anonymous visitors can sign in without making league API requests', async () => {

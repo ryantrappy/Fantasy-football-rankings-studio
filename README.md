@@ -839,3 +839,9 @@ The first slice supports direct additive QB/RB/WR/TE passing, rushing, receiving
 ESPN player reads are cached for five minutes, batched six at a time, and bounded to 120 unique mapped players per league refresh with an eight-second batch-start budget. Later candidates retain native estimates; individual requests time out after seven seconds. Sleeper projections retain their cached fetch timestamps. Both projections interfaces are undocumented provider contracts and may change; errors fail back to native data. The [Sleeper public API documentation](https://docs.sleeper.com/#players) describes the player catalog. Stat IDs were cross-checked against live ESPN JSON and the [espn-api stat dictionary](https://github.com/cwendt94/espn-api/blob/master/espn_api/football/constant.py).
 
 Run the optional public contract check with `RUN_DUAL_SOURCE_CONTRACT=1 npm run test -- src/server/tests/combined-projections.integration.test.ts`. It checks a fixed 2026 regular-season week-4 player snapshot and may need updating when provider history expires; routine tests use deterministic fixtures.
+
+### Sign-in and action controls
+
+The signed-out page now introduces the weekly NFL workspace with a labeled illustrative preview, clear sign-in action and account-recovery section. Loading and unavailable-configuration states share the layout; sign-in keeps the requested destination and allows retry after a redirect error.
+
+Action controls use filled backgrounds or visible outlines and a minimum 44px height. Plain/ghost secondary actions and table sort controls now have boundaries; the managed-team form uses consistent field gaps and stacks its save action on phones. Browser checks cover desktop/phone layout, keyboard focus, contrast, touch targets and saved-team persistence through a full page reload.

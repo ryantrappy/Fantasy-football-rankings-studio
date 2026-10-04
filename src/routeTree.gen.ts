@@ -17,6 +17,7 @@ import { Route as AuthenticatedEspnRouteImport } from './routes/_authenticated.e
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated.history'
 import { Route as AuthenticatedInsightsRouteImport } from './routes/_authenticated.insights'
 import { Route as AuthenticatedLiveRouteImport } from './routes/_authenticated.live'
+import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated.overview'
 import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
@@ -64,6 +65,11 @@ const AuthenticatedInsightsRoute = AuthenticatedInsightsRouteImport.update({
 const AuthenticatedLiveRoute = AuthenticatedLiveRouteImport.update({
   id: '/live',
   path: '/live',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPlayoffsRoute = AuthenticatedPlayoffsRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/live': typeof AuthenticatedLiveRoute
+  '/overview': typeof AuthenticatedOverviewRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -143,6 +150,7 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/insights': typeof AuthenticatedInsightsRoute
   '/live': typeof AuthenticatedLiveRoute
+  '/overview': typeof AuthenticatedOverviewRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/insights': typeof AuthenticatedInsightsRoute
   '/_authenticated/live': typeof AuthenticatedLiveRoute
+  '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -184,6 +193,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/insights'
     | '/live'
+    | '/overview'
     | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/insights'
     | '/live'
+    | '/overview'
     | '/playoffs'
     | '/profile'
     | '/shared/konz-sux'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/insights'
     | '/_authenticated/live'
+    | '/_authenticated/overview'
     | '/_authenticated/playoffs'
     | '/_authenticated/profile'
     | '/shared/konz-sux'
@@ -301,6 +313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLiveRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/overview': {
+      id: '/_authenticated/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AuthenticatedOverviewRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/playoffs': {
       id: '/_authenticated/playoffs'
       path: '/playoffs'
@@ -379,6 +398,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedInsightsRoute: typeof AuthenticatedInsightsRoute
   AuthenticatedLiveRoute: typeof AuthenticatedLiveRoute
+  AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -391,6 +411,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedInsightsRoute: AuthenticatedInsightsRoute,
   AuthenticatedLiveRoute: AuthenticatedLiveRoute,
+  AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,

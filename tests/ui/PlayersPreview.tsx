@@ -1,4 +1,5 @@
 import { ApiContext } from '../../src/auth/session';
+import { afterPreviewData } from './loading-data';
 import { PlayerProfilesPage } from '../../src/components/PlayerProfilesPage';
 import type { LiveLeague, LivePlayer } from '../../src/live-matchups';
 
@@ -38,9 +39,10 @@ const live: LiveLeague = {
   ],
 };
 const api = {
-  listLeagues: async () => [
-    { leagueId: '123', leagueName: 'Sunday League', seasonId: 2026, leagueType: 0 },
-  ],
+  listLeagues: async () =>
+    afterPreviewData([
+      { leagueId: '123', leagueName: 'Sunday League', seasonId: 2026, leagueType: 0 },
+    ]),
   getLiveMatchups: async () => [live],
   getInsights: async () => ({
     generatedAt: '2026-10-04T00:00:00Z',

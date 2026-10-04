@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
@@ -50,7 +51,7 @@ export function ProfilePage({ api }: { api: AccountApi }) {
           eyebrow="Make it your studio"
           description="Manage your display name, league connections and writing assistant settings."
         />
-        {!current && <Text as="output">Loading your profile…</Text>}
+        {!current && <LoadingSkeleton label="Loading your profile…" />}
         {current?.error && (
           <>
             <Text role="alert">{current.error}</Text>

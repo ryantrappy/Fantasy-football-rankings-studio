@@ -9,6 +9,8 @@ screens the navigation scrolls horizontally and keeps the active tab visible;
 wide report tables scroll inside their cards. A keyboard skip link leads directly
 to the page content. Workspace styles live in `src/studio.css`; ranking PNG
 exports retain their independent design.
+Loading placeholders share the workspace card padding and line spacing, with
+page headings retained while data arrives and progress preserved for season reads.
 
 `public/studio-icon.svg` is the source football-and-rankings mark used in the
 header, sign-in page and browser tab. Matching ICO, 192/512px app icons and a

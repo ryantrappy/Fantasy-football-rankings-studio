@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   Box,
   Button,
@@ -243,11 +244,7 @@ export function PlayerProfilesPage({
           </Text>
         )}
       </Flex>
-      {busy && (
-        <Text as="output" display="block" mb={4}>
-          Loading player data…
-        </Text>
-      )}
+      {busy && <LoadingSkeleton label="Loading player data…" />}
       {error && (
         <Text role="alert" mb={4} color="fg.error">
           {error}

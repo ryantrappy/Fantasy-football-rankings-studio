@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   Box,
   Button,
@@ -453,11 +454,7 @@ export function TradeAnalyzerPage() {
           {busy ? 'Refreshing rosters…' : 'Refresh trade rosters'}
         </Button>
       </PageHeading>
-      {busy && (
-        <Text as="output" display="block">
-          Loading rosters…
-        </Text>
-      )}
+      {busy && <LoadingSkeleton label="Loading rosters…" />}
       {error && <Text role="alert">{error}</Text>}
       {leagues.length > 0 && (
         <Flex align="end" wrap="wrap" gap={4} mb={6} p={4} bg="bg.subtle" rounded="lg">

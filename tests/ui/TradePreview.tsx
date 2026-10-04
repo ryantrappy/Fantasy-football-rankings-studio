@@ -1,4 +1,5 @@
 import { ApiContext } from '../../src/auth/session';
+import { afterPreviewData } from './loading-data';
 import { TradeAnalyzerPage } from '../../src/components/TradeAnalyzerPage';
 import type { LiveLeague, LivePlayer } from '../../src/live-matchups';
 
@@ -36,7 +37,7 @@ const league: LiveLeague = {
 };
 export function TradePreview() {
   return (
-    <ApiContext value={{ getLiveMatchups: async () => [league] } as never}>
+    <ApiContext value={{ getLiveMatchups: async () => afterPreviewData([league]) } as never}>
       <TradeAnalyzerPage />
     </ApiContext>
   );

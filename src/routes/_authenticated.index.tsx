@@ -1,4 +1,5 @@
 import { HeaderControls } from '../components/AppShell';
+import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { logClientError } from '../logging';
 import {
   Box,
@@ -239,7 +240,7 @@ function RankingsPage() {
         </Box>
       )}
       {loading ? (
-        <chakra.output>Loading leagues…</chakra.output>
+        <LoadingSkeleton label="Loading leagues…" />
       ) : league ? (
         <>
           {welcome && searchLeagueId === league.leagueId && (

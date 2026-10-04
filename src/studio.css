@@ -183,6 +183,50 @@
   border-radius: 16px;
   box-shadow: 0 5px 18px #172b4c07;
 }
+.studio-loading {
+  display: block;
+  padding: 24px;
+  margin-bottom: 24px;
+  min-width: 0;
+  width: 100%;
+}
+.studio-loading-label {
+  display: block;
+  color: var(--studio-ink);
+  font-weight: 650;
+  line-height: 24px;
+}
+.studio-loading-description {
+  display: block;
+  margin-top: 8px;
+  color: var(--studio-muted);
+  font-size: 14px;
+  line-height: 24px;
+}
+.studio-skeleton-lines {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+.studio-skeleton-lines > span {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: #e9eef8;
+}
+.studio-skeleton-lines > span:nth-child(2) {
+  width: 80%;
+}
+.studio-skeleton-lines > span:last-child {
+  width: 60%;
+}
+.studio-surface .account-card .studio-loading {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
 .studio-surface .panel {
   margin-bottom: 24px;
 }
@@ -448,6 +492,7 @@
     width: 100%;
   }
   .studio-surface .editor-setup,
+  .studio-loading,
   .overview-card {
     padding: 16px;
   }

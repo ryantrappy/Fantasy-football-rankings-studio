@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
@@ -55,13 +56,15 @@ export function WeeklyOverviewPage() {
           Refresh overview
         </Button>
       </PageHeading>
-      <Text as="output" mb={4} fontSize="sm" color="fg.muted">
-        {busy
-          ? 'Loading overview…'
-          : updated
-            ? `Matchups loaded at ${updated}. Season reports refresh on demand.`
-            : ''}
-      </Text>
+      {(updated || rows.length > 0) && (
+        <Text as="output" display="block" mb={4} fontSize="sm" color="fg.muted">
+          {busy
+            ? 'Loading overview…'
+            : updated
+              ? `Matchups loaded at ${updated}. Season reports refresh on demand.`
+              : ''}
+        </Text>
+      )}
       {error && <Text role="alert">{error}</Text>}
       {!busy && !error && rows.length === 0 && (
         <Box>
@@ -74,6 +77,7 @@ export function WeeklyOverviewPage() {
         gridTemplateColumns={{ base: '1fr', md: 'repeat(auto-fit, minmax(280px, 1fr))' }}
         gap={4}
       >
+        {busy && rows.length === 0 && <LoadingSkeleton label="Loading overview…" />}
         {rows.map((row) => {
           const selected = row.selection?.teams.find(
             (team) => team.teamId === row.selection?.teamId,

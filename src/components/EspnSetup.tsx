@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { Box, Button, Field, Flex, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -212,7 +213,21 @@ export function EspnSetup({
         </Button>
       </Box>
     );
-  if (!current?.status) return <Text as="output">Loading ESPN settings…</Text>;
+  if (!current?.status)
+    return settings ? (
+      <Box as="section" className="account-card" maxW="2xl" mx="auto" p={{ base: 4, md: 8 }}>
+        <Stack gap={5}>
+          <PageHeading
+            title="ESPN settings"
+            eyebrow="Bring your league along"
+            description="Connect private ESPN leagues to your fantasy workspace."
+          />
+          <LoadingSkeleton label="Loading ESPN settings…" />
+        </Stack>
+      </Box>
+    ) : (
+      <LoadingSkeleton label="Loading ESPN settings…" />
+    );
   if (!settings && current.status.onboardingComplete) return children;
   return (
     <EspnCredentialForm

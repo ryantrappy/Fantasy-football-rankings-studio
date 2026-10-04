@@ -8,7 +8,8 @@ import { HistoryPage } from '../../src/components/HistoryPage';
 import { ProfilePage } from '../../src/components/ProfilePage';
 import { ManageLeagues } from '../../src/components/ManageLeagues';
 import { CreateLeague } from '../../src/components/CreateLeague';
-import { EspnCredentialForm } from '../../src/components/EspnSetup';
+import { EspnSetup } from '../../src/components/EspnSetup';
+import { afterPreviewData } from './loading-data';
 import { ApiContext, SessionContext } from '../../src/auth/session';
 import { InsightsAccess } from '../../src/auth/InsightsAccess';
 import type { PublicInsightsApi } from '../../src/api/public-insights';
@@ -48,7 +49,7 @@ const profile = {
   emailVerified: true,
 };
 const accountApi = {
-  getProfile: async () => profile,
+  getProfile: async () => afterPreviewData(profile),
   updateProfile: async (value: { name: string; nickname: string }) => ({ ...profile, ...value }),
   getAiCredentialStatus: async () => ({ codexConfigured: false, claudeConfigured: false }),
   saveAiCredential: async () => ({ codexConfigured: false, claudeConfigured: false }),
@@ -56,31 +57,33 @@ const accountApi = {
 };
 const appApi = {
   ...editorApi,
-  listLeagues: async () => [league],
-  getInsights: async () => data,
+  listLeagues: async () => afterPreviewData([league]),
+  getInsights: async () => afterPreviewData(data),
+  getRankings: async () => afterPreviewData(await editorApi.getRankings(league.leagueId)),
   getLeague: async () => league,
   getLeagueSeasons: async () => ({
     years: [2026, 2025, 2024],
     activeSeason: 2026,
     activeManagerKeys: data.teams.map((team) => team.teamId),
   }),
-  getLiveMatchups: async () => [
-    {
-      leagueId: league.leagueId,
-      leagueName: league.leagueName,
-      provider: 'Sleeper',
-      season: 2026,
-      week: 5,
-      capturedAt: '2026-10-04T00:00:00Z',
-      matchups: [
-        {
-          id: '1',
-          home: { teamId: '1', name: 'Fourth & Long', score: 103.24, players: [] },
-          away: { teamId: '2', name: 'Sunday Stunners', score: 98.42, players: [] },
-        },
-      ],
-    },
-  ],
+  getLiveMatchups: async () =>
+    afterPreviewData([
+      {
+        leagueId: league.leagueId,
+        leagueName: league.leagueName,
+        provider: 'Sleeper',
+        season: 2026,
+        week: 5,
+        capturedAt: '2026-10-04T00:00:00Z',
+        matchups: [
+          {
+            id: '1',
+            home: { teamId: '1', name: 'Fourth & Long', score: 103.24, players: [] },
+            away: { teamId: '2', name: 'Sunday Stunners', score: 98.42, players: [] },
+          },
+        ],
+      },
+    ]),
   managedTeam: {
     get: async () => ({ teamId: '1', needsReselection: false, teams: ranking.teams }),
     save: async (_id: string, _year: number, teamId: string | null) => ({
@@ -100,9 +103,11 @@ const appApi = {
 };
 const publicApi = { ...appApi, dispose: () => {} } as unknown as PublicInsightsApi;
 const credentialsApi = {
-  save: async () => ({ configured: true }),
-  remove: async () => ({ configured: false }),
-  getStatus: async () => ({ configured: false }),
+  saveEspnCredentials: async () => ({ configured: true, onboardingComplete: true }),
+  removeEspnCredentials: async () => ({ configured: false, onboardingComplete: true }),
+  skipEspnSetup: async () => ({ configured: false, onboardingComplete: true }),
+  getEspnCredentialStatus: async () =>
+    afterPreviewData({ configured: false, onboardingComplete: true }),
 };
 
 export function StudioPreview() {
@@ -126,11 +131,7 @@ export function StudioPreview() {
             ) : path === '/leagues/new' ? (
               <CreateLeague api={appApi as never} onCreated={() => {}} onCancel={() => {}} />
             ) : path === '/espn' ? (
-              <EspnCredentialForm
-                api={credentialsApi}
-                status={{ configured: false }}
-                onSaved={() => {}}
-              />
+              <EspnSetup api={credentialsApi} settings />
             ) : path === '/insights' || path === '/playoffs' ? (
               <InsightsPage
                 playoff={path === '/playoffs'}
@@ -143,7 +144,7 @@ export function StudioPreview() {
                 navigate={async ({ search }) => setHistorySearch(search)}
               />
             ) : (
-              <RankingEditor api={editorApi} league={league} year={2026} week={2} />
+              <RankingEditor api={appApi} league={league} year={2026} week={2} />
             )}
           </AppShell>
         </InsightsAccess>

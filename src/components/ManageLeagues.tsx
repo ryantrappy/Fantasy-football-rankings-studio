@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { League, LeagueApi } from '../types';
@@ -65,7 +66,7 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
         {notice}
       </Text>
       {loading ? (
-        <Text>Loading leagues…</Text>
+        <LoadingSkeleton label="Loading leagues…" />
       ) : leagues.length ? (
         leagues.map((league) => (
           <Box className="studio-card" key={league.leagueId} p={{ base: 4, md: 6 }} my={4}>

@@ -1,4 +1,5 @@
 import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { CopyEdition } from './CopyEdition';
 import { RevisionHistory } from './RevisionHistory';
 import { PublishEdition } from './PublishEdition';
@@ -131,23 +132,22 @@ export const RankingEditor = forwardRef<
     }
   }
 
+  const pageHeading = (
+    <PageHeading
+      title="Rankings studio"
+      eyebrow={`${league.leagueName} · ${year} · Week ${week}`}
+      description="Set the order, write your take, and turn this week’s story into an edition worth sharing."
+    />
+  );
   if (editor.loading)
     return (
-      <chakra.output
-        bg="bg"
-        borderWidth="1px"
-        borderStyle="solid"
-        borderColor="border"
-        rounded="lg"
-        p={{ base: 4, md: 6 }}
-        className="panel loading-state"
-      >
-        <span className="loading-bar" />
-        <Heading as="h2" size="xl" mb={4}>
-          Getting the field ready…
-        </Heading>
-        <Text mb={4}>Loading your saved rankings and league teams.</Text>
-      </chakra.output>
+      <>
+        {pageHeading}
+        <LoadingSkeleton
+          label="Getting the field ready…"
+          description="Loading your saved rankings and league teams."
+        />
+      </>
     );
   if (editor.loadError)
     return (
@@ -197,11 +197,7 @@ export const RankingEditor = forwardRef<
 
   return (
     <>
-      <PageHeading
-        title="Rankings studio"
-        eyebrow={`${league.leagueName} · ${year} · Week ${week}`}
-        description="Set the order, write your take, and turn this week’s story into an edition worth sharing."
-      />
+      {pageHeading}
       <Flex
         align="center"
         justify="space-between"

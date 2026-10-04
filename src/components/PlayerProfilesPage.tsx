@@ -255,6 +255,16 @@ export function PlayerProfilesPage({
                   Week {player.projectionWeek ?? 'unavailable'} projection:{' '}
                   {player.projection?.toFixed(2) ?? 'Unavailable'}
                 </Text>
+                {player.projectionSources?.map((source) => (
+                  <Text key={source.provider}>
+                    {source.provider}: {source.points.toFixed(2)} · player ID {source.playerId} ·
+                    fetched {source.capturedAt}
+                  </Text>
+                ))}
+                {player.projectionSpread !== undefined && (
+                  <Text>Source disagreement: {player.projectionSpread.toFixed(2)} points</Text>
+                )}
+                {player.projectionNote && <Text>{player.projectionNote}</Text>}
                 <Text>
                   Observed total: {compared.total?.toFixed(2) ?? 'Unavailable'} · average:{' '}
                   {compared.average?.toFixed(2) ?? 'Unavailable'} · coverage: {compared.covered}/

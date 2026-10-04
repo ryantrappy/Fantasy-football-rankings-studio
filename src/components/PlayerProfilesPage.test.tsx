@@ -33,7 +33,20 @@ it('searches provider identities and compares selected players over a common wee
               teamId: '1',
               name: 'Roster',
               players: [
-                { id: 'a', name: 'Alpha', starter: true, points: null, owned: true },
+                {
+                  id: 'a',
+                  name: 'Alpha',
+                  starter: true,
+                  points: null,
+                  owned: true,
+                  projectedPoints: 12,
+                  projectionSpread: 4,
+                  projectionNote: 'Equal-weight ESPN/Sleeper mean.',
+                  projectionSources: [
+                    { provider: 'Sleeper', playerId: 'a', points: 10, capturedAt: '2026-10-02' },
+                    { provider: 'ESPN', playerId: '90', points: 14, capturedAt: '2026-10-02' },
+                  ],
+                },
                 { id: 'b', name: 'Beta', starter: false, points: null, owned: true },
               ],
             },
@@ -52,6 +65,8 @@ it('searches provider identities and compares selected players over a common wee
   );
   fireEvent.click(await screen.findByLabelText(/Alpha ·/));
   fireEvent.click(screen.getByLabelText(/Beta ·/));
+  expect(screen.getByText(/ESPN: 14.00 · player ID 90/)).toBeInTheDocument();
+  expect(screen.getByText('Source disagreement: 4.00 points')).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Last comparison week'), { target: { value: '2' } });
   expect(screen.getByText(/Observed total: 10.00/)).toHaveTextContent('coverage: 1/2 weeks');
   expect(screen.getByText(/Observed total: 20.00/)).toBeInTheDocument();

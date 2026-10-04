@@ -12,6 +12,15 @@ export interface LivePlayer {
   points: number | null;
   starter: boolean;
   projectedPoints?: number;
+  projectionSources?: {
+    provider: 'ESPN' | 'Sleeper';
+    playerId: string;
+    points: number;
+    capturedAt: string;
+  }[];
+  projectionMethod?: 'mean' | 'native' | 'single-source';
+  projectionSpread?: number;
+  projectionNote?: string;
   remainingFraction?: number;
 }
 

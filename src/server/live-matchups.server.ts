@@ -12,6 +12,12 @@ import SleeperProvider from './providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from './providers/espn.provider';
 import { nflRemaining, sleeperLiveProjections } from './live-projections.server';
 import { sleeperNames } from './insights/load.server';
+import { enrichLiveProjections } from './combined-projections.server';
+import {
+  sleeperProjectionRules,
+  espnProjectionRules,
+  type EspnScoringItem,
+} from '../combined-projections';
 
 type SleeperRow = {
   matchup_id: number | null;
@@ -169,7 +175,9 @@ export async function loadLiveLeague(
       home: team(home),
       away: away ? team(away) : null,
     }));
-    return result;
+    return enrichLiveProjections(result, () =>
+      sleeperProjectionRules(season.scoring_settings ?? {}),
+    );
   }
 
   const provider = new EspnProvider(access);
@@ -177,6 +185,7 @@ export async function loadLiveLeague(
     id: number;
     status?: { latestScoringPeriod?: number; finalScoringPeriod?: number };
     settings?: {
+      scoringSettings?: { scoringItems?: EspnScoringItem[] };
       rosterSettings?: { lineupSlotCounts?: Record<string, number> };
       scheduleSettings?: { matchupPeriods?: Record<string, number[]> };
     };
@@ -281,5 +290,7 @@ export async function loadLiveLeague(
       }
     }
   }
-  return result;
+  return enrichLiveProjections(result, (position) =>
+    espnProjectionRules(data.settings?.scoringSettings?.scoringItems, position),
+  );
 }

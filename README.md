@@ -827,3 +827,15 @@ Saved OpenAI keys take precedence even when the server login is ready. Remove yo
 Managed-team choices are saved explicitly for each league and season in **Manage leagues**. Changing the dropdown shows an unsaved-choice message; click **Save my team** and wait for confirmation. A provider failure keeps your draft for retry, and a completed database save no longer depends on a second provider request. **Reload teams** reloads the persisted choice.
 
 The managed-team picker remembers the last viewed season for your account and league. This prevents a page refresh from returning to the league registration year and showing that year's empty choice when you saved a different season.
+
+### ESPN + Sleeper player projections
+
+Current live rosters in **either league type** now use both public player feeds when a unique Sleeper `espn_id` cross-reference and comparable raw weekly stats are available. No second-provider league or account is needed. The mean of the two league-scored projections feeds lineup and trade scenarios; the top 30 native-projected Sleeper waiver candidates also receive a comparison. League ownership, roster slots, injuries and game locks stay tied to your registered league.
+
+Player profiles show each source's player ID, points, fetch time and absolute disagreement. The equal-weight mean is a transparent starting estimate, **not a demonstrated accuracy improvement**; disagreement is not a confidence interval. This does not replace historical scoring records or playoff forecast inputs.
+
+The first slice supports direct additive QB/RB/WR/TE passing, rushing, receiving, two-point and fumble scoring, including ESPN positional point overrides. Unsupported bonuses, ambiguous mappings, missing weekly stats and other positions retain the native estimate with a coverage note. Sparse non-primary event fields are treated as zero; missing primary yardage or receptions needed for PPR cannot form a comparable forecast. No player names are used to join records.
+
+ESPN player reads are cached for five minutes, batched six at a time, and bounded to 120 unique mapped players per league refresh with an eight-second batch-start budget. Later candidates retain native estimates; individual requests time out after seven seconds. Sleeper projections retain their cached fetch timestamps. Both projections interfaces are undocumented provider contracts and may change; errors fail back to native data. The [Sleeper public API documentation](https://docs.sleeper.com/#players) describes the player catalog. Stat IDs were cross-checked against live ESPN JSON and the [espn-api stat dictionary](https://github.com/cwendt94/espn-api/blob/master/espn_api/football/constant.py).
+
+Run the optional public contract check with `RUN_DUAL_SOURCE_CONTRACT=1 npm run test -- src/server/tests/combined-projections.integration.test.ts`. It checks a fixed 2026 regular-season week-4 player snapshot and may need updating when provider history expires; routine tests use deterministic fixtures.

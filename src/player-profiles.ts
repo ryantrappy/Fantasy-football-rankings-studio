@@ -14,6 +14,9 @@ export interface PlayerProfile {
   bye?: boolean;
   reportAt?: string;
   rosterAt?: string;
+  projectionSources?: LivePlayer['projectionSources'];
+  projectionSpread?: number;
+  projectionNote?: string;
 }
 export function playerProfiles(
   provider: 'Sleeper' | 'ESPN',
@@ -85,6 +88,9 @@ function assign(profile: PlayerProfile, player: LivePlayer, week?: number, captu
   profile.availability = player.availability;
   profile.bye = player.bye;
   profile.rosterAt = capturedAt;
+  profile.projectionSources = player.projectionSources;
+  profile.projectionSpread = player.projectionSpread;
+  profile.projectionNote = player.projectionNote;
 }
 export function comparePlayerRange(profile: PlayerProfile, first: number, last: number) {
   const weeks = Array.from(

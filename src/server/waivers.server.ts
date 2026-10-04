@@ -6,6 +6,8 @@ import { loadLiveLeague } from './live-matchups.server';
 import SleeperProvider from './providers/sleeper.provider';
 import { sleeperNames } from './insights/load.server';
 import { nflRemaining, sleeperLiveProjections } from './live-projections.server';
+import { enrichPlayerProjections } from './combined-projections.server';
+import { sleeperProjectionRules } from '../combined-projections';
 export async function loadWaiverPool(
   league: League,
   teamId: string,
@@ -109,6 +111,18 @@ export async function loadWaiverPool(
     .slice(0, 300);
   result.notices.push(
     `Showing up to 300 projected unowned players with NFL teams. ${ids.length} unowned catalog entries were checked; projection gaps are unavailable, not zero.`,
+  );
+  const compared = await enrichPlayerProjections(
+    result.candidates.slice(0, 30),
+    'Sleeper',
+    league.seasonId,
+    live.week,
+    () => sleeperProjectionRules(season.scoring_settings ?? {}),
+  );
+  const comparisonById = new Map(compared.map((player) => [player.id, player]));
+  result.candidates = result.candidates.map((player) => comparisonById.get(player.id) ?? player);
+  result.notices.push(
+    'Cross-source forecasts are checked for the top 30 native-projected candidates. Remaining candidates retain Sleeper projections. Ownership remains verified from your league, not the other source.',
   );
   return result;
 }

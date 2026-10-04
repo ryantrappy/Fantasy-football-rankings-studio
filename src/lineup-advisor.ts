@@ -18,6 +18,15 @@ export function adviseLineup(
   excluded: string[] = [],
 ) {
   const notices: string[] = [];
+  const combined = players.filter((player) => player.projectionMethod === 'mean').length;
+  if (combined)
+    notices.push(
+      `${combined} players use an equal-weight ESPN/Sleeper forecast. Other players retain available native estimates. Compare source disagreement in player profiles; accuracy improvement is unverified.`,
+    );
+  if (players.some((player) => player.projectionNote && player.projectionMethod !== 'mean'))
+    notices.push(
+      'Some players lack comparable cross-source data or supported scoring. Their native projection is retained when available.',
+    );
   if (players.some((player) => player.locked === undefined))
     notices.push(
       'Some game/lineup locks are unknown. Confirm eligibility at your provider before making changes.',

@@ -189,6 +189,7 @@ function CompactMatchup({
       disabled={disabled}
       aria-pressed={selected}
       aria-label={`${selected ? 'Remove' : 'Highlight'} ${matchup.home.name} versus ${matchup.away?.name || 'bye'}`}
+      title={`${matchup.home.name}: ${score(matchup.home.score)}\n${matchup.away ? `${matchup.away.name}: ${score(matchup.away.score)}` : 'Bye'}`}
       variant={selected ? 'solid' : 'outline'}
       colorPalette="indigo"
       h="auto"

@@ -36,6 +36,13 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
     >
       {!shared && (
         <ChakraLink asChild>
+          <Link to="/" activeOptions={{ exact: true }}>
+            <Icon name="edit" size={16} /> Rankings studio
+          </Link>
+        </ChakraLink>
+      )}
+      {!shared && (
+        <ChakraLink asChild>
           <Link to="/players" search={{ leagueId, year: search.year }}>
             <Icon name="players" size={16} /> Players
           </Link>
@@ -52,13 +59,6 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
         <ChakraLink asChild>
           <Link to="/overview">
             <Icon name="grid" size={16} /> My weekly overview
-          </Link>
-        </ChakraLink>
-      )}
-      {!shared && (
-        <ChakraLink asChild>
-          <Link to="/" activeOptions={{ exact: true }}>
-            <Icon name="edit" size={16} /> Rankings studio
           </Link>
         </ChakraLink>
       )}

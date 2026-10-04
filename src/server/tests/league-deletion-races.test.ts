@@ -150,6 +150,7 @@ it('compensates a publish that passed authorization before deletion', async () =
         return result;
       })() as never,
   );
+  vi.spyOn(publicationModel, 'findOne').mockReturnValue({ lean: async () => null } as never);
   const publishingRequest = publishing.publish('owner', { id, revision: 0 });
   await entered.promise;
   await league.deleteLeague('1', 'owner');

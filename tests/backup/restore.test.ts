@@ -168,6 +168,7 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     ]);
     await mongoose.disconnect();
     await mongoose.connect(`${uri}/backup_restored`);
+    vi.stubEnv('MONGODB_URI', `${uri}/backup_restored`);
     const rankings = new RankingsService(),
       leagues = new LeaguesService();
     expect(await revisionModel.countDocuments({ rankingId: String(large._id) })).toBe(130);
@@ -179,6 +180,23 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     const largeRestored = await rankings.restoreRevision(String(large._id), 0, 130, 'owner-a');
     expect(largeRestored.rankingsTitle).toBe('Large edition');
     expect(largeRestored.revision).toBe(131);
+    const { publishing } = await import('../../src/server/publishing.server');
+    const publishedLarge = await publishing.publish('owner-a', {
+      id: String(large._id),
+      revision: 131,
+    });
+    expect(
+      (await publishing.read({ publicId: publishedLarge.publicId })).ranking.rankingsTitle,
+    ).toBe('Large edition');
+    await publishing.unpublish('owner-a', { id: String(large._id) });
+    await expect(publishing.read({ publicId: publishedLarge.publicId })).rejects.toMatchObject({
+      status: 404,
+    });
+    const republishedLarge = await publishing.publish('owner-a', {
+      id: String(large._id),
+      revision: 131,
+    });
+    expect(republishedLarge.publicId).not.toBe(publishedLarge.publicId);
     const restored = await rankings.getRankingById(String(saved._id), 'owner-a');
     expect(restored.rankingsTitle).toBe('Backup edition');
     expect(restored.teams[0].description).toBe('Restored commentary');

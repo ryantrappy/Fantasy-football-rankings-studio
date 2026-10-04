@@ -27,6 +27,7 @@ const base = {
   ],
 };
 beforeEach(() => {
+  vi.spyOn(publicationModel, 'findOne').mockReturnValue({ lean: async () => null } as never);
   vi.spyOn(LeaguesService.prototype, 'getLeagueById').mockResolvedValue({ leagueId: '1' } as never);
   vi.spyOn(leagueModel, 'exists').mockResolvedValue({ _id: '1' } as never);
   vi.spyOn(rankingModel, 'findById').mockReturnValue({
@@ -43,7 +44,11 @@ it('publishes only a saved snapshot, excludes metadata, and revokes its link', a
     return Promise.resolve(document) as never;
   });
   vi.spyOn(publicationModel, 'findOne').mockImplementation(
-    () => Promise.resolve(document) as never,
+    () =>
+      ({
+        lean: async () => document,
+        then: (resolve: (value: unknown) => unknown) => Promise.resolve(document).then(resolve),
+      }) as never,
   );
   vi.spyOn(publicationModel, 'deleteOne').mockImplementation(() => {
     document = null;

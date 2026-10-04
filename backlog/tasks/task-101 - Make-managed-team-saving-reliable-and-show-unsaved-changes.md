@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-04 04:39'
-updated_date: '2026-10-04 04:45'
+updated_date: '2026-10-04 04:47'
 labels: []
 dependencies: []
 priority: high
@@ -38,6 +38,12 @@ A user reports their managed-team selection is not saving. Check provider valida
 <!-- SECTION:PLAN:BEGIN -->
 Remove the redundant provider read after the confirmed MongoDB write. Add explicit unsaved/save feedback and preserve failed drafts with useful errors. Verify actual MongoDB save/reload across seasons plus UI and provider-outage regressions.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Also reject false success if the returned MongoDB document lacks the requested choice. The reported reset-after-refresh case is covered by remembered-season and persisted-team tests.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

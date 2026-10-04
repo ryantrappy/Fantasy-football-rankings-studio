@@ -40,7 +40,15 @@ it('tracks confirmed/uncertain/resolved transitions and deduplicates repeated sn
   data.players[0].availability = null;
   expect(rosterAlerts(data, '10', 2026, 5, capturedAt, ['RB'], now)).toEqual([]);
 });
-it('discloses stale and unknown inputs instead of confidently current injuries', () => {
+it.each([undefined, null, '', 'ACTIVE'])(
+  'does not emit an injury notice for status %s',
+  (availability) => {
+    const data = team();
+    data.players[0].availability = availability;
+    expect(rosterAlerts(data, '10', 2026, 5, capturedAt, ['RB'], now)).toEqual([]);
+  },
+);
+it('discloses stale and missing lineup inputs without notices for absent injury status', () => {
   const data = team();
   const stale = rosterAlerts(data, '10', 2026, 5, '2020-01-01', ['RB'], now);
   expect(stale).toHaveLength(1);
@@ -50,7 +58,8 @@ it('discloses stale and unknown inputs instead of confidently current injuries',
   data.players[0].projectedPoints = undefined;
   const unknown = rosterAlerts(data, '10', 2026, 5, capturedAt, undefined, now);
   expect(unknown.every((alert) => alert.severity === 'Info')).toBe(true);
-  expect(unknown.map((alert) => alert.message).join(' ')).toContain('no confirmed injury');
+  expect(unknown).toHaveLength(3);
+  expect(unknown.map((alert) => alert.message).join(' ')).not.toContain('injury');
 });
 it('handles bye/lineup gaps, roster changes and week/team identity', () => {
   const data = team();

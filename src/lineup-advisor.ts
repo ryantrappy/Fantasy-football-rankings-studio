@@ -31,8 +31,8 @@ export function adviseLineup(
     notices.push(
       'Some game/lineup locks are unknown. Confirm eligibility at your provider before making changes.',
     );
-  if (players.some((player) => player.availability === undefined || player.bye === undefined))
-    notices.push('Some injury or bye information is unavailable.');
+  if (players.some((player) => player.bye === undefined))
+    notices.push('Some bye information is unavailable.');
   const uncertain = players.filter((player) =>
     ['QUESTIONABLE', 'DOUBTFUL'].includes((player.availability ?? '').toUpperCase()),
   );

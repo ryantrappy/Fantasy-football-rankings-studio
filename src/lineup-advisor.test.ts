@@ -71,6 +71,12 @@ it('discloses unknown locks and suppresses point improvement claims with project
   expect(advice.notices.join(' ')).toMatch(/Missing projections/);
   expect(adviseLineup(players, ['QB']).reason).toContain('complete legal');
 });
+it('does not warn about absent injury status and still reports missing bye information', () => {
+  const players = [{ ...player('starter', 'RB', 10, true, 'RB'), availability: undefined }];
+  expect(adviseLineup(players, ['RB']).notices).toEqual([]);
+  players[0].bye = undefined;
+  expect(adviseLineup(players, ['RB']).notices).toEqual(['Some bye information is unavailable.']);
+});
 it('respects provider multiple slot eligibility rather than default position alone', () => {
   const players = [
     { ...player('hybrid', 'QB', 20), eligibleSlots: ['TE'] },

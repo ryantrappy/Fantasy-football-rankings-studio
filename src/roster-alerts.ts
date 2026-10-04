@@ -59,13 +59,6 @@ export function rosterAlerts(
         `${player.name} has uncertain ${player.availability} availability. Recheck before kickoff.`,
         player.id,
       );
-    else if (player.availability === undefined)
-      add(
-        'status-unknown',
-        'Info',
-        `${player.name} injury status is unavailable; no confirmed injury is inferred.`,
-        player.id,
-      );
     if (player.bye === true)
       add(
         'bye',

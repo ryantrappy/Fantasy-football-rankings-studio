@@ -100,6 +100,21 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getManagedTeam: async (owner: string, input: unknown) => {
+    const data = seasonSchema.parse(input);
+    return leagues.managedTeamSelection(data.leagueId, data.year, owner);
+  },
+  setManagedTeam: async (owner: string, input: unknown) => {
+    const data = seasonSchema
+      .extend({
+        teamId: z
+          .string()
+          .regex(/^\d{1,30}$/)
+          .nullable(),
+      })
+      .parse(input);
+    return leagues.setManagedTeam(data.leagueId, data.year, data.teamId, owner);
+  },
   getLiveMatchups: async (owner: string) => {
     const saved = await leagues.listLeagues(owner);
     return Promise.all(

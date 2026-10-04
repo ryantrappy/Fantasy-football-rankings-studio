@@ -1,6 +1,7 @@
 import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { League, LeagueApi } from '../types';
+import { ManagedTeamPicker } from './ManagedTeamPicker';
 import { logClientError } from '../logging';
 export function ManageLeagues({ api }: { api: LeagueApi }) {
   const [archived, setArchived] = useState(false),
@@ -79,6 +80,14 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
               {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
               {league.providerLeagueId ?? league.leagueId}
             </Text>
+            {api.managedTeam && (
+              <ManagedTeamPicker
+                key={`${league.leagueId}:${league.providerLeagueId}`}
+                api={api.managedTeam}
+                leagueId={league.leagueId}
+                initialYear={league.seasonId}
+              />
+            )}
             {editing === league.leagueId ? (
               <Box
                 as="form"

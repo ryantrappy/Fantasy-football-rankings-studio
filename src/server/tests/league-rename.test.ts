@@ -97,7 +97,7 @@ it('validates the replacement provider league before updating it', async () => {
   );
   expect(update).toHaveBeenCalledWith(
     { leagueId: '1', ownerSubject: 'owner' },
-    { $set: { providerLeagueId: '123' } },
+    { $set: { providerLeagueId: '123', managedTeams: {} } },
     { returnDocument: 'after', runValidators: true },
   );
   expect(result.providerLeagueId).toBe('123');

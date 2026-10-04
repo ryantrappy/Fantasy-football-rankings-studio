@@ -53,7 +53,7 @@ class LeaguesService {
     await (await this.providerFor(target, owner)).getLeague(target, target.seasonId);
     const result = await this.leagues.findOneAndUpdate(
       { leagueId: current.leagueId, ownerSubject: owner },
-      { $set: { providerLeagueId: normalized } },
+      { $set: { providerLeagueId: normalized, managedTeams: {} } },
       { returnDocument: 'after', runValidators: true },
     );
     if (!result) throw new HttpException(404, 'League not found.');
@@ -190,6 +190,40 @@ class LeaguesService {
         );
       throw error;
     }
+  }
+
+  public async managedTeamSelection(id: string, year: number, owner: string) {
+    const league = await this.getLeagueById(id, owner);
+    const teams = await (await this.providerFor(league, owner)).getTeams(league, year, 1);
+    const saved = league.managedTeams?.[String(year)];
+    const selected = teams.find(
+      (team) => team.teamId === saved?.teamId && (team.managerKey ?? '') === saved.managerKey,
+    );
+    return {
+      teams: teams.map(({ teamId, teamName, managerName }) => ({ teamId, teamName, managerName })),
+      teamId: selected?.teamId ?? null,
+      needsReselection: Boolean(saved && !selected),
+    };
+  }
+
+  public async setManagedTeam(id: string, year: number, teamId: string | null, owner: string) {
+    const league = await this.getLeagueById(id, owner);
+    const path = `managedTeams.${year}`;
+    let update: object = { $unset: { [path]: '' } };
+    if (teamId !== null) {
+      const teams = await (await this.providerFor(league, owner)).getTeams(league, year, 1);
+      const team = teams.find((entry) => entry.teamId === teamId);
+      if (!team) throw new HttpException(400, 'Choose a team from this league and season.');
+      update = { $set: { [path]: { teamId, managerKey: team.managerKey ?? '' } } };
+    }
+    const result = await this.leagues.findOneAndUpdate(
+      { leagueId: id, ownerSubject: owner, providerLeagueId: league.providerLeagueId },
+      update,
+      { returnDocument: 'after', runValidators: true },
+    );
+    if (!result)
+      throw new HttpException(409, 'The league changed. Reload and choose your team again.');
+    return this.managedTeamSelection(id, year, owner);
   }
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {

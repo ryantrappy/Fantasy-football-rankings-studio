@@ -118,3 +118,10 @@ export const updateLeagueProviderId = createServerFn({ method: 'POST' })
 export const deleteLeague = createServerFn({ method: 'POST' })
   .validator((data: { leagueId: string }) => data)
   .handler(({ data }) => run('deleteLeague', (owner) => operations.deleteLeague(owner, data)));
+
+export const getManagedTeam = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string; year: number }) => data)
+  .handler(({ data }) => run('getManagedTeam', (owner) => operations.getManagedTeam(owner, data)));
+export const setManagedTeam = createServerFn({ method: 'POST' })
+  .validator((data: { leagueId: string; year: number; teamId: string | null }) => data)
+  .handler(({ data }) => run('setManagedTeam', (owner) => operations.setManagedTeam(owner, data)));

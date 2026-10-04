@@ -12,6 +12,7 @@ export interface League {
   seasonId: number;
   ownerSubject?: string;
   publicReports?: boolean;
+  managedTeams?: Record<string, { teamId: string; managerKey: string }>;
 }
 
 export interface LeagueInfo extends League {

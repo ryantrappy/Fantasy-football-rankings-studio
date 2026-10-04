@@ -10,6 +10,7 @@ const leagueSchema = new mongoose.Schema(
     seasonId: { type: Number, min: 2000, max: 2100 },
     archived: { type: Boolean, default: false },
     publicReports: { type: Boolean, default: true },
+    managedTeams: { type: mongoose.Schema.Types.Mixed, default: {} },
     ownerSubject: { type: String, index: true },
   },
   { timestamps: true },

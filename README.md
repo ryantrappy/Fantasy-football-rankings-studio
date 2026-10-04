@@ -765,3 +765,7 @@ Context-sharing approval is saved per assistant on the Auth0 user under
 `user_metadata.writing_context_approval`; revoking it saves `false` and blocks subsequent generation,
 including requests from an already-open page. These preferences use the same server-only Auth0
 Management API configuration as profile editing (`read:users` and `update:users`).
+
+### Choose your managed team
+
+In **Manage leagues**, choose **My team season** and **My managed team**, then select **Save my team**. The private choice is saved to your account for that league and season, so it follows you across devices. Choose **No team / commissioner mode** to clear it and continue using league-wide reports. Each new season needs its own choice. Changing the provider league ID clears choices; a missing team or changed manager requires reselection.

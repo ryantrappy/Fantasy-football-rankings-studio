@@ -80,6 +80,19 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     createReportSnapshot: async (data) =>
       unwrap(await createReportSnapshot({ data, headers: await headers() })),
     subject,
+    managedTeam: {
+      get: async (leagueId, year) =>
+        unwrap(
+          await functions.getManagedTeam({ data: { leagueId, year }, headers: await headers() }),
+        ),
+      set: async (leagueId, year, teamId) =>
+        unwrap(
+          await functions.setManagedTeam({
+            data: { leagueId, year, teamId },
+            headers: await headers(),
+          }),
+        ),
+    },
     management: {
       archived: async () =>
         unwrap(await functions.listArchivedLeagues({ headers: await headers() })),

@@ -41,7 +41,17 @@ export interface WeeklyRanking {
   teams: TeamRanking[];
 }
 
+export interface ManagedTeamSelection {
+  teams: { teamId: string; teamName: string; managerName: string }[];
+  teamId: string | null;
+  needsReselection: boolean;
+}
+
 export interface LeagueApi {
+  managedTeam?: {
+    get(leagueId: string, year: number): Promise<ManagedTeamSelection>;
+    set(leagueId: string, year: number, teamId: string | null): Promise<ManagedTeamSelection>;
+  };
   getLiveMatchups(): Promise<import('./live-matchups').LiveLeague[]>;
   createReportSnapshot?(
     input: import('./report-snapshot').SnapshotInput,

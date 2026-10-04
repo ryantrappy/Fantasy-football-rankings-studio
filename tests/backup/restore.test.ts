@@ -10,6 +10,7 @@ import mongoose from 'mongoose';
 import RankingsService from '../../src/server/services/rankings.service';
 import LeaguesService from '../../src/server/services/leagues.service';
 import leagueModel from '../../src/server/models/league.model';
+import revisionModel from '../../src/server/models/ranking-revision.model';
 import rankingModel from '../../src/server/models/weeklyRanking.model';
 import credentialModel from '../../src/server/models/espn-credentials.model';
 import { encryptCredentials, decryptCredentials } from '../../src/server/espn-credentials.server';
@@ -118,6 +119,31 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     await mongoose.connection
       .db!.collection('publications')
       .createIndex({ publicId: 1 }, { unique: true });
+    await revisionModel.init();
+    const sourceRankings = new RankingsService();
+    let large = await sourceRankings.createNewRanking(
+      {
+        leagueId: '101',
+        year: 2026,
+        week: 4,
+        rankingsTitle: 'Large edition',
+        introduction: '',
+        teams: Array.from({ length: 14 }, (_, index) => ({
+          ...teams[0],
+          teamId: String(index + 1),
+          description: 'x'.repeat(10000),
+        })),
+      },
+      'owner-a',
+    );
+    for (let index = 0; index < 130; index++)
+      large = await sourceRankings.updateRanking(
+        String(large._id),
+        { ...JSON.parse(JSON.stringify(large)), rankingsTitle: `Large save ${index}` },
+        'owner-a',
+      );
+    expect(await revisionModel.countDocuments({ rankingId: String(large._id) })).toBe(130);
+    expect((await rankingModel.findById(large._id).lean())?.revisions).toHaveLength(0);
     const archive = join(scratch, 'backup.archive.gz');
     await run('mongodump', [
       '--host',
@@ -144,6 +170,15 @@ it('restores editions, indexes, publications and owner-bound credentials into an
     await mongoose.connect(`${uri}/backup_restored`);
     const rankings = new RankingsService(),
       leagues = new LeaguesService();
+    expect(await revisionModel.countDocuments({ rankingId: String(large._id) })).toBe(130);
+    expect(
+      (await rankings.getRevisions(String(large._id), 'owner-a')).map(
+        (entry) => entry.ranking.revision,
+      ),
+    ).toHaveLength(11);
+    const largeRestored = await rankings.restoreRevision(String(large._id), 0, 130, 'owner-a');
+    expect(largeRestored.rankingsTitle).toBe('Large edition');
+    expect(largeRestored.revision).toBe(131);
     const restored = await rankings.getRankingById(String(saved._id), 'owner-a');
     expect(restored.rankingsTitle).toBe('Backup edition');
     expect(restored.teams[0].description).toBe('Restored commentary');

@@ -25,6 +25,10 @@ it('uses an atomic revision predicate so two writers cannot both save revision z
     ],
   } as WeeklyRanking;
   let stored = { ...base };
+  service.revisionHistory = { updateOne: vi.fn().mockResolvedValue({}) } as never;
+  vi.spyOn(service.weeklyRankings, 'findById').mockReturnValue({
+    select: () => ({ lean: async () => ({ revisions: [] }) }),
+  } as never);
   vi.spyOn(service, 'getRankingById').mockImplementation(async () => ({ ...stored }));
   const atomic = vi
     .spyOn(service.weeklyRankings, 'findOneAndUpdate')

@@ -715,9 +715,15 @@ disposable MongoDB instance; MongoDB Server and Database Tools must be on PATH.
 team order and commentary with saved timestamps. **Restore selected revision**
 creates a new current revision and leaves published snapshots unchanged. History
 starts when this feature is deployed; older overwritten content cannot be
-reconstructed. Previous snapshots are appended atomically with the revision-checked
-save. They count toward MongoDB's document-size limit; an oversized save fails
-without discarding existing history. Include rankings in regular database backups.
+reconstructed. Previous snapshots live in the indexed `rankingrevisions` collection,
+written durably before the revision-checked save; an archive failure leaves the current
+edition untouched. Current editions no longer grow with save history. Browsing loads
+the current edition plus ten older snapshots; **Older revisions** pages backward,
+and **View saved revisions** returns to the newest page. Restoring any retained
+revision creates a new revision. Embedded legacy snapshots migrate idempotently on
+the first save/history visit before their embedded copies are removed. Stop old app
+instances before upgrading, and back up the entire database including `rankingrevisions`.
+See [Backup and recovery](docs/backup-recovery.md) for rollout and rollback.
 
 Owners can enable or disable public season/history reports beside **Copy share
 link**. Existing leagues retain public sharing until explicitly disabled. Disabling

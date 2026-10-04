@@ -78,7 +78,7 @@ export const skipEspnSetup = createServerFn({ method: 'POST' }).handler(() =>
 );
 
 export const getRankingRevisions = createServerFn({ method: 'GET' })
-  .validator((data: { id: string }) => data)
+  .validator((data: { id: string; before?: number }) => data)
   .handler(({ data }) =>
     run('getRankingRevisions', (owner) => operations.getRankingRevisions(owner, data)),
   );

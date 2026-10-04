@@ -105,6 +105,8 @@ it('validates the replacement provider league before updating it', async () => {
 
 it('deletes only the owned workspace and its local records', async () => {
   const service = new LeaguesService();
+  const revisionDeleteMany = vi.fn().mockResolvedValue({});
+  service.revisionHistory = { deleteMany: revisionDeleteMany } as never;
   const rankingDeleteMany = vi.fn().mockResolvedValue({});
   const snapshotDeleteMany = vi.fn().mockResolvedValue({});
   service.weeklyRankings = {
@@ -117,6 +119,7 @@ it('deletes only the owned workspace and its local records', async () => {
   service.leagues.deleteOne = vi.fn().mockResolvedValue({ deletedCount: 1 });
   await service.deleteLeague('99', 'owner');
   expect(publicationDeleteMany).toHaveBeenCalledWith({ rankingId: { $in: ['ranking-1'] } });
+  expect(revisionDeleteMany).toHaveBeenCalledWith({ rankingId: { $in: ['ranking-1'] } });
   expect(rankingDeleteMany).toHaveBeenCalledWith({ leagueId: '1' });
   expect(snapshotDeleteMany).toHaveBeenCalledWith({ leagueId: '1', ownerSubject: 'owner' });
   expect(service.leagues.deleteOne).toHaveBeenCalledWith({ leagueId: '1', ownerSubject: 'owner' });

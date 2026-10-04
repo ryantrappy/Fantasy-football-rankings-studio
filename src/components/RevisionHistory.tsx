@@ -18,11 +18,15 @@ export function RevisionHistory({
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const selected = entries[index];
-  async function load() {
+  async function load(older = false) {
     setBusy(true);
     setError('');
     try {
-      setEntries(await api.list(ranking._id!));
+      const next = await api.list(
+        ranking._id!,
+        older ? entries.at(-1)?.ranking.revision : undefined,
+      );
+      setEntries(next);
       setIndex(0);
     } catch (e) {
       logClientError('revisions.load', e);
@@ -83,6 +87,13 @@ export function RevisionHistory({
               ))}
             </Box>
           )}
+          <Button
+            variant="outline"
+            disabled={busy || (entries.at(-1)?.ranking.revision ?? 0) === 0}
+            onClick={() => void load(true)}
+          >
+            Older revisions
+          </Button>
           <Text my={3}>
             Restoring creates a new saved revision. Existing history and published snapshots are
             retained.

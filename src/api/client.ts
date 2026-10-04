@@ -142,8 +142,13 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         ),
     },
     revisions: {
-      list: async (id) =>
-        unwrap(await functions.getRankingRevisions({ data: { id }, headers: await headers() })),
+      list: async (id, before) =>
+        unwrap(
+          await functions.getRankingRevisions({
+            data: { id, ...(before === undefined ? {} : { before }) },
+            headers: await headers(),
+          }),
+        ),
       restore: async (id, revision, expectedRevision) =>
         unwrap(
           await functions.restoreRankingRevision({

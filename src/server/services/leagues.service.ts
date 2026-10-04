@@ -6,12 +6,14 @@ import { LeagueProvider } from '../providers/league-provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
 import { getEspnCredentials } from '../espn-credentials.server';
+import rankingRevisionModel from '../models/ranking-revision.model';
 import weeklyRankingModel from '../models/weeklyRanking.model';
 import { reportSnapshotModel } from '../models/report-snapshot.model';
 
 class LeaguesService {
   public leagues = leagueModel;
   public weeklyRankings = weeklyRankingModel;
+  public revisionHistory = rankingRevisionModel;
   public reportSnapshots = reportSnapshotModel;
   public async providerFor(league: League, ownerSubject: string): Promise<LeagueProvider> {
     return league.leagueType === LeagueType.Espn
@@ -72,6 +74,9 @@ class LeaguesService {
     await Promise.all([
       rankingIds.length
         ? publicationModel.deleteMany({ rankingId: { $in: rankingIds } })
+        : undefined,
+      rankingIds.length
+        ? this.revisionHistory.deleteMany({ rankingId: { $in: rankingIds } })
         : undefined,
       this.weeklyRankings.deleteMany({ leagueId: league.leagueId }),
       this.reportSnapshots.deleteMany({ leagueId: league.leagueId, ownerSubject: owner }),

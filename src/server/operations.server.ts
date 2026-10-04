@@ -166,11 +166,15 @@ export const operations = {
     const data = leagueIdSchema.extend({ enabled: z.boolean() }).parse(input);
     return leagues.setReportSharing(data.leagueId, data.enabled, owner);
   },
-  getRankingRevisions: async (owner: string, input: unknown) =>
-    (await rankings.getRevisions(objectIdSchema.parse(input).id, owner)).map((entry) => ({
+  getRankingRevisions: async (owner: string, input: unknown) => {
+    const data = objectIdSchema
+      .extend({ before: z.number().int().nonnegative().optional() })
+      .parse(input);
+    return (await rankings.getRevisions(data.id, owner, data.before)).map((entry) => ({
       savedAt: entry.savedAt,
       ranking: publicRanking(entry.ranking),
-    })),
+    }));
+  },
   restoreRankingRevision: async (owner: string, input: unknown) => {
     const data = objectIdSchema
       .extend({

@@ -28,3 +28,35 @@ it('previews historic content before restoring it', async () => {
   await waitFor(() => expect(onRestored).toHaveBeenCalledTimes(1));
   expect(api.restore).toHaveBeenCalledWith('id', 1, 2);
 });
+
+it('pages older snapshots without accumulating full history in memory', async () => {
+  const ranking = { _id: 'id', revision: 30 } as WeeklyRanking;
+  const entry = (revision: number) => ({
+    savedAt: '',
+    ranking: {
+      ...ranking,
+      revision,
+      rankingsTitle: `Revision ${revision}`,
+      teams: [],
+      introduction: '',
+    },
+  });
+  const api = {
+    list: vi
+      .fn()
+      .mockResolvedValueOnce([entry(30), entry(29), entry(20)])
+      .mockResolvedValueOnce([entry(19), entry(10)]),
+    restore: vi.fn(),
+  };
+  render(
+    <Provider>
+      <RevisionHistory api={api} ranking={ranking} disabled={false} onRestored={() => {}} />
+    </Provider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'View saved revisions' }));
+  await screen.findByRole('option', { name: /Revision 20/ });
+  fireEvent.click(screen.getByRole('button', { name: 'Older revisions' }));
+  await screen.findByRole('option', { name: /Revision 19/ });
+  expect(api.list).toHaveBeenLastCalledWith('id', 20);
+  expect(screen.queryByRole('option', { name: /Revision 30/ })).not.toBeInTheDocument();
+});

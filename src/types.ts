@@ -68,7 +68,7 @@ export interface LeagueApi {
     set(leagueId: string, enabled: boolean): Promise<boolean>;
   };
   revisions?: {
-    list(id: string): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
+    list(id: string, before?: number): Promise<{ savedAt: string; ranking: WeeklyRanking }[]>;
     restore(id: string, revision: number, expectedRevision: number): Promise<WeeklyRanking>;
   };
   publishing?: import('./publishing').PublishingApi;

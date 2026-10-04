@@ -1,3 +1,4 @@
+import { PageHeading } from './PageHeading';
 import { CopyEdition } from './CopyEdition';
 import { RevisionHistory } from './RevisionHistory';
 import { PublishEdition } from './PublishEdition';
@@ -196,6 +197,11 @@ export const RankingEditor = forwardRef<
 
   return (
     <>
+      <PageHeading
+        title="Rankings studio"
+        eyebrow={`${league.leagueName} · ${year} · Week ${week}`}
+        description="Set the order, write your take, and turn this week’s story into an edition worth sharing."
+      />
       <Flex
         align="center"
         justify="space-between"

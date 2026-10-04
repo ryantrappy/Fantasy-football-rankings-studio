@@ -1,3 +1,4 @@
+import { PageHeading } from './PageHeading';
 import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { League, LeagueApi } from '../types';
@@ -45,12 +46,11 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
   }, [api, archived, retry]);
   return (
     <Box>
-      <Heading as="h1" size="2xl" mb={4}>
-        Manage leagues
-      </Heading>
-      <Text mb={4}>
-        Archiving removes a league from active pickers. Rankings and public sharing stay intact.
-      </Text>
+      <PageHeading
+        title="Manage leagues"
+        eyebrow="Your league workspace"
+        description="Choose your team and keep your leagues organized. Archived leagues keep their rankings and shared reports."
+      />
       <Button
         variant="outline"
         disabled={busy}
@@ -68,7 +68,7 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
         <Text>Loading leagues…</Text>
       ) : leagues.length ? (
         leagues.map((league) => (
-          <Box key={league.leagueId} p={4} my={3} bg="bg" borderWidth="1px" rounded="lg">
+          <Box className="studio-card" key={league.leagueId} p={{ base: 4, md: 6 }} my={4}>
             <Heading as="h2" size="md">
               {league.leagueName}
             </Heading>

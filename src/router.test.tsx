@@ -13,6 +13,7 @@ import { readLeagueSetupDraft } from './league-setup-draft';
 import { reportFreshnessLabel } from './components/report-freshness';
 
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
+vi.mock('./studio.css?url', () => ({ default: '/assets/studio.test.css' }));
 vi.mock('./functions/report-snapshots.functions', () => ({
   readReportSnapshot: vi.fn(),
   createReportSnapshot: vi.fn(),
@@ -222,6 +223,16 @@ test('anonymous visitors can sign in without making league API requests', async 
     'href',
     '/assets/index.test.css',
   );
+  expect(document.querySelector('link[href="/assets/studio.test.css"]')).toHaveAttribute(
+    'rel',
+    'stylesheet',
+  );
+  expect(document.querySelector('link[rel="icon"]')).toHaveAttribute('href', '/studio-icon.svg');
+  expect(document.querySelector('link[rel="apple-touch-icon"]')).toHaveAttribute(
+    'href',
+    '/apple-touch-icon.png',
+  );
+  expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.json');
   await userEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
   expect(auth.loginWithRedirect).toHaveBeenCalledTimes(1);
   expect(fetch).not.toHaveBeenCalled();

@@ -615,6 +615,8 @@ export function HistoryPage({
                           {
                             id: '3',
                             header: 'All-play win rate',
+                            headerTooltip:
+                              'Your win percentage if you played every other team each week, based on available scores. Wins count as 1, ties as half, and losses as 0, divided by total matchups.',
                             value: (r) => percentage(r.allPlayWins, r.allPlayGames),
                             cell: (r) => <>{n(percentage(r.allPlayWins, r.allPlayGames))}%</>,
                           },

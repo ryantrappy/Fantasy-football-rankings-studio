@@ -16,12 +16,22 @@ import { PlayoffForecast } from '../../src/components/PlayoffForecast';
 import { LeagueSummary } from '../../src/components/LeagueSummary';
 import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
+import '../../src/studio.css';
 import { PalettePreview } from './PalettePreview';
 import { LiveWorkspace } from './LiveWorkspace';
 import { OverviewPreview } from './OverviewPreview';
+import { StudioPreview } from './StudioPreview';
+import { PlayersPreview } from './PlayersPreview';
+import { TradePreview } from './TradePreview';
 import { CalibrationPreview } from './CalibrationPreview';
 const mode = new URLSearchParams(location.search).get('mode');
 function PreviewApp() {
+  if (mode?.startsWith('workspace-'))
+    return (
+      <Provider>
+        <StudioPreview />
+      </Provider>
+    );
   if (mode === 'live')
     return (
       <Provider>
@@ -35,8 +45,12 @@ function PreviewApp() {
           Studio header
         </header>
       )}
-      <Container maxW="1280px" p={4}>
-        {mode === 'overview' ? (
+      <Container className="studio-surface" maxW="1280px" p={4}>
+        {mode === 'players' ? (
+          <PlayersPreview />
+        ) : mode === 'trade' ? (
+          <TradePreview />
+        ) : mode === 'overview' ? (
           <OverviewPreview />
         ) : mode === 'palette' ? (
           <PalettePreview />
@@ -117,8 +131,35 @@ const router = createRouter({
   routeTree: rootRoute.addChildren([
     previewRoute,
     createRoute({ getParentRoute: () => rootRoute, path: '/live', component: PreviewApp }),
+    ...[
+      '/overview',
+      '/profile',
+      '/leagues/manage',
+      '/leagues/new',
+      '/espn',
+      '/insights',
+      '/playoffs',
+      '/history',
+    ].map((path) => createRoute({ getParentRoute: () => rootRoute, path, component: PreviewApp })),
   ]),
-  history: createMemoryHistory({ initialEntries: [mode === 'live' ? '/live' : '/'] }),
+  history: createMemoryHistory({
+    initialEntries: [
+      mode?.startsWith('workspace-')
+        ? ({
+            overview: '/overview',
+            profile: '/profile',
+            manage: '/leagues/manage',
+            create: '/leagues/new',
+            espn: '/espn',
+            insights: '/insights',
+            playoffs: '/playoffs',
+            history: '/history',
+          }[mode.slice(10)] ?? '/')
+        : mode === 'live'
+          ? '/live'
+          : '/',
+    ],
+  }),
 });
 
 createRoot(document.getElementById('root')!).render(<RouterProvider router={router} />);

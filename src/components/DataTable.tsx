@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useId, useMemo, type ReactNode } from 'react';
 import {
   createColumnHelper,
   createSortedRowModel,
@@ -19,6 +19,7 @@ const features = tableFeatures({
 export interface DataColumn<T> {
   id: string;
   header: string;
+  headerTooltip?: string;
   value: (row: T) => string | number | null | undefined;
   exportValue?: (row: T) => string | number | null | undefined;
   cell: (row: T) => ReactNode;
@@ -114,6 +115,7 @@ export function DataTable<T extends object>({
   limit?: number;
 }) {
   const exportScope = useContext(ReportExportContext);
+  const descriptionId = useId();
   const definitions = useMemo(() => {
     const helper = createColumnHelper<typeof features, T>();
     return helper.columns(
@@ -167,11 +169,15 @@ export function DataTable<T extends object>({
             <tr key={group.id}>
               {group.headers.map((header) => {
                 const direction = header.column.getIsSorted();
+                const headerTooltip = columns.find(
+                  (column) => column.id === header.column.id,
+                )?.headerTooltip;
                 return (
                   <th
                     key={header.id}
                     scope="col"
                     className="sortable-column-header"
+                    title={headerTooltip}
                     onClick={header.column.getToggleSortingHandler()}
                     aria-sort={
                       direction === 'asc'
@@ -182,7 +188,13 @@ export function DataTable<T extends object>({
                     }
                   >
                     {header.column.getCanSort() ? (
-                      <button type="button" className="table-sort-button">
+                      <button
+                        type="button"
+                        className="table-sort-button"
+                        aria-describedby={
+                          headerTooltip ? `${descriptionId}-${header.id}` : undefined
+                        }
+                      >
                         <table.FlexRender header={header} />
                         <span className="table-sort-indicator" aria-hidden="true">
                           {direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}
@@ -190,6 +202,11 @@ export function DataTable<T extends object>({
                       </button>
                     ) : (
                       <table.FlexRender header={header} />
+                    )}
+                    {headerTooltip && (
+                      <span className="sr-only" id={`${descriptionId}-${header.id}`}>
+                        {headerTooltip}
+                      </span>
                     )}
                   </th>
                 );

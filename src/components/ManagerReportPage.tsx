@@ -31,7 +31,14 @@ export function ManagerReportPage({ load = readReport }: { load?: () => Promise<
   const measured = data?.seasons.filter((s) => s.weeks > 0) || [];
   return (
     <Stack gap={8} maxW="6xl" mx="auto">
-      <Box as="header" p={{ base: 5, md: 10 }} bg="fg" color="white" rounded="xl">
+      <Box
+        as="header"
+        className="manager-report-hero"
+        p={{ base: 5, md: 10 }}
+        bg="fg"
+        color="white"
+        rounded="xl"
+      >
         <Text textTransform="uppercase" letterSpacing="wide">
           The hindsight department
         </Text>
@@ -91,7 +98,7 @@ export function ManagerReportPage({ load = readReport }: { load?: () => Promise<
                 `${measured.reduce((s, r) => s + r.ratedPickups, 0)} rated pickups`,
               ],
             ].map(([label, value, note]) => (
-              <Box key={label} p={5} bg="bg" borderWidth="1px" rounded="lg">
+              <Box key={label} className="studio-card" p={5} bg="bg" borderWidth="1px" rounded="lg">
                 <Text>{label}</Text>
                 <Text fontSize="4xl" fontWeight="bold">
                   {value}
@@ -106,6 +113,7 @@ export function ManagerReportPage({ load = readReport }: { load?: () => Promise<
           {data.seasons.map((season) => (
             <Box
               as="section"
+              className="studio-card"
               key={season.year}
               bg="bg"
               p={{ base: 4, md: 7 }}

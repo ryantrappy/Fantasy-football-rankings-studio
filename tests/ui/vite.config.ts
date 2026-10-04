@@ -6,6 +6,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: '../api/public-insights',
+        replacement: fileURLToPath(new URL('./public-insights-api.ts', import.meta.url)),
+      },
+      {
         find: '../api/client',
         replacement: fileURLToPath(new URL('./api-client.ts', import.meta.url)),
       },

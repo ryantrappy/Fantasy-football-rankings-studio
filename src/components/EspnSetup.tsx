@@ -1,5 +1,6 @@
+import { PageHeading } from './PageHeading';
 import { logClientError } from '../logging';
-import { Box, Button, Field, Flex, Heading, Input, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Field, Flex, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import type { EspnCredentialsApi, EspnCredentialStatus } from '../espn-credentials';
 import { errorMessage } from '../api/client';
@@ -47,6 +48,7 @@ export function EspnCredentialForm({
   return (
     <Box
       as="section"
+      className="account-card"
       maxW="2xl"
       mx="auto"
       p={{ base: 4, md: 8 }}
@@ -56,9 +58,11 @@ export function EspnCredentialForm({
       bg="bg"
     >
       <Stack gap={5}>
-        <Heading as="h1" size="2xl">
-          {onboarding ? 'Connect your ESPN account' : 'ESPN settings'}
-        </Heading>
+        <PageHeading
+          title={onboarding ? 'Connect your ESPN account' : 'ESPN settings'}
+          eyebrow="Bring your league along"
+          description="Connect private ESPN leagues to your fantasy workspace."
+        />
         <Text>
           Private ESPN leagues need your espn_s2 and SWID cookies. Public ESPN and Sleeper leagues
           work without them.

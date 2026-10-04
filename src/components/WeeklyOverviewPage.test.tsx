@@ -38,8 +38,8 @@ it('shows missing metrics and workflow links with preserved league/season/week a
   vi.mocked(loadWeeklyOverview).mockResolvedValue([row]);
   view();
   await screen.findByRole('heading', { name: 'My team' });
-  expect(screen.getByText('Record: Unavailable')).toBeInTheDocument();
-  expect(screen.getByText('Estimated playoff chance: Unavailable')).toBeInTheDocument();
+  expect(screen.getByLabelText('Record for My team')).toBeInTheDocument();
+  expect(screen.getByLabelText('Estimated playoff chance for My team')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Rankings' })).toHaveAttribute(
     'href',
     '/?leagueId=1&year=2026&week=5',

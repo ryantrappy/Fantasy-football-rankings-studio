@@ -36,7 +36,7 @@ export function SignInLanding({
       <header className="landing-header">
         <a className="landing-brand" href="/" aria-label="Trapp Fantasy Studio home">
           <span className="landing-mark" aria-hidden="true">
-            T<span>F</span>
+            <img src="/studio-icon.svg" width="44" height="44" alt="" />
           </span>
           <span>
             TRAPP<span className="landing-brand-subtitle">FANTASY STUDIO</span>

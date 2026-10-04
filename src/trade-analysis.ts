@@ -25,7 +25,7 @@ export function evaluateTrade(
   const imbalance = proposal.send[0].length !== proposal.send[1].length;
   if (imbalance && !proposal.acknowledgeImbalance)
     return {
-      error: 'Confirm explicit roster-drop/open-slot assumptions for this unbalanced exchange.',
+      error: 'Confirm explicit open-slot assumptions for this unbalanced exchange.',
       sides: [],
     };
   for (let index = 0; index < 2; index++) {
@@ -48,7 +48,7 @@ export function evaluateTrade(
       proposal.send[1 - index].length - proposal.send[index].length - proposal.drops[index].length;
     if (increase > proposal.openSlots[index])
       return {
-        error: `Team ${teams[index].name} needs an explicit drop or sufficient open roster slots.`,
+        error: `Team ${teams[index].name} needs ${increase} open roster ${increase === 1 ? 'slot' : 'slots'} for this exchange.`,
         sides: [],
       };
   }

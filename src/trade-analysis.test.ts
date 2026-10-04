@@ -40,7 +40,7 @@ it('requires explicit open-slot or drop assumptions for a two-for-one exchange',
   data.send[0] = ['a', 'ab'];
   expect(evaluateTrade(teams(), ['RB'], data).error).toMatch(/Confirm explicit/);
   data.acknowledgeImbalance = true;
-  expect(evaluateTrade(teams(), ['RB'], data).error).toMatch(/open roster slots/);
+  expect(evaluateTrade(teams(), ['RB'], data).error).toMatch(/open roster slot/);
   data.openSlots[1] = 1;
   expect(evaluateTrade(teams(), ['RB'], data).sides[1].rosterSize).toBe(3);
   data.openSlots[1] = 0;

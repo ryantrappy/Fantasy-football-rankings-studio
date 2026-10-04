@@ -1,3 +1,4 @@
+import { PageHeading } from './PageHeading';
 import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
@@ -35,6 +36,7 @@ export function ProfilePage({ api }: { api: AccountApi }) {
   return (
     <Box
       as="section"
+      className="account-card"
       maxW="2xl"
       mx="auto"
       p={{ base: 4, md: 8 }}
@@ -43,9 +45,11 @@ export function ProfilePage({ api }: { api: AccountApi }) {
       bg="bg"
     >
       <Stack gap={5}>
-        <Heading as="h1" size="2xl">
-          Your profile
-        </Heading>
+        <PageHeading
+          title="Your profile"
+          eyebrow="Make it your studio"
+          description="Manage your display name, league connections and writing assistant settings."
+        />
         {!current && <Text as="output">Loading your profile…</Text>}
         {current?.error && (
           <>

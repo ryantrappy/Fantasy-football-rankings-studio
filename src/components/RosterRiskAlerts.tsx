@@ -40,7 +40,7 @@ export function RosterRiskAlerts({
         </Text>
       )}
       {alerts.map((alert) => (
-        <Box key={alert.id} mt={2} borderWidth="1px" p={2}>
+        <Box key={alert.id} mt={2} className="roster-risk" data-severity={alert.severity}>
           <Text>
             <strong>{alert.severity}</strong> · Week {alert.week} · {alert.message}
           </Text>

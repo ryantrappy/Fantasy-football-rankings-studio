@@ -3,6 +3,17 @@
 One React 19 / TanStack Start application serves the UI, public reports, authenticated server functions,
 Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 
+The workspace uses a shared navy, indigo and warm-accent design across navigation,
+overview, rankings, player/trade tools, reports and account settings. On narrow
+screens the navigation scrolls horizontally and keeps the active tab visible;
+wide report tables scroll inside their cards. A keyboard skip link leads directly
+to the page content. Workspace styles live in `src/studio.css`; ranking PNG
+exports retain their independent design.
+
+`public/studio-icon.svg` is the source football-and-rankings mark used in the
+header, sign-in page and browser tab. Matching ICO, 192/512px app icons and a
+180px Apple touch icon are registered in the root document and web manifest.
+
 ## Run with Docker
 
 Copy `.env.example` to `.env`, fill in the required Auth0 settings and
@@ -808,7 +819,7 @@ Open **Trade analyzer**, choose a league and two teams, then search the owned ac
 
 ### Player profiles and comparisons
 
-Open **Players**, or follow a player name/profile link from matchups, lineup assignments, waiver candidates or trade rosters. Search by name, position or provider ID and select multiple players to compare a common week range. Profiles show provider/season identity, observed league-scored totals/averages and week-by-week trends, available current-week projection, current ownership/status and source timestamps. Sleeper unowned candidates can be included on demand after managed-team setup. Observations cover only roster weeks present in the league reports, not full free-agent/career history. Missing weeks, contradictory duplicate observations, targets and snap share remain unavailable; names are never used to merge identities across providers or seasons.
+Open **Players**, or follow a player name/profile link from matchups, lineup assignments, waiver candidates or trade rosters. Search by name, team, position or provider ID, filter by position, and select players to compare. Selected players remain visible while filtering and can be removed individually or cleared. Comparison cards highlight current projections, observed totals/averages and coverage; weekly scores and identity/source details expand on demand. The common week range defaults through the latest reported week and can be adjusted. Refresh preserves the selected league, season and players; changing league or season clears the comparison. Profiles show provider/season identity, observed league-scored totals/averages and week-by-week trends, available current-week projection, current ownership/status and source timestamps. Sleeper unowned candidates can be included on demand after managed-team setup. Observations cover only roster weeks present in the league reports, not full free-agent/career history. Missing weeks, contradictory duplicate observations, targets and snap share remain unavailable; names are never used to merge identities across providers or seasons.
 
 ### In-app roster risks
 

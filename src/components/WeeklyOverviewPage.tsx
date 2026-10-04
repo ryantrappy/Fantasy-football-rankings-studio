@@ -1,3 +1,4 @@
+import { PageHeading } from './PageHeading';
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
@@ -45,21 +46,22 @@ export function WeeklyOverviewPage() {
   }, [api, refresh]);
   return (
     <Box>
-      <Heading as="h1" mb={3}>
-        My weekly overview
-      </Heading>
-      <Flex gap={3} align="center" wrap="wrap" mb={4}>
+      <PageHeading
+        title="My weekly overview"
+        eyebrow="Your week, at a glance"
+        description="Your teams, this week’s matchups, and the next move to make."
+      >
         <Button disabled={busy} onClick={() => setRefresh((value) => value + 1)}>
           Refresh overview
         </Button>
-        <Text as="output">
-          {busy
-            ? 'Loading overview…'
-            : updated
-              ? `Matchups loaded at ${updated}. Refresh on demand; season reports use the existing cache.`
-              : ''}
-        </Text>
-      </Flex>
+      </PageHeading>
+      <Text as="output" mb={4} fontSize="sm" color="fg.muted">
+        {busy
+          ? 'Loading overview…'
+          : updated
+            ? `Matchups loaded at ${updated}. Season reports refresh on demand.`
+            : ''}
+      </Text>
       {error && <Text role="alert">{error}</Text>}
       {!busy && !error && rows.length === 0 && (
         <Box>
@@ -81,41 +83,49 @@ export function WeeklyOverviewPage() {
           const opponent =
             row.matchup?.home.teamId === selected?.teamId ? row.matchup?.away : row.matchup?.home;
           return (
-            <Box
-              as="section"
-              key={row.league.leagueId}
-              p={4}
-              borderWidth="1px"
-              rounded="lg"
-              minW={0}
-            >
+            <Box as="section" key={row.league.leagueId} className="studio-card overview-card">
               <Heading as="h2" size="lg">
                 {row.league.leagueName}
               </Heading>
-              <Text>
+              <Text className="overview-context">
                 {row.league.leagueType === 0 ? 'Sleeper' : 'ESPN'} · {row.league.seasonId} ·{' '}
                 {row.week === null ? 'Week unavailable' : `Week ${row.week}`}
               </Text>
               {selected ? (
                 <>
-                  <Heading as="h3" size="md" mt={3}>
-                    {selected.teamName}
-                  </Heading>
-                  <Text>
-                    {row.matchup
-                      ? `${myTeam?.score?.toFixed(2) ?? '—'} vs ${opponent ? `${opponent.name} (${opponent.score?.toFixed(2) ?? '—'})` : 'Bye'}`
-                      : 'Matchup unavailable'}
-                  </Text>
-                  <Text>
-                    Record:{' '}
-                    {row.team
-                      ? `${row.team.wins}–${row.team.loss}–${row.team.ties}`
-                      : 'Unavailable'}
-                  </Text>
-                  <Text>
-                    Estimated playoff chance:{' '}
-                    {row.playoff === null ? 'Unavailable' : `${(row.playoff * 100).toFixed(1)}%`}
-                  </Text>
+                  <div className="overview-matchup">
+                    <Heading as="h3" size="md">
+                      {selected.teamName}
+                    </Heading>
+                    <div className="overview-matchup-score">
+                      {row.matchup ? (myTeam?.score?.toFixed(2) ?? '—') : '—'}
+                    </div>
+                    <Text fontSize="sm" color="fg.muted">
+                      {row.matchup
+                        ? opponent
+                          ? `vs ${opponent.name} · ${opponent.score?.toFixed(2) ?? '—'} pts`
+                          : 'Bye week'
+                        : 'Matchup unavailable'}
+                    </Text>
+                  </div>
+                  <div className="overview-stats">
+                    <div aria-label={`Record for ${selected.teamName}`}>
+                      <span>Record</span>
+                      <strong>
+                        {row.team
+                          ? `${row.team.wins}–${row.team.loss}–${row.team.ties}`
+                          : 'Unavailable'}
+                      </strong>
+                    </div>
+                    <div aria-label={`Estimated playoff chance for ${selected.teamName}`}>
+                      <span>Estimated playoff chance</span>
+                      <strong>
+                        {row.playoff === null
+                          ? 'Unavailable'
+                          : `${(row.playoff * 100).toFixed(1)}%`}
+                      </strong>
+                    </div>
+                  </div>
                   {row.refreshedAt && (
                     <Text fontSize="sm">
                       {reportFreshnessLabel(row.refreshedAt)} · through week {row.completedWeek}.
@@ -157,7 +167,7 @@ export function WeeklyOverviewPage() {
                       />
                     </details>
                   )}
-                  <Flex mt={3} gap={3} wrap="wrap">
+                  <Flex className="overview-links">
                     <Link
                       to="/"
                       search={{

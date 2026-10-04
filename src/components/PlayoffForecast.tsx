@@ -39,7 +39,7 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
           </Box>
           <Button
             size="sm"
-            colorPalette="green"
+            colorPalette="indigo"
             variant={view === 'table' ? 'solid' : 'outline'}
             aria-pressed={view === 'table'}
             onClick={() => setView('table')}
@@ -48,7 +48,7 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
           </Button>
           <Button
             size="sm"
-            colorPalette="green"
+            colorPalette="indigo"
             variant={view === 'chart' ? 'solid' : 'outline'}
             aria-pressed={view === 'chart'}
             onClick={() => setView('chart')}
@@ -90,16 +90,6 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
         </Text>
       ) : (
         <>
-          <Text mb={3}>
-            {forecast.simulations.toLocaleString()} simulations{' '}
-            {view === 'chart'
-              ? 'at each completed regular-season week'
-              : `using scores through week ${forecast.throughWeek}`}
-            . {settings!.playoffTeams} playoff places; regular season ends week{' '}
-            {settings!.regularSeasonEnd}. All percentages are unconditional chances from their
-            cutoff, not chances conditional on reaching a round. Projected record averages final
-            regular-season wins and losses across simulations. Byes count as advancement.
-          </Text>
           {forecast.throughWeek <= 2 && (
             <Text role="note" mb={3} fontWeight="bold">
               Early-season estimate: only {forecast.throughWeek} completed scoring week
@@ -108,55 +98,68 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
               can move sharply as more results arrive.
             </Text>
           )}
-          <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
-            Projection mode: {forecast.projection.note}
-          </Text>
-          <Text mb={3}>
-            Known schedule: {forecast.schedule.knownWeeks} of {forecast.schedule.remainingWeeks}{' '}
-            remaining regular-season weeks. Missing weeks use random remaining opponents.
-          </Text>
-          {forecast.projection.used && data.playoffProjection && (
+          <Box as="details" mb={4} className="forecast-method">
+            <summary>Forecast assumptions and projection coverage</summary>
             <Text mb={3}>
-              Availability:{' '}
-              {data.playoffProjection.availabilityChecked
-                ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
-                : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
-              No extra injury discount is added to provider estimates.
-              {data.playoffProjection.weekly &&
-                ' Current injury labels apply only to the next week; later weeks use their own provider estimates and scheduled byes. Current roster ownership is held fixed.'}
+              {forecast.simulations.toLocaleString()} simulations{' '}
+              {view === 'chart'
+                ? 'at each completed regular-season week'
+                : `using scores through week ${forecast.throughWeek}`}
+              . {settings!.playoffTeams} playoff places; regular season ends week{' '}
+              {settings!.regularSeasonEnd}. All percentages are unconditional chances from their
+              cutoff, not chances conditional on reaching a round. Projected record averages final
+              regular-season wins and losses across simulations. Byes count as advancement.
             </Text>
-          )}
-          {forecast.projection.used && forecast.projection.weeks && (
-            <Box as="details" mb={3}>
-              <summary>Weekly lineup projection coverage</summary>
-              <DataTable
-                label="Weekly lineup projection coverage"
-                data={forecast.projection.weeks}
-                getRowId={(row) => String(row.week)}
-                columns={[
-                  {
-                    id: 'week',
-                    header: 'Week',
-                    value: (row) => row.week,
-                    cell: (row) => row.week,
-                    rowHeader: true,
-                  },
-                  {
-                    id: 'teams',
-                    header: 'Projected teams',
-                    value: (row) => row.projectedTeams,
-                    cell: (row) => `${row.projectedTeams} of ${data.teams.length}`,
-                  },
-                  {
-                    id: 'fallback',
-                    header: 'Historical fallback teams',
-                    value: (row) => data.teams.length - row.projectedTeams,
-                    cell: (row) => data.teams.length - row.projectedTeams,
-                  },
-                ]}
-              />
-            </Box>
-          )}
+            <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
+              Projection mode: {forecast.projection.note}
+            </Text>
+            <Text mb={3}>
+              Known schedule: {forecast.schedule.knownWeeks} of {forecast.schedule.remainingWeeks}{' '}
+              remaining regular-season weeks. Missing weeks use random remaining opponents.
+            </Text>
+            {forecast.projection.used && data.playoffProjection && (
+              <Text mb={3}>
+                Availability:{' '}
+                {data.playoffProjection.availabilityChecked
+                  ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
+                  : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
+                No extra injury discount is added to provider estimates.
+                {data.playoffProjection.weekly &&
+                  ' Current injury labels apply only to the next week; later weeks use their own provider estimates and scheduled byes. Current roster ownership is held fixed.'}
+              </Text>
+            )}
+            {forecast.projection.used && forecast.projection.weeks && (
+              <Box as="details" mb={3}>
+                <summary>Weekly lineup projection coverage</summary>
+                <DataTable
+                  label="Weekly lineup projection coverage"
+                  data={forecast.projection.weeks}
+                  getRowId={(row) => String(row.week)}
+                  columns={[
+                    {
+                      id: 'week',
+                      header: 'Week',
+                      value: (row) => row.week,
+                      cell: (row) => row.week,
+                      rowHeader: true,
+                    },
+                    {
+                      id: 'teams',
+                      header: 'Projected teams',
+                      value: (row) => row.projectedTeams,
+                      cell: (row) => `${row.projectedTeams} of ${data.teams.length}`,
+                    },
+                    {
+                      id: 'fallback',
+                      header: 'Historical fallback teams',
+                      value: (row) => data.teams.length - row.projectedTeams,
+                      cell: (row) => data.teams.length - row.projectedTeams,
+                    },
+                  ]}
+                />
+              </Box>
+            )}
+          </Box>
           {data.completedWeek > settings!.regularSeasonEnd && (
             <Text mb={3} fontWeight="bold">
               Retrospective pre-playoff forecast: actual postseason results are excluded.

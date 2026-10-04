@@ -39,6 +39,7 @@ it('shows cutoff-controlled probabilities and the scenario limitations', () => {
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
   expect(screen.getByRole('note')).toHaveTextContent(/only 2 completed scoring weeks/);
   expect(screen.getByRole('note')).toHaveTextContent(/especially uncertain/);
+  expect(screen.getByRole('note')).toBeVisible();
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
   expect(screen.getByText(/No eligible held-out games yet/)).toBeInTheDocument();
 });

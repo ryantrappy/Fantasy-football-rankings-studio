@@ -4,6 +4,7 @@ import RankingsService from '../services/rankings.service';
 import type { WeeklyRanking } from '../interfaces/weeklyRanking.interface';
 function setup() {
   const service = new RankingsService();
+  vi.spyOn(service.leagueService, 'getLeagueById').mockResolvedValue({ leagueId: '1' } as never);
   let stored: WeeklyRanking = {
     _id: 'a'.repeat(24),
     leagueId: '1',

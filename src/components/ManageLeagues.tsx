@@ -23,10 +23,13 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
     // oxlint-disable-next-line react/set-state-in-effect
     setLoading(true);
     setError('');
-    void (archived ? api.management!.archived() : api.listLeagues())
+    void Promise.all([
+      archived ? api.management!.archived() : api.listLeagues(),
+      api.management?.deleting?.() ?? Promise.resolve([]),
+    ])
       .then(
         (rows) => {
-          if (active) setLeagues(rows);
+          if (active) setLeagues([...rows[0], ...rows[1]]);
         },
         (e) => {
           logClientError('leagues.manage', e);
@@ -80,7 +83,12 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
               {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
               {league.providerLeagueId ?? league.leagueId}
             </Text>
-            {api.managedTeam && (
+            {league.deleting && (
+              <Text as="output">
+                Deletion cleanup is pending. Retry Delete league to finish removing local data.
+              </Text>
+            )}
+            {api.managedTeam && !league.deleting && (
               <ManagedTeamPicker
                 key={`${league.leagueId}:${league.providerLeagueId}`}
                 api={api.managedTeam}

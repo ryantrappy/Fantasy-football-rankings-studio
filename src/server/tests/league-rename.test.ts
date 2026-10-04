@@ -3,7 +3,7 @@ const update = vi.hoisted(() => vi.fn());
 const findOne = vi.hoisted(() => vi.fn());
 const publicationDeleteMany = vi.hoisted(() => vi.fn());
 vi.mock('../models/league.model', () => ({
-  default: { findOneAndUpdate: update, findOne },
+  default: { findOneAndUpdate: update, findOne, updateOne: vi.fn().mockResolvedValue({}) },
 }));
 vi.mock('../publishing.server', () => ({
   publicationModel: { deleteMany: publicationDeleteMany },
@@ -29,7 +29,11 @@ it('renames only the owner workspace and returns the updated league', async () =
   });
   const result = await new LeaguesService().rename('1', '  Writers league  ', 'owner');
   expect(update).toHaveBeenCalledWith(
-    { ownerSubject: 'owner', $or: [{ leagueId: '1' }, { providerLeagueId: '1' }] },
+    {
+      ownerSubject: 'owner',
+      deleted: { $ne: true },
+      $or: [{ leagueId: '1' }, { providerLeagueId: '1' }],
+    },
     { $set: { leagueName: 'Writers league' } },
     { returnDocument: 'after' },
   );
@@ -63,7 +67,11 @@ it('renames by provider league ID while retaining owner isolation', async () => 
   });
   await new LeaguesService().rename('99', 'Renamed', 'owner');
   expect(update).toHaveBeenCalledWith(
-    { ownerSubject: 'owner', $or: [{ leagueId: '99' }, { providerLeagueId: '99' }] },
+    {
+      ownerSubject: 'owner',
+      deleted: { $ne: true },
+      $or: [{ leagueId: '99' }, { providerLeagueId: '99' }],
+    },
     { $set: { leagueName: 'Renamed' } },
     { returnDocument: 'after' },
   );
@@ -73,7 +81,11 @@ it('archives by provider league ID', async () => {
   update.mockResolvedValue({ leagueId: 'workspace-1', providerLeagueId: '99' });
   await new LeaguesService().setArchived('99', true, 'owner');
   expect(update).toHaveBeenCalledWith(
-    { ownerSubject: 'owner', $or: [{ leagueId: '99' }, { providerLeagueId: '99' }] },
+    {
+      ownerSubject: 'owner',
+      deleted: { $ne: true },
+      $or: [{ leagueId: '99' }, { providerLeagueId: '99' }],
+    },
     { $set: { archived: true } },
     { returnDocument: 'after' },
   );
@@ -96,7 +108,7 @@ it('validates the replacement provider league before updating it', async () => {
     2026,
   );
   expect(update).toHaveBeenCalledWith(
-    { leagueId: '1', ownerSubject: 'owner' },
+    { leagueId: '1', ownerSubject: 'owner', deleted: { $ne: true } },
     { $set: { providerLeagueId: '123', managedTeams: {} } },
     { returnDocument: 'after', runValidators: true },
   );
@@ -117,6 +129,7 @@ it('deletes only the owned workspace and its local records', async () => {
   } as never;
   service.reportSnapshots = { deleteMany: snapshotDeleteMany } as never;
   service.leagues.deleteOne = vi.fn().mockResolvedValue({ deletedCount: 1 });
+  update.mockResolvedValue({ leagueId: '1', deleted: true });
   await service.deleteLeague('99', 'owner');
   expect(publicationDeleteMany).toHaveBeenCalledWith({ rankingId: { $in: ['ranking-1'] } });
   expect(revisionDeleteMany).toHaveBeenCalledWith({ rankingId: { $in: ['ranking-1'] } });

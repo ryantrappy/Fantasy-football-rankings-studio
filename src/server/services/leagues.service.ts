@@ -28,13 +28,19 @@ class LeaguesService {
   }
 
   public async getLeagueById(id: string, ownerSubject: string): Promise<League> {
-    const league = await this.leagues.findOne({ leagueId: id, ownerSubject }).lean();
+    const league = await this.leagues
+      .findOne({ leagueId: id, ownerSubject, deleted: { $ne: true } })
+      .lean();
     if (!league) throw new HttpException(404, 'League not found.');
     return league as unknown as League;
   }
 
   private ownerLeagueFilter(id: string, ownerSubject: string) {
-    return { ownerSubject, $or: [{ leagueId: id }, { providerLeagueId: id }] };
+    return {
+      ownerSubject,
+      deleted: { $ne: true },
+      $or: [{ leagueId: id }, { providerLeagueId: id }],
+    };
   }
 
   private async managedLeague(id: string, ownerSubject: string): Promise<League> {
@@ -54,7 +60,7 @@ class LeaguesService {
     // Validate the target before changing the saved association. Keep the owner's display name local.
     await (await this.providerFor(target, owner)).getLeague(target, target.seasonId);
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: current.leagueId, ownerSubject: owner },
+      { leagueId: current.leagueId, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { providerLeagueId: normalized, managedTeams: {} } },
       { returnDocument: 'after', runValidators: true },
     );
@@ -63,12 +69,30 @@ class LeaguesService {
   }
 
   public async deleteLeague(id: string, owner: string) {
-    const league = await this.managedLeague(id, owner);
+    const league = await this.leagues
+      .findOne({ ownerSubject: owner, $or: [{ leagueId: id }, { providerLeagueId: id }] })
+      .lean();
+    if (!league) throw new HttpException(404, 'League not found.');
+    const marked = await this.leagues.findOneAndUpdate(
+      { leagueId: league.leagueId, ownerSubject: owner },
+      { $set: { deleted: true, publicReports: false } },
+      { returnDocument: 'after' },
+    );
+    if (!marked) throw new HttpException(404, 'League not found.');
     const rankings = await this.weeklyRankings
       .find({ leagueId: league.leagueId })
       .select('_id')
       .lean();
-    const rankingIds = rankings.map((ranking) => String(ranking._id));
+    const rankingIds = [
+      ...new Set([
+        ...(league.deletionRankingIds ?? []),
+        ...rankings.map((ranking) => String(ranking._id)),
+      ]),
+    ];
+    await this.leagues.updateOne(
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: true },
+      { $addToSet: { deletionRankingIds: { $each: rankingIds } } },
+    );
     // Publications are keyed by ranking ID; loading this model here avoids a service import cycle.
     const { publicationModel } = await import('../publishing.server');
     await Promise.all([
@@ -87,7 +111,7 @@ class LeaguesService {
 
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
-      .findOne({ leagueId: id, publicReports: { $ne: false } })
+      .findOne({ leagueId: id, deleted: { $ne: true }, publicReports: { $ne: false } })
       .select({
         _id: 0,
         leagueId: 1,
@@ -109,7 +133,7 @@ class LeaguesService {
 
   public async setReportSharing(id: string, enabled: boolean, owner: string) {
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: id, ownerSubject: owner },
+      { leagueId: id, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { publicReports: enabled } },
       { returnDocument: 'after' },
     );
@@ -119,9 +143,22 @@ class LeaguesService {
 
   public async listLeagues(ownerSubject: string, archived = false) {
     return this.leagues
-      .find({ ownerSubject, archived: archived ? true : { $ne: true } })
+      .find({ ownerSubject, deleted: { $ne: true }, archived: archived ? true : { $ne: true } })
       .sort({ leagueName: 1 })
       .lean();
+  }
+
+  public async listDeleting(ownerSubject: string) {
+    return this.leagues.find({ ownerSubject, deleted: true }).sort({ leagueName: 1 }).lean();
+  }
+
+  public async verifyWrite(leagueId: string, owner: string, cleanup: () => Promise<unknown>) {
+    try {
+      await this.getLeagueById(leagueId, owner);
+    } catch (error) {
+      if (error instanceof HttpException && error.status === 404) await cleanup();
+      throw error;
+    }
   }
 
   public async setArchived(id: string, archived: boolean, owner: string) {
@@ -222,7 +259,12 @@ class LeaguesService {
       update = { $set: { [path]: { teamId, managerKey: team.managerKey ?? '' } } };
     }
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: id, ownerSubject: owner, providerLeagueId: league.providerLeagueId },
+      {
+        leagueId: id,
+        ownerSubject: owner,
+        deleted: { $ne: true },
+        providerLeagueId: league.providerLeagueId,
+      },
       update,
       { returnDocument: 'after', runValidators: true },
     );

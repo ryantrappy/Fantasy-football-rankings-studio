@@ -65,7 +65,11 @@ it('loads credentials only after verifying league ownership', async () => {
   await expect(
     operations.getInsights('owner-a', { leagueId: '123', year: 2025 }),
   ).rejects.toMatchObject({ status: 404 });
-  expect(leagueModel.findOne).toHaveBeenCalledWith({ leagueId: '123', ownerSubject: 'owner-a' });
+  expect(leagueModel.findOne).toHaveBeenCalledWith({
+    leagueId: '123',
+    ownerSubject: 'owner-a',
+    deleted: { $ne: true },
+  });
   expect(getEspnCredentials).not.toHaveBeenCalled();
 });
 it('passes owner credentials through discovery and insight reads', async () => {

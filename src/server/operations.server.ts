@@ -29,6 +29,7 @@ const rankings = new RankingsService();
 // Select only public fields; Mongoose documents, owner subjects and internal metadata never cross RPC.
 function publicLeague(value: League): League {
   return {
+    ...((value as League & { deleted?: boolean }).deleted ? { deleting: true } : {}),
     _id: String(value._id),
     leagueId: value.leagueId,
     ...(value.providerLeagueId ? { providerLeagueId: value.providerLeagueId } : {}),
@@ -137,6 +138,8 @@ export const operations = {
       }),
     );
   },
+  listDeletingLeagues: async (owner: string) =>
+    (await leagues.listDeleting(owner)).map(publicLeague),
   listArchivedLeagues: async (owner: string) =>
     (await leagues.listLeagues(owner, true)).map(publicLeague),
   setLeagueArchived: async (owner: string, input: unknown) => {

@@ -1,4 +1,5 @@
 export interface League {
+  deleting?: boolean;
   providerLeagueId?: string;
   _id?: string;
   leagueId: string;
@@ -57,6 +58,7 @@ export interface LeagueApi {
     input: import('./report-snapshot').SnapshotInput,
   ): Promise<{ publicId: string; savedAt: string }>;
   management?: {
+    deleting?(): Promise<League[]>;
     archived(): Promise<League[]>;
     archive(leagueId: string, archived: boolean): Promise<void>;
     rename(leagueId: string, leagueName: string): Promise<League>;

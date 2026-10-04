@@ -1,6 +1,9 @@
 // @vitest-environment node
 vi.mock('../database.server', () => ({ connectDatabase: vi.fn() }));
 import { publishing, publicationModel } from '../publishing.server';
+import LeaguesService from '../services/leagues.service';
+import leagueModel from '../models/league.model';
+import rankingModel from '../models/weeklyRanking.model';
 import RankingsService from '../services/rankings.service';
 const base = {
   _id: 'a'.repeat(24),
@@ -23,6 +26,13 @@ const base = {
     },
   ],
 };
+beforeEach(() => {
+  vi.spyOn(LeaguesService.prototype, 'getLeagueById').mockResolvedValue({ leagueId: '1' } as never);
+  vi.spyOn(leagueModel, 'exists').mockResolvedValue({ _id: '1' } as never);
+  vi.spyOn(rankingModel, 'findById').mockReturnValue({
+    select: () => ({ lean: async () => ({ leagueId: '1' }) }),
+  } as never);
+});
 afterEach(() => vi.restoreAllMocks());
 it('publishes only a saved snapshot, excludes metadata, and revokes its link', async () => {
   let document: Record<string, unknown> | null = null;

@@ -2,6 +2,8 @@ import '@tanstack/react-start/server-only';
 import mongoose from 'mongoose';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import leagueModel from './models/league.model';
+import rankingModel from './models/weeklyRanking.model';
 import RankingsService from './services/rankings.service';
 import { connectDatabase } from './database.server';
 import { objectIdSchema, rankingSchema } from './validation';
@@ -65,6 +67,9 @@ export const publishing = {
       },
       { upsert: true, returnDocument: 'after', runValidators: true },
     );
+    await rankings.leagueService.verifyWrite(saved.leagueId, owner, () =>
+      publicationModel.deleteOne({ rankingId: id }),
+    );
     return status(result!);
   },
   async unpublish(owner: string, input: unknown) {
@@ -78,6 +83,15 @@ export const publishing = {
     const found = await publicationModel.findOne({ publicId });
     if (!found)
       throw new HttpException(404, 'This edition is not published or its link has been revoked.');
+    const source = await rankingModel.findById(found.rankingId).select('leagueId').lean();
+    if (
+      !source ||
+      !(await leagueModel.exists({ leagueId: source.leagueId, deleted: { $ne: true } }))
+    )
+      throw new HttpException(
+        404,
+        'This edition is unavailable because its source workspace was deleted.',
+      );
     return { status: status(found), ranking: rankingSchema.parse(found.ranking) };
   },
 };

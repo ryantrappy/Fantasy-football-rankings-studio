@@ -119,3 +119,40 @@ it('validates a provider ID and requires the exact name before permanent deletio
   fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
   expect(api.management!.delete).toHaveBeenCalledWith('1');
 });
+
+it('shows failed deletion cleanup and lets the owner retry even when active lists exclude it', async () => {
+  const league = {
+    leagueId: '1',
+    leagueName: 'Pending league',
+    leagueType: 0,
+    seasonId: 2026,
+    deleting: true,
+  };
+  let pending = true;
+  const api = {
+    listLeagues: vi.fn(async () => []),
+    management: {
+      deleting: vi.fn(async () => (pending ? [league] : [])),
+      archived: vi.fn(async () => []),
+      archive: vi.fn(),
+      rename: vi.fn(),
+      updateProviderId: vi.fn(),
+      delete: vi.fn(async () => {
+        pending = false;
+      }),
+    },
+  } as unknown as LeagueApi;
+  render(
+    <Provider>
+      <ManageLeagues api={api} />
+    </Provider>,
+  );
+  await screen.findByText(/Deletion cleanup is pending/);
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league' }));
+  fireEvent.change(screen.getByLabelText('Type Pending league to confirm'), {
+    target: { value: 'Pending league' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
+  await screen.findByText('No active leagues.');
+  expect(api.management!.delete).toHaveBeenCalledWith('1');
+});

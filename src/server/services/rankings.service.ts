@@ -58,7 +58,11 @@ class RankingsService {
         409,
         'Rankings already exist for this league, season, and week. Open them to edit.',
       );
-    return this.weeklyRankings.create(ranking) as unknown as Promise<WeeklyRanking>;
+    const saved = await this.weeklyRankings.create(ranking);
+    await this.leagueService.verifyWrite(ranking.leagueId, ownerSubject, () =>
+      this.weeklyRankings.deleteOne({ _id: saved._id }),
+    );
+    return saved as unknown as WeeklyRanking;
   }
 
   public async updateRanking(
@@ -88,7 +92,16 @@ class RankingsService {
       },
       { returnDocument: 'after', runValidators: true },
     );
-    if (!result) throw conflict();
+    if (!result) {
+      await this.leagueService.verifyWrite(current.leagueId, ownerSubject, () =>
+        this.revisionHistory.deleteMany({ rankingId }),
+      );
+      throw conflict();
+    }
+    await this.leagueService.verifyWrite(current.leagueId, ownerSubject, async () => {
+      await this.weeklyRankings.deleteOne({ _id: rankingId });
+      await this.revisionHistory.deleteMany({ rankingId });
+    });
     return result as unknown as WeeklyRanking;
   }
 

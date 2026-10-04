@@ -125,3 +125,7 @@ export const getManagedTeam = createServerFn({ method: 'GET' })
 export const setManagedTeam = createServerFn({ method: 'POST' })
   .validator((data: { leagueId: string; year: number; teamId: string | null }) => data)
   .handler(({ data }) => run('setManagedTeam', (owner) => operations.setManagedTeam(owner, data)));
+
+export const listDeletingLeagues = createServerFn({ method: 'GET' }).handler(() =>
+  run('listDeletingLeagues', operations.listDeletingLeagues),
+);

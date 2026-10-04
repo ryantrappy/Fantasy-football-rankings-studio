@@ -94,6 +94,8 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         ),
     },
     management: {
+      deleting: async () =>
+        unwrap(await functions.listDeletingLeagues({ headers: await headers() })),
       archived: async () =>
         unwrap(await functions.listArchivedLeagues({ headers: await headers() })),
       archive: async (leagueId, archived) => {

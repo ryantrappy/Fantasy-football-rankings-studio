@@ -80,7 +80,15 @@ export interface LeagueApi {
     leagueId: string,
     year: number,
   ): Promise<
-    League & { teamCount?: number; maxWeek: number; validWeeks: number[]; scheduleNote: string }
+    League & {
+      isCurrentSeason?: boolean;
+      defaultWeek?: number;
+      defaultWeekNote?: string;
+      teamCount?: number;
+      maxWeek: number;
+      validWeeks: number[];
+      scheduleNote: string;
+    }
   >;
   getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;
   getMatchups(leagueId: string, year: number, week: number): Promise<Matchup[]>;

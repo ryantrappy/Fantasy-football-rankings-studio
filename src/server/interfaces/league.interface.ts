@@ -17,6 +17,7 @@ export interface League {
 
 export interface LeagueInfo extends League {
   teamCount?: number;
+  currentWeek?: number;
   maxWeek: number;
   validWeeks: number[];
   scheduleNote: string;

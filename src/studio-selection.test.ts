@@ -74,3 +74,11 @@ describe('studio selection', () => {
     ).toEqual({});
   });
 });
+
+it('advances stale current-season storage but preserves explicit and historical selections', async () => {
+  const { preferredStudioWeek } = await import('./studio-selection');
+  expect(preferredStudioWeek(2, undefined, { isCurrentSeason: true, defaultWeek: 5 })).toBe(5);
+  expect(preferredStudioWeek(2, 3, { isCurrentSeason: true, defaultWeek: 5 })).toBe(3);
+  expect(preferredStudioWeek(8, undefined, { isCurrentSeason: false, defaultWeek: 1 })).toBe(8);
+  expect(preferredStudioWeek(8, undefined, {})).toBe(8);
+});

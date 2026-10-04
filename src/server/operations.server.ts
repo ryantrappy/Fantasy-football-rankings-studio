@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
+import { getNflState, defaultNflWeek } from './nfl-week.server';
 import * as credentials from './espn-credentials.server';
 import * as aiCredentials from './ai-credentials.server';
 import { logServerError } from './logging.server';
@@ -214,6 +215,7 @@ export const operations = {
     const info = await leagues.getLeagueInfo(data.leagueId, data.year, owner);
     return {
       ...publicLeague(info),
+      ...defaultNflWeek(info, await getNflState().catch(() => undefined)),
       teamCount: info.teamCount,
       maxWeek: info.maxWeek,
       validWeeks: info.validWeeks,

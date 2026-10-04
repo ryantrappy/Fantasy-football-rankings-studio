@@ -16,6 +16,8 @@ export interface WeeklyOverviewRow {
   selection?: ManagedTeamSelection;
   team?: Team;
   matchup?: LiveMatchup;
+  lineupSlots?: string[];
+  rosterCapturedAt?: string;
   playoff: number | null;
   refreshedAt?: string;
   completedWeek?: number;
@@ -52,6 +54,8 @@ export async function loadWeeklyOverview(api: OverviewApi): Promise<WeeklyOvervi
             return row;
           }
           if (!scores || scores.error) row.notices.push('Current week and matchup unavailable.');
+          row.lineupSlots = scores?.lineupSlots;
+          row.rosterCapturedAt = scores?.capturedAt;
           row.matchup = scores?.matchups.find((matchup) =>
             [matchup.home.teamId, matchup.away?.teamId].includes(row.selection!.teamId!),
           );

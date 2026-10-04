@@ -1,6 +1,11 @@
 export interface LivePlayer {
   id: string;
   name: string;
+  availability?: string | null;
+  bye?: boolean;
+  locked?: boolean;
+  reserve?: boolean;
+  eligibleSlots?: string[];
   position?: string;
   lineupSlot?: string;
   points: number | null;
@@ -28,6 +33,8 @@ export interface LiveLeague {
   provider: 'Sleeper' | 'ESPN';
   season: number;
   week: number;
+  lineupSlots?: string[];
+  capturedAt?: string;
   matchups: LiveMatchup[];
   error?: string;
 }

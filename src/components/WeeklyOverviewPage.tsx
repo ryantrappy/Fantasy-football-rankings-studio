@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useApi } from '../auth/session';
 import { loadWeeklyOverview, type WeeklyOverviewRow } from '../weekly-overview';
+import { LineupAdvisor } from './LineupAdvisor';
 import { reportFreshnessLabel } from './report-freshness';
 
 export function WeeklyOverviewPage() {
@@ -118,6 +119,16 @@ export function WeeklyOverviewPage() {
                       {reportFreshnessLabel(row.refreshedAt)} · through week {row.completedWeek}.
                       Playoff estimates are not calibrated odds.
                     </Text>
+                  )}
+                  {myTeam && (
+                    <details>
+                      <summary>Lineup advisor</summary>
+                      <LineupAdvisor
+                        team={myTeam}
+                        slots={row.lineupSlots}
+                        capturedAt={row.rosterCapturedAt}
+                      />
+                    </details>
                   )}
                   <Flex mt={3} gap={3} wrap="wrap">
                     <Link

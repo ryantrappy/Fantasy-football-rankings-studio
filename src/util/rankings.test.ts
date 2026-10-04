@@ -116,3 +116,61 @@ describe('ranking calculations', () => {
     expect(defaultSeason(new Date(2026, 8, 6))).toBe(2026);
   });
 });
+
+it('puts an unmeasured team between weak and strong measured teams regardless of its name', () => {
+  const teams = ['weak', 'missing', 'strong'].map((teamId, index) => ({
+    teamId,
+    teamName: ['Z weak', 'A missing', 'B strong'][index],
+    managerName: '',
+    wins: 0,
+    loss: 0,
+    ties: 0,
+  }));
+  const matchups = [
+    { matchupId: '1', homeTeamId: 'weak', awayTeamId: 'strong', homeScore: 50, awayScore: 150 },
+  ];
+  expect(powerOrderTeams(teams, matchups).map((team) => team.teamId)).toEqual([
+    'strong',
+    'missing',
+    'weak',
+  ]);
+  expect(
+    powerOrderTeams(teams, [
+      ...matchups,
+      {
+        matchupId: 'bye',
+        homeTeamId: 'missing',
+        awayTeamId: null,
+        homeScore: 200,
+        awayScore: null,
+      },
+    ]).map((team) => team.teamId),
+  ).toEqual(['strong', 'missing', 'weak']);
+  expect(teams.map((team) => team.teamId)).toEqual(['weak', 'missing', 'strong']);
+});
+it('treats completed zero scores as measurements and preserves provider order without usable games', () => {
+  const teams = ['weak', 'missing', 'strong'].map((teamId) => ({
+    teamId,
+    teamName: teamId,
+    managerName: '',
+    wins: 0,
+    loss: 0,
+    ties: 0,
+  }));
+  expect(
+    powerOrderTeams(teams, [
+      { matchupId: 'zero', homeTeamId: 'weak', awayTeamId: 'strong', homeScore: 0, awayScore: 100 },
+    ]).map((team) => team.teamId),
+  ).toEqual(['strong', 'missing', 'weak']);
+  expect(
+    powerOrderTeams(teams, [
+      {
+        matchupId: 'partial',
+        homeTeamId: 'weak',
+        awayTeamId: 'strong',
+        homeScore: 100,
+        awayScore: null,
+      },
+    ]),
+  ).toBe(teams);
+});

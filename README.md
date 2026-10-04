@@ -799,3 +799,5 @@ Changing a provider league ID starts a new cache generation for that workspaceâ€
 Publication decisions use an atomic generation check. A publish delayed behind another successful publish or unpublish receives a conflict and must be reviewed again. Unpublish retains a private revoked marker so old in-flight requests cannot recreate the link. Intentional republishing still works and uses a fresh link; public readers see only complete, non-revoked snapshots.
 
 Management actions resolve exact workspace IDs first. An external provider ID is accepted only when it uniquely identifies one owned workspace; a Sleeper/ESPN collision returns a conflict instead of choosing arbitrarily. Select the desired row in **Manage leagues** to use its workspace identity.
+
+The suggested initial power order assigns teams with no completed matchup samples a finite neutral league baseline when other teams have data. Completed zero scores count as data; byes and incomplete games do not. If no team has usable data, provider order is retained. Saved editions are not reordered.

@@ -817,3 +817,9 @@ Selected team cards in **My weekly overview** show injury, bye, unfilled-slot an
 ### Additional NFL data sources
 
 The [NFL provider evaluation](docs/nfl-data-providers.md) compares projection and historical enrichment sources, recommends a bounded private comparison, and lists access/licensing gates and follow-up delivery briefs. NFL remains the only sport; no additional live feed is enabled by this research.
+
+### Writing connection readiness
+
+**Your profile → Writing assistant connections** shows the server Codex login status and links to the Docker OAuth instructions above. It distinguishes access disabled for your account, a missing CLI, a failed login check, and cached login readiness. Refresh after the operator changes setup. The status contains no tokens or other users' identifiers, and users outside the server allowlist cannot inspect its login state.
+
+Saved OpenAI keys take precedence even when the server login is ready. Remove your saved key to use the enabled server account; settings refresh readiness after removal. A ready login does not prove ChatGPT authentication mode, account model access, or available quota. Confirm **Logged in using ChatGPT** on the Docker host when configuring OAuth.

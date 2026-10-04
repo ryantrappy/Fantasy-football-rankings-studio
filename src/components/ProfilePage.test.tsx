@@ -39,6 +39,29 @@ it('saves an API key without rendering its value after submission', async () => 
   expect(input).toHaveValue('');
   expect(screen.queryByText('sk-test-secret')).not.toBeInTheDocument();
 });
+it('explains saved-key precedence and refreshes server readiness after removal', async () => {
+  const api = {
+    ...makeApi(),
+    writing: { providers: vi.fn().mockResolvedValue([{ id: 'codex', serverStatus: 'ready' }]) },
+  };
+  vi.mocked(api.getAiCredentialStatus).mockResolvedValue({
+    codexConfigured: true,
+    claudeConfigured: false,
+  });
+  render(
+    <Provider>
+      <ProfilePage api={api} />
+    </Provider>,
+  );
+  await screen.findByText(/Your saved OpenAI key takes precedence/);
+  await screen.findByText(/Server Codex login is ready/);
+  const calls = api.writing.providers.mock.calls.length;
+  fireEvent.click(screen.getByRole('button', { name: 'Remove OpenAI API key (Codex)' }));
+  await screen.findByText('OpenAI API key (Codex) removed.');
+  await screen.findByText(/With no saved OpenAI key/);
+  await vi.waitFor(() => expect(api.writing.providers.mock.calls.length).toBeGreaterThan(calls));
+  expect(api.removeAiCredential).toHaveBeenCalledWith('codex');
+});
 it('displays account identity and persists edited profile fields', async () => {
   const api = makeApi();
   render(

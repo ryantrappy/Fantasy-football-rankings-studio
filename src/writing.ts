@@ -20,6 +20,8 @@ export interface WritingProviderOption {
   installed: boolean;
   enabled: boolean;
   status: 'not-installed' | 'not-enabled' | 'login-check-failed' | 'ready';
+  serverStatus?: WritingProviderOption['status'];
+  credentialSource?: 'saved-key' | 'server-account' | 'none';
 }
 export type WritingConsent = Record<WritingProvider, boolean>;
 export interface WritingApi {

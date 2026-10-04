@@ -813,3 +813,7 @@ Open **Players**, or follow a player name/profile link from matchups, lineup ass
 ### In-app roster risks
 
 Selected team cards in **My weekly overview** show injury, bye, unfilled-slot and projection/lock-coverage alerts with severity, player/week, source time and player/lineup links. Confirmed unavailable starters are distinguished from questionable/doubtful or unknown status. Inputs older than five minutes produce a refresh warning instead of confidently current injury alerts. Conditions are recomputed on refresh: repeated conditions have stable IDs and resolved conditions disappear. Dismissals are stored in this browser separately for each signed-in account, league/team, week and condition; **Show dismissed risks for this team** restores them. No emails, push notifications or provider changes are sent.
+
+### Additional NFL data sources
+
+The [NFL provider evaluation](docs/nfl-data-providers.md) compares projection and historical enrichment sources, recommends a bounded private comparison, and lists access/licensing gates and follow-up delivery briefs. NFL remains the only sport; no additional live feed is enabled by this research.

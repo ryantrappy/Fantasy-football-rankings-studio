@@ -2,14 +2,20 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Authentication } from './Authentication';
 import { Provider } from '../components/ui/provider';
-const mocks = vi.hoisted(() => ({ login: vi.fn(), dispose: vi.fn(), loading: false }));
+const mocks = vi.hoisted(() => ({
+  login: vi.fn(),
+  dispose: vi.fn(),
+  getToken: vi.fn(),
+  createApi: vi.fn(),
+  loading: false,
+}));
 vi.mock('@auth0/auth0-react', () => ({
   Auth0Provider: ({ children }: { children: ReactNode }) => children,
   useAuth0: () => ({
     isLoading: mocks.loading,
     isAuthenticated: false,
     loginWithRedirect: mocks.login,
-    getAccessTokenSilently: vi.fn(),
+    getAccessTokenSilently: mocks.getToken,
     logout: vi.fn(),
   }),
 }));
@@ -18,12 +24,14 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ navigate: vi.fn() }),
 }));
 vi.mock('../api/client', () => ({
-  createApi: () => ({ dispose: mocks.dispose }),
+  createApi: mocks.createApi,
   errorMessage: (e: Error) => e.message,
 }));
 vi.mock('../logging', () => ({ logClientError: vi.fn() }));
 beforeEach(() => {
   mocks.login.mockReset();
+  mocks.getToken.mockReset();
+  mocks.createApi.mockReset().mockReturnValue({ dispose: mocks.dispose });
   mocks.dispose.mockResolvedValue(undefined);
   mocks.loading = false;
   vi.stubEnv('VITE_AUTH0_DOMAIN', 'example.auth0.com');
@@ -31,6 +39,19 @@ beforeEach(() => {
   vi.stubEnv('VITE_AUTH0_AUDIENCE', 'test-audience');
 });
 afterEach(() => vi.unstubAllEnvs());
+it('passes access tokens to the API and rejects a missing token', async () => {
+  render(
+    <Provider>
+      <Authentication>
+        <div>Private content</div>
+      </Authentication>
+    </Provider>,
+  );
+  const getToken = mocks.createApi.mock.calls[0][0];
+  mocks.getToken.mockResolvedValueOnce('access-token').mockResolvedValueOnce(undefined);
+  await expect(getToken()).resolves.toBe('access-token');
+  await expect(getToken()).rejects.toThrow('No access token returned for this session.');
+});
 it('keeps the return path and shows a busy sign-in action with a retry after failure', async () => {
   mocks.login
     .mockRejectedValueOnce(new Error('Could not open sign-in.'))

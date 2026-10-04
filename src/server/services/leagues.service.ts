@@ -3,6 +3,7 @@ import leagueModel from '../models/league.model';
 import { League, LeagueType } from '../interfaces/league.interface';
 import HttpException from '../exceptions/HttpException';
 import { LeagueProvider } from '../providers/league-provider';
+import type { Team } from '../interfaces/teams.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
 import { getEspnCredentials } from '../espn-credentials.server';
@@ -261,7 +262,7 @@ class LeaguesService {
       await this.providerFor(league, owner)
     )
       .getTeams(league, year, 1)
-      .catch((error) => {
+      .catch((error): Team[] => {
         if (teamId !== null) throw error;
         return [];
       });

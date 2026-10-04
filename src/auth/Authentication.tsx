@@ -71,7 +71,12 @@ function Session({ children }: { children: ReactNode }) {
   const [signingIn, setSigningIn] = useState(false);
   const subject = isAuthenticated ? user?.sub : undefined;
   const api = useMemo(
-    () => createApi(getAccessTokenSilently, subject),
+    () =>
+      createApi(async () => {
+        const token = await getAccessTokenSilently();
+        if (!token) throw new Error('No access token returned for this session.');
+        return token;
+      }, subject),
     [getAccessTokenSilently, subject],
   );
   useEffect(

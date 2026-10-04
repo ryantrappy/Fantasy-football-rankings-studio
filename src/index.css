@@ -1,3 +1,4 @@
+/*noinspection CssUnresolvedCustomProperty*/
 @import './export.css';
 
 body {
@@ -408,6 +409,7 @@ header :focus-visible {
   padding: 1rem;
   border: 1px solid #dce2ef;
   border-radius: 12px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #ffffff);
 }
 .team-editor-placeholder {
@@ -453,6 +455,7 @@ header :focus-visible {
 @keyframes playoff-point-rise {
   from {
     opacity: 0;
+    /*noinspection CssUnresolvedCustomProperty*/
     transform: translateY(var(--point-rise));
   }
   to {
@@ -601,8 +604,11 @@ header :focus-visible {
   position: sticky;
   top: 0;
   z-index: 30;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
+  /*noinspection CssUnresolvedCustomProperty*/
   color: var(--chakra-colors-fg, #17223b);
+  /*noinspection CssUnresolvedCustomProperty*/
   border-bottom: 1px solid var(--chakra-colors-border, #dce2ef);
 }
 .workspace-toolbar {
@@ -692,6 +698,7 @@ header :focus-visible {
   box-sizing: border-box;
   height: 40px;
   padding: 0 14px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 8px;
   font-weight: 600;
@@ -709,8 +716,10 @@ header :focus-visible {
   min-width: 180px;
   display: grid;
   padding: 6px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 10px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
   box-shadow: 0 8px 30px #17223b20;
 }
@@ -725,6 +734,7 @@ header :focus-visible {
 }
 .profile-menu-items a:hover,
 .profile-menu-items button:hover {
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg-muted, #f3f5fb);
 }
 .workspace-main {
@@ -768,7 +778,9 @@ header :focus-visible {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px 8px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border-right: 1px solid var(--chakra-colors-border, #dce2ef);
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
 }
 .live-board {
@@ -799,8 +811,10 @@ header :focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 20px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
   padding: 12px;
 }
@@ -1124,9 +1138,11 @@ header :focus-visible {
 
 /* Ranking studio layout only; exported image styles live in export.css. */
 .editor-setup {
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 12px;
   padding: 16px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
 }
 .editor-fields {
@@ -1156,12 +1172,15 @@ header :focus-visible {
 }
 .editor-layout .preview-scroll {
   overflow: auto;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 12px;
   background: #f8f8f2;
 }
 .editor-layout {
+  /*noinspection CssUnresolvedCustomProperty*/
   height: calc(100dvh - var(--ranking-header-height, 0px));
+  /*noinspection CssUnresolvedCustomProperty*/
   scroll-margin-top: var(--ranking-header-height, 0px);
 }
 .editor-layout .editor-panel,

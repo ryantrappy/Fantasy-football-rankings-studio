@@ -12,6 +12,19 @@ import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
 import { reportFreshnessLabel } from './components/report-freshness';
 
+const sessions = vi.hoisted(() => [] as ReturnType<typeof import('./api/client').createApi>[]);
+vi.mock('./api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api/client')>();
+  return {
+    ...actual,
+    createApi: (...args: Parameters<typeof actual.createApi>) => {
+      const api = actual.createApi(...args);
+      sessions.push(api);
+      return api;
+    },
+  };
+});
+
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
 vi.mock('./studio.css?url', () => ({ default: '/assets/studio.test.css' }));
 vi.mock('./functions/report-snapshots.functions', () => ({
@@ -181,11 +194,15 @@ beforeEach(() => {
     vi.fn().mockImplementation(async () => new Response(JSON.stringify({ data: [] }))),
   );
 });
-afterEach(() => {
+afterEach(async () => {
   const emptyHrefs = [...document.querySelectorAll<HTMLElement>('[href]')].filter(
     (element) => element.getAttribute('href') === '',
   );
   cleanup();
+  // React starts asynchronous disposal; finish it while jsdom globals still exist.
+  const disposedSessions = sessions.splice(0);
+  await Promise.all(disposedSessions.map((api) => api.dispose()));
+  expect(disposedSessions.every((api) => api.leagueCollection.status === 'cleaned-up')).toBe(true);
   const unexpectedConsoleErrors = consoleErrors.filter((args) => !isClientErrorLog(args));
   restoreConsoleError();
   vi.unstubAllEnvs();

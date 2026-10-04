@@ -49,6 +49,7 @@ export interface ManagedTeamSelection {
 }
 
 export interface LeagueApi {
+  waivers?: { get(leagueId: string, year: number): Promise<import('./waivers').WaiverPool> };
   managedTeam?: {
     get(leagueId: string, year: number): Promise<ManagedTeamSelection>;
     set(leagueId: string, year: number, teamId: string | null): Promise<ManagedTeamSelection>;

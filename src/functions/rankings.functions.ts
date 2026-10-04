@@ -129,3 +129,7 @@ export const setManagedTeam = createServerFn({ method: 'POST' })
 export const listDeletingLeagues = createServerFn({ method: 'GET' }).handler(() =>
   run('listDeletingLeagues', operations.listDeletingLeagues),
 );
+
+export const getWaiverPool = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string; year: number }) => data)
+  .handler(({ data }) => run('getWaiverPool', (owner) => operations.getWaiverPool(owner, data)));

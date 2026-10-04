@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
+import { loadWaiverPool } from './waivers.server';
 import { getNflState, defaultNflWeek } from './nfl-week.server';
 import * as credentials from './espn-credentials.server';
 import * as aiCredentials from './ai-credentials.server';
@@ -102,6 +103,18 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getWaiverPool: async (owner: string, input: unknown) => {
+    const data = seasonSchema.parse(input);
+    const league = await leagues.getLeagueById(data.leagueId, owner);
+    const choice = await leagues.managedTeamSelection(data.leagueId, data.year, owner);
+    if (!choice.teamId)
+      throw new HttpException(409, 'Select your managed team for this season first.');
+    return loadWaiverPool(
+      { ...league, seasonId: data.year },
+      choice.teamId,
+      await leagues.espnAccess(league, owner),
+    );
+  },
   getManagedTeam: async (owner: string, input: unknown) => {
     const data = seasonSchema.parse(input);
     return leagues.managedTeamSelection(data.leagueId, data.year, owner);

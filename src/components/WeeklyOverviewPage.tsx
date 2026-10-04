@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useApi } from '../auth/session';
 import { loadWeeklyOverview, type WeeklyOverviewRow } from '../weekly-overview';
+import { WaiverAdvisor } from './WaiverAdvisor';
 import { LineupAdvisor } from './LineupAdvisor';
 import { reportFreshnessLabel } from './report-freshness';
 
@@ -127,6 +128,17 @@ export function WeeklyOverviewPage() {
                         team={myTeam}
                         slots={row.lineupSlots}
                         capturedAt={row.rosterCapturedAt}
+                      />
+                    </details>
+                  )}
+                  {api.waivers && (
+                    <details>
+                      <summary>Waiver advisor</summary>
+                      <WaiverAdvisor
+                        key={`${row.league.leagueId}:${row.league.seasonId}`}
+                        api={api.waivers}
+                        leagueId={row.league.leagueId}
+                        year={row.league.seasonId}
                       />
                     </details>
                   )}

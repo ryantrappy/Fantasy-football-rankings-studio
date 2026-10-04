@@ -32,7 +32,7 @@ it('renames only the owner workspace and returns the updated league', async () =
     {
       ownerSubject: 'owner',
       deleted: { $ne: true },
-      $or: [{ leagueId: '1' }, { providerLeagueId: '1' }],
+      leagueId: '1',
     },
     { $set: { leagueName: 'Writers league' } },
     { returnDocument: 'after' },
@@ -70,7 +70,7 @@ it('renames by provider league ID while retaining owner isolation', async () => 
     {
       ownerSubject: 'owner',
       deleted: { $ne: true },
-      $or: [{ leagueId: '99' }, { providerLeagueId: '99' }],
+      leagueId: '1',
     },
     { $set: { leagueName: 'Renamed' } },
     { returnDocument: 'after' },
@@ -84,7 +84,7 @@ it('archives by provider league ID', async () => {
     {
       ownerSubject: 'owner',
       deleted: { $ne: true },
-      $or: [{ leagueId: '99' }, { providerLeagueId: '99' }],
+      leagueId: '1',
     },
     { $set: { archived: true } },
     { returnDocument: 'after' },

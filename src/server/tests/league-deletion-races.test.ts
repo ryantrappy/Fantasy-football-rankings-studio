@@ -57,6 +57,7 @@ function setup() {
           ? structuredClone(workspace)
           : null,
     })),
+    find: vi.fn(() => ({ limit: () => ({ lean: async () => [] }) })),
     findOneAndUpdate: vi.fn(async (_filter, mutation) => {
       Object.assign(workspace, mutation.$set);
       return workspace;

@@ -797,3 +797,5 @@ Expand **Waiver advisor** in a selected team’s weekly overview card and load a
 Changing a provider league ID starts a new cache generation for that workspace’s season lists and insights, including historical reports. Old requests are canceled and cannot refill the new cache. Unrelated leagues’ reports and locally saved ranking editions remain cached.
 
 Publication decisions use an atomic generation check. A publish delayed behind another successful publish or unpublish receives a conflict and must be reviewed again. Unpublish retains a private revoked marker so old in-flight requests cannot recreate the link. Intentional republishing still works and uses a fresh link; public readers see only complete, non-revoked snapshots.
+
+Management actions resolve exact workspace IDs first. An external provider ID is accepted only when it uniquely identifies one owned workspace; a Sleeper/ESPN collision returns a conflict instead of choosing arbitrarily. Select the desired row in **Manage leagues** to use its workspace identity.

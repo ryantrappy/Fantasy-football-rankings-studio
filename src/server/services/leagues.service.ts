@@ -35,18 +35,25 @@ class LeaguesService {
     return league as unknown as League;
   }
 
-  private ownerLeagueFilter(id: string, ownerSubject: string) {
-    return {
-      ownerSubject,
-      deleted: { $ne: true },
-      $or: [{ leagueId: id }, { providerLeagueId: id }],
-    };
-  }
-
-  private async managedLeague(id: string, ownerSubject: string): Promise<League> {
-    const league = await this.leagues.findOne(this.ownerLeagueFilter(id, ownerSubject)).lean();
-    if (!league) throw new HttpException(404, 'League not found.');
-    return league as unknown as League;
+  private async managedLeague(
+    id: string,
+    ownerSubject: string,
+    includeDeleted = false,
+  ): Promise<League> {
+    const filter = { ownerSubject, ...(includeDeleted ? {} : { deleted: { $ne: true } }) };
+    const exact = await this.leagues.findOne({ ...filter, leagueId: id }).lean();
+    if (exact) return exact as unknown as League;
+    const matches = await this.leagues
+      .find({ ...filter, providerLeagueId: id })
+      .limit(2)
+      .lean();
+    if (matches.length > 1)
+      throw new HttpException(
+        409,
+        'This provider league ID matches multiple workspaces. Select the specific league in Manage leagues or use its workspace ID.',
+      );
+    if (!matches.length) throw new HttpException(404, 'League not found.');
+    return matches[0] as unknown as League;
   }
 
   public async updateProviderLeagueId(id: string, providerLeagueId: string, owner: string) {
@@ -69,10 +76,7 @@ class LeaguesService {
   }
 
   public async deleteLeague(id: string, owner: string) {
-    const league = await this.leagues
-      .findOne({ ownerSubject: owner, $or: [{ leagueId: id }, { providerLeagueId: id }] })
-      .lean();
-    if (!league) throw new HttpException(404, 'League not found.');
+    const league = await this.managedLeague(id, owner, true);
     const marked = await this.leagues.findOneAndUpdate(
       { leagueId: league.leagueId, ownerSubject: owner },
       { $set: { deleted: true, publicReports: false } },
@@ -162,8 +166,9 @@ class LeaguesService {
   }
 
   public async setArchived(id: string, archived: boolean, owner: string) {
+    const league = await this.managedLeague(id, owner);
     const result = await this.leagues.findOneAndUpdate(
-      this.ownerLeagueFilter(id, owner),
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { archived } },
       { returnDocument: 'after' },
     );
@@ -175,8 +180,9 @@ class LeaguesService {
     if (!leagueName) throw new HttpException(400, 'Enter a league display name.');
     if (leagueName.length > 120)
       throw new HttpException(400, 'League display name must be at most 120 characters.');
+    const league = await this.managedLeague(id, owner);
     const result = await this.leagues.findOneAndUpdate(
-      this.ownerLeagueFilter(id, owner),
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { leagueName } },
       { returnDocument: 'after' },
     );

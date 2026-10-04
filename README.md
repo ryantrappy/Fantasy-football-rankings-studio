@@ -5,8 +5,9 @@ Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 
 ## Run with Docker
 
-Copy `.env.example` to `.env`, fill in the required Auth0 settings,
-`ESPN_CREDENTIALS_KEY`, and `AI_CREDENTIALS_KEY`, then run:
+Copy `.env.example` to `.env`, fill in the required Auth0 settings and
+`ESPN_CREDENTIALS_KEY` (`AI_CREDENTIALS_KEY` is needed only for saved per-user AI
+keys), then run:
 
 ```sh
 docker compose up
@@ -16,6 +17,79 @@ The Compose setup runs the app and MongoDB on the internal `fantasy-internal`
 network and publishes only the app at http://localhost:3001. See
 [docker-running.md](docker-running.md) for the complete list of values to fill in,
 the published image details, and cleanup commands.
+
+### Sign in to Codex in Docker with your ChatGPT account
+
+The image includes Codex CLI `0.157.1`. You can use its ChatGPT OAuth login for
+writing suggestions without creating an OpenAI API key. Use device-code login
+for the container, as described in the official [Codex authentication guide](https://learn.chatgpt.com/docs/auth#login-on-headless-devices).
+
+Run these commands on the Docker host, from `react_refactor_fantasy_website`
+(the directory containing `docker-compose.yml`). For the homelab, connect to
+`trappserv.er` first. A login on your laptop does not sign in the container.
+
+1. Enable device-code login in your ChatGPT account's security settings, or ask
+   your workspace administrator to enable it. In the application's `.env`, set:
+
+   ```dotenv
+   WRITING_AI_PROVIDERS=codex
+   WRITING_AI_USERS='auth0|your-user-id'
+   ```
+
+   Replace the placeholder with your exact Auth0 **user_id**, available in the
+   Auth0 Dashboard under **User Management → Users**. This is your application
+   account's subject, not your email or ChatGPT account ID. Multiple authorized
+   subjects can be separated with commas. These users share the container's
+   Codex account and its quota.
+
+2. Start or recreate the app so it loads those settings, then sign in:
+
+   ```sh
+   docker compose up -d rankings_studio
+   docker compose exec rankings_studio codex -c 'cli_auth_credentials_store="file"' login --device-auth
+   ```
+
+   Open the URL printed by the CLI in your own browser, enter its one-time code,
+   and sign in with the ChatGPT account you want the server to use. Keep the
+   terminal open until login completes. This flow does not require publishing
+   an OAuth callback port from Docker.
+
+3. Confirm the container's authentication mode:
+
+   ```sh
+   docker compose exec rankings_studio codex login status
+   ```
+
+   Confirm it reports **Logged in using ChatGPT**. The app also checks this
+   command before reporting the server-managed provider as ready. A successful
+   status check confirms cached credentials; a generation still needs available
+   account access and quota. See the [CLI login reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli#codex-login).
+
+4. Reopen the ranking editor's **Talking points for your rankings** panel,
+   select Codex, and approve the displayed context before generating. Leave the
+   model blank to use the CLI default, or choose one available to your account.
+   If you previously saved an OpenAI key in **Your profile**, remove it to use
+   this server-login path: saved per-user keys take precedence in the app.
+   `AI_CREDENTIALS_KEY` is unnecessary for OAuth-only use with no saved AI keys;
+   retain it if any existing encrypted keys still need to be read.
+
+Compose sets `CODEX_HOME=/app/.codex` and mounts the `codex-home` named volume
+there. The login command explicitly selects file storage, so credentials are
+saved at `/app/.codex/auth.json` in that volume. Restarts, container recreation,
+and image rebuilds retain the login while the same Compose project and volume
+are used. `docker compose down -v` removes the named volume and its login.
+Treat the credential file as a secret; keep it out of Git, image layers, and logs.
+
+If device login is unavailable, enable it in the account/workspace settings and
+retry. If Codex is missing, rebuild the image with `docker compose up -d --build rankings_studio`.
+If the app says **not enabled**, check both `WRITING_AI_*`
+settings and recreate the app with `docker compose up -d rankings_studio`;
+`docker compose restart` does not reload changed environment settings. If the
+CLI is signed out, repeat login. To disconnect the server account explicitly:
+
+```sh
+docker compose exec rankings_studio codex logout
+```
 
 ## Run locally
 

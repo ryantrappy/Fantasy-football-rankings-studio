@@ -1,4 +1,5 @@
 import { HeaderControls } from '../components/AppShell';
+import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { logClientError } from '../logging';
 import {
   Box,
@@ -20,6 +21,7 @@ import { useLiveQuery } from '@tanstack/react-db';
 import { defaultSeason } from '../util/rankings';
 import { safeWeek, weekChoices, type WeekChoice } from '../week-options';
 import {
+  preferredStudioWeek,
   readStudioSelection,
   rememberStudioSelection,
   resolveStudioSelection,
@@ -48,6 +50,7 @@ function RankingsPage() {
   const [year, setYear] = useState(defaultSeason);
   const [week, setWeek] = useState(1);
   const weekRef = useRef(1);
+  const explicitWeek = useRef<number | undefined>(searchWeek);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -86,6 +89,10 @@ function RankingsPage() {
           { leagueId: searchLeagueId, year: searchYear, week: searchWeek },
           readStudioSelection(api.subject),
         );
+        explicitWeek.current =
+          !searchLeagueId || entries.some((entry) => entry.leagueId === searchLeagueId)
+            ? searchWeek
+            : undefined;
         setSelected(selection?.leagueId || '');
         setYear(selection?.year || defaultSeason());
         weekRef.current = selection?.week || 1;
@@ -152,7 +159,8 @@ function RankingsPage() {
           );
           return;
         }
-        applySchedule(choices, info.scheduleNote);
+        weekRef.current = preferredStudioWeek(weekRef.current, explicitWeek.current, info);
+        applySchedule(choices, [info.scheduleNote, info.defaultWeekNote].filter(Boolean).join(' '));
       })
       .catch((failure) => {
         logClientError('_authenticated.index.schedule', failure);
@@ -232,7 +240,7 @@ function RankingsPage() {
         </Box>
       )}
       {loading ? (
-        <chakra.output>Loading leagues…</chakra.output>
+        <LoadingSkeleton label="Loading leagues…" />
       ) : league ? (
         <>
           {welcome && searchLeagueId === league.leagueId && (
@@ -269,14 +277,11 @@ function RankingsPage() {
                     onChange={(event) => {
                       const id = event.target.value;
                       void changeSelection(() => {
-                        setSelected(id);
                         const nextYear =
                           leagues.find((entry) => entry.leagueId === id)?.seasonId ||
                           defaultSeason();
-                        setYear(nextYear);
-                        weekRef.current = 1;
-                        setWeek(1);
-                        void navigate({ search: { leagueId: id, year: nextYear, week: 1 } });
+                        explicitWeek.current = undefined;
+                        void navigate({ search: { leagueId: id, year: nextYear } });
                       });
                     }}
                   >
@@ -297,10 +302,8 @@ function RankingsPage() {
                     onChange={(event) => {
                       const value = Number(event.target.value);
                       void changeSelection(() => {
-                        setYear(value);
-                        weekRef.current = 1;
-                        setWeek(1);
-                        void navigate({ search: { leagueId: selected, year: value, week: 1 } });
+                        explicitWeek.current = undefined;
+                        void navigate({ search: { leagueId: selected, year: value } });
                       });
                     }}
                   >
@@ -319,6 +322,7 @@ function RankingsPage() {
                     onChange={(event) => {
                       const value = Number(event.target.value);
                       void changeSelection(() => {
+                        explicitWeek.current = value;
                         weekRef.current = value;
                         setWeek(value);
                         void navigate({ search: { leagueId: selected, year, week: value } });

@@ -1,4 +1,5 @@
 import { HeaderControls } from './AppShell';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { normalizeLeagueId, type ReportPageProps } from './report-search';
 import { ShareReport } from '../components/ShareReport';
@@ -232,18 +233,30 @@ export function HistoryPage({
           }
         />
       </Flex>
+      <HeaderControls>
+        <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
+          <Field.Label>League</Field.Label>
+          <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
+            <NativeSelect.Field
+              value={leagueId}
+              onChange={(e) => {
+                setManager('');
+                void navigate({ search: { leagueId: e.target.value } });
+              }}
+            >
+              {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
+              {currentCatalog?.leagues.map((l) => (
+                <option key={l.leagueId} value={l.leagueId}>
+                  {l.leagueName}
+                </option>
+              ))}
+            </NativeSelect.Field>
+            <NativeSelect.Indicator />
+          </NativeSelect.Root>
+        </Field.Root>
+      </HeaderControls>
       {!currentCatalog ? (
-        <chakra.output
-          bg="bg"
-          borderWidth="1px"
-          borderStyle="solid"
-          borderColor="border"
-          rounded="lg"
-          p={{ base: 4, md: 6 }}
-          className="panel"
-        >
-          Finding linked seasons…
-        </chakra.output>
+        <LoadingSkeleton label="Finding linked seasons…" />
       ) : currentCatalog.error ? (
         <Box role="alert" className="notice error">
           {currentCatalog.error}
@@ -257,27 +270,6 @@ export function HistoryPage({
         </Box>
       ) : (
         <>
-          <HeaderControls>
-            <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
-              <Field.Label>League</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  value={leagueId}
-                  onChange={(e) => {
-                    setManager('');
-                    void navigate({ search: { leagueId: e.target.value } });
-                  }}
-                >
-                  {currentCatalog.leagues.map((l) => (
-                    <option key={l.leagueId} value={l.leagueId}>
-                      {l.leagueName}
-                    </option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-          </HeaderControls>
           {!currentCatalog.leagues.length ? (
             <Text mb={4}>
               <ChakraLink asChild>
@@ -347,7 +339,7 @@ export function HistoryPage({
               </Box>
               {!years.length && <Text mb={4}>Select at least one season to compare.</Text>}
               {loading && (
-                <chakra.output className="notice insights-notice" aria-live="polite">
+                <chakra.output className="studio-card studio-loading" aria-live="polite">
                   <chakra.progress
                     value={current?.completed || 0}
                     max={years.length}
@@ -615,6 +607,8 @@ export function HistoryPage({
                           {
                             id: '3',
                             header: 'All-play win rate',
+                            headerTooltip:
+                              'Your win percentage if you played every other team each week, based on available scores. Wins count as 1, ties as half, and losses as 0, divided by total matchups.',
                             value: (r) => percentage(r.allPlayWins, r.allPlayGames),
                             cell: (r) => <>{n(percentage(r.allPlayWins, r.allPlayGames))}%</>,
                           },

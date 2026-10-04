@@ -21,10 +21,16 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
   return (
     <HeaderTarget.Provider value={controls}>
       <div className={`app-shell${live ? ' app-shell-live' : ''}`}>
+        <a className="studio-skip-link" href="#workspace-content">
+          Skip to content
+        </a>
         <header className="workspace-header">
           <div className="workspace-toolbar">
             <Link to="/" className="workspace-brand">
-              Trapp Fantasy Studio
+              <img src="/studio-icon.svg" alt="" width="40" height="40" />
+              <span>
+                Trapp<span className="workspace-brand-caption">Fantasy Studio</span>
+              </span>
             </Link>
             <div className="workspace-selectors" ref={setControls} />
             {!shared && (
@@ -59,7 +65,15 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
           </div>
           <AppNavigation shared={shared} />
         </header>
-        <main className={live ? 'workspace-main workspace-main-live' : 'workspace-main'}>
+        <main
+          id="workspace-content"
+          tabIndex={-1}
+          className={
+            live
+              ? 'workspace-main workspace-main-live studio-surface'
+              : 'workspace-main studio-surface'
+          }
+        >
           {children}
         </main>
       </div>

@@ -29,15 +29,15 @@ export function nflRemaining(year: number, week: number) {
       const remaining = new Map<string, number>();
       for (const game of data.events) {
         const fraction = gameRemaining(game);
-        if (fraction == null) continue;
+
         for (const competitor of game.competitions?.[0]?.competitors || []) {
           const team = competitor.team;
-          if (team?.id) remaining.set(team.id, fraction);
+          if (team?.id) remaining.set(team.id, fraction ?? Number.NaN);
           if (team?.abbreviation) {
             const abbreviation =
               ({ WSH: 'WAS', JAX: 'JAC' } as Record<string, string>)[team.abbreviation] ||
               team.abbreviation;
-            remaining.set(abbreviation, fraction);
+            remaining.set(abbreviation, fraction ?? Number.NaN);
           }
         }
       }
@@ -51,7 +51,7 @@ export function nflRemaining(year: number, week: number) {
   return value;
 }
 
-type Projection = { player_id?: string; stats?: Record<string, number> };
+type Projection = { player_id?: string; stats?: Record<string, number>; capturedAt?: string };
 const projectionsCache = new Map<string, { expires: number; value: Promise<Projection[]> }>();
 export function sleeperLiveProjections(year: number, week: number) {
   const key = `${year}:${week}`;
@@ -65,7 +65,11 @@ export function sleeperLiveProjections(year: number, week: number) {
       },
       timeout: 10000,
     })
-    .then(({ data }) => data)
+    .then(({ data }) => {
+      if (!Array.isArray(data)) throw new Error('Invalid Sleeper projection response');
+      const capturedAt = new Date().toISOString();
+      return data.map((row) => ({ ...row, capturedAt }));
+    })
     .catch((error) => {
       projectionsCache.delete(key);
       throw error;

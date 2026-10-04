@@ -1,4 +1,4 @@
-import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react';
+import { createSystem, defaultConfig, defineConfig, defineRecipe } from '@chakra-ui/react';
 
 // Keep the document's existing typography and the PNG's browser defaults intact.
 // Chakra's reset and default global styles would otherwise affect the export table.
@@ -22,6 +22,17 @@ export const system = createSystem(
       'button:disabled': { cursor: 'default' },
     },
     theme: {
+      recipes: {
+        button: defineRecipe({
+          base: { minHeight: '44px' },
+          variants: {
+            variant: {
+              plain: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
+              ghost: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
+            },
+          },
+        }),
+      },
       tokens: {
         fonts: {
           body: { value: 'system-ui, sans-serif' },

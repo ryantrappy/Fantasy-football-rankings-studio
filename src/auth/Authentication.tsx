@@ -2,31 +2,16 @@ import { PasswordReset } from './PasswordReset';
 import { logClientError } from '../logging';
 import { EspnSetup } from '../components/EspnSetup';
 import { InsightsAccess } from './InsightsAccess';
-import { Box, Button, Heading, Text, chakra } from '@chakra-ui/react';
+import { Text } from '@chakra-ui/react';
 import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { ClientOnly, useRouter } from '@tanstack/react-router';
 import { errorMessage, createApi } from '../api/client';
 import { ApiContext, SessionContext } from './session';
+import { SignInLanding } from './SignInLanding';
 
 function LoadingSession() {
-  return (
-    <Box
-      as="section"
-      bg="bg"
-      borderWidth="1px"
-      borderStyle="solid"
-      borderColor="border"
-      rounded="lg"
-      p={{ base: 4, md: 6 }}
-      className="panel"
-    >
-      <Heading as="h1" size="3xl" mb={4}>
-        Your league. Your rankings.
-      </Heading>
-      <chakra.output>Loading your session…</chakra.output>
-    </Box>
-  );
+  return <SignInLanding state="loading" />;
 }
 
 export function Authentication({ children }: { children: ReactNode }) {
@@ -43,27 +28,7 @@ function BrowserAuthentication({ children }: { children: ReactNode }) {
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
   if (!domain || !clientId || !audience) {
-    return (
-      <Box
-        as="section"
-        bg="bg"
-        borderWidth="1px"
-        borderStyle="solid"
-        borderColor="border"
-        rounded="lg"
-        p={{ base: 4, md: 6 }}
-        className="panel"
-        role="alert"
-      >
-        <Heading as="h1" size="3xl" mb={4}>
-          Sign-in is not configured.
-        </Heading>
-        <Text mb={4}>
-          Set VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID, and VITE_AUTH0_AUDIENCE in the application
-          environment.
-        </Text>
-      </Box>
-    );
+    return <SignInLanding state="unconfigured" />;
   }
   return (
     <Auth0Provider
@@ -103,9 +68,15 @@ function Session({ children }: { children: ReactNode }) {
     if (error) logClientError('auth.session', error);
   }, [error]);
   const [loginError, setLoginError] = useState('');
+  const [signingIn, setSigningIn] = useState(false);
   const subject = isAuthenticated ? user?.sub : undefined;
   const api = useMemo(
-    () => createApi(getAccessTokenSilently, subject),
+    () =>
+      createApi(async () => {
+        const token = await getAccessTokenSilently();
+        if (!token) throw new Error('No access token returned for this session.');
+        return token;
+      }, subject),
     [getAccessTokenSilently, subject],
   );
   useEffect(
@@ -117,43 +88,24 @@ function Session({ children }: { children: ReactNode }) {
   if (isLoading) return <LoadingSession />;
   if (!isAuthenticated || error)
     return (
-      <Box
-        as="section"
-        bg="bg"
-        borderWidth="1px"
-        borderStyle="solid"
-        borderColor="border"
-        rounded="lg"
-        p={{ base: 4, md: 6 }}
-        className="panel"
-      >
-        <Heading as="h1" size="3xl" mb={4}>
-          Your league. Your rankings.
-        </Heading>
-        <Text mb={4}>Sign in to manage leagues and publish your weekly takes.</Text>
-        {(error || loginError) && (
-          <Text mb={4} role="alert">
-            {error?.message || loginError}
-          </Text>
-        )}
-        <Button
-          colorPalette="indigo"
-          variant="solid"
-          type="button"
-
-          onClick={() =>
-            void loginWithRedirect({
-              appState: { returnTo: window.location.pathname + window.location.search },
-            }).catch((failure) => {
+      <SignInLanding
+        error={error?.message || loginError}
+        signingIn={signingIn}
+        recovery={<PasswordReset />}
+        onSignIn={() => {
+          if (signingIn) return;
+          setSigningIn(true);
+          setLoginError('');
+          void loginWithRedirect({
+            appState: { returnTo: window.location.pathname + window.location.search },
+          })
+            .catch((failure) => {
               logClientError('auth.login', failure);
               setLoginError(errorMessage(failure));
             })
-          }
-        >
-          Sign in
-        </Button>
-        <PasswordReset />
-      </Box>
+            .finally(() => setSigningIn(false));
+        }}
+      />
     );
   return (
     <SessionContext.Provider

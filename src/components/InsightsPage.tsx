@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { HeaderControls } from './AppShell';
 import { PlayoffForecast } from './PlayoffForecast';
 import { PlayoffCalibration } from './PlayoffCalibration';
@@ -259,20 +260,13 @@ export function InsightsPage({
         </Box>
       )}
       {loading && (
-        <chakra.output
-          aria-live="polite"
-          bg="bg"
-          borderWidth="1px"
-          borderStyle="solid"
-          borderColor="border"
-          rounded="lg"
-          p={{ base: 4, md: 6 }}
-          className="panel"
-        >
-          {data
-            ? `Refreshing insights… Showing the report ${reportFreshnessLabel(data.generatedAt).toLowerCase()} until the refresh finishes.`
-            : 'Reading season scores and transactions… This can take a moment for a full season.'}
-        </chakra.output>
+        <LoadingSkeleton
+          label={
+            data
+              ? `Refreshing insights… Showing the report ${reportFreshnessLabel(data.generatedAt).toLowerCase()} until the refresh finishes.`
+              : 'Reading season scores and transactions… This can take a moment for a full season.'
+          }
+        />
       )}
       {!loading && error && data && (
         <Box className="notice error" role="alert">

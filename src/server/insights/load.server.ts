@@ -33,6 +33,7 @@ let namesCache:
       positions: Record<string, string>;
       availability: Record<string, string | null>;
       teams: Record<string, string>;
+      espnIds?: Record<string, string>;
     }
   | undefined;
 export async function sleeperNames() {
@@ -48,6 +49,7 @@ export async function sleeperNames() {
         team?: string;
         injury_status?: string | null;
         status?: string;
+        espn_id?: number | string | null;
       }
     >
   >('https://api.sleeper.app/v1/players/nfl', { timeout: 20000 });
@@ -70,7 +72,19 @@ export async function sleeperNames() {
       .filter(([, p]) => p.team)
       .map(([id, p]) => [id, p.team!]),
   );
-  namesCache = { expires: Date.now() + 5 * 60 * 1000, names, positions, availability, teams };
+  const espnIds = Object.fromEntries(
+    Object.entries(data).flatMap(([id, player]) =>
+      player.espn_id && /^\d+$/.test(String(player.espn_id)) ? [[id, String(player.espn_id)]] : [],
+    ),
+  );
+  namesCache = {
+    expires: Date.now() + 5 * 60 * 1000,
+    names,
+    positions,
+    availability,
+    teams,
+    espnIds,
+  };
   return namesCache;
 }
 interface SleeperScore {

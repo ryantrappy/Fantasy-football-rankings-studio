@@ -1,3 +1,4 @@
+/*noinspection CssUnresolvedCustomProperty*/
 @import './export.css';
 
 body {
@@ -408,6 +409,7 @@ header :focus-visible {
   padding: 1rem;
   border: 1px solid #dce2ef;
   border-radius: 12px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #ffffff);
 }
 .team-editor-placeholder {
@@ -453,6 +455,7 @@ header :focus-visible {
 @keyframes playoff-point-rise {
   from {
     opacity: 0;
+    /*noinspection CssUnresolvedCustomProperty*/
     transform: translateY(var(--point-rise));
   }
   to {
@@ -471,9 +474,11 @@ header :focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  min-height: 44px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid #9aa7bd;
+  border-radius: 0.4rem;
+  background: #eef2f8;
   color: inherit;
   font: inherit;
   text-align: inherit;
@@ -481,6 +486,7 @@ header :focus-visible {
 }
 .table-export-button {
   display: block;
+  min-height: 44px;
   margin: 0 0 0.75rem auto;
   padding: 0.45rem 0.75rem;
   border: 1px solid currentColor;
@@ -509,12 +515,57 @@ header :focus-visible {
   font-size: 0.9em;
   opacity: 0.7;
 }
+.managed-team-picker {
+  padding: 16px;
+  border: 1px solid #cbd3df;
+  border-radius: 8px;
+  background: #f6f7fa;
+}
+.managed-team-picker label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.managed-team-picker input[type='number'],
+.managed-team-picker select {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #71809a;
+  border-radius: 6px;
+  background: white;
+  width: 100%;
+  min-width: 0;
+}
+.managed-team-picker input[type='number'] {
+  max-width: 180px;
+}
+.managed-team-picker form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+.managed-team-picker form > label,
+.managed-team-picker form > output {
+  grid-column: 1 / -1;
+}
+.managed-team-picker form > label {
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+@media (max-width: 680px) {
+  .managed-team-picker form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .insight-table tbody th {
   text-align: left;
   font-weight: 600;
 }
 
 .sortable-column-header {
+  position: relative;
   cursor: pointer;
 }
 
@@ -553,8 +604,11 @@ header :focus-visible {
   position: sticky;
   top: 0;
   z-index: 30;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
+  /*noinspection CssUnresolvedCustomProperty*/
   color: var(--chakra-colors-fg, #17223b);
+  /*noinspection CssUnresolvedCustomProperty*/
   border-bottom: 1px solid var(--chakra-colors-border, #dce2ef);
 }
 .workspace-toolbar {
@@ -644,6 +698,7 @@ header :focus-visible {
   box-sizing: border-box;
   height: 40px;
   padding: 0 14px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 8px;
   font-weight: 600;
@@ -661,8 +716,10 @@ header :focus-visible {
   min-width: 180px;
   display: grid;
   padding: 6px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 10px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
   box-shadow: 0 8px 30px #17223b20;
 }
@@ -677,6 +734,7 @@ header :focus-visible {
 }
 .profile-menu-items a:hover,
 .profile-menu-items button:hover {
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg-muted, #f3f5fb);
 }
 .workspace-main {
@@ -720,7 +778,9 @@ header :focus-visible {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 12px 8px;
+  /*noinspection CssUnresolvedCustomProperty*/
   border-right: 1px solid var(--chakra-colors-border, #dce2ef);
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
 }
 .live-board {
@@ -751,8 +811,10 @@ header :focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 20px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
   padding: 12px;
 }
@@ -1076,9 +1138,11 @@ header :focus-visible {
 
 /* Ranking studio layout only; exported image styles live in export.css. */
 .editor-setup {
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 12px;
   padding: 16px;
+  /*noinspection CssUnresolvedCustomProperty*/
   background: var(--chakra-colors-bg, #fff);
 }
 .editor-fields {
@@ -1108,12 +1172,15 @@ header :focus-visible {
 }
 .editor-layout .preview-scroll {
   overflow: auto;
+  /*noinspection CssUnresolvedCustomProperty*/
   border: 1px solid var(--chakra-colors-border, #dce2ef);
   border-radius: 12px;
   background: #f8f8f2;
 }
 .editor-layout {
+  /*noinspection CssUnresolvedCustomProperty*/
   height: calc(100dvh - var(--ranking-header-height, 0px));
+  /*noinspection CssUnresolvedCustomProperty*/
   scroll-margin-top: var(--ranking-header-height, 0px);
 }
 .editor-layout .editor-panel,

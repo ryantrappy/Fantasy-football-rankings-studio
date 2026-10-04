@@ -1,12 +1,15 @@
+import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { ProfileApi, UserProfile } from '../profile';
 import type { AiCredentialStatus, AiCredentialsApi } from '../ai-credentials';
-import type { WritingProvider } from '../writing';
+import type { WritingApi, WritingProvider } from '../writing';
+import { CodexAccountSettings } from './CodexAccountSettings';
 import { errorMessage } from '../api/client';
 
-type AccountApi = ProfileApi & AiCredentialsApi;
+type AccountApi = ProfileApi & AiCredentialsApi & { writing?: Pick<WritingApi, 'providers'> };
 
 export function ProfilePage({ api }: { api: AccountApi }) {
   const [result, setResult] = useState<{
@@ -34,6 +37,7 @@ export function ProfilePage({ api }: { api: AccountApi }) {
   return (
     <Box
       as="section"
+      className="account-card"
       maxW="2xl"
       mx="auto"
       p={{ base: 4, md: 8 }}
@@ -42,10 +46,12 @@ export function ProfilePage({ api }: { api: AccountApi }) {
       bg="bg"
     >
       <Stack gap={5}>
-        <Heading as="h1" size="2xl">
-          Your profile
-        </Heading>
-        {!current && <Text as="output">Loading your profile…</Text>}
+        <PageHeading
+          title="Your profile"
+          eyebrow="Make it your studio"
+          description="Manage your display name, league connections and writing assistant settings."
+        />
+        {!current && <LoadingSkeleton label="Loading your profile…" />}
         {current?.error && (
           <>
             <Text role="alert">{current.error}</Text>
@@ -148,7 +154,7 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
   );
 }
 
-function AiCredentialSettings({ api }: { api: AiCredentialsApi }) {
+function AiCredentialSettings({ api }: { api: AccountApi }) {
   const [status, setStatus] = useState<AiCredentialStatus>();
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
@@ -170,12 +176,13 @@ function AiCredentialSettings({ api }: { api: AiCredentialsApi }) {
   return (
     <Stack gap={4} pt={5} borderTopWidth="1px">
       <Heading as="h2" size="lg">
-        Writing assistant API keys
+        Writing assistant connections
       </Heading>
       <Text>
         Optionally save your own OpenAI key for Codex or Anthropic key for Claude. Keys are
         encrypted and used only for your writing requests; saved values are never shown again.
       </Text>
+      <CodexAccountSettings api={api.writing} revision={status?.codexConfigured} />
       {!status && !error && <Text as="output">Loading AI key settings…</Text>}
       {error && (
         <>

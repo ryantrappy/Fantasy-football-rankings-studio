@@ -3,10 +3,24 @@
 One React 19 / TanStack Start application serves the UI, public reports, authenticated server functions,
 Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
 
+The workspace uses a shared navy, indigo and warm-accent design across navigation,
+overview, rankings, player/trade tools, reports and account settings. On narrow
+screens the navigation scrolls horizontally and keeps the active tab visible;
+wide report tables scroll inside their cards. A keyboard skip link leads directly
+to the page content. Workspace styles live in `src/studio.css`; ranking PNG
+exports retain their independent design.
+Loading placeholders share the workspace card padding and line spacing, with
+page headings retained while data arrives and progress preserved for season reads.
+
+`public/studio-icon.svg` is the source football-and-rankings mark used in the
+header, sign-in page and browser tab. Matching ICO, 192/512px app icons and a
+180px Apple touch icon are registered in the root document and web manifest.
+
 ## Run with Docker
 
-Copy `.env.example` to `.env`, fill in the required Auth0 settings,
-`ESPN_CREDENTIALS_KEY`, and `AI_CREDENTIALS_KEY`, then run:
+Copy `.env.example` to `.env`, fill in the required Auth0 settings and
+`ESPN_CREDENTIALS_KEY` (`AI_CREDENTIALS_KEY` is needed only for saved per-user AI
+keys), then run:
 
 ```sh
 docker compose up
@@ -16,6 +30,79 @@ The Compose setup runs the app and MongoDB on the internal `fantasy-internal`
 network and publishes only the app at http://localhost:3001. See
 [docker-running.md](docker-running.md) for the complete list of values to fill in,
 the published image details, and cleanup commands.
+
+### Sign in to Codex in Docker with your ChatGPT account
+
+The image includes Codex CLI `0.157.1`. You can use its ChatGPT OAuth login for
+writing suggestions without creating an OpenAI API key. Use device-code login
+for the container, as described in the official [Codex authentication guide](https://learn.chatgpt.com/docs/auth#login-on-headless-devices).
+
+Run these commands on the Docker host, from `react_refactor_fantasy_website`
+(the directory containing `docker-compose.yml`). For the homelab, connect to
+`trappserv.er` first. A login on your laptop does not sign in the container.
+
+1. Enable device-code login in your ChatGPT account's security settings, or ask
+   your workspace administrator to enable it. In the application's `.env`, set:
+
+   ```dotenv
+   WRITING_AI_PROVIDERS=codex
+   WRITING_AI_USERS='auth0|your-user-id'
+   ```
+
+   Replace the placeholder with your exact Auth0 **user_id**, available in the
+   Auth0 Dashboard under **User Management → Users**. This is your application
+   account's subject, not your email or ChatGPT account ID. Multiple authorized
+   subjects can be separated with commas. These users share the container's
+   Codex account and its quota.
+
+2. Start or recreate the app so it loads those settings, then sign in:
+
+   ```sh
+   docker compose up -d rankings_studio
+   docker compose exec rankings_studio codex -c 'cli_auth_credentials_store="file"' login --device-auth
+   ```
+
+   Open the URL printed by the CLI in your own browser, enter its one-time code,
+   and sign in with the ChatGPT account you want the server to use. Keep the
+   terminal open until login completes. This flow does not require publishing
+   an OAuth callback port from Docker.
+
+3. Confirm the container's authentication mode:
+
+   ```sh
+   docker compose exec rankings_studio codex login status
+   ```
+
+   Confirm it reports **Logged in using ChatGPT**. The app also checks this
+   command before reporting the server-managed provider as ready. A successful
+   status check confirms cached credentials; a generation still needs available
+   account access and quota. See the [CLI login reference](https://learn.chatgpt.com/docs/developer-commands?surface=cli#codex-login).
+
+4. Reopen the ranking editor's **Talking points for your rankings** panel,
+   select Codex, and approve the displayed context before generating. Leave the
+   model blank to use the CLI default, or choose one available to your account.
+   If you previously saved an OpenAI key in **Your profile**, remove it to use
+   this server-login path: saved per-user keys take precedence in the app.
+   `AI_CREDENTIALS_KEY` is unnecessary for OAuth-only use with no saved AI keys;
+   retain it if any existing encrypted keys still need to be read.
+
+Compose sets `CODEX_HOME=/app/.codex` and mounts the `codex-home` named volume
+there. The login command explicitly selects file storage, so credentials are
+saved at `/app/.codex/auth.json` in that volume. Restarts, container recreation,
+and image rebuilds retain the login while the same Compose project and volume
+are used. `docker compose down -v` removes the named volume and its login.
+Treat the credential file as a secret; keep it out of Git, image layers, and logs.
+
+If device login is unavailable, enable it in the account/workspace settings and
+retry. If Codex is missing, rebuild the image with `docker compose up -d --build rankings_studio`.
+If the app says **not enabled**, check both `WRITING_AI_*`
+settings and recreate the app with `docker compose up -d rankings_studio`;
+`docker compose restart` does not reload changed environment settings. If the
+CLI is signed out, repeat login. To disconnect the server account explicitly:
+
+```sh
+docker compose exec rankings_studio codex logout
+```
 
 ## Run locally
 
@@ -641,9 +728,15 @@ disposable MongoDB instance; MongoDB Server and Database Tools must be on PATH.
 team order and commentary with saved timestamps. **Restore selected revision**
 creates a new current revision and leaves published snapshots unchanged. History
 starts when this feature is deployed; older overwritten content cannot be
-reconstructed. Previous snapshots are appended atomically with the revision-checked
-save. They count toward MongoDB's document-size limit; an oversized save fails
-without discarding existing history. Include rankings in regular database backups.
+reconstructed. Previous snapshots live in the indexed `rankingrevisions` collection,
+written durably before the revision-checked save; an archive failure leaves the current
+edition untouched. Current editions no longer grow with save history. Browsing loads
+the current edition plus ten older snapshots; **Older revisions** pages backward,
+and **View saved revisions** returns to the newest page. Restoring any retained
+revision creates a new revision. Embedded legacy snapshots migrate idempotently on
+the first save/history visit before their embedded copies are removed. Stop old app
+instances before upgrading, and back up the entire database including `rankingrevisions`.
+See [Backup and recovery](docs/backup-recovery.md) for rollout and rollback.
 
 Owners can enable or disable public season/history reports beside **Copy share
 link**. Existing leagues retain public sharing until explicitly disabled. Disabling
@@ -691,3 +784,81 @@ Context-sharing approval is saved per assistant on the Auth0 user under
 `user_metadata.writing_context_approval`; revoking it saves `false` and blocks subsequent generation,
 including requests from an already-open page. These preferences use the same server-only Auth0
 Management API configuration as profile editing (`read:users` and `update:users`).
+
+### Choose your managed team
+
+In **Manage leagues**, choose **My team season** and **My managed team**, then select **Save my team**. The private choice is saved to your account for that league and season, so it follows you across devices. Choose **No team / commissioner mode** to clear it and continue using league-wide reports. Each new season needs its own choice. Changing the provider league ID clears choices; a missing team or changed manager requires reselection.
+
+### My weekly overview
+
+Open **My weekly overview** to see active leagues and your selected team for each saved season. Cards show the provider scoring week, matchup, record, and available playoff estimate, with links into rankings and season reports. Select teams in **Manage leagues**; archived leagues are excluded. Refresh runs on demand, with at most three league-context reads at a time, and reuses cached season insights. Every report shows its refresh time and completed-week cutoff. Missing scores or projections remain unavailable, and one league failing does not hide the others.
+
+### Live matchups
+
+Opening **Live matchups** automatically highlights your saved **My managed team** matchup for the first four leagues in sidebar order, using each league’s live season. Home, away and bye matchups are supported. Leagues without a valid team choice or current matchup are skipped; later leagues are not substituted. You can change or remove any highlight, and manual choices—including an empty board—remain in place during score refreshes. The board supports up to four matchups.
+
+### Default NFL week
+
+The rankings studio defaults to the current scoring week for the active NFL season, using Sleeper NFL season state and ESPN’s scoring period for ESPN leagues. Explicit URL or manually selected weeks win and remain stable on refresh. Returning without an explicit week advances to the current week rather than reusing an old current-season choice. Historical seasons retain remembered weeks; a newly selected historical season starts at its first supported week. Preseason starts at the first supported week; postseason/offseason uses the last supported week of that NFL season. Defaults are bounded to the league schedule. If NFL state is unavailable, the studio shows a notice and uses the remembered or first supported week.
+
+Permanent deletion marks the workspace unavailable before removing its data. If cleanup fails, **Manage leagues** shows a pending deletion; retry **Delete league** with the same workspace to finish. Cleanup retains ranking IDs until publications and revision snapshots have been removed. Already-running writes perform a second ownership check and remove late records. Public edition links verify both their source ranking and workspace, so leftover orphan records cannot make a deleted edition public. This affects only local workspace data, never the upstream Sleeper/ESPN league.
+
+### Weekly lineup advisor
+
+In **My weekly overview**, expand **Lineup advisor** on your selected team’s matchup card. It compares submitted and proposed projections, names starts/benches, and lists the proposed slot assignments. League slots (including FLEX/Superflex), owned active players, known byes/injuries, and known game locks constrain the legal optimizer. Locked starters stay in their slots and locked bench players cannot enter. Unknown provider lineup locks, missing projections, uncertain injuries, and old roster timestamps are disclosed; projected improvement is unavailable when coverage is incomplete. **Inspect alternative scenarios** lets you exclude players locally. It never changes provider lineups or calls AI. ESPN multiweek matchups or unsupported/missing configured slots remain unavailable.
+
+### Waiver advisor
+
+Expand **Waiver advisor** in a selected team’s weekly overview card and load available players on demand. Sleeper verifies all league rosters, including reserve/taxi ownership, before showing unowned candidates scored with your league’s settings. Filter by position, choose a candidate, and pair it with an unlocked same-position active-roster drop to compare optimized current-week lineup totals. The comparison preserves roster size/position counts and checks known byes, injuries and game locks. Missing coverage stays unavailable. The pool shows its ownership timestamp and coverage; refresh before acting. ESPN pool reads are explicitly unsupported. Unowned does not mean immediately addable: waiver timing, FAAB, permissions, undroppable lists and other provider restrictions must be checked in the provider. No claims, drops or lineup changes are submitted.
+
+Changing a provider league ID starts a new cache generation for that workspace’s season lists and insights, including historical reports. Old requests are canceled and cannot refill the new cache. Unrelated leagues’ reports and locally saved ranking editions remain cached.
+
+Publication decisions use an atomic generation check. A publish delayed behind another successful publish or unpublish receives a conflict and must be reviewed again. Unpublish retains a private revoked marker so old in-flight requests cannot recreate the link. Intentional republishing still works and uses a fresh link; public readers see only complete, non-revoked snapshots.
+
+Management actions resolve exact workspace IDs first. An external provider ID is accepted only when it uniquely identifies one owned workspace; a Sleeper/ESPN collision returns a conflict instead of choosing arbitrarily. Select the desired row in **Manage leagues** to use its workspace identity.
+
+The suggested initial power order assigns teams with no completed matchup samples a finite neutral league baseline when other teams have data. Completed zero scores count as data; byes and incomplete games do not. If no team has usable data, provider order is retained. Saved editions are not reordered.
+
+### Trade analyzer
+
+Open **Trade analyzer**, choose a league and two teams, then search the owned active players each side would send by name or position. Selected players remain visible above each roster and can be removed individually or with **Clear trade**. Each team card shows incoming players, before/after legal lineup projections, positional counts and projection gaps from one current-week snapshot. The tab has no drop controls. Uneven offers show an open-slot input only for the team receiving extra players and require explicit confirmation of sufficient roster space; missing replacement slots are not filled with imaginary waiver pickups. Locked/reserve/taxi assets, duplicate selections and non-owned assets are rejected. Draft picks and future weeks without projection snapshots are unsupported, and positional roster caps, approval/deadline rules and playoff changes are not simulated. Values describe a hypothetical lineup, not a certain fair-value verdict. No roster, ranking or forecast observation is written.
+
+### Player profiles and comparisons
+
+Open **Players**, or follow a player name/profile link from matchups, lineup assignments, waiver candidates or trade rosters. Search by name, team, position or provider ID, filter by position, and select players to compare. Selected players remain visible while filtering and can be removed individually or cleared. Comparison cards highlight current projections, observed totals/averages and coverage; weekly scores and identity/source details expand on demand. The common week range defaults through the latest reported week and can be adjusted. Refresh preserves the selected league, season and players; changing league or season clears the comparison. Profiles show provider/season identity, observed league-scored totals/averages and week-by-week trends, available current-week projection, current ownership/status and source timestamps. Sleeper unowned candidates can be included on demand after managed-team setup. Observations cover only roster weeks present in the league reports, not full free-agent/career history. Missing weeks, contradictory duplicate observations, targets and snap share remain unavailable; names are never used to merge identities across providers or seasons.
+
+### In-app roster risks
+
+Selected team cards in **My weekly overview** show injury, bye, unfilled-slot and projection/lock-coverage alerts with severity, player/week, source time and player/lineup links. Confirmed unavailable starters are distinguished from questionable/doubtful or unknown status. Inputs older than five minutes produce a refresh warning instead of confidently current injury alerts. Conditions are recomputed on refresh: repeated conditions have stable IDs and resolved conditions disappear. Dismissals are stored in this browser separately for each signed-in account, league/team, week and condition; **Show dismissed risks for this team** restores them. No emails, push notifications or provider changes are sent.
+
+### Additional NFL data sources
+
+The [NFL provider evaluation](docs/nfl-data-providers.md) compares projection and historical enrichment sources, recommends a bounded private comparison, and lists access/licensing gates and follow-up delivery briefs. NFL remains the only sport; no additional live feed is enabled by this research.
+
+### Writing connection readiness
+
+**Your profile → Writing assistant connections** shows the server Codex login status and links to the Docker OAuth instructions above. It distinguishes access disabled for your account, a missing CLI, a failed login check, and cached login readiness. Refresh after the operator changes setup. The status contains no tokens or other users' identifiers, and users outside the server allowlist cannot inspect its login state.
+
+Saved OpenAI keys take precedence even when the server login is ready. Remove your saved key to use the enabled server account; settings refresh readiness after removal. A ready login does not prove ChatGPT authentication mode, account model access, or available quota. Confirm **Logged in using ChatGPT** on the Docker host when configuring OAuth.
+
+Managed-team choices are saved explicitly for each league and season in **Manage leagues**. Changing the dropdown shows an unsaved-choice message; click **Save my team** and wait for confirmation. A provider failure keeps your draft for retry, and a completed database save no longer depends on a second provider request. **Reload teams** reloads the persisted choice.
+
+The managed-team picker remembers the last viewed season for your account and league. This prevents a page refresh from returning to the league registration year and showing that year's empty choice when you saved a different season.
+
+### ESPN + Sleeper player projections
+
+Current live rosters in **either league type** now use both public player feeds when a unique Sleeper `espn_id` cross-reference and comparable raw weekly stats are available. No second-provider league or account is needed. The mean of the two league-scored projections feeds lineup and trade scenarios; the top 30 native-projected Sleeper waiver candidates also receive a comparison. League ownership, roster slots, injuries and game locks stay tied to your registered league.
+
+Player profiles show each source's player ID, points, fetch time and absolute disagreement. The equal-weight mean is a transparent starting estimate, **not a demonstrated accuracy improvement**; disagreement is not a confidence interval. This does not replace historical scoring records or playoff forecast inputs.
+
+The first slice supports direct additive QB/RB/WR/TE passing, rushing, receiving, two-point and fumble scoring, including ESPN positional point overrides. Unsupported bonuses, ambiguous mappings, missing weekly stats and other positions retain the native estimate with a coverage note. Sparse non-primary event fields are treated as zero; missing primary yardage or receptions needed for PPR cannot form a comparable forecast. No player names are used to join records.
+
+ESPN player reads are cached for five minutes, batched six at a time, and bounded to 120 unique mapped players per league refresh with an eight-second batch-start budget. Later candidates retain native estimates; individual requests time out after seven seconds. Sleeper projections retain their cached fetch timestamps. Both projections interfaces are undocumented provider contracts and may change; errors fail back to native data. The [Sleeper public API documentation](https://docs.sleeper.com/#players) describes the player catalog. Stat IDs were cross-checked against live ESPN JSON and the [espn-api stat dictionary](https://github.com/cwendt94/espn-api/blob/master/espn_api/football/constant.py).
+
+Run the optional public contract check with `RUN_DUAL_SOURCE_CONTRACT=1 npm run test -- src/server/tests/combined-projections.integration.test.ts`. It checks a fixed 2026 regular-season week-4 player snapshot and may need updating when provider history expires; routine tests use deterministic fixtures.
+
+### Sign-in and action controls
+
+The signed-out page now introduces the weekly NFL workspace with a labeled illustrative preview, clear sign-in action and account-recovery section. Loading and unavailable-configuration states share the layout; sign-in keeps the requested destination and allows retry after a redirect error.
+
+Action controls use filled backgrounds or visible outlines and a minimum 44px height. Plain/ghost secondary actions and table sort controls now have boundaries; the managed-team form uses consistent field gaps and stacks its save action on phones. Browser checks cover desktop/phone layout, keyboard focus, contrast, touch targets and saved-team persistence through a full page reload.

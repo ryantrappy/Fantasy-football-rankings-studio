@@ -75,6 +75,7 @@ export function powerOrderTeams(teams: Team[], matchups: Matchup[]): Team[] {
       const data = entries.get(String(team.teamId))!,
         n = data.points.length,
         weight = n / (n + 3);
+      if (!n) return 0.7 * leaguePoints + 0.3 * leagueMargin;
       return (
         weight * (0.7 * average(data.points) + 0.3 * average(data.margins)) +
         (1 - weight) * (0.7 * leaguePoints + 0.3 * leagueMargin)

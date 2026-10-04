@@ -9,7 +9,7 @@ database.
 ## What must be retained
 
 - Back up the **entire application database**, including `leagues`, `rankings`,
-  `espncredentials`, `aicredentials`, and `publications`. Full-database archives also capture future
+  `rankingrevisions`, `espncredentials`, `aicredentials`, and `publications`. Full-database archives also capture future
   collections and indexes. Rankings include revision numbers; publications are
   separate snapshots and must not be reconstructed from newer private drafts.
 - Keep separately encrypted recovery records of the exact `ESPN_CREDENTIALS_KEY` and
@@ -127,3 +127,19 @@ removed afterward. It never loads application `.env` files, connects to the runn
 database, or sends provider requests. This verifies the logical restore procedure;
 it does not substitute for periodically restoring a real encrypted off-host backup
 in an operator-controlled environment.
+
+## Revision-storage rollout
+
+Stop all old application instances, take a full-database backup, and deploy the new
+version. No replica set or transaction support is required. Each retained snapshot
+has a unique ranking ID/revision index. Legacy embedded histories migrate lazily
+on the first save or history read: snapshots are copied idempotently, then embedded
+copies are removed only after all writes succeed. A failure can be retried safely.
+Routine edition reads exclude embedded history. New saves archive the previous
+revision before updating the current edition with its revision predicate; a crash
+may leave a duplicate copy of the current revision, which history browsing excludes.
+
+For rollback, stop writers and restore the complete pre-upgrade backup into a
+separate database following the cutover procedure above. Older code cannot read
+`rankingrevisions`; rolling back code alone loses access to migrated history.
+Retain both collections in all backups and recovery rehearsals.

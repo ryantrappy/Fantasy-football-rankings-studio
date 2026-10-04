@@ -1,11 +1,26 @@
 export interface LivePlayer {
   id: string;
   name: string;
+  availability?: string | null;
+  bye?: boolean;
+  locked?: boolean;
+  reserve?: boolean;
+  owned?: boolean;
+  eligibleSlots?: string[];
   position?: string;
   lineupSlot?: string;
   points: number | null;
   starter: boolean;
   projectedPoints?: number;
+  projectionSources?: {
+    provider: 'ESPN' | 'Sleeper';
+    playerId: string;
+    points: number;
+    capturedAt: string;
+  }[];
+  projectionMethod?: 'mean' | 'native' | 'single-source';
+  projectionSpread?: number;
+  projectionNote?: string;
   remainingFraction?: number;
 }
 
@@ -28,6 +43,8 @@ export interface LiveLeague {
   provider: 'Sleeper' | 'ESPN';
   season: number;
   week: number;
+  lineupSlots?: string[];
+  capturedAt?: string;
   matchups: LiveMatchup[];
   error?: string;
 }

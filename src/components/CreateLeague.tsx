@@ -1,3 +1,4 @@
+import { PageHeading } from './PageHeading';
 import { logClientError } from '../logging';
 import {
   Box,
@@ -78,6 +79,7 @@ export function CreateLeague({
     <Box className="create-page">
       <Button
         variant="plain"
+        mb={4}
         type="button"
         onClick={() => {
           finalized.current = true;
@@ -88,23 +90,11 @@ export function CreateLeague({
       >
         ← Back to rankings
       </Button>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={4}
-        flexWrap="wrap"
-        mt={4}
-        mb={6}
-        className="page-heading"
-      >
-        <Text mb={4} className="eyebrow">
-          A new season of opinions
-        </Text>
-        <Heading as="h1" size="3xl" mb={4}>
-          Create a league.
-        </Heading>
-        <Text mb={4}>Bring your league into the studio. We’ll take care of the teams.</Text>
-      </Flex>
+      <PageHeading
+        title="Create a league."
+        eyebrow="A new season of opinions"
+        description="Bring your league into the studio. We’ll take care of the teams."
+      />
       {restored && (
         <Text as="output" className="notice insights-notice">
           Your league details were restored. Create the league when you’re ready.

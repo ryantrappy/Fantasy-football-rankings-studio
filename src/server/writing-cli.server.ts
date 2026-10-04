@@ -82,17 +82,29 @@ export async function writingProviderConfig(owner: string): Promise<{
     (['codex', 'claude'] as const).map(async (id) => {
       const executable = await findWritingCli(id);
       const installed = !!executable;
-      const enabled =
-        !!apiKeys[id] ||
-        (list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner));
+      const serverEnabled =
+        list('WRITING_AI_PROVIDERS').includes(id) && list('WRITING_AI_USERS').includes(owner);
+      const enabled = !!apiKeys[id] || serverEnabled;
+      const serverStatus: WritingProviderOption['status'] = !serverEnabled
+        ? 'not-enabled'
+        : !installed
+          ? 'not-installed'
+          : (await checkWritingCliLogin(executable, id))
+            ? 'ready'
+            : 'login-check-failed';
       const status: WritingProviderOption['status'] = !installed
         ? 'not-installed'
         : !enabled
           ? 'not-enabled'
-          : apiKeys[id] || (await checkWritingCliLogin(executable, id))
+          : apiKeys[id] || serverStatus === 'ready'
             ? 'ready'
             : 'login-check-failed';
-      return { id, installed, enabled, status };
+      const credentialSource: WritingProviderOption['credentialSource'] = apiKeys[id]
+        ? 'saved-key'
+        : serverEnabled
+          ? 'server-account'
+          : 'none';
+      return { id, installed, enabled, status, serverStatus, credentialSource };
     }),
   );
   return { providers, apiKeys };

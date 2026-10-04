@@ -4,7 +4,12 @@ import { ApiContext, SessionContext } from '../../src/auth/session';
 import type { LiveLeague } from '../../src/live-matchups';
 import type { createApi } from '../../src/api/client';
 
-const leagues: LiveLeague[] = ['Sunday League', 'Monday League'].map((name, leagueIndex) => ({
+const managed = new URLSearchParams(location.search).has('managed');
+const leagues: LiveLeague[] = (
+  managed
+    ? ['Sunday League', 'Monday League', 'Tuesday League', 'Wednesday League', 'Thursday League']
+    : ['Sunday League', 'Monday League']
+).map((name, leagueIndex) => ({
   leagueId: String(leagueIndex + 1),
   leagueName: name,
   provider: 'Sleeper',
@@ -30,7 +35,24 @@ function team(name: string) {
     })),
   };
 }
-const api = { getLiveMatchups: async () => leagues } as unknown as ReturnType<typeof createApi>;
+const api = {
+  getLiveMatchups: async () => leagues,
+  ...(managed
+    ? {
+        managedTeam: {
+          get: async (leagueId: string) => {
+            const index = leagues.findIndex((league) => league.leagueId === leagueId);
+            const matchup = leagues[index].matchups[1];
+            return {
+              teamId: index % 2 ? matchup.away!.teamId : matchup.home.teamId,
+              needsReselection: false,
+              teams: [],
+            };
+          },
+        },
+      }
+    : {}),
+} as unknown as ReturnType<typeof createApi>;
 export function LiveWorkspace() {
   return (
     <SessionContext.Provider

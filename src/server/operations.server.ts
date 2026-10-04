@@ -1,5 +1,7 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
+import { loadWaiverPool } from './waivers.server';
+import { getNflState, defaultNflWeek } from './nfl-week.server';
 import * as credentials from './espn-credentials.server';
 import * as aiCredentials from './ai-credentials.server';
 import { logServerError } from './logging.server';
@@ -28,6 +30,7 @@ const rankings = new RankingsService();
 // Select only public fields; Mongoose documents, owner subjects and internal metadata never cross RPC.
 function publicLeague(value: League): League {
   return {
+    ...((value as League & { deleted?: boolean }).deleted ? { deleting: true } : {}),
     _id: String(value._id),
     leagueId: value.leagueId,
     ...(value.providerLeagueId ? { providerLeagueId: value.providerLeagueId } : {}),
@@ -100,6 +103,33 @@ export async function executePublic<T>(
   }
 }
 export const operations = {
+  getWaiverPool: async (owner: string, input: unknown) => {
+    const data = seasonSchema.parse(input);
+    const league = await leagues.getLeagueById(data.leagueId, owner);
+    const choice = await leagues.managedTeamSelection(data.leagueId, data.year, owner);
+    if (!choice.teamId)
+      throw new HttpException(409, 'Select your managed team for this season first.');
+    return loadWaiverPool(
+      { ...league, seasonId: data.year },
+      choice.teamId,
+      await leagues.espnAccess(league, owner),
+    );
+  },
+  getManagedTeam: async (owner: string, input: unknown) => {
+    const data = seasonSchema.parse(input);
+    return leagues.managedTeamSelection(data.leagueId, data.year, owner);
+  },
+  setManagedTeam: async (owner: string, input: unknown) => {
+    const data = seasonSchema
+      .extend({
+        teamId: z
+          .string()
+          .regex(/^\d{1,30}$/)
+          .nullable(),
+      })
+      .parse(input);
+    return leagues.setManagedTeam(data.leagueId, data.year, data.teamId, owner);
+  },
   getLiveMatchups: async (owner: string) => {
     const saved = await leagues.listLeagues(owner);
     return Promise.all(
@@ -121,6 +151,8 @@ export const operations = {
       }),
     );
   },
+  listDeletingLeagues: async (owner: string) =>
+    (await leagues.listDeleting(owner)).map(publicLeague),
   listArchivedLeagues: async (owner: string) =>
     (await leagues.listLeagues(owner, true)).map(publicLeague),
   setLeagueArchived: async (owner: string, input: unknown) => {
@@ -150,11 +182,15 @@ export const operations = {
     const data = leagueIdSchema.extend({ enabled: z.boolean() }).parse(input);
     return leagues.setReportSharing(data.leagueId, data.enabled, owner);
   },
-  getRankingRevisions: async (owner: string, input: unknown) =>
-    (await rankings.getRevisions(objectIdSchema.parse(input).id, owner)).map((entry) => ({
+  getRankingRevisions: async (owner: string, input: unknown) => {
+    const data = objectIdSchema
+      .extend({ before: z.number().int().nonnegative().optional() })
+      .parse(input);
+    return (await rankings.getRevisions(data.id, owner, data.before)).map((entry) => ({
       savedAt: entry.savedAt,
       ranking: publicRanking(entry.ranking),
-    })),
+    }));
+  },
   restoreRankingRevision: async (owner: string, input: unknown) => {
     const data = objectIdSchema
       .extend({
@@ -199,6 +235,7 @@ export const operations = {
     const info = await leagues.getLeagueInfo(data.leagueId, data.year, owner);
     return {
       ...publicLeague(info),
+      ...defaultNflWeek(info, await getNflState().catch(() => undefined)),
       teamCount: info.teamCount,
       maxWeek: info.maxWeek,
       validWeeks: info.validWeeks,

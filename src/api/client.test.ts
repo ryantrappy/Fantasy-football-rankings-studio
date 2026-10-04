@@ -9,6 +9,7 @@ vi.mock('../functions/rankings.functions', () => ({
   removeEspnCredentials: vi.fn(),
   skipEspnSetup: vi.fn(),
   getLeagueSeasons: vi.fn(),
+  getInsights: vi.fn(),
   listLeagues: vi.fn(),
   createLeague: vi.fn(),
   getRankings: vi.fn(),
@@ -143,4 +144,60 @@ it('authenticates credential writes and discards reports cached with old credent
   });
   await api.getLeagueSeasons('123');
   expect(functions.getLeagueSeasons).toHaveBeenCalledTimes(3);
+});
+
+it('refreshes current/historical provider caches without discarding unrelated reports or editions', async () => {
+  const api = session('owner');
+  let source = 'old';
+  vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+  vi.mocked(functions.getLeagueSeasons).mockImplementation(async () => ({
+    ok: true,
+    data: { years: source === 'old' ? [2025] : [2026], activeSeason: 2026, activeManagerKeys: [] },
+  }));
+  vi.mocked(functions.getInsights).mockImplementation(async () => ({
+    ok: true,
+    data: { generatedAt: source } as never,
+  }));
+  vi.mocked(functions.getRankings).mockResolvedValue({ ok: true, data: [ranking] });
+  vi.mocked(functions.updateLeagueProviderId).mockResolvedValue({
+    ok: true,
+    data: { ...league, providerLeagueId: '99' },
+  });
+  await api.getLeagueSeasons(league.leagueId);
+  await api.getInsights(league.leagueId, 2025);
+  await api.getInsights(league.leagueId, 2026);
+  await api.getInsights('other', 2025);
+  await api.getRankings(league.leagueId);
+  source = 'new';
+  await api.management!.updateProviderId(league.leagueId, '99');
+  expect((await api.getLeagueSeasons(league.leagueId)).years).toEqual([2026]);
+  expect((await api.getInsights(league.leagueId, 2025)).generatedAt).toBe('new');
+  expect((await api.getInsights(league.leagueId, 2026)).generatedAt).toBe('new');
+  expect((await api.getInsights('other', 2025)).generatedAt).toBe('old');
+  expect(api.rankingsFor(league.leagueId).toArray[0].rankingsTitle).toBe('Saved');
+});
+it('prevents a delayed old-provider read from repopulating the new workspace cache', async () => {
+  const api = session('owner');
+  let finish!: (result: never) => void;
+  vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+  vi.mocked(functions.updateLeagueProviderId).mockResolvedValue({
+    ok: true,
+    data: { ...league, providerLeagueId: '99' },
+  });
+  vi.mocked(functions.getInsights)
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    )
+    .mockResolvedValue({ ok: true, data: { generatedAt: 'new' } as never });
+  const old = api.getInsights(league.leagueId, 2025).catch(() => undefined);
+  await vi.waitFor(() => expect(finish).toBeDefined());
+  await api.management!.updateProviderId(league.leagueId, '99');
+  expect((await api.getInsights(league.leagueId, 2025)).generatedAt).toBe('new');
+  finish({ ok: true, data: { generatedAt: 'old' } } as never);
+  await old;
+  expect((await api.getInsights(league.leagueId, 2025)).generatedAt).toBe('new');
+  expect(functions.getInsights).toHaveBeenCalledTimes(2);
 });

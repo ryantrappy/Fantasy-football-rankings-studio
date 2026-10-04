@@ -58,3 +58,11 @@ directory configured by `MONGO_DATA_PATH` if it is no longer needed:
 ```sh
 docker compose down
 ```
+
+## Codex login with ChatGPT
+
+The app image includes Codex CLI and retains its login in the `codex-home` volume.
+See [Sign in to Codex in Docker with your ChatGPT account](README.md#sign-in-to-codex-in-docker-with-your-chatgpt-account)
+for device-code login, the authorized app-user allowlist, verification, and logout.
+This writing-assistant setup can use your ChatGPT OAuth login without an OpenAI
+API key.

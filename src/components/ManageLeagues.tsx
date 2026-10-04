@@ -1,6 +1,9 @@
+import { PageHeading } from './PageHeading';
+import { LoadingSkeleton } from './LoadingSkeleton';
 import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { League, LeagueApi } from '../types';
+import { ManagedTeamPicker } from './ManagedTeamPicker';
 import { logClientError } from '../logging';
 export function ManageLeagues({ api }: { api: LeagueApi }) {
   const [archived, setArchived] = useState(false),
@@ -22,10 +25,13 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
     // oxlint-disable-next-line react/set-state-in-effect
     setLoading(true);
     setError('');
-    void (archived ? api.management!.archived() : api.listLeagues())
+    void Promise.all([
+      archived ? api.management!.archived() : api.listLeagues(),
+      api.management?.deleting?.() ?? Promise.resolve([]),
+    ])
       .then(
         (rows) => {
-          if (active) setLeagues(rows);
+          if (active) setLeagues([...rows[0], ...rows[1]]);
         },
         (e) => {
           logClientError('leagues.manage', e);
@@ -41,12 +47,11 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
   }, [api, archived, retry]);
   return (
     <Box>
-      <Heading as="h1" size="2xl" mb={4}>
-        Manage leagues
-      </Heading>
-      <Text mb={4}>
-        Archiving removes a league from active pickers. Rankings and public sharing stay intact.
-      </Text>
+      <PageHeading
+        title="Manage leagues"
+        eyebrow="Your league workspace"
+        description="Choose your team and keep your leagues organized. Archived leagues keep their rankings and shared reports."
+      />
       <Button
         variant="outline"
         disabled={busy}
@@ -61,17 +66,10 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
         {notice}
       </Text>
       {loading ? (
-        <Text>Loading leagues…</Text>
+        <LoadingSkeleton label="Loading leagues…" />
       ) : leagues.length ? (
         leagues.map((league) => (
-          <Box
-            key={league.providerLeagueId ?? league.leagueId}
-            p={4}
-            my={3}
-            bg="bg"
-            borderWidth="1px"
-            rounded="lg"
-          >
+          <Box className="studio-card" key={league.leagueId} p={{ base: 4, md: 6 }} my={4}>
             <Heading as="h2" size="md">
               {league.leagueName}
             </Heading>
@@ -79,6 +77,20 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
               {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
               {league.providerLeagueId ?? league.leagueId}
             </Text>
+            {league.deleting && (
+              <Text as="output">
+                Deletion cleanup is pending. Retry Delete league to finish removing local data.
+              </Text>
+            )}
+            {api.managedTeam && !league.deleting && (
+              <ManagedTeamPicker
+                key={`${api.subject}:${league.leagueId}:${league.providerLeagueId}`}
+                api={api.managedTeam}
+                leagueId={league.leagueId}
+                initialYear={league.seasonId}
+                subject={api.subject}
+              />
+            )}
             {editing === league.leagueId ? (
               <Box
                 as="form"

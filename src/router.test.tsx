@@ -12,7 +12,21 @@ import { Authentication } from './auth/Authentication';
 import { readLeagueSetupDraft } from './league-setup-draft';
 import { reportFreshnessLabel } from './components/report-freshness';
 
+const sessions = vi.hoisted(() => [] as ReturnType<typeof import('./api/client').createApi>[]);
+vi.mock('./api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api/client')>();
+  return {
+    ...actual,
+    createApi: (...args: Parameters<typeof actual.createApi>) => {
+      const api = actual.createApi(...args);
+      sessions.push(api);
+      return api;
+    },
+  };
+});
+
 vi.mock('./index.css?url', () => ({ default: '/assets/index.test.css' }));
+vi.mock('./studio.css?url', () => ({ default: '/assets/studio.test.css' }));
 vi.mock('./functions/report-snapshots.functions', () => ({
   readReportSnapshot: vi.fn(),
   createReportSnapshot: vi.fn(),
@@ -140,6 +154,9 @@ beforeEach(() => {
       leagueType: 0,
       seasonId: 2026,
       teamCount: undefined,
+      isCurrentSeason: false,
+      defaultWeek: 1,
+      defaultWeekNote: '',
       maxWeek: 17,
       validWeeks: Array.from({ length: 17 }, (_, index) => index + 1),
       scheduleNote: 'Sleeper schedule weeks 1–17.',
@@ -177,11 +194,15 @@ beforeEach(() => {
     vi.fn().mockImplementation(async () => new Response(JSON.stringify({ data: [] }))),
   );
 });
-afterEach(() => {
+afterEach(async () => {
   const emptyHrefs = [...document.querySelectorAll<HTMLElement>('[href]')].filter(
     (element) => element.getAttribute('href') === '',
   );
   cleanup();
+  // React starts asynchronous disposal; finish it while jsdom globals still exist.
+  const disposedSessions = sessions.splice(0);
+  await Promise.all(disposedSessions.map((api) => api.dispose()));
+  expect(disposedSessions.every((api) => api.leagueCollection.status === 'cleaned-up')).toBe(true);
   const unexpectedConsoleErrors = consoleErrors.filter((args) => !isClientErrorLog(args));
   restoreConsoleError();
   vi.unstubAllEnvs();
@@ -210,7 +231,7 @@ test('server rendering keeps browser authentication and private content behind h
       </Authentication>
     </Provider>,
   );
-  expect(html).toContain('Your league. Your rankings.');
+  expect(html).toContain('Know your team.');
   expect(html).not.toContain('Private rankings');
 });
 test('anonymous visitors can sign in without making league API requests', async () => {
@@ -219,6 +240,16 @@ test('anonymous visitors can sign in without making league API requests', async 
     'href',
     '/assets/index.test.css',
   );
+  expect(document.querySelector('link[href="/assets/studio.test.css"]')).toHaveAttribute(
+    'rel',
+    'stylesheet',
+  );
+  expect(document.querySelector('link[rel="icon"]')).toHaveAttribute('href', '/studio-icon.svg');
+  expect(document.querySelector('link[rel="apple-touch-icon"]')).toHaveAttribute(
+    'href',
+    '/apple-touch-icon.png',
+  );
+  expect(document.querySelector('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.json');
   await userEvent.click(await screen.findByRole('button', { name: 'Sign in' }));
   expect(auth.loginWithRedirect).toHaveBeenCalledTimes(1);
   expect(fetch).not.toHaveBeenCalled();
@@ -373,6 +404,9 @@ test('the rankings studio uses provider weeks and retains saved out-of-schedule 
       leagueType: 0,
       seasonId: 2026,
       teamCount: undefined,
+      isCurrentSeason: false,
+      defaultWeek: 1,
+      defaultWeekNote: '',
       maxWeek: 3,
       validWeeks: [2, 3],
       scheduleNote: 'Preseason schedule: weeks 2–3 are available for planning.',
@@ -415,6 +449,9 @@ test('an invalid week moves safely to the first provider week with an explanatio
       leagueType: 0,
       seasonId: 2026,
       teamCount: undefined,
+      isCurrentSeason: false,
+      defaultWeek: 1,
+      defaultWeekNote: '',
       maxWeek: 3,
       validWeeks: [2, 3],
       scheduleNote: 'Sleeper schedule weeks 2–3.',
@@ -956,4 +993,39 @@ test('first-login ESPN setup returns to the requested internal route after skipp
   expect(privateFunctions.skipEspnSetup).toHaveBeenCalledWith({
     headers: { Authorization: 'Bearer test-token' },
   });
+});
+
+test('current week defaults advance stale storage and league/season switches preserve explicit weeks', async () => {
+  auth.isAuthenticated = true;
+  const leagues = [
+    { leagueId: '123', leagueName: 'League', leagueType: 0 as const, seasonId: 2026 },
+    { leagueId: '456', leagueName: 'Other league', leagueType: 1 as const, seasonId: 2026 },
+  ];
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({ ok: true, data: leagues });
+  vi.mocked(privateFunctions.getLeagueInfo).mockImplementation(async ({ data }) => ({
+    ok: true,
+    data: {
+      ...leagues.find((league) => league.leagueId === data.leagueId)!,
+      seasonId: data.year,
+      teamCount: undefined,
+      maxWeek: 17,
+      validWeeks: Array.from({ length: 17 }, (_, index) => index + 1),
+      scheduleNote: 'Schedule',
+      isCurrentSeason: data.year === 2026,
+      defaultWeek: data.leagueId === '456' ? 6 : 5,
+      defaultWeekNote: 'Current default',
+    },
+  }));
+  const router = await openPage();
+  await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('5'));
+  const user = userEvent.setup();
+  await user.selectOptions(screen.getByLabelText('Week'), '3');
+  await waitFor(() => expect(router.state.location.search.week).toBe(3));
+  expect(screen.getByLabelText('Week')).toHaveValue('3');
+  await user.selectOptions(screen.getByLabelText('League'), '456');
+  await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('6'));
+  await user.selectOptions(screen.getByLabelText('Season'), '2025');
+  await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('1'));
+  await user.selectOptions(screen.getByLabelText('Season'), '2026');
+  await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('6'));
 });

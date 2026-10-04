@@ -1,5 +1,51 @@
 import { expect, test } from '@playwright/test';
 
+for (const width of [1440, 390]) {
+  test(`managed teams open automatically for the first four leagues at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/tests/ui/?mode=live&managed=1');
+    const sidebar = page.getByRole('complementary', { name: 'All league matchups' });
+    const board = page.getByRole('region', { name: 'Highlighted matchups' });
+    await expect(board).toHaveAttribute('data-count', '4');
+    for (const index of [2, 5, 8, 11]) {
+      await expect(
+        sidebar.getByRole('button', {
+          name: `Remove Home ${index} versus Away ${index}`,
+          exact: true,
+        }),
+      ).toHaveAttribute('aria-pressed', 'true');
+      await expect(
+        board.getByRole('heading', { name: `Home ${index} vs Away ${index}`, exact: true }),
+      ).toBeVisible();
+    }
+    await expect(
+      sidebar.getByRole('button', { name: 'Highlight Home 14 versus Away 14', exact: true }),
+    ).toBeDisabled();
+    await sidebar
+      .getByRole('button', { name: 'Remove Home 11 versus Away 11', exact: true })
+      .click();
+    await sidebar
+      .getByRole('button', { name: 'Highlight Home 14 versus Away 14', exact: true })
+      .click();
+    await page.getByRole('button', { name: 'Refresh scores' }).click();
+    await expect(page.getByRole('button', { name: 'Refresh scores' })).toBeEnabled();
+    await expect(
+      sidebar.getByRole('button', { name: 'Remove Home 14 versus Away 14', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      sidebar.getByRole('button', { name: 'Highlight Home 11 versus Away 11', exact: true }),
+    ).toHaveAttribute('aria-pressed', 'false');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+      844,
+    );
+  });
+}
+
 test('the header owns selectors and the live grid fills the viewport for two and four selections', async ({
   page,
 }, testInfo) => {

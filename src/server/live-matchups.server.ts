@@ -12,6 +12,12 @@ import SleeperProvider from './providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from './providers/espn.provider';
 import { nflRemaining, sleeperLiveProjections } from './live-projections.server';
 import { sleeperNames } from './insights/load.server';
+import { enrichLiveProjections } from './combined-projections.server';
+import {
+  sleeperProjectionRules,
+  espnProjectionRules,
+  type EspnScoringItem,
+} from '../combined-projections';
 
 type SleeperRow = {
   matchup_id: number | null;
@@ -32,6 +38,8 @@ type EspnEntry = {
       id?: number;
       fullName?: string;
       defaultPositionId?: number;
+      eligibleSlots?: number[];
+      injuryStatus?: string;
       proTeamId?: number;
       stats?: {
         seasonId: number;
@@ -69,6 +77,7 @@ export async function loadLiveLeague(
     season: league.seasonId,
     week: 1,
     matchups: [],
+    capturedAt: new Date().toISOString(),
   };
   const providerId = league.providerLeagueId ?? league.leagueId;
   if (league.leagueType === 0) {
@@ -87,13 +96,18 @@ export async function loadLiveLeague(
         : Math.max(1, Math.min(18, season.settings?.last_scored_leg ?? 1));
     const [rows, rosters, catalog, projections, remaining] = await Promise.all([
       provider.get<SleeperRow[]>(`${season.league_id}/matchups/${result.week}`),
-      provider.get<{ roster_id: number; players?: string[] }[]>(`${season.league_id}/rosters`),
+      provider.get<
+        { roster_id: number; players?: string[]; reserve?: string[]; taxi?: string[] }[]
+      >(`${season.league_id}/rosters`),
       playerCatalog().catch(() => ({ names: {}, positions: {}, availability: {}, teams: {} })),
       sleeperLiveProjections(league.seasonId, result.week).catch(
         (): Awaited<ReturnType<typeof sleeperLiveProjections>> => [],
       ),
       nflRemaining(league.seasonId, result.week).catch(() => undefined),
     ]);
+    result.lineupSlots = (season.roster_positions ?? []).filter(
+      (slot) => !['BN', 'BENCH', 'IR', 'TAXI'].includes(slot),
+    );
     const projected = new Map(
       projections
         .filter((row) => row.player_id && row.stats && Object.keys(row.stats).length)
@@ -107,6 +121,9 @@ export async function loadLiveLeague(
         ]),
     );
     const byId = new Map(teams.map((team) => [team.teamId, team]));
+    const reserves = new Set(
+      rosters.flatMap((roster) => [...(roster.reserve ?? []), ...(roster.taxi ?? [])]),
+    );
     const owned = new Map(rosters.map((roster) => [roster.roster_id, roster.players || []]));
     const groups = new Map<string, SleeperRow[]>();
     for (const row of rows) {
@@ -131,6 +148,12 @@ export async function loadLiveLeague(
           id,
           name: catalog.names[id] || id,
           position: catalog.positions[id],
+          availability: catalog.availability[id],
+          bye: remaining && catalog.teams[id] ? !remaining.has(catalog.teams[id]) : undefined,
+          locked:
+            remaining && catalog.teams[id] && Number.isFinite(remaining.get(catalog.teams[id]))
+              ? remaining.get(catalog.teams[id])! < 1
+              : undefined,
           lineupSlot: slots.get(id),
           projectedPoints: projected.get(id),
           remainingFraction:
@@ -142,6 +165,8 @@ export async function loadLiveLeague(
               : undefined) ??
             null,
           starter: starters.has(id),
+          reserve: reserves.has(id),
+          owned: (owned.get(row.roster_id) ?? []).includes(id) || reserves.has(id),
         })),
       };
     };
@@ -150,14 +175,20 @@ export async function loadLiveLeague(
       home: team(home),
       away: away ? team(away) : null,
     }));
-    return result;
+    return enrichLiveProjections(result, () =>
+      sleeperProjectionRules(season.scoring_settings ?? {}),
+    );
   }
 
   const provider = new EspnProvider(access);
   type EspnLiveData = {
     id: number;
     status?: { latestScoringPeriod?: number; finalScoringPeriod?: number };
-    settings?: { scheduleSettings?: { matchupPeriods?: Record<string, number[]> } };
+    settings?: {
+      scoringSettings?: { scoringItems?: EspnScoringItem[] };
+      rosterSettings?: { lineupSlotCounts?: Record<string, number> };
+      scheduleSettings?: { matchupPeriods?: Record<string, number[]> };
+    };
     teams?: { id: number; name?: string; location?: string; nickname?: string }[];
     schedule?: { id: number; matchupPeriodId: number; home?: EspnSide; away?: EspnSide }[];
   };
@@ -168,6 +199,13 @@ export async function loadLiveLeague(
     league.seasonId,
     ['mTeam', 'mSettings', 'mMatchupScore', 'mBoxscore'],
     result.week,
+  );
+  result.lineupSlots = Object.entries(
+    data.settings?.rosterSettings?.lineupSlotCounts ?? {},
+  ).flatMap(([id, count]) =>
+    [20, 21].includes(Number(id))
+      ? []
+      : Array.from({ length: count }, () => espnLineupSlot(Number(id)) ?? `Unsupported slot ${id}`),
   );
   const remaining = await nflRemaining(league.seasonId, result.week).catch(() => undefined);
   const matchupPeriod = Number(
@@ -201,6 +239,15 @@ export async function loadLiveLeague(
           { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' } as Record<number, string>
         )[player?.defaultPositionId ?? -1],
         lineupSlot: espnLineupSlot(entry.lineupSlotId),
+        eligibleSlots: player?.eligibleSlots?.flatMap((slot) => espnLineupSlot(slot) ?? []),
+        availability: player?.injuryStatus,
+        reserve: entry.lineupSlotId === 21,
+        owned: true,
+        bye: remaining && player?.proTeamId ? !remaining.has(String(player.proTeamId)) : undefined,
+        locked:
+          remaining && player?.proTeamId && Number.isFinite(remaining.get(String(player.proTeamId)))
+            ? remaining.get(String(player.proTeamId))! < 1
+            : undefined,
         projectedPoints: player?.stats?.find(
           (stat) =>
             stat.seasonId === league.seasonId &&
@@ -237,8 +284,13 @@ export async function loadLiveLeague(
       )
         team.score = starters.reduce((sum, player) => sum + (player.points ?? 0), 0);
       // Current-week projections cannot describe a multiweek matchup in full.
-      if (!singleWeek) for (const player of team.players) player.remainingFraction = undefined;
+      if (!singleWeek) {
+        result.lineupSlots = undefined;
+        for (const player of team.players) player.remainingFraction = undefined;
+      }
     }
   }
-  return result;
+  return enrichLiveProjections(result, (position) =>
+    espnProjectionRules(data.settings?.scoringSettings?.scoringItems, position),
+  );
 }

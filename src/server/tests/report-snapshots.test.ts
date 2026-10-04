@@ -193,3 +193,15 @@ it('denies an expired snapshot before TTL deletion and cleans overdue records af
     { expireAfterSeconds: 0 },
   ]);
 });
+
+it('removes a snapshot written after its workspace was deleted', async () => {
+  vi.spyOn(LeaguesService.prototype, 'getLeagueById')
+    .mockResolvedValueOnce(league)
+    .mockRejectedValueOnce(new HttpException(404, 'League not found.'));
+  vi.spyOn(reportSnapshotModel, 'create').mockResolvedValue({} as never);
+  const cleanup = vi
+    .spyOn(reportSnapshotModel, 'deleteOne')
+    .mockResolvedValue({ deletedCount: 1 } as never);
+  await expect(reportSnapshots.create('owner', input())).rejects.toMatchObject({ status: 404 });
+  expect(cleanup).toHaveBeenCalledWith({ publicId: expect.any(String), ownerSubject: 'owner' });
+});

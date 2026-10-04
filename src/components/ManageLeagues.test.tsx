@@ -119,3 +119,88 @@ it('validates a provider ID and requires the exact name before permanent deletio
   fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
   expect(api.management!.delete).toHaveBeenCalledWith('1');
 });
+
+it('shows failed deletion cleanup and lets the owner retry even when active lists exclude it', async () => {
+  const league = {
+    leagueId: '1',
+    leagueName: 'Pending league',
+    leagueType: 0,
+    seasonId: 2026,
+    deleting: true,
+  };
+  let pending = true;
+  const api = {
+    listLeagues: vi.fn(async () => []),
+    management: {
+      deleting: vi.fn(async () => (pending ? [league] : [])),
+      archived: vi.fn(async () => []),
+      archive: vi.fn(),
+      rename: vi.fn(),
+      updateProviderId: vi.fn(),
+      delete: vi.fn(async () => {
+        pending = false;
+      }),
+    },
+  } as unknown as LeagueApi;
+  render(
+    <Provider>
+      <ManageLeagues api={api} />
+    </Provider>,
+  );
+  await screen.findByText(/Deletion cleanup is pending/);
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league' }));
+  fireEvent.change(screen.getByLabelText('Type Pending league to confirm'), {
+    target: { value: 'Pending league' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Delete league permanently' }));
+  await screen.findByText('No active leagues.');
+  expect(api.management!.delete).toHaveBeenCalledWith('1');
+});
+
+it('renders cross-provider ID collisions independently and edits the chosen workspace', async () => {
+  const leagues = [
+    {
+      leagueId: '10',
+      providerLeagueId: '99',
+      leagueName: 'Sleeper league',
+      leagueType: 0,
+      seasonId: 2026,
+    },
+    {
+      leagueId: '20',
+      providerLeagueId: '99',
+      leagueName: 'ESPN league',
+      leagueType: 1,
+      seasonId: 2026,
+    },
+  ];
+  const rename = vi.fn(async (id: string, name: string) => ({
+    ...leagues.find((league) => league.leagueId === id)!,
+    leagueName: name,
+  }));
+  const api = {
+    listLeagues: vi.fn(async () => leagues),
+    management: {
+      archived: vi.fn(),
+      archive: vi.fn(),
+      rename,
+      updateProviderId: vi.fn(),
+      delete: vi.fn(),
+    },
+  } as unknown as LeagueApi;
+  const errors = vi.spyOn(console, 'error');
+  render(
+    <Provider>
+      <ManageLeagues api={api} />
+    </Provider>,
+  );
+  const buttons = await screen.findAllByRole('button', { name: 'Edit display name' });
+  fireEvent.click(buttons[1]);
+  fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'ESPN renamed' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save display name' }));
+  await screen.findByRole('heading', { name: 'ESPN renamed' });
+  expect(screen.getByRole('heading', { name: 'Sleeper league' })).toBeInTheDocument();
+  expect(rename).toHaveBeenCalledWith('20', 'ESPN renamed');
+  expect(errors.mock.calls.flat().join(' ')).not.toMatch(/same key/);
+  errors.mockRestore();
+});

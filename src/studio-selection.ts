@@ -85,3 +85,12 @@ export function resolveStudioSelection(
       : 1);
   return { leagueId: league.leagueId, year: resolvedYear, week };
 }
+
+// URL/manual weeks win; current-season storage cannot freeze the default in a past week.
+export function preferredStudioWeek(
+  rememberedWeek: number,
+  explicitWeek: number | undefined,
+  info: { isCurrentSeason?: boolean; defaultWeek?: number },
+) {
+  return explicitWeek ?? (info.isCurrentSeason ? (info.defaultWeek ?? 1) : rememberedWeek);
+}

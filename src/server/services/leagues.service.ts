@@ -3,15 +3,18 @@ import leagueModel from '../models/league.model';
 import { League, LeagueType } from '../interfaces/league.interface';
 import HttpException from '../exceptions/HttpException';
 import { LeagueProvider } from '../providers/league-provider';
+import type { Team } from '../interfaces/teams.interface';
 import SleeperProvider from '../providers/sleeper.provider';
 import EspnProvider from '../providers/espn.provider';
 import { getEspnCredentials } from '../espn-credentials.server';
+import rankingRevisionModel from '../models/ranking-revision.model';
 import weeklyRankingModel from '../models/weeklyRanking.model';
 import { reportSnapshotModel } from '../models/report-snapshot.model';
 
 class LeaguesService {
   public leagues = leagueModel;
   public weeklyRankings = weeklyRankingModel;
+  public revisionHistory = rankingRevisionModel;
   public reportSnapshots = reportSnapshotModel;
   public async providerFor(league: League, ownerSubject: string): Promise<LeagueProvider> {
     return league.leagueType === LeagueType.Espn
@@ -26,19 +29,32 @@ class LeaguesService {
   }
 
   public async getLeagueById(id: string, ownerSubject: string): Promise<League> {
-    const league = await this.leagues.findOne({ leagueId: id, ownerSubject }).lean();
+    const league = await this.leagues
+      .findOne({ leagueId: id, ownerSubject, deleted: { $ne: true } })
+      .lean();
     if (!league) throw new HttpException(404, 'League not found.');
     return league as unknown as League;
   }
 
-  private ownerLeagueFilter(id: string, ownerSubject: string) {
-    return { ownerSubject, $or: [{ leagueId: id }, { providerLeagueId: id }] };
-  }
-
-  private async managedLeague(id: string, ownerSubject: string): Promise<League> {
-    const league = await this.leagues.findOne(this.ownerLeagueFilter(id, ownerSubject)).lean();
-    if (!league) throw new HttpException(404, 'League not found.');
-    return league as unknown as League;
+  private async managedLeague(
+    id: string,
+    ownerSubject: string,
+    includeDeleted = false,
+  ): Promise<League> {
+    const filter = { ownerSubject, ...(includeDeleted ? {} : { deleted: { $ne: true } }) };
+    const exact = await this.leagues.findOne({ ...filter, leagueId: id }).lean();
+    if (exact) return exact as unknown as League;
+    const matches = await this.leagues
+      .find({ ...filter, providerLeagueId: id })
+      .limit(2)
+      .lean();
+    if (matches.length > 1)
+      throw new HttpException(
+        409,
+        'This provider league ID matches multiple workspaces. Select the specific league in Manage leagues or use its workspace ID.',
+      );
+    if (!matches.length) throw new HttpException(404, 'League not found.');
+    return matches[0] as unknown as League;
   }
 
   public async updateProviderLeagueId(id: string, providerLeagueId: string, owner: string) {
@@ -52,8 +68,8 @@ class LeaguesService {
     // Validate the target before changing the saved association. Keep the owner's display name local.
     await (await this.providerFor(target, owner)).getLeague(target, target.seasonId);
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: current.leagueId, ownerSubject: owner },
-      { $set: { providerLeagueId: normalized } },
+      { leagueId: current.leagueId, ownerSubject: owner, deleted: { $ne: true } },
+      { $set: { providerLeagueId: normalized, managedTeams: {} } },
       { returnDocument: 'after', runValidators: true },
     );
     if (!result) throw new HttpException(404, 'League not found.');
@@ -61,17 +77,35 @@ class LeaguesService {
   }
 
   public async deleteLeague(id: string, owner: string) {
-    const league = await this.managedLeague(id, owner);
+    const league = await this.managedLeague(id, owner, true);
+    const marked = await this.leagues.findOneAndUpdate(
+      { leagueId: league.leagueId, ownerSubject: owner },
+      { $set: { deleted: true, publicReports: false } },
+      { returnDocument: 'after' },
+    );
+    if (!marked) throw new HttpException(404, 'League not found.');
     const rankings = await this.weeklyRankings
       .find({ leagueId: league.leagueId })
       .select('_id')
       .lean();
-    const rankingIds = rankings.map((ranking) => String(ranking._id));
+    const rankingIds = [
+      ...new Set([
+        ...(league.deletionRankingIds ?? []),
+        ...rankings.map((ranking) => String(ranking._id)),
+      ]),
+    ];
+    await this.leagues.updateOne(
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: true },
+      { $addToSet: { deletionRankingIds: { $each: rankingIds } } },
+    );
     // Publications are keyed by ranking ID; loading this model here avoids a service import cycle.
     const { publicationModel } = await import('../publishing.server');
     await Promise.all([
       rankingIds.length
         ? publicationModel.deleteMany({ rankingId: { $in: rankingIds } })
+        : undefined,
+      rankingIds.length
+        ? this.revisionHistory.deleteMany({ rankingId: { $in: rankingIds } })
         : undefined,
       this.weeklyRankings.deleteMany({ leagueId: league.leagueId }),
       this.reportSnapshots.deleteMany({ leagueId: league.leagueId, ownerSubject: owner }),
@@ -82,7 +116,7 @@ class LeaguesService {
 
   public async getPublicLeagueById(id: string): Promise<League> {
     const league = await this.leagues
-      .findOne({ leagueId: id, publicReports: { $ne: false } })
+      .findOne({ leagueId: id, deleted: { $ne: true }, publicReports: { $ne: false } })
       .select({
         _id: 0,
         leagueId: 1,
@@ -104,7 +138,7 @@ class LeaguesService {
 
   public async setReportSharing(id: string, enabled: boolean, owner: string) {
     const result = await this.leagues.findOneAndUpdate(
-      { leagueId: id, ownerSubject: owner },
+      { leagueId: id, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { publicReports: enabled } },
       { returnDocument: 'after' },
     );
@@ -114,14 +148,28 @@ class LeaguesService {
 
   public async listLeagues(ownerSubject: string, archived = false) {
     return this.leagues
-      .find({ ownerSubject, archived: archived ? true : { $ne: true } })
+      .find({ ownerSubject, deleted: { $ne: true }, archived: archived ? true : { $ne: true } })
       .sort({ leagueName: 1 })
       .lean();
   }
 
+  public async listDeleting(ownerSubject: string) {
+    return this.leagues.find({ ownerSubject, deleted: true }).sort({ leagueName: 1 }).lean();
+  }
+
+  public async verifyWrite(leagueId: string, owner: string, cleanup: () => Promise<unknown>) {
+    try {
+      await this.getLeagueById(leagueId, owner);
+    } catch (error) {
+      if (error instanceof HttpException && error.status === 404) await cleanup();
+      throw error;
+    }
+  }
+
   public async setArchived(id: string, archived: boolean, owner: string) {
+    const league = await this.managedLeague(id, owner);
     const result = await this.leagues.findOneAndUpdate(
-      this.ownerLeagueFilter(id, owner),
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { archived } },
       { returnDocument: 'after' },
     );
@@ -133,8 +181,9 @@ class LeaguesService {
     if (!leagueName) throw new HttpException(400, 'Enter a league display name.');
     if (leagueName.length > 120)
       throw new HttpException(400, 'League display name must be at most 120 characters.');
+    const league = await this.managedLeague(id, owner);
     const result = await this.leagues.findOneAndUpdate(
-      this.ownerLeagueFilter(id, owner),
+      { leagueId: league.leagueId, ownerSubject: owner, deleted: { $ne: true } },
       { $set: { leagueName } },
       { returnDocument: 'after' },
     );
@@ -190,6 +239,63 @@ class LeaguesService {
         );
       throw error;
     }
+  }
+
+  public async managedTeamSelection(id: string, year: number, owner: string) {
+    const league = await this.getLeagueById(id, owner);
+    const teams = await (await this.providerFor(league, owner)).getTeams(league, year, 1);
+    const saved = league.managedTeams?.[String(year)];
+    const selected = teams.find(
+      (team) => team.teamId === saved?.teamId && (team.managerKey ?? '') === saved.managerKey,
+    );
+    return {
+      teams: teams.map(({ teamId, teamName, managerName }) => ({ teamId, teamName, managerName })),
+      teamId: selected?.teamId ?? null,
+      needsReselection: Boolean(saved && !selected),
+    };
+  }
+
+  public async setManagedTeam(id: string, year: number, teamId: string | null, owner: string) {
+    const league = await this.getLeagueById(id, owner);
+    const path = `managedTeams.${year}`;
+    const teams = await (
+      await this.providerFor(league, owner)
+    )
+      .getTeams(league, year, 1)
+      .catch((error): Team[] => {
+        if (teamId !== null) throw error;
+        return [];
+      });
+    let update: object = { $unset: { [path]: '' } };
+    if (teamId !== null) {
+      const team = teams.find((entry) => entry.teamId === teamId);
+      if (!team) throw new HttpException(400, 'Choose a team from this league and season.');
+      update = { $set: { [path]: { teamId, managerKey: team.managerKey ?? '' } } };
+    }
+    const result = await this.leagues.findOneAndUpdate(
+      {
+        leagueId: id,
+        ownerSubject: owner,
+        deleted: { $ne: true },
+        providerLeagueId: league.providerLeagueId,
+      },
+      update,
+      { returnDocument: 'after', runValidators: true },
+    );
+    if (!result)
+      throw new HttpException(409, 'The league changed. Reload and choose your team again.');
+    if ((result.managedTeams?.[String(year)]?.teamId ?? null) !== teamId)
+      throw new HttpException(
+        503,
+        'The server did not persist your team choice. Restart the application to reload its database schema, then retry.',
+      );
+    // The write returned the committed selection. A second provider read could fail after
+    // persistence and make the browser report a failed save that actually succeeded.
+    return {
+      teams: teams.map(({ teamId, teamName, managerName }) => ({ teamId, teamName, managerName })),
+      teamId,
+      needsReselection: false,
+    };
   }
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {

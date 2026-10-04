@@ -44,6 +44,9 @@ export const reportSnapshots = {
       league: leagueSchema.parse(league),
       report,
     });
+    await leagues.verifyWrite(leagueId, owner, () =>
+      reportSnapshotModel.deleteOne({ publicId, ownerSubject: owner }),
+    );
     return { publicId, savedAt, expiresAt: expiresAt.toISOString() };
   },
   async read(input: unknown): Promise<ReportSnapshot> {

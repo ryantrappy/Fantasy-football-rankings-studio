@@ -67,12 +67,10 @@ it('retains observations when current provider responses fail and labels project
     listLeagues: vi
       .fn()
       .mockResolvedValue([{ leagueId: '10', leagueName: 'League', seasonId: 2026, leagueType: 1 }]),
-    getInsights: vi
-      .fn()
-      .mockResolvedValue({
-        generatedAt: '2026-10-01',
-        scores: [{ week: 1, players: [{ playerId: '1', points: 0 }] }],
-      }),
+    getInsights: vi.fn().mockResolvedValue({
+      generatedAt: '2026-10-01',
+      scores: [{ week: 1, players: [{ playerId: '1', points: 0 }] }],
+    }),
     getLiveMatchups: vi.fn().mockRejectedValue(new Error('offline')),
   };
   render(

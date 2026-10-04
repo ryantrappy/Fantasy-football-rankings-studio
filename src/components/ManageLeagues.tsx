@@ -83,10 +83,11 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
             )}
             {api.managedTeam && !league.deleting && (
               <ManagedTeamPicker
-                key={`${league.leagueId}:${league.providerLeagueId}`}
+                key={`${api.subject}:${league.leagueId}:${league.providerLeagueId}`}
                 api={api.managedTeam}
                 leagueId={league.leagueId}
                 initialYear={league.seasonId}
+                subject={api.subject}
               />
             )}
             {editing === league.leagueId ? (

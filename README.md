@@ -823,3 +823,7 @@ The [NFL provider evaluation](docs/nfl-data-providers.md) compares projection an
 **Your profile → Writing assistant connections** shows the server Codex login status and links to the Docker OAuth instructions above. It distinguishes access disabled for your account, a missing CLI, a failed login check, and cached login readiness. Refresh after the operator changes setup. The status contains no tokens or other users' identifiers, and users outside the server allowlist cannot inspect its login state.
 
 Saved OpenAI keys take precedence even when the server login is ready. Remove your saved key to use the enabled server account; settings refresh readiness after removal. A ready login does not prove ChatGPT authentication mode, account model access, or available quota. Confirm **Logged in using ChatGPT** on the Docker host when configuring OAuth.
+
+Managed-team choices are saved explicitly for each league and season in **Manage leagues**. Changing the dropdown shows an unsaved-choice message; click **Save my team** and wait for confirmation. A provider failure keeps your draft for retry, and a completed database save no longer depends on a second provider request. **Reload teams** reloads the persisted choice.
+
+The managed-team picker remembers the last viewed season for your account and league. This prevents a page refresh from returning to the league registration year and showing that year's empty choice when you saved a different season.

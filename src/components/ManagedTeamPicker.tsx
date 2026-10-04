@@ -1,17 +1,32 @@
 import { Box, Button, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { LeagueApi, ManagedTeamSelection } from '../types';
+import { errorMessage } from '../api/client';
 
 export function ManagedTeamPicker({
   api,
   leagueId,
   initialYear,
+  subject,
 }: {
   api: NonNullable<LeagueApi['managedTeam']>;
   leagueId: string;
   initialYear: number;
+  subject?: string;
 }) {
-  const [year, setYear] = useState(initialYear);
+  const seasonKey = subject
+    ? `managed-team-season:v1:${JSON.stringify([subject, leagueId])}`
+    : undefined;
+  const [year, setYear] = useState(() => {
+    try {
+      const remembered = seasonKey ? Number(window.localStorage.getItem(seasonKey)) : 0;
+      return Number.isInteger(remembered) && remembered >= 2000 && remembered <= 2100
+        ? remembered
+        : initialYear;
+    } catch {
+      return initialYear;
+    }
+  });
   const [selection, setSelection] = useState<ManagedTeamSelection>();
   const [teamId, setTeamId] = useState('');
   const [error, setError] = useState('');
@@ -51,7 +66,14 @@ export function ManagedTeamPicker({
         disabled={busy}
         onChange={(event) => {
           const next = Number(event.target.value);
-          if (Number.isInteger(next) && next >= 2000 && next <= 2100) setYear(next);
+          if (Number.isInteger(next) && next >= 2000 && next <= 2100) {
+            setYear(next);
+            try {
+              if (seasonKey) window.localStorage.setItem(seasonKey, String(next));
+            } catch {
+              /* Selection still saves on the server when browser storage is unavailable. */
+            }
+          }
         }}
       />
       {selection ? (
@@ -60,6 +82,7 @@ export function ManagedTeamPicker({
           mt={2}
           onSubmit={async (event) => {
             event.preventDefault();
+            if (busy) return;
             setBusy(true);
             setError('');
             setNotice('');
@@ -70,8 +93,8 @@ export function ManagedTeamPicker({
               setNotice(
                 result.teamId ? 'Your managed team was saved.' : 'Commissioner mode saved.',
               );
-            } catch {
-              setError('Could not save your team. Reload teams and try again.');
+            } catch (failure) {
+              setError(`Could not save your team. ${errorMessage(failure)}`);
             } finally {
               setBusy(false);
             }
@@ -82,7 +105,11 @@ export function ManagedTeamPicker({
             id={`my-team-${leagueId}`}
             value={teamId}
             disabled={busy}
-            onChange={(event) => setTeamId(event.target.value)}
+            onChange={(event) => {
+              setTeamId(event.target.value);
+              setNotice('');
+              setError('');
+            }}
           >
             <option value="">No team / commissioner mode</option>
             {selection.teams.map((team) => (
@@ -96,9 +123,14 @@ export function ManagedTeamPicker({
               Your saved team is no longer available or its manager changed. Choose your team again.
             </Text>
           )}
-          <Button type="submit" ml={2} disabled={busy}>
-            Save my team
+          <Button type="submit" ml={2} colorPalette="indigo" disabled={busy}>
+            {busy ? 'Saving my team…' : 'Save my team'}
           </Button>
+          {teamId !== (selection.teamId ?? '') && !busy && (
+            <Text as="output" mt={2}>
+              Unsaved team choice. Click Save my team to keep it for {year}.
+            </Text>
+          )}
         </Box>
       ) : (
         !error && <Text>Loading teams…</Text>

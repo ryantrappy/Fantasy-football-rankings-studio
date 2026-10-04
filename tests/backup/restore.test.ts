@@ -78,6 +78,17 @@ it('restores editions, indexes, publications and owner-bound credentials into an
       },
     ]);
     await rankingModel.init();
+    const managedService = new LeaguesService();
+    vi.spyOn(managedService, 'providerFor').mockResolvedValue({
+      getTeams: async () => [
+        { teamId: '1', teamName: 'Team', managerName: 'A', managerKey: 'sleeper:a' },
+      ],
+    } as never);
+    expect((await managedService.setManagedTeam('101', 2026, '1', 'owner-a')).teamId).toBe('1');
+    expect((await managedService.managedTeamSelection('101', 2026, 'owner-a')).teamId).toBe('1');
+    expect(
+      (await new LeaguesService().getLeagueById('101', 'owner-a')).managedTeams?.['2026'].teamId,
+    ).toBe('1');
     const teams = [
       {
         teamId: '1',

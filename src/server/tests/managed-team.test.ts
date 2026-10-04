@@ -75,6 +75,18 @@ it('rejects another account and teams from a different season', async () => {
   });
   expect(update).not.toHaveBeenCalled();
 });
+it('confirms the persisted save without a second provider request and supports offline clearing', async () => {
+  const { service, getTeams } = setup();
+  getTeams.mockRejectedValueOnce(new Error('Offline'));
+  await expect(service.setManagedTeam('10', 2026, '1', 'alice')).rejects.toThrow('Offline');
+  expect(update).not.toHaveBeenCalled();
+  const result = await service.setManagedTeam('10', 2026, '1', 'alice');
+  expect(result.teamId).toBe('1');
+  expect(getTeams).toHaveBeenCalledTimes(2);
+  expect((await service.managedTeamSelection('10', 2026, 'alice')).teamId).toBe('1');
+  getTeams.mockRejectedValueOnce(new Error('Offline'));
+  expect((await service.setManagedTeam('10', 2026, null, 'alice')).teamId).toBeNull();
+});
 it('requires reselection for missing teams or changed managers', async () => {
   const { service, getTeams } = setup();
   await service.setManagedTeam('10', 2026, '1', 'alice');
@@ -89,6 +101,13 @@ it('requires reselection for missing teams or changed managers', async () => {
   expect(await service.managedTeamSelection('10', 2026, 'alice')).toMatchObject({
     teamId: null,
     needsReselection: true,
+  });
+});
+it('does not report a successful save when the database update was ignored', async () => {
+  const { service } = setup();
+  update.mockResolvedValueOnce({ ...rows.get('alice:10'), managedTeams: {} });
+  await expect(service.setManagedTeam('10', 2026, '1', 'alice')).rejects.toMatchObject({
+    status: 503,
   });
 });
 it('rejects a provider change while a team selection is being validated', async () => {

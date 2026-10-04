@@ -257,9 +257,16 @@ class LeaguesService {
   public async setManagedTeam(id: string, year: number, teamId: string | null, owner: string) {
     const league = await this.getLeagueById(id, owner);
     const path = `managedTeams.${year}`;
+    const teams = await (
+      await this.providerFor(league, owner)
+    )
+      .getTeams(league, year, 1)
+      .catch((error) => {
+        if (teamId !== null) throw error;
+        return [];
+      });
     let update: object = { $unset: { [path]: '' } };
     if (teamId !== null) {
-      const teams = await (await this.providerFor(league, owner)).getTeams(league, year, 1);
       const team = teams.find((entry) => entry.teamId === teamId);
       if (!team) throw new HttpException(400, 'Choose a team from this league and season.');
       update = { $set: { [path]: { teamId, managerKey: team.managerKey ?? '' } } };
@@ -276,7 +283,18 @@ class LeaguesService {
     );
     if (!result)
       throw new HttpException(409, 'The league changed. Reload and choose your team again.');
-    return this.managedTeamSelection(id, year, owner);
+    if ((result.managedTeams?.[String(year)]?.teamId ?? null) !== teamId)
+      throw new HttpException(
+        503,
+        'The server did not persist your team choice. Restart the application to reload its database schema, then retry.',
+      );
+    // The write returned the committed selection. A second provider read could fail after
+    // persistence and make the browser report a failed save that actually succeeded.
+    return {
+      teams: teams.map(({ teamId, teamName, managerName }) => ({ teamId, teamName, managerName })),
+      teamId,
+      needsReselection: false,
+    };
   }
 
   public async getLeagueInfo(id: string, seasonId: number, ownerSubject: string) {

@@ -11,7 +11,7 @@ import {
   Field,
   NativeSelect,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../auth/session';
 import { errorMessage } from '../api/client';
 import {
@@ -235,8 +235,16 @@ export function LiveMatchupsPage() {
   const [updated, setUpdated] = useState<Date>();
   const [retry, setRetry] = useState(0);
   const [leagueFilter, setLeagueFilter] = useState('');
+  const defaults = useRef({ api, initialized: false });
 
   useEffect(() => {
+    if (defaults.current.api !== api) {
+      defaults.current = { api, initialized: false };
+      setSelected([]);
+      setLeagues([]);
+      setLeagueFilter('');
+      setLoading(true);
+    }
     let active = true;
     let inFlight = false;
     const refresh = async () => {
@@ -247,13 +255,41 @@ export function LiveMatchupsPage() {
         const next = await api.getLiveMatchups();
         if (!active) return;
         setLeagues(next);
-        setSelected((previous) =>
-          previous.filter((key) =>
-            next.some((league) =>
-              league.matchups.some((matchup) => matchupKey(league.leagueId, matchup.id) === key),
+        const managedTeams = api.managedTeam;
+        const initialKeys =
+          !defaults.current.initialized && managedTeams
+            ? await Promise.all(
+                next.slice(0, 4).map(async (league) => {
+                  if (league.error) return undefined;
+                  try {
+                    const selection = await managedTeams.get(league.leagueId, league.season);
+                    if (!selection.teamId || selection.needsReselection) return undefined;
+                    const matchup = league.matchups.find(
+                      (matchup) =>
+                        matchup.home.teamId === selection.teamId ||
+                        matchup.away?.teamId === selection.teamId,
+                    );
+                    return matchup ? matchupKey(league.leagueId, matchup.id) : undefined;
+                  } catch {
+                    // Scores and manual selection remain usable when a saved team cannot be read.
+                    return undefined;
+                  }
+                }),
+              )
+            : [];
+        if (!active) return;
+        if (!defaults.current.initialized) {
+          defaults.current.initialized = true;
+          setSelected(initialKeys.filter((key): key is string => key !== undefined));
+        } else {
+          setSelected((previous) =>
+            previous.filter((key) =>
+              next.some((league) =>
+                league.matchups.some((matchup) => matchupKey(league.leagueId, matchup.id) === key),
+              ),
             ),
-          ),
-        );
+          );
+        }
         setUpdated(new Date());
         setError('');
       } catch (failure) {
@@ -283,7 +319,8 @@ export function LiveMatchupsPage() {
         .map((matchup) => ({ league, matchup })),
     ),
   );
-  const toggle = (key: string) =>
+  const toggle = (key: string) => {
+    defaults.current.initialized = true;
     setSelected((previous) =>
       previous.includes(key)
         ? previous.filter((item) => item !== key)
@@ -291,6 +328,7 @@ export function LiveMatchupsPage() {
           ? [...previous, key]
           : previous,
     );
+  };
 
   return (
     <>

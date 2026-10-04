@@ -793,6 +793,10 @@ In **Manage leagues**, choose **My team season** and **My managed team**, then s
 
 Open **My weekly overview** to see active leagues and your selected team for each saved season. Cards show the provider scoring week, matchup, record, and available playoff estimate, with links into rankings and season reports. Select teams in **Manage leagues**; archived leagues are excluded. Refresh runs on demand, with at most three league-context reads at a time, and reuses cached season insights. Every report shows its refresh time and completed-week cutoff. Missing scores or projections remain unavailable, and one league failing does not hide the others.
 
+### Live matchups
+
+Opening **Live matchups** automatically highlights your saved **My managed team** matchup for the first four leagues in sidebar order, using each league’s live season. Home, away and bye matchups are supported. Leagues without a valid team choice or current matchup are skipped; later leagues are not substituted. You can change or remove any highlight, and manual choices—including an empty board—remain in place during score refreshes. The board supports up to four matchups.
+
 ### Default NFL week
 
 The rankings studio defaults to the current scoring week for the active NFL season, using Sleeper NFL season state and ESPN’s scoring period for ESPN leagues. Explicit URL or manually selected weeks win and remain stable on refresh. Returning without an explicit week advances to the current week rather than reusing an old current-season choice. Historical seasons retain remembered weeks; a newly selected historical season starts at its first supported week. Preseason starts at the first supported week; postseason/offseason uses the last supported week of that NFL season. Defaults are bounded to the league schedule. If NFL state is unavailable, the studio shows a notice and uses the remembered or first supported week.

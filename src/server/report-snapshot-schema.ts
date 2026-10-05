@@ -14,6 +14,7 @@ const weeklyProjection = z.object({
   availabilityChecked: z.boolean().optional(),
   week: count.min(1).max(18),
   teamPoints: z.record(text, num),
+  positionPoints: z.record(text, z.record(text, num)).optional(),
   coveredStarters: count,
   totalStarters: count,
   benchSelections: count.optional(),
@@ -23,6 +24,16 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  regularSeasonSchedule: z
+    .object({
+      endWeek: count.min(1).max(18),
+      fixtures: z
+        .array(
+          z.object({ week: count.min(1).max(18), homeTeamId: text, awayTeamId: text.nullable() }),
+        )
+        .max(1800),
+    })
+    .optional(),
   forecastSchedule: z
     .array(z.object({ week: num, homeTeamId: text, awayTeamId: text }))
     .max(1800)

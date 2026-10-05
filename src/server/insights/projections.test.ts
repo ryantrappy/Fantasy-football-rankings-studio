@@ -26,6 +26,7 @@ it('uses the best legal Sleeper lineup from starters and bench players', () => {
     { a: 'QB', b: 'RB', c: 'RB', d: 'RB' },
   );
   expect(result.teamPoints).toEqual({ '1': 33 });
+  expect(result.positionPoints).toEqual({ '1': { QB: 16, RB: 17 } });
   expect(result.coveredStarters).toBe(2);
   expect(result.totalStarters).toBe(4);
   expect(result.benchSelections).toBe(1);
@@ -51,6 +52,7 @@ it('reoptimizes overlapping slots each week and treats a known bye as zero, not 
   expect(project(4).teamPoints['1']).toBe(115);
   const bye = project(5, { rb: 5 });
   expect(bye.teamPoints['1']).toBe(105);
+  expect(bye.positionPoints?.['1']).toEqual({ RB: 10, WR: 55, QB: 40 });
   expect(bye.lineups?.['1']).toContain('replacement');
   expect(bye.lineups?.['1']).not.toContain('rb');
   expect(new Set(bye.lineups?.['1']).size).toBe(4);
@@ -278,6 +280,25 @@ it('uses configured ESPN slots even if the current starting lineup is empty', ()
     { '0': 1, '2': 1, '20': 5 },
   );
   expect(result.teamPoints['1']).toBe(30);
+  expect(result.positionPoints?.['1']).toEqual({ QB: 20, RB: 10 });
   expect(result.totalStarters).toBe(2);
   expect(result.unavailablePlayers).toBe(1);
+});
+
+it('groups IDP and defense contributions without counting overlapping flex players twice', () => {
+  const result = sleeperProjectionSnapshot(
+    5,
+    ['1'],
+    [{ teamId: '1', starters: ['lb', 'def'], bench: ['dl', 'lb2'] }],
+    Object.entries({ lb: 15, def: -2, dl: 20, lb2: 10 }).map(([player_id, points]) => ({
+      player_id,
+      stats: { points },
+    })),
+    { points: 1 },
+    ['LB', 'IDP_FLEX', 'DEF'],
+    { lb: 'LB', def: 'DST', dl: 'DL', lb2: 'LB' },
+  );
+  expect(result.teamPoints).toEqual({ '1': 33 });
+  expect(result.positionPoints).toEqual({ '1': { LB: 15, DL: 20, DEF: -2 } });
+  expect(new Set(result.lineups?.['1']).size).toBe(3);
 });

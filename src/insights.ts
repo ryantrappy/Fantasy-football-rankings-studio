@@ -20,7 +20,13 @@ export interface ScoreWeek {
     slots: number;
   };
 }
+export interface RegularSeasonSchedule {
+  endWeek: number;
+  fixtures: { week: number; homeTeamId: string; awayTeamId: string | null }[];
+}
 export interface WeeklyPlayoffProjection {
+  // Primary-position contributions from each complete optimized legal lineup.
+  positionPoints?: Record<string, Record<string, number>>;
   unavailablePlayers?: number;
   uncertainPlayers?: number;
   availabilityChecked?: boolean;
@@ -58,6 +64,7 @@ export interface RosterSnapshot {
   }[];
 }
 export interface InsightsSource {
+  regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
   forecastContext?: {
     rosterSlots: string[] | Record<string, number>;
@@ -105,6 +112,7 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: InsightsSource['forecastSchedule'];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;

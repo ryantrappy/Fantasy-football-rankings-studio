@@ -37,10 +37,10 @@ export function evaluateTrade(
       return { error: 'Enter a valid explicit open-slot assumption (0–10).', sides: [] };
     for (const id of [...proposal.send[index], ...proposal.drops[index]]) {
       const player = teams[index].players.find((entry) => entry.id === id && entry.owned === true);
-      if (!player || player.reserve || player.locked)
+      if (!player || player.reserve)
         return {
           error:
-            'Assets must belong to the selected team’s active roster and have no known game lock. Reserve/taxi assets and draft picks are unsupported.',
+            'Assets must belong to the selected team’s active roster. Reserve/taxi assets and draft picks are unsupported.',
           sides: [],
         };
     }
@@ -52,11 +52,16 @@ export function evaluateTrade(
         sides: [],
       };
   }
-  const sides = teams.map((team, index) => {
+  // Compare hypothetical rosters independently of this week's game locks.
+  const simulatedTeams = teams.map((team) => ({
+    ...team,
+    players: team.players.map((player) => ({ ...player, locked: false })),
+  }));
+  const sides = simulatedTeams.map((team, index) => {
     const remove = new Set([...proposal.send[index], ...proposal.drops[index]]);
     const players = [
       ...team.players.filter((player) => player.owned && !remove.has(player.id)),
-      ...teams[1 - index].players
+      ...simulatedTeams[1 - index].players
         .filter((player) => proposal.send[1 - index].includes(player.id))
         .map((player) => ({ ...player, starter: false, lineupSlot: undefined })),
     ];

@@ -66,6 +66,7 @@ it('stores independent snapshots and reads them without provider calls or creden
       Promise.resolve(documents.get((filter as unknown as { publicId: string }).publicId)) as never,
   );
   const original = input();
+  original.records[0].data.scores[0].starters = [{ playerId: '7', points: 100, position: 'QB' }];
   original.records[0].data.forecastSchedule = [{ week: 2, homeTeamId: '1', awayTeamId: '2' }];
   original.records[0].data.regularSeasonSchedule = {
     endWeek: 3,
@@ -143,6 +144,9 @@ it('stores independent snapshots and reads them without provider calls or creden
   expect(saved.records[0].data.regularSeasonSchedule).toEqual(
     original.records[0].data.regularSeasonSchedule,
   );
+  expect(saved.records[0].data.scores[0].starters).toEqual([
+    { playerId: '7', points: 100, position: 'QB' },
+  ]);
   expect(saved.records[0].data.playoffProjection?.positionPoints).toEqual(
     original.records[0].data.playoffProjection?.positionPoints,
   );

@@ -47,3 +47,37 @@ it('replaces projections with unavailable states for completed seasons and expos
     screen.queryByRole('table', { name: 'Remaining schedule difficulty' }),
   ).not.toBeInTheDocument();
 });
+
+it('switches rankings and bars to actual completed-week starter points and back', () => {
+  render(wrap());
+  const completed = screen.getByRole('button', { name: 'Completed weeks only' });
+  expect(completed).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(completed);
+  expect(completed).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('heading', { name: 'Completed-week scoring' })).toBeInTheDocument();
+  expect(screen.getByRole('img')).toHaveAccessibleName(/Completed-week actual starter points/);
+  expect(screen.getByText(/completed weeks 1, 2, 3, 4/)).toBeInTheDocument();
+  const ranks = screen.getByRole('table', { name: 'Position group rankings' });
+  expect(
+    within(ranks).getByRole('columnheader', { name: /Total actual points/ }),
+  ).toBeInTheDocument();
+  expect(within(ranks).getByText('344')).toBeInTheDocument();
+  expect(screen.getByRole('table', { name: 'Remaining schedule difficulty' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
+  expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
+  expect(screen.getByRole('heading', { name: 'Roster projections' })).toBeInTheDocument();
+});
+
+it('offers completed mode without forecasts and explains missing positions or no completed weeks', () => {
+  const data = structuredClone(strengthData);
+  delete data.playoffProjection;
+  const view = render(wrap(data));
+  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
+  expect(screen.getByRole('img')).toHaveAccessibleName(/Completed-week actual starter points/);
+  data.scores.forEach((score) => score.starters.forEach((player) => delete player.position));
+  view.rerender(wrap({ ...data }));
+  expect(screen.getByText(/Completed-week position data is unavailable/)).toBeInTheDocument();
+  data.completedWeek = 0;
+  view.rerender(wrap({ ...data }));
+  expect(screen.getByText(/No completed weeks yet/)).toBeInTheDocument();
+});

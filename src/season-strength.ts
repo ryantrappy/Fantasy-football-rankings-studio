@@ -17,7 +17,11 @@ function currentWeekly(data: SeasonInsights) {
   );
 }
 
-export function positionStrength(data: SeasonInsights) {
+export type PositionStrengthMode = 'projected' | 'completed';
+const primaryPosition = (position: string) =>
+  position.toUpperCase() === 'DST' ? 'DEF' : position.toUpperCase();
+
+export function positionStrength(data: SeasonInsights, mode: PositionStrengthMode = 'projected') {
   const weekly = currentWeekly(data);
   const end = data.regularSeasonSchedule?.endWeek ?? data.playoffSettings?.regularSeasonEnd;
   const postseason =
@@ -28,7 +32,7 @@ export function positionStrength(data: SeasonInsights) {
           (_, i) => data.playoffSettings!.regularSeasonEnd + i + 1,
         )
       : []);
-  const weeks = end
+  const projectedWeeks = end
     ? [
         ...new Set([
           ...Array.from(
@@ -41,10 +45,29 @@ export function positionStrength(data: SeasonInsights) {
         .filter((week) => week > data.completedWeek && week <= 18)
         .sort((a, b) => a - b)
     : weekly.map((row) => row.week).sort((a, b) => a - b);
+  const completedScores = data.scores.filter(
+    (score) => score.week >= 1 && score.week <= data.completedWeek,
+  );
+  const firstCompletedWeek = completedScores.length
+    ? Math.min(...completedScores.map((score) => score.week))
+    : 1;
+  const weeks =
+    mode === 'completed'
+      ? Array.from(
+          { length: Math.max(0, data.completedWeek - firstCompletedWeek + 1) },
+          (_, i) => firstCompletedWeek + i,
+        )
+      : projectedWeeks;
   const positionSet = new Set(
-    weekly.flatMap((row) =>
-      Object.values(row.positionPoints ?? {}).flatMap((points) => Object.keys(points)),
-    ),
+    mode === 'completed'
+      ? completedScores.flatMap((score) =>
+          score.starters.flatMap((player) =>
+            player.position ? [primaryPosition(player.position)] : [],
+          ),
+        )
+      : weekly.flatMap((row) =>
+          Object.values(row.positionPoints ?? {}).flatMap((points) => Object.keys(points)),
+        ),
   );
   const positions = [
     ...standardPositions.filter((p) => positionSet.has(p)),
@@ -52,6 +75,26 @@ export function positionStrength(data: SeasonInsights) {
   ];
   const rows = data.teams.map((team) => {
     const covered = weeks.flatMap((week) => {
+      if (mode === 'completed') {
+        const scores = completedScores.filter(
+          (score) => score.teamId === team.teamId && score.week === week,
+        );
+        const score = scores.length === 1 ? scores[0] : undefined;
+        if (
+          !score ||
+          score.lineupAvailable === false ||
+          (!score.starters.length && score.lineupAvailable !== true) ||
+          new Set(score.starters.map((player) => player.playerId)).size !== score.starters.length ||
+          score.starters.some((player) => !player.position || !finite(player.points))
+        )
+          return [];
+        const points: Record<string, number> = {};
+        for (const player of score.starters) {
+          const position = primaryPosition(player.position!);
+          points[position] = (points[position] ?? 0) + player.points;
+        }
+        return [points];
+      }
       const row = weekly.find((r) => r.week === week);
       const points = row?.positionPoints?.[team.teamId];
       if (
@@ -101,7 +144,7 @@ export function positionStrength(data: SeasonInsights) {
               (other) => other.points[position] !== null && other.points[position]! > points,
             ).length;
     }
-  return { weeks, positions, rows };
+  return { weeks, positions, rows, mode };
 }
 
 export interface ScheduleOpponent {

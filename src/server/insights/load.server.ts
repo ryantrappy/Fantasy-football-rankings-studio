@@ -375,7 +375,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     );
   }
   let catalog = { names: {}, positions: {} };
-  if (moves.length || rosterSnapshot || season.roster_positions?.length)
+  if (
+    moves.length ||
+    rosterSnapshot ||
+    season.roster_positions?.length ||
+    scores.some((score) => score.starters.length)
+  )
     try {
       catalog = await sleeperNames();
     } catch (error) {
@@ -647,7 +652,11 @@ async function loadEspn(
         bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)
-          .map((e) => ({ playerId: String(e.playerId), points: stat(e, 0)! })),
+          .map((e) => ({
+            playerId: String(e.playerId),
+            points: stat(e, 0)!,
+            position: playerPositions[String(e.playerId)],
+          })),
       });
     }
   }

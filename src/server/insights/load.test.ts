@@ -76,6 +76,7 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
       player: {
         id,
         fullName: `Player ${id}`,
+        defaultPositionId: 2,
         stats: [
           {
             scoringPeriodId: 2,
@@ -174,7 +175,7 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
   expect(result.scores[1]).toMatchObject({
     actual: 10,
     projected: 15,
-    starters: [{ playerId: '7', points: 10 }],
+    starters: [{ playerId: '7', points: 10, position: 'RB' }],
   });
   expect(result.scores[0].projected).toBeNull();
   expect(result.pickups).toHaveLength(1);
@@ -186,9 +187,16 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
   ]);
 });
 it('caps Sleeper at the league last-scored week even when the NFL played more weeks', async () => {
-  vi.mocked(axios.get).mockResolvedValue({
-    data: { season: '2026', leg: 1, season_type: 'regular' },
-  });
+  vi.mocked(axios.get).mockImplementation(async (url): Promise<any> =>
+    String(url).includes('/state/nfl')
+      ? { data: { season: '2026', leg: 1, season_type: 'regular' } }
+      : {
+          data: {
+            a: { full_name: 'Starter', position: 'RB' },
+            b: { full_name: 'Bench', position: 'RB' },
+          },
+        },
+  );
   vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
     league_id: '123',
     name: 'League',
@@ -202,7 +210,15 @@ it('caps Sleeper at the league last-scored week even when the NFL played more we
     .mockImplementation(async (path): Promise<any> =>
       path.includes('/transactions/')
         ? []
-        : [{ roster_id: 1, points: 0, custom_points: -2, starters: [], players_points: {} }],
+        : [
+            {
+              roster_id: 1,
+              points: 0,
+              custom_points: -2,
+              starters: ['a'],
+              players_points: { a: -2 },
+            },
+          ],
     );
   const result = await loadInsights(
     { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2025 },
@@ -211,6 +227,8 @@ it('caps Sleeper at the league last-scored week even when the NFL played more we
   expect(result.scores).toHaveLength(2);
   expect(result.completedWeek).toBe(2);
   expect(result.scores[0]).toMatchObject({ actual: -2, projected: null });
+  expect(result.scores[0].starters).toEqual([{ playerId: 'a', points: -2, position: 'RB' }]);
+  expect(read.mock.calls.map(([path]) => path)).not.toContain('123/rosters');
   expect(read.mock.calls.map(([path]) => path)).not.toContain('123/matchups/3');
 });
 it('keeps insights available when current Sleeper projections fail', async () => {

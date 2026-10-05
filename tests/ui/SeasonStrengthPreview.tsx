@@ -15,7 +15,10 @@ export const strengthData = calculateInsights({
       week,
       actual: 90 + team * 8,
       projected: null,
-      starters: [],
+      lineupAvailable: true,
+      starters: Object.entries({ RB: 20 + team, WR: 30 + team, QB: 18, TE: 10, K: 8, DEF: -2 }).map(
+        ([position, points]) => ({ playerId: `${team}-${position}`, position, points }),
+      ),
     })),
   ),
   moves: [],

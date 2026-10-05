@@ -7,7 +7,7 @@ const num = z.number();
 const count = z.number().int().nonnegative();
 const year = z.number().int().min(2000).max(2100);
 const strings = z.array(text).max(10000);
-const player = z.object({ playerId: text, points: num });
+const player = z.object({ playerId: text, points: num, position: text.optional() });
 const weeklyProjection = z.object({
   unavailablePlayers: count.optional(),
   uncertainPlayers: count.optional(),

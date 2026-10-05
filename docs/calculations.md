@@ -442,6 +442,25 @@ without those inputs remain unavailable. Refresh an active-season report to
 load the new breakdown. All teams share the same horizon, including projected
 playoff weeks regardless of whether that team will qualify.
 
+The **Completed weeks only** toggle instead sums the actual points of the starters
+each manager fielded, using completed team-week box scores through the report
+cutoff. The displayed horizon runs from the first observed scoring week through
+that cutoff, allowing leagues that started later. A missing week within that
+horizon makes the affected team unavailable. Future and unfinished weeks,
+bench scores, best-possible lineups, and projections never enter these totals.
+FLEX and SUPER_FLEX starters count once under their primary position; DST displays
+as DEF. Commissioner adjustments to team totals are not allocated to positions.
+
+Starter positions are captured in the report: ESPN uses each weekly box score's
+primary position and Sleeper uses its player catalog. Historical rankings do not
+require current roster ownership. Saved reports preserve starter positions;
+older reports without that metadata need a refresh. A duplicate player or
+team-week, missing starter score or position, or explicitly unavailable lineup
+makes that week unavailable. A provider-confirmed empty lineup contributes zero.
+The same full-horizon coverage rule, two-decimal competition ranks and signed
+bars apply to actual scoring. Switching the toggle updates both views together
+and leaves remaining schedule difficulty unchanged.
+
 ### Remaining fantasy schedule difficulty
 
 The default horizon is every regular-season scoring week after the completed

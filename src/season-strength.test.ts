@@ -80,6 +80,80 @@ it('leaves incomplete, inconsistent, stale and legacy position snapshots unavail
   expect(model.rows.every((row) => row.total === null)).toBe(true);
 });
 
+it('ranks completed actual starters, ignoring projections, bench, optimal lineups and unfinished weeks', () => {
+  const data = fixture();
+  data.scores.forEach((score, i) => {
+    score.starters = [
+      { playerId: 'rb', position: 'RB', points: i < 2 ? 10 : i === 2 ? 0 : -2 },
+      { playerId: 'flex-wr', position: 'WR', points: 5 },
+      { playerId: 'def', position: 'DST', points: -1 },
+    ];
+    score.players = [{ playerId: 'bench', points: 999 }];
+    score.bestLineup = { points: 999, slots: 3, correctStarts: 0 };
+  });
+  data.scores.push({
+    teamId: 'A',
+    week: 2,
+    actual: 9999,
+    projected: null,
+    starters: [{ playerId: 'future', points: 9999, position: 'QB' }],
+  });
+  const model = positionStrength(data, 'completed');
+  expect(model.weeks).toEqual([1]);
+  expect(model.positions).toEqual(['RB', 'WR', 'DEF']);
+  expect(model.rows[0]).toMatchObject({ total: 14, points: { RB: 10, WR: 5, DEF: -1 } });
+  expect(model.rows.map((row) => row.ranks.RB)).toEqual([1, 1, 3, 4]);
+  expect(model.rows[2].points.RB).toBe(0);
+  delete data.playoffProjection;
+  delete data.regularSeasonSchedule;
+  expect(positionStrength(data, 'completed')).toEqual(model);
+});
+
+it('requires complete actual starter coverage across a common completed horizon', () => {
+  const data = fixture();
+  data.completedWeek = 3;
+  data.scores = [1, 2, 3].flatMap((week) =>
+    data.teams.map((team) => ({
+      teamId: team.teamId,
+      week,
+      actual: 10,
+      projected: null,
+      lineupAvailable: true,
+      starters: [{ playerId: 'p', points: 10, position: 'RB' }],
+    })),
+  );
+  data.scores[0].starters[0].position = undefined;
+  data.scores[1].lineupAvailable = false;
+  data.scores[2].starters.push({ ...data.scores[2].starters[0] });
+  data.scores[3].starters[0].points = NaN;
+  expect(positionStrength(data, 'completed').rows.every((row) => row.total === null)).toBe(true);
+  expect(positionStrength(data, 'completed').rows.every((row) => row.coveredWeeks === 2)).toBe(
+    true,
+  );
+  data.scores = data.scores.filter((score) => score.week !== 1 && score.week !== 2);
+  expect(positionStrength(data, 'completed').weeks).toEqual([3]);
+  expect(positionStrength(data, 'completed').rows[0].total).toBe(10);
+  data.completedWeek = 5;
+  data.scores.push(...data.scores.map((score) => ({ ...score, week: 5 })));
+  expect(positionStrength(data, 'completed').weeks).toEqual([3, 4, 5]);
+  expect(positionStrength(data, 'completed').rows[0]).toMatchObject({
+    total: null,
+    coveredWeeks: 2,
+  });
+});
+
+it('keeps empty seasons unavailable and treats a confirmed empty lineup as zero', () => {
+  const data = fixture();
+  data.scores[0].lineupAvailable = true;
+  data.scores[1].starters = [{ playerId: 'p', points: 10, position: 'RB' }];
+  const model = positionStrength(data, 'completed');
+  expect(model.rows[0]).toMatchObject({ total: 0, points: { RB: 0 }, ranks: { RB: 2 } });
+  expect(model.rows[2].total).toBeNull();
+  data.completedWeek = 0;
+  expect(positionStrength(data, 'completed').weeks).toEqual([]);
+  expect(positionStrength(data, 'completed').rows.every((row) => row.total === null)).toBe(true);
+});
+
 it('ranks repeated opponents using weekly differences and handles real zero projections', () => {
   const data = fixture();
   const model = remainingScheduleStrength(data);

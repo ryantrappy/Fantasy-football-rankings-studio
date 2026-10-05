@@ -3,7 +3,15 @@ import { normalizedComparisons } from './normalize';
 const round = (value: number) => Math.round(value * 100) / 100;
 export function calculateInsights(source: InsightsSource): SeasonInsights {
   const normalized = normalizedComparisons(source);
-  const scores = source.scores.filter((s) => s.week <= source.completedWeek);
+  const scores = source.scores
+    .filter((s) => s.week <= source.completedWeek)
+    .map((score) => ({
+      ...score,
+      starters: score.starters.map((player) => ({
+        ...player,
+        position: player.position ?? source.playerPositions?.[player.playerId],
+      })),
+    }));
   const moves = [...source.moves].sort(
     (a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id),
   );

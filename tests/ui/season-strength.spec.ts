@@ -20,11 +20,29 @@ test('shows real stacked bars, heatmap values, sort controls and remaining oppon
   await expect(opponents.locator('tbody tr')).toHaveCount(6);
   await expect(opponents.locator('tbody tr').first()).toContainText('Sleeper weekly lineup');
   await page.screenshot({ path: 'test-results/season-strength-desktop.png', fullPage: true });
+  await page.getByRole('button', { name: 'Completed weeks only' }).click();
+  await expect(page.getByRole('heading', { name: 'Completed-week scoring' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Completed weeks only' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(ranks.getByRole('columnheader', { name: /Total actual points/ })).toBeVisible();
+  await expect(ranks.getByText('344', { exact: true })).toBeVisible();
+  await expect(page.locator('.season-strength svg rect').first()).toBeVisible();
+  await expect(opponents.locator('tbody tr').first()).toContainText('Sleeper weekly lineup');
+  await page.screenshot({
+    path: 'test-results/season-strength-completed-desktop.png',
+    fullPage: true,
+  });
   const accessibility = await new AxeBuilder({ page })
     .include('.season-strength')
     .withTags(['wcag2a', 'wcag2aa'])
     .analyze();
   expect(accessibility.violations).toEqual([]);
+  await page.getByRole('button', { name: 'Projected remaining weeks' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Roster projections', exact: true }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -33,6 +51,8 @@ test('keeps wide chart and tables inside scrollable panels on mobile', async ({ 
   await page.goto('/tests/ui/?mode=season-strength');
   await expect(page.getByRole('heading', { name: 'Remaining schedule strength' })).toBeVisible();
   await expect(page.locator('.season-strength svg rect').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Completed weeks only' }).click();
+  await expect(page.getByRole('heading', { name: 'Completed-week scoring' })).toBeVisible();
   const dimensions = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,
     scroll: document.documentElement.scrollWidth,

@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react';
-import { Box, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
+import { Box, Button, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
 import { barX, defineChart, text } from '@tanstack/charts';
 import { Chart } from '@tanstack/charts/react';
 import { decorative } from '@tanstack/charts/mark/decorative';
@@ -11,6 +11,7 @@ import {
   positionStrength,
   remainingScheduleStrength,
   type PositionStrength,
+  type PositionStrengthMode,
 } from '../season-strength';
 import { DataTable } from './DataTable';
 
@@ -109,12 +110,17 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
       tooltip: {
         use: tooltip,
         format: (point) =>
-          `${point.datum.teamName} · ${point.datum.position}: ${number(point.datum.points)} projected points`,
+          `${point.datum.teamName} · ${point.datum.position}: ${number(point.datum.points)} ${model.mode === 'completed' ? 'actual' : 'projected'} points`,
       },
       scales: {
         x: {
           scale: scaleLinear().domain([min, max * 1.12]),
-          axis: { label: 'Remaining projected fantasy points' },
+          axis: {
+            label:
+              model.mode === 'completed'
+                ? 'Completed-week starter fantasy points'
+                : 'Remaining projected fantasy points',
+          },
         },
         y: {
           scale: scaleBand().domain(rows.map((row) => row.teamId)),
@@ -134,7 +140,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
     <Chart
       definition={definition}
       height={Math.max(230, model.rows.length * 42 + 70)}
-      ariaLabel="Roster projections by position. Full team names, position values and totals are in the tables below."
+      ariaLabel={`${model.mode === 'completed' ? 'Completed-week actual starter points' : 'Roster projections'} by position. Full team names, position values and totals are in the tables below.`}
     />
   );
 }
@@ -146,7 +152,9 @@ export function SeasonStrength({
   data: SeasonInsights;
   managedTeamId?: string | null;
 }) {
-  const positions = useMemo(() => positionStrength(data), [data]);
+  const [mode, setMode] = useState<PositionStrengthMode>('projected');
+  const completed = mode === 'completed';
+  const positions = useMemo(() => positionStrength(data, mode), [data, mode]);
   const schedule = useMemo(() => remainingScheduleStrength(data), [data]);
   const [sort, setSort] = useState('total');
   const sortId = useId();
@@ -172,8 +180,39 @@ export function SeasonStrength({
       <Box className="panel" p={{ base: 4, md: 6 }} mb={6}>
         <Flex justify="space-between" align="center" gap={4} flexWrap="wrap">
           <Heading as="h3" size="lg" mb={4}>
-            Roster projections
+            {completed ? 'Completed-week scoring' : 'Roster projections'}
           </Heading>
+          <Flex
+            as="fieldset"
+            aria-label="Position ranking weeks"
+            gap={2}
+            flexWrap="wrap"
+            border="0"
+            p="0"
+          >
+            <Button
+              colorPalette="indigo"
+              variant={completed ? 'outline' : 'solid'}
+              aria-pressed={!completed}
+              onClick={() => {
+                setMode('projected');
+                setSort('total');
+              }}
+            >
+              Projected remaining weeks
+            </Button>
+            <Button
+              colorPalette="indigo"
+              variant={completed ? 'solid' : 'outline'}
+              aria-pressed={completed}
+              onClick={() => {
+                setMode('completed');
+                setSort('total');
+              }}
+            >
+              Completed weeks only
+            </Button>
+          </Flex>
           {hasPositions && (
             <label htmlFor={sortId}>
               Sort charts by
@@ -184,7 +223,9 @@ export function SeasonStrength({
                   value={sort}
                   onChange={(event) => setSort(event.target.value)}
                 >
-                  <option value="total">Total projected points</option>
+                  <option value="total">
+                    {completed ? 'Total actual points' : 'Total projected points'}
+                  </option>
                   {positions.positions.map((position) => (
                     <option key={position} value={position}>
                       {position} strength
@@ -197,18 +238,37 @@ export function SeasonStrength({
           )}
         </Flex>
         <Text mb={4}>
-          Best legal weekly lineups from current rosters, grouped by each selected player's primary
-          position. Bench players compete for starting slots; reserve and taxi players are excluded.
-          FLEX and SUPER_FLEX count under the player's position, once per week.
+          {completed ? (
+            "Actual points from the starters each manager fielded in completed weeks, grouped by primary position. Bench points and future or unfinished weeks are excluded. FLEX and SUPER_FLEX starters count under the player's position once. Commissioner adjustments to team totals are not assigned to a position."
+          ) : (
+            <>
+              Best legal weekly lineups from current rosters, grouped by each selected player's
+              primary position. Bench players compete for starting slots; reserve and taxi players
+              are excluded. FLEX and SUPER_FLEX count under the player's position, once per week.
+            </>
+          )}
         </Text>
         {hasPositions ? (
           <>
             <Text mb={4} className="insights-meta">
-              {data.playoffProjection?.provider} native projections · selected league scoring and
-              lineup rules · weeks {positions.weeks.join(', ')} (including configured playoff weeks)
-              · captured {data.playoffProjection?.capturedAt ?? data.generatedAt}. Published byes
-              score zero. Confirmed absences are excluded in the current week only; future injury
-              recovery is unknown. Rankings use the same full horizon for every team.
+              {completed ? (
+                <>
+                  Actual starter scoring under the selected league's rules · completed weeks{' '}
+                  {positions.weeks.join(', ')} · through week {data.completedWeek} · report captured{' '}
+                  {data.generatedAt}. Primary positions come from provider player metadata (Sleeper
+                  uses its current position catalog). Rankings require complete starter scores and
+                  positions for every displayed week.
+                </>
+              ) : (
+                <>
+                  {data.playoffProjection?.provider} native projections · selected league scoring
+                  and lineup rules · weeks {positions.weeks.join(', ')} (including configured
+                  playoff weeks) · captured {data.playoffProjection?.capturedAt ?? data.generatedAt}
+                  . Published byes score zero. Confirmed absences are excluded in the current week
+                  only; future injury recovery is unknown. Rankings use the same full horizon for
+                  every team.
+                </>
+              )}
             </Text>
             <Box overflowX="auto">
               <Box minW="720px">
@@ -236,12 +296,13 @@ export function SeasonStrength({
             </Heading>
             <Text mb={4}>
               1 is strongest. Equal totals to two decimal places share a rank; the next rank skips
-              tied teams. Ranks compare teams with complete projections. Gray cells are unavailable,
-              never zero.
+              tied teams. Ranks compare teams with complete{' '}
+              {completed ? 'actual starter data' : 'projections'}. Gray cells are unavailable, never
+              zero.
             </Text>
             <Box overflowX="auto">
               <DataTable
-                key={`ranks:${sort}`}
+                key={`ranks:${mode}:${sort}`}
                 label="Position group rankings"
                 data={positions.rows}
                 getRowId={(row) => row.teamId}
@@ -284,7 +345,7 @@ export function SeasonStrength({
                   })),
                   {
                     id: 'total',
-                    header: 'Total projected points',
+                    header: completed ? 'Total actual points' : 'Total projected points',
                     value: (row) => row.total,
                     cell: (row) => number(row.total),
                   },
@@ -300,9 +361,20 @@ export function SeasonStrength({
           </>
         ) : (
           <Text className="notice">
-            Position projections are unavailable for this report. Refresh an active-season report to
-            load the new positional breakdown. Historical and completed seasons do not substitute
-            current projections; missing or unsupported lineup positions are not scored as zero.
+            {completed ? (
+              data.completedWeek === 0 ? (
+                'No completed weeks yet. Actual position rankings will appear after a week finishes.'
+              ) : (
+                'Completed-week position data is unavailable for this report. Refresh to load starter positions. Missing lineup details or player positions are not scored as zero.'
+              )
+            ) : (
+              <>
+                Position projections are unavailable for this report. Refresh an active-season
+                report to load the new positional breakdown. Historical and completed seasons do not
+                substitute current projections; missing or unsupported lineup positions are not
+                scored as zero.
+              </>
+            )}
           </Text>
         )}
       </Box>

@@ -1,0 +1,41 @@
+---
+id: TASK-112
+title: Keep unusable Sleeper live projections unavailable instead of zero
+status: To Do
+assignee: []
+created_date: '2026-10-05 17:34'
+labels:
+  - analytics
+  - live
+  - data-quality
+dependencies: []
+references:
+  - src/server/live-matchups.server.ts
+  - src/server/insights/projections.ts
+  - src/server/combined-projections.server.ts
+documentation:
+  - docs/code-review-2026-10-05.md
+priority: high
+type: bug
+ordinal: 119000
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+Live Sleeper normalization accepts any nonempty stat dictionary and sums absent scoring weights as zero. With league scoring rush_yd=0.1, a projection row containing only unrelated_stat=1 becomes a finite zero-point forecast. This differs from the season forecast coverage check and can feed Live, Players, lineup advice and trade analysis as though the player has a genuine zero forecast. A local mocked-provider reproduction confirmed projectedPoints=0 for that input. Related completed tasks 55 and 99 do not cover this normalization case.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 A native projection with no finite stat applicable to the selected league scoring remains unavailable rather than becoming a zero forecast.
+- [ ] #2 Legitimate zero and negative projections remain numeric, while missing scoring settings, nonfinite inputs and unusable dictionaries do not claim covered projection data.
+- [ ] #3 Live, Players, lineup advice and trade analysis consistently disclose missing projection coverage; a valid optional cross-source estimate may still be used with its actual provenance.
+- [ ] #4 Provider regression tests reproduce the irrelevant-stat case and verify real zero, negative, missing and valid cross-source cases; calculation documentation explains the coverage rule.
+<!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 - Tests pass
+- [ ] #2 Docs updated
+<!-- DOD:END -->

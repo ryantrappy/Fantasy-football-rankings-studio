@@ -66,11 +66,20 @@ it('stores independent snapshots and reads them without provider calls or creden
       Promise.resolve(documents.get((filter as unknown as { publicId: string }).publicId)) as never,
   );
   const original = input();
+  original.records[0].data.scores[0].starters = [{ playerId: '7', points: 100, position: 'QB' }];
   original.records[0].data.forecastSchedule = [{ week: 2, homeTeamId: '1', awayTeamId: '2' }];
+  original.records[0].data.regularSeasonSchedule = {
+    endWeek: 3,
+    fixtures: [
+      { week: 2, homeTeamId: '1', awayTeamId: '2' },
+      { week: 3, homeTeamId: '1', awayTeamId: null },
+    ],
+  };
   original.records[0].data.playoffProjection = {
     provider: 'ESPN',
     week: 2,
     teamPoints: { '1': 105 },
+    positionPoints: { '1': { QB: 105 } },
     coveredStarters: 1,
     totalStarters: 1,
     unavailablePlayers: 1,
@@ -79,6 +88,7 @@ it('stores independent snapshots and reads them without provider calls or creden
       {
         week: 2,
         teamPoints: { '1': 105 },
+        positionPoints: { '1': { QB: 105 } },
         coveredStarters: 1,
         totalStarters: 1,
         lineups: { '1': ['7'] },
@@ -87,6 +97,7 @@ it('stores independent snapshots and reads them without provider calls or creden
       {
         week: 3,
         teamPoints: { '1': 0 },
+        positionPoints: { '1': { QB: 0 } },
         coveredStarters: 1,
         totalStarters: 1,
         lineups: { '1': ['7'] },
@@ -130,6 +141,15 @@ it('stores independent snapshots and reads them without provider calls or creden
   expect(saved.records).toHaveLength(2);
   expect(saved.records[0].data.scores[0].actual).toBe(100);
   expect(saved.records[0].data.forecastSchedule).toEqual(original.records[0].data.forecastSchedule);
+  expect(saved.records[0].data.regularSeasonSchedule).toEqual(
+    original.records[0].data.regularSeasonSchedule,
+  );
+  expect(saved.records[0].data.scores[0].starters).toEqual([
+    { playerId: '7', points: 100, position: 'QB' },
+  ]);
+  expect(saved.records[0].data.playoffProjection?.positionPoints).toEqual(
+    original.records[0].data.playoffProjection?.positionPoints,
+  );
   expect(saved.records[0].data.playoffProjection?.unavailablePlayers).toBe(1);
   expect(saved.records[0].data.playoffProjection?.weekly).toEqual(
     original.records[0].data.playoffProjection?.weekly,

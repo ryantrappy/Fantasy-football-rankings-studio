@@ -1,3 +1,4 @@
+import { SeasonStrengthPreview } from './SeasonStrengthPreview';
 import { createRoot } from 'react-dom/client';
 import { Container } from '@chakra-ui/react';
 import {
@@ -46,7 +47,9 @@ function PreviewApp() {
         </header>
       )}
       <Container className="studio-surface" maxW="1280px" p={4}>
-        {mode === 'players' ? (
+        {mode === 'season-strength' ? (
+          <SeasonStrengthPreview />
+        ) : mode === 'players' ? (
           <PlayersPreview />
         ) : mode === 'trade' ? (
           <TradePreview />

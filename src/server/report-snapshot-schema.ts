@@ -7,13 +7,14 @@ const num = z.number();
 const count = z.number().int().nonnegative();
 const year = z.number().int().min(2000).max(2100);
 const strings = z.array(text).max(10000);
-const player = z.object({ playerId: text, points: num });
+const player = z.object({ playerId: text, points: num, position: text.optional() });
 const weeklyProjection = z.object({
   unavailablePlayers: count.optional(),
   uncertainPlayers: count.optional(),
   availabilityChecked: z.boolean().optional(),
   week: count.min(1).max(18),
   teamPoints: z.record(text, num),
+  positionPoints: z.record(text, z.record(text, num)).optional(),
   coveredStarters: count,
   totalStarters: count,
   benchSelections: count.optional(),
@@ -23,6 +24,16 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  regularSeasonSchedule: z
+    .object({
+      endWeek: count.min(1).max(18),
+      fixtures: z
+        .array(
+          z.object({ week: count.min(1).max(18), homeTeamId: text, awayTeamId: text.nullable() }),
+        )
+        .max(1800),
+    })
+    .optional(),
   forecastSchedule: z
     .array(z.object({ week: num, homeTeamId: text, awayTeamId: text }))
     .max(1800)

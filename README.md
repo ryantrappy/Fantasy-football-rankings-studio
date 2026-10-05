@@ -289,6 +289,31 @@ The rankings studio loads valid week choices for the selected league and season 
 
 ## Season insights
 
+**Roster strength & the road ahead** adds two league-wide views: stacked
+remaining-week lineup projections and a position ranking heatmap, sortable by
+total or position. Both use optimized legal lineups from the current roster,
+not the sum of every bench player's forecast. The exact-value table shows ranks,
+points, and coverage. Refresh an active-season report to populate the positional
+breakdown; older saved reports and historical seasons may not have this data.
+
+Use **Completed weeks only** to switch both positional views to actual points
+from the starters each manager fielded through the report's completed-week cutoff.
+Bench points and unfinished weeks are excluded; FLEX starters count under their
+primary position once. Zero and negative scores remain visible, and teams with
+missing starter scores or positions remain unavailable. Actual rankings also work
+for historical seasons without current projections. Older reports may need a
+refresh to capture starter positions. **Projected remaining weeks** restores the
+forecast view. Remaining schedule difficulty keeps its existing basis.
+
+**Remaining schedule strength** ranks regular-season fantasy opponents from
+easiest to hardest. Difficulty is the average opponent score minus the same-week
+league average, in points per scoring week. Expand a team to see opponents,
+expected points, baselines, and whether that week uses provider projections or
+a completed-score fallback. Missing fixtures or estimates leave the team
+unranked. Your private managed-team selection is highlighted in owner reports.
+See [the calculation reference](docs/calculations.md#roster-and-remaining-schedule-strength)
+for the horizon, aggregation, fallback, and multiweek rules.
+
 Open `/insights` from the main navigation. League and season selections are encoded
 in the URL. These pages require sign-in. `/shared/insights?leagueId=123&year=2025` and
 `/shared/history?leagueId=123` are

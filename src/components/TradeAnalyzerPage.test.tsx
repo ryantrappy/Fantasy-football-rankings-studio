@@ -66,7 +66,7 @@ it('shows both lineup impacts and receiving players without drop controls', asyn
   expect(screen.queryByRole('status')).not.toBeInTheDocument();
   expect(screen.queryByLabelText(/Drop/)).not.toBeInTheDocument();
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Send Locked')).toBeDisabled();
+  expect(screen.getByLabelText('Send Locked')).toBeEnabled();
   expect(screen.getByText(/Game locked/)).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText('Send C'));
   fireEvent.click(screen.getByLabelText('Send B'));
@@ -78,6 +78,17 @@ it('shows both lineup impacts and receiving players without drop controls', asyn
   expect(within(two).getByLabelText('Two lineup impact')).toHaveTextContent('-15.00');
   expect(within(one).getByLabelText('One exchange')).toHaveTextContent('Receiving · 1 playerB');
   expect(api.getLiveMatchups).toHaveBeenCalledTimes(1);
+});
+
+it('allows selecting and removing players whose games are locked', async () => {
+  await setup();
+  fireEvent.click(screen.getByLabelText('Send Locked'));
+  expect(screen.getByLabelText('Send Locked')).toBeChecked();
+  fireEvent.click(screen.getByLabelText('Send B'));
+  expect(screen.getByLabelText('One lineup impact')).toHaveTextContent('+10.00');
+  expect(screen.getByLabelText('Two lineup impact')).toHaveTextContent('-19.00');
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Locked from trade' }));
+  expect(screen.getByLabelText('Send Locked')).not.toBeChecked();
 });
 
 it('keeps selected players visible while searching and supports removing and clearing them', async () => {

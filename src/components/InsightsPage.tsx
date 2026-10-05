@@ -1,3 +1,5 @@
+import { SeasonStrength } from './SeasonStrength';
+import { ApiContext } from '../auth/session';
 import { Icon } from './Icon';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { HeaderControls } from './AppShell';
@@ -21,7 +23,7 @@ import {
   Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useInsightsApi } from '../auth/InsightsAccess';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
@@ -49,6 +51,12 @@ export function InsightsPage({
   initialLeague?: League | null;
 }) {
   const api = useInsightsApi();
+  const privateApi = useContext(ApiContext);
+  const [managed, setManaged] = useState<{
+    scope: string;
+    api: typeof privateApi;
+    teamId: string | null;
+  }>();
   const { leagueId, year } = search;
   const [leagueResult, setLeagueResult] = useState<{ api: typeof api; entries: League[] }>();
   const leagues = leagueResult?.api === api ? leagueResult.entries : [];
@@ -69,6 +77,24 @@ export function InsightsPage({
   const [includeFormer, setIncludeFormer] = useState(false);
   const requestKey = `${leagueId}:${year}:${reload}`;
   const reportScope = `${leagueId}:${year}`;
+  useEffect(() => {
+    if (shared || snapshot || !leagueId || !privateApi?.managedTeam) return;
+    let cancelled = false;
+    void privateApi.managedTeam
+      .get(leagueId, year)
+      .then((selection) => {
+        if (!cancelled)
+          setManaged({
+            scope: reportScope,
+            api: privateApi,
+            teamId: selection.needsReselection ? null : selection.teamId,
+          });
+      })
+      .catch((error) => logClientError('InsightsPage.managedTeam', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [privateApi, shared, snapshot, leagueId, year, reportScope]);
   const loading = result?.key !== requestKey || result?.api !== api;
   const data = result?.api === api && result.scope === reportScope ? result.data : undefined;
   const error = loading ? '' : result?.error || '';
@@ -390,6 +416,18 @@ export function InsightsPage({
                   </Text>
                 </Box>
               </SimpleGrid>
+              <SeasonStrength
+                key={reportScope}
+                data={data}
+                managedTeamId={
+                  !shared &&
+                  !snapshot &&
+                  managed?.api === privateApi &&
+                  managed?.scope === reportScope
+                    ? managed.teamId
+                    : null
+                }
+              />
               <label className="history-toggle">
                 <chakra.input
                   accentColor="green.700"

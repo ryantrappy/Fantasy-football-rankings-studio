@@ -398,3 +398,105 @@ posterior against its frozen normal predecessor on the same corrected rules. Run
 to reproduce full-precision playoff metrics, early reliability, chronological groups,
 per-season sensitivity, one/four-week score interval coverage and interval scores,
 plus new schema-4 exports. It reads local artifacts and makes no provider requests.
+
+## Roster and remaining schedule strength
+
+The Season Insights strength section uses the report's selected league, season,
+completed-week cutoff, and refresh timestamp. Switching either league or season
+removes the prior report while the new one loads. Managed-team highlighting is
+private UI state; it is not included in public report snapshots.
+
+### Positional strength
+
+For each remaining regular-season and configured playoff scoring week, optimize
+one complete legal lineup using that week's native league-provider projections
+and the captured current roster. Sleeper applies league scoring weights; ESPN
+uses that league's applied projected points. These season-report forecasts are
+native provider estimates, not the combined current-week trade/player estimates.
+Bench players compete for starts, while IR/reserve/taxi slots are excluded. A
+FLEX or SUPER_FLEX starter contributes to their primary position exactly once.
+DST is displayed as DEF, and supported IDP/custom positions receive their own
+columns. Unsupported or incomplete lineups do not receive invented totals.
+
+Sum the selected players' projected points by primary position, then sum each
+position across the displayed weeks. This measures projected starting-lineup
+contribution, not full bench depth or standalone market value. Depth only helps
+when a replacement enters the optimized lineup. Known NFL byes are valid zeroes;
+confirmed unavailable players are excluded for the current week only. Future
+injury recovery is not inferred from today's absence. Availability and projection
+coverage limitations remain the same as the weekly forecast inputs.
+
+A team is ranked only with valid positional contributions over every displayed
+week. Each weekly position sum must reconcile with its optimized team total.
+Missing breakdowns, duplicate forecast weeks, and snapshots whose first week
+is not the completed cutoff plus one are unavailable. Competition ranks use
+points rounded to two decimals: equal values share rank 1, for example, and the
+next value has rank 3 when two teams tie. Rank 1 means the strongest contribution.
+Absent positions in a complete lineup contribute a genuine zero; incomplete
+lineups are unavailable. Negative projected points retain their sign in a
+separate negative bar stack and in exact values.
+
+Historical and completed seasons do not substitute current projections. A saved
+report preserves its captured positional inputs if present; older snapshots
+without those inputs remain unavailable. Refresh an active-season report to
+load the new breakdown. All teams share the same horizon, including projected
+playoff weeks regardless of whether that team will qualify.
+
+The **Completed weeks only** toggle instead sums the actual points of the starters
+each manager fielded, using completed team-week box scores through the report
+cutoff. The displayed horizon runs from the first observed scoring week through
+that cutoff, allowing leagues that started later. A missing week within that
+horizon makes the affected team unavailable. Future and unfinished weeks,
+bench scores, best-possible lineups, and projections never enter these totals.
+FLEX and SUPER_FLEX starters count once under their primary position; DST displays
+as DEF. Commissioner adjustments to team totals are not allocated to positions.
+
+Starter positions are captured in the report: ESPN uses each weekly box score's
+primary position and Sleeper uses its player catalog. Historical rankings do not
+require current roster ownership. Saved reports preserve starter positions;
+older reports without that metadata need a refresh. A duplicate player or
+team-week, missing starter score or position, or explicitly unavailable lineup
+makes that week unavailable. A provider-confirmed empty lineup contributes zero.
+The same full-horizon coverage rule, two-decimal competition ranks and signed
+bars apply to actual scoring. Switching the toggle updates both views together
+and leaves remaining schedule difficulty unchanged.
+
+### Remaining fantasy schedule difficulty
+
+The default horizon is every regular-season scoring week after the completed
+cutoff. Published fantasy league opponents determine difficulty; NFL opponents
+of individual players and unknown future playoff opponents are not used. ESPN's
+published matchup-period mappings expand multiweek matchups into their constituent
+scoring weeks. A valid uniform period length can provide the mapping when an
+explicit mapping is absent. Unknown or overlapping calendars remain unavailable.
+This separate calendar does not enable unsupported formats in the playoff simulator.
+
+For week `w`, use every team's best legal projected lineup when the entire league
+has valid weekly projections. Otherwise, use every team's average actual score
+from observed completed regular-season weeks through the report cutoff. The
+whole week switches basis together, so a projected opponent is not compared
+with a partly historical league baseline. Missing historical data for any team
+makes that week's baseline unavailable. The opponent table labels this fallback;
+it is a simple scoring-average estimate, not an injury-adjusted forecast.
+
+`baseline(w) = mean(expected score of every league team in week w)`
+
+`difference(team, w) = expected score of its opponent - baseline(w)`
+
+`difficulty(team) = mean(difference(team, w) across remaining opponent weeks)`
+
+Units are fantasy points per scoring week. Negative is easier, positive is
+harder, and zero is league-average opposition. Repeated opponents count each
+time. Every uncompleted scoring week of a multiweek matchup counts once; this
+is average weekly difficulty, not a count of matchup wins. Explicit published
+byes contribute no opponent and are excluded from the denominator, allowing
+teams with different remaining game counts to be compared. An absent fixture
+is unknown rather than a bye. Conflicting fixtures, unknown team identities,
+and missing opponent/baseline estimates leave the affected team unranked.
+
+Schedule competition ranks use the rounded difficulty score, with rank 1 easiest
+and skipped ranks after ties. Completed regular seasons display an explicit
+no-remaining-matchups state. The section exposes opponent coverage, unknown
+weeks, fallback-week counts, and exact expected points and baselines for every
+remaining week. Historical fallback never reads scores after the cutoff, and
+future projections are excluded when their snapshot cutoff is inconsistent.

@@ -1215,3 +1215,29 @@ header :focus-visible {
     display: none;
   }
 }
+
+/* Positional strength keeps exact values readable alongside color. */
+.position-rank-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  color: #14251f;
+}
+.position-rank-cell strong {
+  font-size: 1.1rem;
+}
+.position-rank-cell small {
+  color: inherit;
+  white-space: nowrap;
+}
+.schedule-strength-details {
+  margin-top: 12px;
+}
+.schedule-strength-details summary {
+  cursor: pointer;
+  padding: 12px 0;
+}

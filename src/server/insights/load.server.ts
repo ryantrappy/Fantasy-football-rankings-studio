@@ -1,3 +1,4 @@
+import { espnRegularSeasonSchedule } from './schedule';
 import { sleeperResults, espnResults, type BracketMatch, type EspnResultsData } from './results';
 import { logServerError } from '../logging.server';
 import { defaultSeason } from '../../util/rankings';
@@ -261,7 +262,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
             {
               params: {
                 season_type: 'regular',
-                'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF'],
+                'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF', 'DL', 'LB', 'DB'],
               },
               timeout: 10000,
             },
@@ -374,7 +375,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     );
   }
   let catalog = { names: {}, positions: {} };
-  if (moves.length || rosterSnapshot || season.roster_positions?.length)
+  if (
+    moves.length ||
+    rosterSnapshot ||
+    season.roster_positions?.length ||
+    scores.some((score) => score.starters.length)
+  )
     try {
       catalog = await sleeperNames();
     } catch (error) {
@@ -423,6 +429,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   });
   return {
     forecastSchedule,
+    regularSeasonSchedule: season.settings?.playoff_week_start
+      ? {
+          endWeek: regularEnd,
+          fixtures: forecastSchedule.filter((f) => f.week <= regularEnd),
+        }
+      : undefined,
     forecastContext,
     playoffProjection,
     playoffSettings,
@@ -640,12 +652,17 @@ async function loadEspn(
         bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)
-          .map((e) => ({ playerId: String(e.playerId), points: stat(e, 0)! })),
+          .map((e) => ({
+            playerId: String(e.playerId),
+            points: stat(e, 0)!,
+            position: playerPositions[String(e.playerId)],
+          })),
       });
     }
   }
   const projectionWeek = meta.status.latestScoringPeriod;
   const playoffSettings = espnPlayoffSettings(meta, year);
+  const regularSeasonSchedule = espnRegularSeasonSchedule(meta);
   let playoffProjection: InsightsSource['playoffProjection'];
   let forecastContext: InsightsSource['forecastContext'];
   const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
@@ -653,7 +670,13 @@ async function loadEspn(
     year === defaultSeason() &&
     projectionWeek === completedWeek + 1 &&
     !!meta.settings?.scheduleSettings?.matchupPeriodCount &&
-    projectionWeek <= Math.min(18, (meta.settings?.scheduleSettings?.matchupPeriodCount ?? 0) + 1)
+    projectionWeek <=
+      Math.min(
+        18,
+        (regularSeasonSchedule?.endWeek ??
+          meta.settings?.scheduleSettings?.matchupPeriodCount ??
+          0) + 1,
+      )
   ) {
     const byeWeekByProTeam = await axios
       .get<{
@@ -699,7 +722,15 @@ async function loadEspn(
     }));
     const failed: number[] = [];
     const weeklyProjections = await mapWeeks(
-      playoffSettings ? remainingProjectionWeeks(playoffSettings, completedWeek) : [projectionWeek],
+      playoffSettings
+        ? remainingProjectionWeeks(
+            {
+              ...playoffSettings,
+              regularSeasonEnd: regularSeasonSchedule?.endWeek ?? playoffSettings.regularSeasonEnd,
+            },
+            completedWeek,
+          )
+        : [projectionWeek],
       async (week) => {
         try {
           const projectionData = await provider.get<EspnSnapshot>(
@@ -784,6 +815,7 @@ async function loadEspn(
       })),
   );
   return {
+    regularSeasonSchedule,
     forecastSchedule:
       meta.settings?.scheduleSettings?.matchupPeriodLength === 1
         ? (meta.schedule || []).flatMap((m) =>

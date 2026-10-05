@@ -38,6 +38,22 @@ it('keeps missing projections distinct from zero and excludes unfinished weeks',
   });
   expect(result.scores).toHaveLength(3);
 });
+it('captures starter primary positions and preserves historical positions over catalog changes', () => {
+  const input = source([
+    score('1', 1, 20, null, [
+      { playerId: 'p', points: 10 },
+      { playerId: 'q', points: 10, position: 'WR' },
+      { playerId: 'unknown', points: 0 },
+    ]),
+  ]);
+  input.playerPositions = { p: 'RB', q: 'TE' };
+  expect(calculateInsights(input).scores[0].starters).toEqual([
+    { playerId: 'p', points: 10, position: 'RB' },
+    { playerId: 'q', points: 10, position: 'WR' },
+    { playerId: 'unknown', points: 0, position: undefined },
+  ]);
+  expect(input.scores[0].starters[0].position).toBeUndefined();
+});
 it('aggregates best legal lineup coverage without treating unavailable weeks as zero', () => {
   const result = calculateInsights(
     source([

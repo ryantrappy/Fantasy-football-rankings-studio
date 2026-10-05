@@ -47,18 +47,27 @@ it('requires explicit open-slot or drop assumptions for a two-for-one exchange',
   data.drops[1] = ['bb'];
   expect(evaluateTrade(teams(), ['RB'], data).sides[1].rosterSize).toBe(2);
 });
-it('rejects duplicate, non-owned, reserve and locked assets', () => {
+it('rejects duplicate, non-owned and reserve assets', () => {
   const data = proposal();
   data.drops[0] = ['a'];
   expect(evaluateTrade(teams(), ['RB'], data).error).toMatch(/unique/);
   data.drops[0] = [];
   data.send[0] = ['draft-pick'];
   expect(evaluateTrade(teams(), ['RB'], data).error).toMatch(/draft picks/);
-  for (const modification of [{ owned: false }, { reserve: true }, { locked: true }]) {
+  for (const modification of [{ owned: false }, { reserve: true }]) {
     const source = teams();
     Object.assign(source[0].players[0], modification);
     expect(evaluateTrade(source, ['RB'], proposal()).error).toBeDefined();
   }
+});
+it('compares game-locked players without changing the live snapshot', () => {
+  const source = teams();
+  for (const team of source) for (const player of team.players) player.locked = true;
+  const before = JSON.stringify(source);
+  const result = evaluateTrade(source, ['RB'], proposal());
+  expect(result.error).toBeUndefined();
+  expect(result.sides.map((side) => side.difference)).toEqual([10, -10]);
+  expect(JSON.stringify(source)).toBe(before);
 });
 it('reports projection gaps rather than inventing gains or fair value', () => {
   const source = teams();

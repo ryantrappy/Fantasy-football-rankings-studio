@@ -73,7 +73,8 @@ function Proposal({ league }: { league: LiveLeague }) {
             Build your trade
           </Heading>
           <Text color="fg.muted" mt={1}>
-            Choose the players each team sends. Lineup impact updates as you select.
+            Choose the players each team sends. Lineup impact updates as you select. This
+            hypothetical comparison ignores current game locks.
           </Text>
         </Box>
         <Button variant="outline" disabled={!send.flat().length} onClick={reset}>
@@ -326,14 +327,13 @@ function Proposal({ league }: { league: LiveLeague }) {
                         gap={3}
                         flex="1"
                         minW={0}
-                        cursor={player.locked ? 'default' : 'pointer'}
+                        cursor="pointer"
                       >
                         <input
                           type="checkbox"
                           style={{ width: 18, height: 18, flexShrink: 0, accentColor: '#3949ab' }}
                           aria-label={`Send ${player.name}`}
                           checked={send[side].includes(player.id)}
-                          disabled={player.locked}
                           onChange={() => toggle(side, player.id)}
                         />
                         <Box minW={0}>

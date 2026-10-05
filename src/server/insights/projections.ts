@@ -194,6 +194,7 @@ export function sleeperProjectionSnapshot(
   const slots = rosterPositions.map(sleeperSlot).filter((slot): slot is Slot => !!slot);
   const teamPoints: Record<string, number> = {};
   const lineups: Record<string, string[]> = {};
+  const positionPoints: NonNullable<PlayoffProjection['positionPoints']> = {};
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
@@ -228,6 +229,12 @@ export function sleeperProjectionSnapshot(
     if (!lineup) continue;
     teamPoints[teamId] = lineup.points;
     lineups[teamId] = lineup.playerIds;
+    positionPoints[teamId] = {};
+    for (const player of players.filter((p) => lineup.playerIds.includes(p.id))) {
+      const position =
+        player.position.toUpperCase() === 'DST' ? 'DEF' : player.position.toUpperCase();
+      positionPoints[teamId][position] = (positionPoints[teamId][position] ?? 0) + player.points;
+    }
     coveredStarters += slots.length;
     benchSelections += lineup.benchSelections;
   }
@@ -245,6 +252,7 @@ export function sleeperProjectionSnapshot(
     optimizedLineup: true,
     byePlayers,
     lineups,
+    positionPoints,
   };
 }
 
@@ -315,6 +323,7 @@ export function espnProjectionSnapshot(
 ): PlayoffProjection {
   const teamPoints: Record<string, number> = {};
   const lineups: Record<string, string[]> = {};
+  const positionPoints: NonNullable<PlayoffProjection['positionPoints']> = {};
   let coveredStarters = 0;
   let totalStarters = 0;
   let benchSelections = 0;
@@ -397,6 +406,12 @@ export function espnProjectionSnapshot(
     if (!lineup) continue;
     teamPoints[teamId] = lineup.points;
     lineups[teamId] = lineup.playerIds;
+    positionPoints[teamId] = {};
+    for (const player of players.filter((p) => lineup.playerIds.includes(p.id))) {
+      const position =
+        player.position.toUpperCase() === 'DST' ? 'DEF' : player.position.toUpperCase();
+      positionPoints[teamId][position] = (positionPoints[teamId][position] ?? 0) + player.points;
+    }
     coveredStarters += slots.length;
     benchSelections += lineup.benchSelections;
   }
@@ -414,6 +429,7 @@ export function espnProjectionSnapshot(
     optimizedLineup: true,
     byePlayers,
     lineups,
+    positionPoints,
   };
 }
 

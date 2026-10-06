@@ -1,0 +1,42 @@
+---
+id: TASK-114
+title: Resolve ESPN ranking-studio matchups by scoring week rather than period ID
+status: To Do
+assignee: []
+created_date: '2026-10-05 17:34'
+labels:
+  - espn
+  - rankings
+  - data-quality
+dependencies: []
+references:
+  - src/server/providers/espn.provider.ts
+  - src/server/insights/schedule.ts
+  - src/hooks/useRankingEditor.ts
+  - src/server/providers/providers.test.ts
+documentation:
+  - docs/code-review-2026-10-05.md
+priority: high
+type: bug
+ordinal: 121000
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+EspnProvider.getMatchups requests a scoringPeriodId but filters schedule entries by matchupPeriodId === selected week. For a two-week calendar where period 2 covers weeks 3 and 4, selecting week 3 returns no matchup for the valid period-2 fixture; another period with ID 3 can instead select the wrong opponent. The ranking editor consumes this endpoint. Season schedule analysis already distinguishes these calendars. A local provider reproduction returned an empty array for the week-3/period-2 case. This is a separate gap from completed TASK-26 week choices and TASK-109 schedule strength.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 A selected ESPN scoring week returns the matchup period containing that week using the published calendar or a validated equivalent mapping.
+- [ ] #2 The returned opponent and score context explicitly distinguish selected-week points from multiweek aggregate points; unknown or overlapping mappings do not substitute another period.
+- [ ] #3 Single-week leagues and bye matchups continue to work, including regular-season and playoff period mappings where published.
+- [ ] #4 Provider and ranking-editor regression tests cover week 3 inside period 2, unknown calendars, single-week behavior and selected-week versus aggregate scores; user-facing score semantics are documented.
+<!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 - Tests pass
+- [ ] #2 Docs updated
+<!-- DOD:END -->

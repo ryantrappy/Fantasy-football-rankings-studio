@@ -87,6 +87,16 @@ export function TradePreview({ suggestions = false }: { suggestions?: boolean })
                 },
               }
             : {}),
+          listLeagues: async () =>
+            afterPreviewData([
+              {
+                leagueId: league.leagueId,
+                leagueName: league.leagueName,
+                seasonId: league.season,
+                leagueType: 0,
+              },
+            ]),
+          getLiveLeague: async () => afterPreviewData(suggestions ? discoveryLeague : league),
         } as never
       }
     >

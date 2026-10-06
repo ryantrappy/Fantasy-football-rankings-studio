@@ -50,6 +50,9 @@ export function powerOrderTeams(teams: Team[], matchups: Matchup[]): Team[] {
   );
   for (const matchup of matchups) {
     if (
+      matchup.scoreContext === 'matchup-period' ||
+      matchup.scoreContext === 'unavailable' ||
+      matchup.homeScore == null ||
       matchup.awayTeamId == null ||
       matchup.awayScore == null ||
       !Number.isFinite(matchup.homeScore) ||

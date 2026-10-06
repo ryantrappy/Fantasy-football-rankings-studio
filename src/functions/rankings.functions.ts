@@ -20,6 +20,9 @@ export const listLeagues = createServerFn({ method: 'GET' }).handler(() =>
 export const getLiveMatchups = createServerFn({ method: 'GET' }).handler(() =>
   run('getLiveMatchups', operations.getLiveMatchups),
 );
+export const getLiveLeague = createServerFn({ method: 'GET' })
+  .validator((data: { leagueId: string }) => data)
+  .handler(({ data }) => run('getLiveLeague', (owner) => operations.getLiveLeague(owner, data)));
 export const createLeague = createServerFn({ method: 'POST' })
   .validator((data: Omit<League, '_id'>) => data)
   .handler(({ data }) => run('createLeague', (owner) => operations.createLeague(owner, data)));

@@ -41,7 +41,23 @@ export async function warmTab(tab: Tab, context: RouterContext, scope: Scope = {
   // A failed background read must leave the page's retry/error UI available.
   try {
     const leagues = await (context.sessionInsightsApi ?? api).listLeagues();
-    if (tab === 'live' || tab === 'trades' || tab === 'overview') {
+    if (tab === 'trades') {
+      const preferred = scope.leagueId ? scope : readStudioSelection(api.subject);
+      const league = leagues.find((entry) => entry.leagueId === preferred?.leagueId) ?? leagues[0];
+      if (!league) return;
+      if (
+        preferred?.leagueId === league.leagueId &&
+        preferred.year &&
+        preferred.year !== league.seasonId
+      )
+        return;
+      await Promise.allSettled([
+        api.getLiveLeague(league.leagueId),
+        api.managedTeam?.get(league.leagueId, league.seasonId),
+      ]);
+      return;
+    }
+    if (tab === 'live' || tab === 'overview') {
       const live = await api.getLiveMatchups();
       for (let offset = 0; offset < leagues.length; offset += 3) {
         await Promise.allSettled(
@@ -78,7 +94,7 @@ export async function warmTab(tab: Tab, context: RouterContext, scope: Scope = {
       if (!leagueId) return;
       await Promise.allSettled([
         api.getInsights(leagueId, scope.year ?? league?.seasonId ?? defaultSeason()),
-        api.getLiveMatchups(),
+        api.getLiveLeague(leagueId),
       ]);
       return;
     }

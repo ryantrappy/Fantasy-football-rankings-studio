@@ -2,7 +2,7 @@
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import { useEffect, useState, type CSSProperties } from 'react';
 import type { SeasonInsights } from '../insights';
-import { cachedPlayoffForecast } from '../playoff-timeline';
+import { requestPlayoffForecast } from '../playoff-timeline';
 import type { PlayoffForecast, PlayoffSettings } from '../playoff-forecast';
 import { DataTable } from './DataTable';
 import { ChartPointTooltip } from './ChartPointTooltip';
@@ -46,6 +46,7 @@ export function PlayoffTimeline({
     data: SeasonInsights;
     settings: PlayoffSettings;
     forecasts: PlayoffForecast[];
+    error?: string;
   }>(() => ({ data, settings, forecasts: [] }));
   const [hovered, setHovered] = useState<{
     teamName: string;
@@ -54,28 +55,30 @@ export function PlayoffTimeline({
   } | null>(null);
   const forecasts =
     progress.data === data && progress.settings === settings ? progress.forecasts : [];
+  const error =
+    progress.data === data && progress.settings === settings ? progress.error : undefined;
   useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    let week = 1;
-    const next = () => {
-      if (cancelled) return;
-      const result = cachedPlayoffForecast(data, settings, week);
-      setProgress((previous) => ({
-        data,
-        settings,
-        forecasts: [
-          ...(previous.data === data && previous.settings === settings ? previous.forecasts : []),
-          result,
-        ],
-      }));
-      week++;
-      if (week <= maxWeek) timer = setTimeout(next, 0);
+    const controller = new AbortController();
+    const next = async () => {
+      const forecasts: PlayoffForecast[] = [];
+      for (let week = 1; week <= maxWeek; week++) {
+        const result = await requestPlayoffForecast(data, settings, week, controller.signal);
+        if (controller.signal.aborted) return;
+        forecasts.push(result);
+        setProgress({ data, settings, forecasts: [...forecasts] });
+      }
     };
-    if (maxWeek > 0) timer = setTimeout(next, 0);
+    void next().catch(() => {
+      if (!controller.signal.aborted)
+        setProgress({
+          data,
+          settings,
+          forecasts: [],
+          error: 'Timeline calculation is unavailable. Refresh this report to try again.',
+        });
+    });
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      controller.abort();
     };
   }, [data, settings, maxWeek]);
 
@@ -131,7 +134,10 @@ export function PlayoffTimeline({
           Win championship
         </Button>
       </Flex>
-      {forecasts.length < maxWeek && (
+      {progress.data === data && progress.settings === settings && progress.error && (
+        <Text role="alert">{progress.error}</Text>
+      )}
+      {forecasts.length < maxWeek && !error && (
         <Box as="output" mb={3} display="block">
           Simulating week {forecasts.length + 1} of {maxWeek}…
         </Box>

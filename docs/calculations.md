@@ -3,6 +3,12 @@
 Season Insights and League History expose **How are these numbers calculated?**
 above the summary cards. The same guide appears in public shared reports.
 
+Live Sleeper projections require at least one finite stat that applies to the
+selected league's scoring rules. True zero and negative projections are retained;
+missing, unrelated, or invalid stat coverage remains unavailable. Optional ESPN
+estimates disclose their actual source and coverage rather than implying that
+an unavailable native projection exists.
+
 ## Schedule luck
 
 For each eligible regular-season game:
@@ -444,9 +450,12 @@ playoff weeks regardless of whether that team will qualify.
 
 The **Completed weeks only** toggle instead sums the actual points of the starters
 each manager fielded, using completed team-week box scores through the report
-cutoff. The displayed horizon runs from the first observed scoring week through
-that cutoff, allowing leagues that started later. A missing week within that
-horizon makes the affected team unavailable. Future and unfinished weeks,
+cutoff. The displayed horizon runs from the provider's configured reporting start
+through that cutoff, allowing leagues that started later. Reports and snapshots
+retain that start; it is never inferred from the first observed score. A missing
+opening or later week makes the affected team unavailable. Legacy reports with an
+unknown start remain unranked until refreshed and show coverage assuming week 1.
+Future and unfinished weeks,
 bench scores, best-possible lineups, and projections never enter these totals.
 FLEX and SUPER_FLEX starters count once under their primary position; DST displays
 as DEF. Commissioner adjustments to team totals are not allocated to positions.

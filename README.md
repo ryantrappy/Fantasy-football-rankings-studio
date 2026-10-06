@@ -869,6 +869,13 @@ Suggestions exclude unowned, duplicate/ambiguous, reserve/taxi, unsupported, gam
 
 For manual analysis, choose two teams and search the owned active players each side would send by name or position. Selected players remain visible above each roster and can be removed individually or with **Clear trade**. Each team card shows incoming players, before/after legal lineup projections, positional counts and projection gaps from one current-week snapshot. The tab has no drop controls. Uneven offers show an open-slot input only for the team receiving extra players and require explicit confirmation of sufficient roster space; missing replacement slots are not filled with imaginary waiver pickups. Game locks are ignored for this hypothetical comparison; reserve/taxi assets, duplicate selections and non-owned assets are rejected. Draft picks, future weeks, positional roster caps and playoff changes are unsupported. Discovery and inspection submit no offers or messages and write no provider roster, ranking or forecast observation. Saving a managed-team preference is a separate explicit action.
 
+### Selected league data
+
+Players and Trade analyzer load the selected owned league through a scoped live
+read, so another league's slow provider cannot delay the page. Live scores and
+My weekly overview retain their all-league reads. Trade discovery preserves the
+selected season and only exposes current rosters for the league's live season.
+
 ### Player profiles and comparisons
 
 Open **Players**, or follow a player name/profile link from matchups, lineup assignments, waiver candidates or trade rosters. Search by name, team, position or provider ID, filter by position, and select players to compare. Selected players remain visible while filtering and can be removed individually or cleared. Comparison cards highlight current projections, observed totals/averages and coverage; weekly scores and identity/source details expand on demand. The common week range defaults through the latest reported week and can be adjusted. Refresh preserves the selected league, season and players; changing league or season clears the comparison. Profiles show provider/season identity, observed league-scored totals/averages and week-by-week trends, available current-week projection, current ownership/status and source timestamps. Sleeper unowned candidates can be included on demand after managed-team setup. Observations cover only roster weeks present in the league reports, not full free-agent/career history. Missing weeks, contradictory duplicate observations, targets and snap share remain unavailable; names are never used to merge identities across providers or seasons.
@@ -890,6 +897,35 @@ Saved OpenAI keys take precedence even when the server login is ready. Remove yo
 Managed-team choices are saved explicitly for each league and season in **Manage leagues**. Changing the dropdown shows an unsaved-choice message; click **Save my team** and wait for confirmation. A provider failure keeps your draft for retry, and a completed database save no longer depends on a second provider request. **Reload teams** reloads the persisted choice.
 
 The managed-team picker remembers the last viewed season for your account and league. This prevents a page refresh from returning to the league registration year and showing that year's empty choice when you saved a different season.
+
+Historical profiles retain provider names and primary positions for players
+represented in the report, including dropped players. Saved report snapshots
+preserve these identities. Legacy reports fall back to provider IDs when metadata
+is absent. Current ownership, injuries and projections remain unavailable for
+historical seasons. Explicit **Refresh player data** reloads cached current or
+historical scoring while preserving the selected league, season and comparisons;
+ordinary reads reuse the cache.
+
+Playoff simulations yield between batches of 100 seeded trials so controls remain
+responsive. Replaced requests are canceled, and finished results are reused for
+unchanged inputs. Both async and synchronous simulations produce identical seeded
+results; forecast and timeline pages disclose pending work.
+
+Local Chrome checks of 20,000 trials completed in 1.37 seconds for 12 teams and
+1.44 seconds for 32 teams, with no long tasks and maximum input probe gaps of
+13.3 ms and 17.5 ms respectively. These measurements are machine dependent; the
+browser regression also checks seeded result parity and responsiveness.
+
+The public Sleeper player catalog shares one in-flight read across live scores,
+reports and waivers, with a five-minute cache starting after normalization.
+Failed reads release that shared request so a later read can retry. The catalog
+contains public player metadata and no account or roster ownership data.
+
+ESPN ranking-studio matchups resolve the scoring week through the published
+matchup-period calendar. Weekly scores are preferred when supplied; multiweek
+aggregate scores are labeled and excluded from suggested weekly ranking order.
+Unknown or overlapping calendars remain unavailable, and missing scores are not
+substituted with zero. Published single-week periods and byes remain supported.
 
 ### ESPN + Sleeper player projections
 

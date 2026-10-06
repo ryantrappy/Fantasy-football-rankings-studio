@@ -1,9 +1,11 @@
 ---
 id: TASK-112
 title: Keep unusable Sleeper live projections unavailable instead of zero
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@codex'
 created_date: '2026-10-05 17:34'
+updated_date: '2026-10-06 17:28'
 labels:
   - analytics
   - live
@@ -28,14 +30,34 @@ Live Sleeper normalization accepts any nonempty stat dictionary and sums absent 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A native projection with no finite stat applicable to the selected league scoring remains unavailable rather than becoming a zero forecast.
-- [ ] #2 Legitimate zero and negative projections remain numeric, while missing scoring settings, nonfinite inputs and unusable dictionaries do not claim covered projection data.
-- [ ] #3 Live, Players, lineup advice and trade analysis consistently disclose missing projection coverage; a valid optional cross-source estimate may still be used with its actual provenance.
-- [ ] #4 Provider regression tests reproduce the irrelevant-stat case and verify real zero, negative, missing and valid cross-source cases; calculation documentation explains the coverage rule.
+- [x] #1 A native projection with no finite stat applicable to the selected league scoring remains unavailable rather than becoming a zero forecast.
+- [x] #2 Legitimate zero and negative projections remain numeric, while missing scoring settings, nonfinite inputs and unusable dictionaries do not claim covered projection data.
+- [x] #3 Live, Players, lineup advice and trade analysis consistently disclose missing projection coverage; a valid optional cross-source estimate may still be used with its actual provenance.
+- [x] #4 Provider regression tests reproduce the irrelevant-stat case and verify real zero, negative, missing and valid cross-source cases; calculation documentation explains the coverage rule.
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 - Tests pass
-- [ ] #2 Docs updated
+- [x] #1 - Tests pass
+- [x] #2 Docs updated
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Repair the partially restored implementation and supporting API/provider files; preserve main’s trade suggestions; verify with regression tests, browser checks, type checks, lint, formatting and a production build.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Restored after accidental shelving and manual merge. Reconnected missing supporting code and reconciled it with the newer trade suggestions implementation.
+
+Recovery validation: 582 unit tests passed (1 skipped). All 51 browser cases passed across the full run and corrected trade-preview rerun. Production build, type checks, lint, formatting and diff checks passed.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Restored finite applicable-stat projection scoring; zero/negative values remain valid and missing coverage stays unavailable, including optional-source provenance.
+<!-- SECTION:FINAL_SUMMARY:END -->

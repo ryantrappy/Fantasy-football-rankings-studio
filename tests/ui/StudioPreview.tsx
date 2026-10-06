@@ -56,6 +56,8 @@ const accountApi = {
   removeAiCredential: async () => ({ codexConfigured: false, claudeConfigured: false }),
 };
 const appApi = {
+  getLiveLeague: async (id: string) =>
+    (await appApi.getLiveMatchups()).find((entry) => entry.leagueId === id),
   ...editorApi,
   listLeagues: async () => afterPreviewData([league]),
   getInsights: async () => afterPreviewData(data),

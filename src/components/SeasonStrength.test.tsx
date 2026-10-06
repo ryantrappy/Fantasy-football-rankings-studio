@@ -81,3 +81,22 @@ it('offers completed mode without forecasts and explains missing positions or no
   view.rerender(wrap({ ...data }));
   expect(screen.getByText(/No completed weeks yet/)).toBeInTheDocument();
 });
+
+it('counts a missing opening week even when every team is missing it', () => {
+  const data = structuredClone(strengthData);
+  data.scores = data.scores.filter((score) => score.week !== 1);
+  render(wrap(data));
+  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  const coverage = screen.getByRole('table', { name: 'Completed-week position coverage' });
+  expect(within(coverage).getAllByText('3 / 4')).toHaveLength(data.teams.length);
+});
+
+it('explains unknown legacy horizons and keeps completed rankings unavailable', () => {
+  const data = structuredClone(strengthData);
+  delete data.reportingStartWeek;
+  render(wrap(data));
+  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
+  expect(screen.getByRole('status')).toHaveTextContent('configured season start is unavailable');
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+});

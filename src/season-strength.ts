@@ -45,12 +45,14 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
         .filter((week) => week > data.completedWeek && week <= 18)
         .sort((a, b) => a - b)
     : weekly.map((row) => row.week).sort((a, b) => a - b);
+  const horizonKnown =
+    Number.isInteger(data.reportingStartWeek) &&
+    data.reportingStartWeek! >= 1 &&
+    data.reportingStartWeek! <= 18;
+  const firstCompletedWeek = horizonKnown ? data.reportingStartWeek! : 1;
   const completedScores = data.scores.filter(
-    (score) => score.week >= 1 && score.week <= data.completedWeek,
+    (score) => score.week >= firstCompletedWeek && score.week <= data.completedWeek,
   );
-  const firstCompletedWeek = completedScores.length
-    ? Math.min(...completedScores.map((score) => score.week))
-    : 1;
   const weeks =
     mode === 'completed'
       ? Array.from(
@@ -113,7 +115,8 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
         return [];
       return [points];
     });
-    const complete = weeks.length > 0 && covered.length === weeks.length;
+    const complete =
+      (mode !== 'completed' || horizonKnown) && weeks.length > 0 && covered.length === weeks.length;
     const points = Object.fromEntries(
       positions.map((position) => [
         position,
@@ -144,7 +147,16 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
               (other) => other.points[position] !== null && other.points[position]! > points,
             ).length;
     }
-  return { weeks, positions, rows, mode };
+  return {
+    weeks,
+    positions,
+    rows,
+    mode,
+    notice:
+      mode === 'completed' && !horizonKnown
+        ? 'The configured season start is unavailable in this report. Completed-week rankings are unavailable until you refresh the report; coverage shown assumes week 1 and cannot verify the full horizon.'
+        : undefined,
+  };
 }
 
 export interface ScheduleOpponent {

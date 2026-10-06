@@ -43,7 +43,7 @@ const api = {
     afterPreviewData([
       { leagueId: '123', leagueName: 'Sunday League', seasonId: 2026, leagueType: 0 },
     ]),
-  getLiveMatchups: async () => [live],
+  getLiveLeague: async () => live,
   getInsights: async () => ({
     generatedAt: '2026-10-04T00:00:00Z',
     scores: Array.from({ length: 4 }, (_, index) => ({

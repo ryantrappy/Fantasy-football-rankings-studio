@@ -4,6 +4,7 @@ import { positionStrength, remainingScheduleStrength } from './season-strength';
 function fixture() {
   const data = calculateInsights({
     completedWeek: 1,
+    reportingStartWeek: 1,
     teams: ['A', 'B', 'C', 'D'].map((teamId) => ({
       teamId,
       teamName: teamId,
@@ -131,6 +132,12 @@ it('requires complete actual starter coverage across a common completed horizon'
     true,
   );
   data.scores = data.scores.filter((score) => score.week !== 1 && score.week !== 2);
+  expect(positionStrength(data, 'completed').weeks).toEqual([1, 2, 3]);
+  expect(positionStrength(data, 'completed').rows[0]).toMatchObject({
+    total: null,
+    coveredWeeks: 1,
+  });
+  data.reportingStartWeek = 3;
   expect(positionStrength(data, 'completed').weeks).toEqual([3]);
   expect(positionStrength(data, 'completed').rows[0].total).toBe(10);
   data.completedWeek = 5;
@@ -243,4 +250,15 @@ it('ranks tied schedule values equally and isolates reports with differing team 
   other.teams = other.teams.map((team) => ({ ...team, teamId: `new-${team.teamId}` }));
   expect(positionStrength(other).rows.every((row) => row.total === null)).toBe(true);
   expect(remainingScheduleStrength(other).rows.every((row) => row.difficulty === null)).toBe(true);
+});
+
+it('leaves legacy completed rankings unavailable until the configured horizon is known', () => {
+  const data = fixture();
+  data.scores.forEach((score) => {
+    score.starters = [{ playerId: 'p', points: 10, position: 'RB' }];
+  });
+  delete data.reportingStartWeek;
+  const model = positionStrength(data, 'completed');
+  expect(model.notice).toMatch(/configured season start is unavailable/);
+  expect(model.rows.every((row) => row.total === null && row.coveredWeeks === 1)).toBe(true);
 });

@@ -1,6 +1,7 @@
 import { playerProfiles, comparePlayerRange } from './player-profiles';
 import type { SeasonInsights } from './insights';
 import type { LiveLeague } from './live-matchups';
+import { calculateInsights } from './server/insights/calculate';
 const report = (points: number): SeasonInsights =>
   ({
     generatedAt: '2026-10-01',
@@ -94,4 +95,54 @@ it('rejects contradictory duplicate observed weeks and leaves absent projections
   expect(profile.projection).toBeUndefined();
   expect(profile.availability).toBeUndefined();
   expect(profile.ownership).toBe('Unavailable');
+});
+
+it('retains scoped historical identities and observed starter positions without current ownership', () => {
+  const data = calculateInsights({
+    completedWeek: 1,
+    teams: [],
+    moves: [],
+    notes: [],
+    draftPickTrades: 0,
+    playerNames: { '1': 'Same Name', '2': 'Same Name', unrelated: 'Other NFL Player' },
+    playerPositions: { '2': 'WR', unrelated: 'QB' },
+    scores: [
+      {
+        teamId: '1',
+        week: 1,
+        actual: 5,
+        projected: null,
+        starters: [{ playerId: '1', points: 0, position: 'RB' }],
+        players: [
+          { playerId: '1', points: 0 },
+          { playerId: '2', points: 5 },
+          { playerId: '3', points: -1 },
+        ],
+      },
+    ],
+  });
+  expect(data.playerIdentities).toEqual({
+    '1': { name: 'Same Name', position: 'RB' },
+    '2': { name: 'Same Name', position: 'WR' },
+  });
+  const profiles = playerProfiles('Sleeper', 2024, data, live);
+  expect(profiles).toHaveLength(3);
+  expect(profiles.find((row) => row.id === '1')).toMatchObject({
+    name: 'Same Name',
+    position: 'RB',
+    observed: { 1: 0 },
+    ownership: 'Unavailable',
+  });
+  expect(profiles.find((row) => row.id === '1')?.projection).toBeUndefined();
+  expect(profiles.find((row) => row.id === '1')?.availability).toBeUndefined();
+  expect(profiles.find((row) => row.id === '2')).toMatchObject({
+    name: 'Same Name',
+    position: 'WR',
+    key: 'Sleeper:2024:2',
+  });
+  expect(profiles.find((row) => row.id === '3')).toMatchObject({
+    name: 'Player 3',
+    position: undefined,
+  });
+  expect(playerProfiles('ESPN', 2024, data)[0].key).toContain('ESPN:2024:');
 });

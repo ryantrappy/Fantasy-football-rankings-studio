@@ -21,7 +21,11 @@ export interface Matchup {
   matchupId: string;
   homeTeamId: string;
   awayTeamId: string | null;
-  homeScore: number;
+  homeScore: number | null;
+  scoringWeek?: number;
+  matchupPeriodId?: number;
+  periodWeeks?: number[];
+  scoreContext?: 'selected-week' | 'matchup-period' | 'unavailable';
   awayScore: number | null;
 }
 
@@ -55,6 +59,7 @@ export interface LeagueApi {
     set(leagueId: string, year: number, teamId: string | null): Promise<ManagedTeamSelection>;
   };
   getLiveMatchups(refresh?: boolean): Promise<import('./live-matchups').LiveLeague[]>;
+  getLiveLeague(leagueId: string, refresh?: boolean): Promise<import('./live-matchups').LiveLeague>;
   createReportSnapshot?(
     input: import('./report-snapshot').SnapshotInput,
   ): Promise<{ publicId: string; savedAt: string }>;

@@ -17,6 +17,9 @@ vi.mock('../functions/rankings.functions', () => ({
   saveRanking: vi.fn(),
   getTeams: vi.fn(),
   getLeagueInfo: vi.fn(),
+  getLiveLeague: vi
+    .fn()
+    .mockResolvedValue({ ok: true, data: { leagueId: '123', season: 2026, matchups: [] } }),
   getLiveMatchups: vi.fn(),
   getMatchups: vi.fn(),
   getManagedTeam: vi.fn(),
@@ -348,4 +351,40 @@ it('keeps owner report access during a sibling league lookup and clears it after
   await expect(pending).rejects.toThrow('League lookup failed');
   await api.getInsights(league.leagueId, 2026);
   expect(publicApi.getInsights).toHaveBeenCalledTimes(1);
+});
+
+it.each([2025, 2026])(
+  'explicitly refreshes cached player scoring for season %s while ordinary reads reuse it',
+  async (year) => {
+    const api = session(`profiles-${year}`);
+    const old = { completedWeek: 1, scores: [{ actual: 10 }], teams: [] };
+    const updated = { ...old, scores: [{ actual: 20 }] };
+    vi.mocked(functions.getInsights)
+      .mockResolvedValueOnce({ ok: true, data: old } as never)
+      .mockResolvedValueOnce({ ok: true, data: updated } as never);
+    expect(await api.getInsights(league.leagueId, year)).toEqual(old);
+    expect(await api.getInsights(league.leagueId, year)).toEqual(old);
+    expect(functions.getInsights).toHaveBeenCalledTimes(1);
+    expect(await api.getInsights(league.leagueId, year, true)).toEqual(updated);
+    expect(await api.getInsights(league.leagueId, year)).toEqual(updated);
+    expect(functions.getInsights).toHaveBeenCalledTimes(2);
+  },
+);
+
+it('coalesces selected-league reads and refreshes them without sharing other league or account data', async () => {
+  const api = session('scoped-live');
+  vi.mocked(functions.getLiveLeague).mockImplementation(
+    async ({ data }) =>
+      ({ ok: true, data: { leagueId: data.leagueId, season: 2026, matchups: [] } }) as never,
+  );
+  await Promise.all([api.getLiveLeague('1'), api.getLiveLeague('1')]);
+  await api.getLiveLeague('1');
+  expect(functions.getLiveLeague).toHaveBeenCalledTimes(1);
+  await api.getLiveLeague('2');
+  await api.getLiveLeague('1', true);
+  expect(functions.getLiveLeague).toHaveBeenCalledTimes(3);
+  const other = session('other-scoped-live');
+  await other.getLiveLeague('1');
+  expect(functions.getLiveLeague).toHaveBeenCalledTimes(4);
+  expect(functions.getLiveMatchups).not.toHaveBeenCalled();
 });

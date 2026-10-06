@@ -43,13 +43,13 @@ export interface PlayoffForecast {
   reason?: string;
 }
 // Reproducible model estimates, not provider playoff-clinch declarations.
-export function forecastPlayoffs(
+function* simulatePlayoffs(
   data: SeasonInsights,
   settings: PlayoffSettings,
   cutoff: number,
   simulations = 20000,
   scoreModel: 'historical' | 'equal-strength' = 'historical',
-): PlayoffForecast {
+): Generator<void, PlayoffForecast> {
   const throughWeek = Math.max(
     0,
     Math.min(Math.floor(cutoff), data.completedWeek, settings.regularSeasonEnd),
@@ -326,6 +326,8 @@ export function forecastPlayoffs(
       round++;
       playoffRound++;
     }
+    // Keep the same random stream and accumulators across interactive batches.
+    if ((trial + 1) % 100 === 0) yield;
   }
   return {
     schedule: {
@@ -346,6 +348,49 @@ export function forecastPlayoffs(
       advance: r.advance.map((n) => n / simulations),
     })),
   };
+}
+
+export function forecastPlayoffs(
+  data: SeasonInsights,
+  settings: PlayoffSettings,
+  cutoff: number,
+  simulations = 20000,
+  scoreModel: 'historical' | 'equal-strength' = 'historical',
+): PlayoffForecast {
+  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel);
+  let step = iterator.next();
+  while (!step.done) step = iterator.next();
+  return step.value;
+}
+
+function pause(signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const abort = () => {
+      clearTimeout(timer);
+      reject(new DOMException('Forecast canceled', 'AbortError'));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', abort);
+      resolve();
+    }, 0);
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
+  });
+}
+
+export async function forecastPlayoffsAsync(
+  data: SeasonInsights,
+  settings: PlayoffSettings,
+  cutoff: number,
+  signal?: AbortSignal,
+): Promise<PlayoffForecast> {
+  const iterator = simulatePlayoffs(data, settings, cutoff);
+  for (;;) {
+    await pause(signal);
+    signal?.throwIfAborted();
+    const step = iterator.next();
+    if (step.done) return step.value;
+  }
 }
 
 function teamsWithProjection(data: SeasonInsights, points: Record<string, number>) {

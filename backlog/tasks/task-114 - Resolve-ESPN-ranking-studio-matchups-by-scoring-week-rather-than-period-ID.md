@@ -1,9 +1,11 @@
 ---
 id: TASK-114
 title: Resolve ESPN ranking-studio matchups by scoring week rather than period ID
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@codex'
 created_date: '2026-10-05 17:34'
+updated_date: '2026-10-06 17:28'
 labels:
   - espn
   - rankings
@@ -29,14 +31,34 @@ EspnProvider.getMatchups requests a scoringPeriodId but filters schedule entries
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A selected ESPN scoring week returns the matchup period containing that week using the published calendar or a validated equivalent mapping.
-- [ ] #2 The returned opponent and score context explicitly distinguish selected-week points from multiweek aggregate points; unknown or overlapping mappings do not substitute another period.
-- [ ] #3 Single-week leagues and bye matchups continue to work, including regular-season and playoff period mappings where published.
-- [ ] #4 Provider and ranking-editor regression tests cover week 3 inside period 2, unknown calendars, single-week behavior and selected-week versus aggregate scores; user-facing score semantics are documented.
+- [x] #1 A selected ESPN scoring week returns the matchup period containing that week using the published calendar or a validated equivalent mapping.
+- [x] #2 The returned opponent and score context explicitly distinguish selected-week points from multiweek aggregate points; unknown or overlapping mappings do not substitute another period.
+- [x] #3 Single-week leagues and bye matchups continue to work, including regular-season and playoff period mappings where published.
+- [x] #4 Provider and ranking-editor regression tests cover week 3 inside period 2, unknown calendars, single-week behavior and selected-week versus aggregate scores; user-facing score semantics are documented.
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 - Tests pass
-- [ ] #2 Docs updated
+- [x] #1 - Tests pass
+- [x] #2 Docs updated
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Repair the partially restored implementation and supporting API/provider files; preserve main’s trade suggestions; verify with regression tests, browser checks, type checks, lint, formatting and a production build.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Restored after accidental shelving and manual merge. Reconnected missing supporting code and reconciled it with the newer trade suggestions implementation.
+
+Recovery validation: 582 unit tests passed (1 skipped). All 51 browser cases passed across the full run and corrected trade-preview rerun. Production build, type checks, lint, formatting and diff checks passed.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Resolved ESPN scoring weeks through validated matchup calendars, preserved weekly/aggregate/unavailable score context, and excluded aggregate scores from suggested ranking order.
+<!-- SECTION:FINAL_SUMMARY:END -->

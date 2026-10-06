@@ -25,13 +25,15 @@ export function playerProfiles(
   live?: LiveLeague,
   pool?: WaiverPool,
 ): PlayerProfile[] {
+  if (live && (live.provider !== provider || live.season !== season)) live = undefined;
   const players = new Map<string, PlayerProfile>();
   function profile(id: string) {
     if (!players.has(id))
       players.set(id, {
         id,
         key: `${provider}:${season}:${id}`,
-        name: `Player ${id}`,
+        name: report?.playerIdentities?.[id]?.name || `Player ${id}`,
+        position: report?.playerIdentities?.[id]?.position,
         observed: {},
         ownership: 'Unavailable',
         reportAt: report?.generatedAt,
@@ -40,7 +42,12 @@ export function playerProfiles(
   }
   const observations = new Map<string, number[]>();
   for (const score of report?.scores ?? [])
-    for (const player of score.players ?? []) {
+    for (const player of [
+      ...(score.players ?? []),
+      ...(score.starters ?? []).filter(
+        (starter) => !(score.players ?? []).some((player) => player.playerId === starter.playerId),
+      ),
+    ]) {
       if (!Number.isFinite(player.points)) continue;
       const key = `${player.playerId}:${score.week}`;
       observations.set(key, [...(observations.get(key) ?? []), player.points]);
@@ -82,7 +89,7 @@ export function playerProfiles(
 }
 function assign(profile: PlayerProfile, player: LivePlayer, week?: number, capturedAt?: string) {
   profile.name = player.name;
-  profile.position = player.position;
+  profile.position = player.position ?? profile.position;
   profile.projection = Number.isFinite(player.projectedPoints) ? player.projectedPoints : undefined;
   profile.projectionWeek = week;
   profile.availability = player.availability;

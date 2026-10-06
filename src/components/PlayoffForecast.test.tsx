@@ -17,14 +17,15 @@ function forecastData() {
   } as SeasonInsights;
 }
 
-it('shows cutoff-controlled probabilities and the scenario limitations', () => {
+it('shows cutoff-controlled probabilities and the scenario limitations', async () => {
   const data = forecastData();
   render(
     <Provider>
       <PlayoffForecast data={data} />
     </Provider>,
   );
-  expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Calculating playoff forecast');
+  expect(await screen.findByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
   expect(screen.getByRole('columnheader', { name: 'Projected record' })).toBeInTheDocument();
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toHaveTextContent(
     /\d+\.\d-\d+\.\d/,
@@ -37,6 +38,7 @@ it('shows cutoff-controlled probabilities and the scenario limitations', () => {
   expect(screen.getByText(/2 held-out games/)).toBeInTheDocument();
   expect(screen.getByText(/±0.69 percentage points/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
+  await screen.findByRole('table', { name: 'Playoff probabilities' });
   expect(screen.getByRole('note')).toHaveTextContent(/only 2 completed scoring weeks/);
   expect(screen.getByRole('note')).toHaveTextContent(/especially uncertain/);
   expect(screen.getByRole('note')).toBeVisible();
@@ -51,11 +53,14 @@ it('shows cached week-by-week playoff and title chances with exact values', asyn
   );
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Week-by-week chart' }));
+  await screen.findByRole('img', { name: /Make playoffs probability by completed week/ });
   expect(screen.queryByRole('table', { name: 'Playoff probabilities' })).not.toBeInTheDocument();
   expect(
     screen.getByRole('img', { name: /Make playoffs probability by completed week/ }),
   ).toBeInTheDocument();
-  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
+    timeout: 5000,
+  });
   fireEvent.click(screen.getByText('Exact weekly percentages'));
   const table = screen.getByRole('table', { name: 'Weekly make playoffs probabilities' });
   expect(table.querySelectorAll('tbody tr')).toHaveLength(4);
@@ -74,7 +79,9 @@ it('shows cached week-by-week playoff and title chances with exact values', asyn
   fireEvent.click(screen.getByRole('button', { name: 'Forecast table' }));
   expect(screen.getByLabelText('Forecast through week')).toHaveValue('2');
   fireEvent.click(screen.getByRole('button', { name: 'Week-by-week chart' }));
-  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
+    timeout: 5000,
+  });
   expect(screen.getByRole('button', { name: 'Win championship' })).toHaveAttribute(
     'aria-pressed',
     'true',
@@ -89,7 +96,9 @@ it('keeps earlier trend points visible when the latest week is incomplete', asyn
     </Provider>,
   );
   fireEvent.click(screen.getByRole('button', { name: 'Week-by-week chart' }));
-  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument());
+  await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
+    timeout: 5000,
+  });
   expect(
     screen.getByRole('img', { name: /Make playoffs probability by completed week/ }),
   ).toBeInTheDocument();
@@ -105,7 +114,7 @@ it('explains missing provider settings', () => {
   expect(screen.getByText(/settings are unavailable/)).toBeInTheDocument();
 });
 
-it('discloses weekly coverage and removes current lineup assumptions at an older cutoff', () => {
+it('discloses weekly coverage and removes current lineup assumptions at an older cutoff', async () => {
   const data = forecastData();
   const next = { week: 5, teamPoints: { '1': 110, '2': 95 }, coveredStarters: 2, totalStarters: 2 };
   data.playoffProjection = {
@@ -119,13 +128,16 @@ it('discloses weekly coverage and removes current lineup assumptions at an older
       <PlayoffForecast data={data} />
     </Provider>,
   );
-  expect(screen.getByText(/best legal weekly lineups/)).toHaveTextContent('3 of 14 team-weeks');
+  expect(await screen.findByText(/best legal weekly lineups/)).toHaveTextContent(
+    '3 of 14 team-weeks',
+  );
   expect(screen.getByText(/later weeks use their own provider estimates/)).toBeInTheDocument();
   fireEvent.click(screen.getByText('Weekly lineup projection coverage'));
   const table = screen.getByRole('table', { name: 'Weekly lineup projection coverage' });
   expect(table.querySelectorAll('tbody tr')).toHaveLength(7);
   expect(table.querySelectorAll('tbody tr')[1]).toHaveTextContent('1 of 2');
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '3' } });
+  await screen.findByRole('table', { name: 'Playoff probabilities' });
   expect(
     screen.queryByRole('table', { name: 'Weekly lineup projection coverage' }),
   ).not.toBeInTheDocument();

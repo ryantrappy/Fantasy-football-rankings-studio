@@ -13,6 +13,10 @@ export interface Matchup {
   matchupId: string;
   homeTeamId: string;
   awayTeamId: string | null;
-  homeScore: number;
+  homeScore: number | null;
+  scoringWeek?: number;
+  matchupPeriodId?: number;
+  periodWeeks?: number[];
+  scoreContext?: 'selected-week' | 'matchup-period' | 'unavailable';
   awayScore: number | null;
 }

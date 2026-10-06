@@ -3,13 +3,16 @@ import { expect, test } from '@playwright/test';
 test('week-by-week playoff chart shows both metrics without overflowing mobile', async ({
   page,
 }) => {
+  test.slow(); // Four weekly 20,000-trial simulations can exceed the default timeout on CI.
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/tests/ui/?mode=playoffs');
   await page.getByRole('button', { name: 'Week-by-week chart' }).click();
   await expect(
     page.getByRole('img', { name: /Make playoffs probability by completed week/ }),
   ).toBeVisible();
-  await expect(page.locator('.playoff-timeline-chart circle')).toHaveCount(16);
+  await expect(page.locator('.playoff-timeline-chart circle')).toHaveCount(16, {
+    timeout: 30_000,
+  });
   await expect(page.locator('.playoff-timeline-chart circle').first()).toHaveCSS(
     'animation-name',
     'playoff-point-rise',

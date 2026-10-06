@@ -130,9 +130,22 @@ it('hides stale trade rosters when refreshed league ownership cannot be loaded a
   fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Trade roster data is unavailable');
   expect(screen.queryByLabelText('Send A')).not.toBeInTheDocument();
+  const current = await api.getLiveLeague.mock.results[0].value;
+  let finish!: (value: typeof current) => void;
+  api.getLiveLeague.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
-  await screen.findByLabelText('Send A');
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(screen.queryByLabelText('Send A')).not.toBeInTheDocument();
+  await act(async () => finish(current));
+  await waitFor(() => {
+    expect(screen.getByLabelText('Send A')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
 
 it('keeps selected players visible while searching and supports removing and clearing them', async () => {

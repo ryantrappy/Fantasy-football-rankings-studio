@@ -167,7 +167,7 @@ it('preserves the chosen league and season on refresh and clears selections on c
   expect(await screen.findByLabelText('Compare Alpha')).toBeChecked();
   expect(screen.getByLabelText('Player league')).toHaveValue('20');
   expect(screen.getByLabelText('Player season')).toHaveValue(2025);
-  expect(api.getInsights).toHaveBeenLastCalledWith('20', 2025);
+  expect(api.getInsights).toHaveBeenLastCalledWith('20', 2025, true);
   fireEvent.change(screen.getByLabelText('Player season'), { target: { value: '2024' } });
   await screen.findByLabelText('Compare Player a');
   expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();

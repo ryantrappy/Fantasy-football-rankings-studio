@@ -35,16 +35,17 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
     setLoading(true);
     setLoadError('');
     (async () => {
-      const entries = await api.getRankings(league.leagueId);
+      const entries = await api.getRankings(league.leagueId, retry > 0);
       let current = entries.find((entry) => entry.year === year && entry.week === week);
       if (!current) {
         const [teams, weeklyMatchups] = await Promise.all([
-          api.getTeams(league.leagueId, year, week),
+          api.getTeams(league.leagueId, year, week, retry > 0),
           Promise.all(
             Array.from(
               { length: Math.max(0, week - 1) },
               (_, index) =>
-                api.getMatchups?.(league.leagueId, year, index + 1) ?? Promise.resolve([]),
+                api.getMatchups?.(league.leagueId, year, index + 1, retry > 0) ??
+                Promise.resolve([]),
             ),
           ).catch(() => []),
         ]);
@@ -180,7 +181,7 @@ export function useRankingEditor(api: LeagueApi, league: League, year: number, w
     conflictVersion,
     inspectConflict: async () => {
       try {
-        const entries = await api.getRankings(league.leagueId);
+        const entries = await api.getRankings(league.leagueId, retry > 0);
         const current = entries.find((r) => r.year === year && r.week === week);
         if (!current) throw new Error('The saved edition is no longer available.');
         setConflictVersion(current);

@@ -51,10 +51,10 @@ export interface ManagedTeamSelection {
 export interface LeagueApi {
   waivers?: { get(leagueId: string, year: number): Promise<import('./waivers').WaiverPool> };
   managedTeam?: {
-    get(leagueId: string, year: number): Promise<ManagedTeamSelection>;
+    get(leagueId: string, year: number, refresh?: boolean): Promise<ManagedTeamSelection>;
     set(leagueId: string, year: number, teamId: string | null): Promise<ManagedTeamSelection>;
   };
-  getLiveMatchups(): Promise<import('./live-matchups').LiveLeague[]>;
+  getLiveMatchups(refresh?: boolean): Promise<import('./live-matchups').LiveLeague[]>;
   createReportSnapshot?(
     input: import('./report-snapshot').SnapshotInput,
   ): Promise<{ publicId: string; savedAt: string }>;
@@ -77,11 +77,12 @@ export interface LeagueApi {
   publishing?: import('./publishing').PublishingApi;
   subject?: string;
   writing?: import('./writing').WritingApi;
-  listLeagues(): Promise<League[]>;
+  listLeagues(refresh?: boolean): Promise<League[]>;
   createLeague(league: Omit<League, '_id'>): Promise<League>;
   getLeagueInfo(
     leagueId: string,
     year: number,
+    refresh?: boolean,
   ): Promise<
     League & {
       isCurrentSeason?: boolean;
@@ -93,8 +94,8 @@ export interface LeagueApi {
       scheduleNote: string;
     }
   >;
-  getTeams(leagueId: string, year: number, week: number): Promise<Team[]>;
-  getMatchups(leagueId: string, year: number, week: number): Promise<Matchup[]>;
-  getRankings(leagueId: string): Promise<WeeklyRanking[]>;
+  getTeams(leagueId: string, year: number, week: number, refresh?: boolean): Promise<Team[]>;
+  getMatchups(leagueId: string, year: number, week: number, refresh?: boolean): Promise<Matchup[]>;
+  getRankings(leagueId: string, refresh?: boolean): Promise<WeeklyRanking[]>;
   saveRanking(ranking: WeeklyRanking): Promise<WeeklyRanking>;
 }

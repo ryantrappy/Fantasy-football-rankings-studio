@@ -30,8 +30,67 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     defaultOptions: { queries: { retry: false, staleTime: 30000 } },
   });
   const providerGeneration = new Map<string, number>();
+  const collectionRefreshes = new Map<string, Promise<void>>();
+  async function refetchCollection(key: string, fetch: () => Promise<unknown>) {
+    const pending = collectionRefreshes.get(key);
+    if (pending) return pending;
+    const request = fetch().then(() => {});
+    collectionRefreshes.set(key, request);
+    try {
+      await request;
+    } finally {
+      collectionRefreshes.delete(key);
+    }
+  }
+  let disposed = false;
+  const assertActive = () => {
+    if (disposed) throw new Error('This account session has ended.');
+  };
   const generation = (leagueId: string) => providerGeneration.get(leagueId) ?? 0;
-  const headers = async () => ({ Authorization: `Bearer ${await getToken()}` });
+  const headers = async () => {
+    assertActive();
+    const token = await getToken();
+    assertActive();
+    return { Authorization: `Bearer ${token}` };
+  };
+  const providerKinds = new Set([
+    'league-seasons',
+    'insights-v4',
+    'league-info',
+    'teams',
+    'matchups',
+    'managed-team',
+    'live-matchups',
+  ]);
+  async function invalidateProviderData(leagueId?: string) {
+    const filters = {
+      predicate: (query: { queryKey: readonly unknown[] }) =>
+        providerKinds.has(String(query.queryKey[1])) &&
+        (!leagueId || query.queryKey[2] === leagueId || query.queryKey[1] === 'live-matchups'),
+    };
+    await queryClient.cancelQueries(filters);
+    queryClient.removeQueries(filters);
+  }
+  async function read<T>(
+    kind: string,
+    scope: readonly unknown[],
+    fetch: (signal: AbortSignal) => Promise<T>,
+    staleTime = 30000,
+    refresh = false,
+  ) {
+    assertActive();
+    const queryKey = [subject, kind, ...scope];
+    if (refresh) await queryClient.invalidateQueries({ queryKey, exact: true });
+    return queryClient.fetchQuery({
+      queryKey,
+      queryFn: ({ signal }) => fetch(signal),
+      staleTime,
+      gcTime: 60 * 60 * 1000,
+    });
+  }
+  function providerScope(leagueId: string, ...scope: unknown[]) {
+    return [leagueId, ...scope, generation(leagueId)];
+  }
   const leagueCollection = createCollection(
     queryCollectionOptions({
       queryKey: [subject, 'leagues'],
@@ -68,17 +127,26 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
   let disposePromise: Promise<void> | undefined;
   function dispose() {
     disposePromise ??= (async () => {
+      disposed = true;
       const collections = [leagueCollection, ...rankingCollections.values()];
-      queryClient.clear();
+      await queryClient.cancelQueries();
       while (collections.some((collection) => collection.subscriberCount > 0))
         await new Promise((resolve) => setTimeout(resolve, 0));
       await Promise.all(collections.map((collection) => collection.cleanup()));
+      queryClient.clear();
     })();
     return disposePromise;
   }
   const api: LeagueApi = {
-    getLiveMatchups: async () =>
-      unwrap(await functions.getLiveMatchups({ headers: await headers() })),
+    getLiveMatchups: (refresh = false) =>
+      read(
+        'live-matchups',
+        [],
+        async (signal) =>
+          unwrap(await functions.getLiveMatchups({ headers: await headers(), signal })),
+        15000,
+        refresh,
+      ),
     createReportSnapshot: async (data) =>
       unwrap(await createReportSnapshot({ data, headers: await headers() })),
     subject,
@@ -89,17 +157,33 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         ),
     },
     managedTeam: {
-      get: async (leagueId, year) =>
-        unwrap(
-          await functions.getManagedTeam({ data: { leagueId, year }, headers: await headers() }),
+      get: (leagueId, year, refresh = false) =>
+        read(
+          'managed-team',
+          providerScope(leagueId, year),
+          async (signal) =>
+            unwrap(
+              await functions.getManagedTeam({
+                data: { leagueId, year },
+                headers: await headers(),
+                signal,
+              }),
+            ),
+          30000,
+          refresh,
         ),
-      set: async (leagueId, year, teamId) =>
-        unwrap(
+      set: async (leagueId, year, teamId) => {
+        const saved = unwrap(
           await functions.setManagedTeam({
             data: { leagueId, year, teamId },
             headers: await headers(),
           }),
-        ),
+        );
+        const queryKey = [subject, 'managed-team', ...providerScope(leagueId, year)];
+        await queryClient.cancelQueries({ queryKey, exact: true });
+        queryClient.setQueryData(queryKey, saved);
+        return saved;
+      },
     },
     management: {
       deleting: async () =>
@@ -113,6 +197,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
             headers: await headers(),
           }),
         );
+        await invalidateProviderData();
         await leagueCollection.utils.refetch({ throwOnError: true });
       },
       rename: async (leagueId, leagueName) => {
@@ -122,6 +207,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
             headers: await headers(),
           }),
         );
+        await invalidateProviderData(leagueId);
         await leagueCollection.utils.refetch({ throwOnError: true });
         return renamed;
       },
@@ -134,20 +220,13 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         );
         const nextGeneration = generation(leagueId) + 1;
         providerGeneration.set(leagueId, nextGeneration);
-        const oldProviderQueries = {
-          predicate: (query: { queryKey: readonly unknown[] }) =>
-            query.queryKey[0] === subject &&
-            query.queryKey[2] === leagueId &&
-            ['league-seasons', 'insights-v4'].includes(String(query.queryKey[1])) &&
-            Number(query.queryKey.at(-1)) < nextGeneration,
-        };
-        await queryClient.cancelQueries(oldProviderQueries);
-        queryClient.removeQueries(oldProviderQueries);
+        await invalidateProviderData(leagueId);
         await leagueCollection.utils.refetch({ throwOnError: true });
         return updated;
       },
       delete: async (leagueId) => {
         unwrap(await functions.deleteLeague({ data: { leagueId }, headers: await headers() }));
+        await invalidateProviderData(leagueId);
         await leagueCollection.utils.refetch({ throwOnError: true });
       },
     },
@@ -208,9 +287,19 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
           await writingFunctions.generateSuggestions({ data, headers: await headers(), signal }),
         ),
     },
-    listLeagues: async () => {
+    listLeagues: async (refresh = false) => {
+      assertActive();
       await leagueCollection.preload();
-      await leagueCollection.utils.refetch({ throwOnError: true });
+      const state = queryClient.getQueryState([subject, 'leagues']);
+      if (
+        refresh ||
+        state?.isInvalidated ||
+        !state?.dataUpdatedAt ||
+        Date.now() - state.dataUpdatedAt >= 30000
+      )
+        await refetchCollection('leagues', () =>
+          leagueCollection.utils.refetch({ throwOnError: true }),
+        );
       return leagueCollection.toArray;
     },
     createLeague: async (league) => {
@@ -219,27 +308,68 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         await functions.createLeague({ data: league, headers: await headers() }),
       );
       leagueCollection.utils.writeUpsert(saved);
+      await invalidateProviderData();
       return saved;
     },
-    getLeagueInfo: async (leagueId, year) =>
-      unwrap(
-        await functions.getLeagueInfo({
-          data: { leagueId, year },
-          headers: await headers(),
-        }),
+    getLeagueInfo: (leagueId, year, refresh = false) =>
+      read(
+        'league-info',
+        providerScope(leagueId, year),
+        async (signal) =>
+          unwrap(
+            await functions.getLeagueInfo({
+              data: { leagueId, year },
+              headers: await headers(),
+              signal,
+            }),
+          ),
+        insightsCacheOptions(year).staleTime,
+        refresh,
       ),
-    getTeams: async (leagueId, year, week) =>
-      unwrap(
-        await functions.getTeams({ data: { leagueId, year, week }, headers: await headers() }),
+    getTeams: (leagueId, year, week, refresh = false) =>
+      read(
+        'teams',
+        providerScope(leagueId, year, week),
+        async (signal) =>
+          unwrap(
+            await functions.getTeams({
+              data: { leagueId, year, week },
+              headers: await headers(),
+              signal,
+            }),
+          ),
+        insightsCacheOptions(year).staleTime,
+        refresh,
       ),
-    getMatchups: async (leagueId, year, week) =>
-      unwrap(
-        await functions.getMatchups({ data: { leagueId, year, week }, headers: await headers() }),
+    getMatchups: (leagueId, year, week, refresh = false) =>
+      read(
+        'matchups',
+        providerScope(leagueId, year, week),
+        async (signal) =>
+          unwrap(
+            await functions.getMatchups({
+              data: { leagueId, year, week },
+              headers: await headers(),
+              signal,
+            }),
+          ),
+        insightsCacheOptions(year).staleTime,
+        refresh,
       ),
-    getRankings: async (leagueId) => {
+    getRankings: async (leagueId, refresh = false) => {
+      assertActive();
       const collection = rankingsFor(leagueId);
       await collection.preload();
-      await collection.utils.refetch({ throwOnError: true });
+      const state = queryClient.getQueryState([subject, 'rankings', leagueId]);
+      if (
+        refresh ||
+        state?.isInvalidated ||
+        !state?.dataUpdatedAt ||
+        Date.now() - state.dataUpdatedAt >= 30000
+      )
+        await refetchCollection(`rankings:${leagueId}`, () =>
+          collection.utils.refetch({ throwOnError: true }),
+        );
       return collection.toArray;
     },
     saveRanking: async (ranking) => {
@@ -272,26 +402,20 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       const status = unwrap(
         await functions.saveEspnCredentials({ data, headers: await headers() }),
       );
-      await queryClient.cancelQueries();
-      queryClient.removeQueries({
-        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
-      });
+      await invalidateProviderData();
       return status;
     },
     removeEspnCredentials: async () => {
       const status = unwrap(await functions.removeEspnCredentials({ headers: await headers() }));
-      await queryClient.cancelQueries();
-      queryClient.removeQueries({
-        predicate: (q) => ['league-seasons', 'insights-v4'].includes(String(q.queryKey[1])),
-      });
+      await invalidateProviderData();
       return status;
     },
     skipEspnSetup: async () => unwrap(await functions.skipEspnSetup({ headers: await headers() })),
-    getLeagueSeasons: async (leagueId: string) =>
-      queryClient.fetchQuery({
-        queryKey: [subject, 'league-seasons', leagueId, generation(leagueId)],
-        staleTime: 5 * 60 * 1000,
-        queryFn: async ({ signal }) =>
+    getLeagueSeasons: (leagueId: string) =>
+      read(
+        'league-seasons',
+        providerScope(leagueId),
+        async (signal) =>
           unwrap(
             await functions.getLeagueSeasons({
               data: { leagueId },
@@ -299,8 +423,10 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
               signal,
             }),
           ),
-      }),
+        5 * 60 * 1000,
+      ),
     getInsights: async (leagueId: string, year: number, refresh = false) => {
+      assertActive();
       const queryKey = [subject, 'insights-v4', leagueId, year, generation(leagueId)];
       if (refresh) await queryClient.invalidateQueries({ queryKey });
       return queryClient.fetchQuery({

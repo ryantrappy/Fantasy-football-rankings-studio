@@ -1,3 +1,4 @@
+import { warmTab } from '../tab-data';
 import { createFileRoute } from '@tanstack/react-router';
 import { PlayerProfilesPage } from '../components/PlayerProfilesPage';
 import { validateStudioSearch } from '../studio-selection';
@@ -8,6 +9,8 @@ export const Route = createFileRoute('/_authenticated/players')({
       ? { playerId: input.playerId }
       : {}),
   }),
+  loaderDeps: ({ search }) => ({ leagueId: search.leagueId, year: search.year }),
+  loader: ({ context, deps }) => warmTab('players', context, deps),
   component: () => {
     const search = Route.useSearch();
     return (

@@ -82,6 +82,11 @@ vi.mock('./functions/rankings.functions', () => ({
       scheduleNote: 'Sleeper schedule weeks 1–17.',
     },
   }),
+  getLiveMatchups: vi.fn().mockResolvedValue({ ok: true, data: [] }),
+  getManagedTeam: vi
+    .fn()
+    .mockResolvedValue({ ok: true, data: { teamId: null, needsReselection: false, teams: [] } }),
+  getMatchups: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   getRankings: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   getTeams: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   saveRanking: vi.fn().mockImplementation(async ({ data }) => ({ ok: true, data })),
@@ -727,7 +732,11 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
     expect.objectContaining({ data: { leagueId: '123', year: 2024 } }),
   );
-  expect(publicFunctions.getPublicInsights).toHaveBeenCalledTimes(1);
+  expect(
+    vi
+      .mocked(publicFunctions.getPublicInsights)
+      .mock.calls.filter(([call]) => call.data?.year === 2024),
+  ).toHaveLength(1);
   await user.click(screen.getByRole('button', { name: 'Copy share link' }));
   expect(await screen.findByRole('button', { name: 'Link copied' })).toBeInTheDocument();
   const copied = await navigator.clipboard.readText();
@@ -974,7 +983,7 @@ test('shared league cache checks revocation again after its freshness window', a
 
   expect(await screen.findByRole('alert')).toHaveTextContent('League not found.');
   expect(document.title).toBe('Shared fantasy report | Trapp Fantasy Studio');
-  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(2);
+  expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(3);
   clock.mockRestore();
 });
 
@@ -1028,4 +1037,43 @@ test('current week defaults advance stale storage and league/season switches pre
   await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('1'));
   await user.selectOptions(screen.getByLabelText('Season'), '2026');
   await waitFor(() => expect(screen.getByLabelText('Week')).toHaveValue('6'));
+});
+
+test('the first ready workspace warms tab queries once and navigation reuses them', async () => {
+  auth.isAuthenticated = true;
+  auth.user = { sub: 'preload-owner' };
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  const router = await openPage('/?leagueId=123&year=2026&week=1');
+  await waitFor(() => {
+    expect(privateFunctions.getInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { leagueId: '123', year: 2026 } }),
+    );
+    expect(privateFunctions.getInsights).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { leagueId: '123', year: 2025 } }),
+    );
+    expect(privateFunctions.getLiveMatchups).toHaveBeenCalledTimes(1);
+    expect(privateFunctions.getManagedTeam).toHaveBeenCalledTimes(1);
+  });
+  await act(async () => {
+    await router.preloadRoute({ to: '/playoffs', search: { leagueId: '123', year: 2026 } });
+  });
+  await act(async () => {
+    await router.navigate({ to: '/insights', search: { leagueId: '123', year: 2026 } });
+  });
+  await screen.findByRole('heading', { name: 'Who delivers every week?' });
+  await act(async () => {
+    await router.navigate({ to: '/playoffs', search: { leagueId: '123', year: 2026 } });
+  });
+  await waitFor(() => expect(router.state.location.pathname).toBe('/playoffs'));
+  expect(privateFunctions.getInsights).toHaveBeenCalledTimes(2);
+  expect(privateFunctions.getLeagueSeasons).toHaveBeenCalledTimes(1);
+  expect(privateFunctions.getLiveMatchups).toHaveBeenCalledTimes(1);
+  expect(privateFunctions.listLeagues).toHaveBeenCalledTimes(1);
+  expect(privateFunctions.getRankings).toHaveBeenCalledTimes(1);
+  expect(privateFunctions.getTeams).toHaveBeenCalledTimes(1);
+  expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
+  expect(router.options.context.sessionApi?.subject).toBe('preload-owner');
 });

@@ -22,7 +22,7 @@ export function WeeklyOverviewPage() {
     // Fetch the overview when entering this account session or requesting a refresh.
     // oxlint-disable-next-line react/set-state-in-effect
     setBusy(true);
-    void loadWeeklyOverview({ ...api, managedTeam: api.managedTeam! })
+    void loadWeeklyOverview({ ...api, managedTeam: api.managedTeam! }, refresh > 0)
       .then(
         (next) => {
           if (active) {

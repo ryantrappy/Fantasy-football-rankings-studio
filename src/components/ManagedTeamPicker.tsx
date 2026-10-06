@@ -40,7 +40,7 @@ export function ManagedTeamPicker({
     setSelection(undefined);
     setError('');
     setNotice('');
-    void api.get(leagueId, year).then(
+    void api.get(leagueId, year, retry > 0).then(
       (result) => {
         if (!active) return;
         setSelection(result);

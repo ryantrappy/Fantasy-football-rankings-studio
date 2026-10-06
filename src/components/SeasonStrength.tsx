@@ -248,6 +248,11 @@ export function SeasonStrength({
             </>
           )}
         </Text>
+        {positions.notice && (
+          <Text as="output" display="block" mb={4}>
+            {positions.notice}
+          </Text>
+        )}
         {hasPositions ? (
           <>
             <Text mb={4} className="insights-meta">
@@ -376,6 +381,28 @@ export function SeasonStrength({
               </>
             )}
           </Text>
+        )}
+        {completed && !hasPositions && positions.weeks.length > 0 && (
+          <DataTable
+            label="Completed-week position coverage"
+            data={positions.rows}
+            getRowId={(row) => row.teamId}
+            columns={[
+              {
+                id: 'team',
+                header: 'Team',
+                value: (row) => row.teamName,
+                rowHeader: true,
+                cell: (row) => teamLabel(row),
+              },
+              {
+                id: 'coverage',
+                header: 'Starter week coverage',
+                value: (row) => row.coveredWeeks,
+                cell: (row) => `${row.coveredWeeks} / ${positions.weeks.length}`,
+              },
+            ]}
+          />
         )}
       </Box>
       <Box className="panel" p={{ base: 4, md: 6 }}>

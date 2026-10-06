@@ -1,9 +1,11 @@
 ---
 id: TASK-118
 title: Retain player names and primary positions for historical profile browsing
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@codex'
 created_date: '2026-10-05 17:34'
+updated_date: '2026-10-06 17:28'
 labels:
   - players
   - analytics
@@ -30,14 +32,34 @@ Historical observations create PlayerProfile records with names such as Player p
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Players with historical observations retain available provider names and primary positions in the selected provider and season without requiring current roster ownership.
-- [ ] #2 Historical name search and position filtering work with that metadata; current ownership, injury status and projections remain unavailable when unsupported.
-- [ ] #3 Identity metadata is scoped to players represented in the report, survives snapshots and never merges players across providers or seasons by name; legacy or unknown identities remain explicit.
-- [ ] #4 Tests cover historical seasons without live data, dropped players, duplicate names across IDs, missing metadata and snapshot round trips; profile coverage documentation is updated.
+- [x] #1 Players with historical observations retain available provider names and primary positions in the selected provider and season without requiring current roster ownership.
+- [x] #2 Historical name search and position filtering work with that metadata; current ownership, injury status and projections remain unavailable when unsupported.
+- [x] #3 Identity metadata is scoped to players represented in the report, survives snapshots and never merges players across providers or seasons by name; legacy or unknown identities remain explicit.
+- [x] #4 Tests cover historical seasons without live data, dropped players, duplicate names across IDs, missing metadata and snapshot round trips; profile coverage documentation is updated.
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 - Tests pass
-- [ ] #2 Docs updated
+- [x] #1 - Tests pass
+- [x] #2 Docs updated
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Repair the partially restored implementation and supporting API/provider files; preserve main’s trade suggestions; verify with regression tests, browser checks, type checks, lint, formatting and a production build.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Restored after accidental shelving and manual merge. Reconnected missing supporting code and reconciled it with the newer trade suggestions implementation.
+
+Recovery validation: 582 unit tests passed (1 skipped). All 51 browser cases passed across the full run and corrected trade-preview rerun. Production build, type checks, lint, formatting and diff checks passed.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Retained represented player names and positions in reports and snapshots for historical search/filtering without introducing current-season claims.
+<!-- SECTION:FINAL_SUMMARY:END -->

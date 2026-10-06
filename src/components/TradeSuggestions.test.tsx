@@ -89,6 +89,17 @@ const saved = (teamId: string | null = '1'): ManagedTeamSelection => ({
 function makeApi(leagues = [snapshot()], selection = saved()) {
   return {
     subject: 'owner',
+    listLeagues: vi.fn().mockResolvedValue(
+      leagues.map((league) => ({
+        leagueId: league.leagueId,
+        leagueName: league.leagueName,
+        leagueType: league.provider === 'ESPN' ? 1 : 0,
+        seasonId: league.season,
+      })),
+    ),
+    getLiveLeague: vi
+      .fn()
+      .mockImplementation(async (id) => leagues.find((league) => league.leagueId === id)),
     getLiveMatchups: vi.fn().mockResolvedValue(leagues),
     managedTeam: {
       get: vi.fn().mockResolvedValue(selection),
@@ -135,7 +146,8 @@ it('shows ranked exchanges, both lineup gains and coverage, sources, horizon and
     'Before: 28.00 → After: 40.00',
   );
   expect(api.managedTeam.set).not.toHaveBeenCalled();
-  expect(api.getLiveMatchups).toHaveBeenCalledTimes(1);
+  expect(api.getLiveLeague).toHaveBeenCalledWith('100', false);
+  expect(api.getLiveMatchups).not.toHaveBeenCalled();
   expect(api.managedTeam.get).toHaveBeenCalledWith('100', 2026, false);
 });
 

@@ -16,6 +16,7 @@ import { sleeperNames } from './insights/load.server';
 import { enrichLiveProjections } from './combined-projections.server';
 import {
   sleeperProjectionRules,
+  scoreSleeperProjection,
   espnProjectionRules,
   type EspnScoringItem,
 } from '../combined-projections';
@@ -58,15 +59,6 @@ type EspnSide = {
   totalPointsLive?: number;
   rosterForCurrentScoringPeriod?: { entries?: EspnEntry[] };
 };
-let catalogPromise: ReturnType<typeof sleeperNames> | undefined;
-function playerCatalog() {
-  if (!catalogPromise)
-    catalogPromise = sleeperNames().finally(() => {
-      catalogPromise = undefined;
-    });
-  return catalogPromise;
-}
-
 export async function loadLiveLeague(
   league: League,
   access: EspnAccess = 'public',
@@ -100,7 +92,7 @@ export async function loadLiveLeague(
       provider.get<
         { roster_id: number; players?: string[]; reserve?: string[]; taxi?: string[] }[]
       >(`${season.league_id}/rosters`),
-      playerCatalog().catch(() => ({ names: {}, positions: {}, availability: {}, teams: {} })),
+      sleeperNames().catch(() => ({ names: {}, positions: {}, availability: {}, teams: {} })),
       sleeperLiveProjections(league.seasonId, result.week).catch(
         (): Awaited<ReturnType<typeof sleeperLiveProjections>> => [],
       ),
@@ -115,11 +107,7 @@ export async function loadLiveLeague(
         .filter((row) => row.player_id && row.stats && Object.keys(row.stats).length)
         .map((row) => [
           row.player_id!,
-          Object.entries(row.stats!).reduce(
-            (sum, [stat, value]) =>
-              sum + (Number.isFinite(value) ? value * (season.scoring_settings?.[stat] || 0) : 0),
-            0,
-          ),
+          scoreSleeperProjection(row.stats, season.scoring_settings ?? {}),
         ]),
     );
     const byId = new Map(teams.map((team) => [team.teamId, team]));

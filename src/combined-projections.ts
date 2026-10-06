@@ -1,5 +1,19 @@
 import type { LivePlayer } from './live-matchups';
 
+export function scoreSleeperProjection(
+  stats: Record<string, number> | undefined,
+  scoring: Record<string, number>,
+) {
+  const applicable = Object.entries(stats ?? {}).filter(([stat]) => Object.hasOwn(scoring, stat));
+  if (
+    !applicable.length ||
+    applicable.some(([stat, value]) => !Number.isFinite(value) || !Number.isFinite(scoring[stat]))
+  )
+    return undefined;
+  const points = applicable.reduce((sum, [stat, value]) => sum + value * scoring[stat], 0);
+  return Number.isFinite(points) ? points : undefined;
+}
+
 // Stat meanings checked against ESPN's raw projection responses and espn-api's
 // PLAYER_STATS_MAP. Only direct additive offensive stats are combined.
 export const espnStatIds: Record<string, number> = {

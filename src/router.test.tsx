@@ -82,6 +82,9 @@ vi.mock('./functions/rankings.functions', () => ({
       scheduleNote: 'Sleeper schedule weeks 1–17.',
     },
   }),
+  getLiveLeague: vi
+    .fn()
+    .mockResolvedValue({ ok: true, data: { leagueId: '123', season: 2026, matchups: [] } }),
   getLiveMatchups: vi.fn().mockResolvedValue({ ok: true, data: [] }),
   getManagedTeam: vi
     .fn()

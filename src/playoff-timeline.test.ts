@@ -1,7 +1,12 @@
-import { cachedPlayoffForecast } from './playoff-timeline';
+import {
+  cachedPlayoffForecast,
+  requestPlayoffForecast,
+  peekPlayoffForecast,
+} from './playoff-timeline';
+import { forecastPlayoffs } from './playoff-forecast';
 import type { SeasonInsights } from './insights';
 
-it('caches each weekly cutoff and excludes current projections from older weeks', () => {
+it('caches each weekly cutoff and excludes current projections from older weeks', async () => {
   const data = {
     completedWeek: 2,
     generatedAt: '',
@@ -33,4 +38,16 @@ it('caches each weekly cutoff and excludes current projections from older weeks'
   expect(second.projection.used).toBe(true);
   expect(cachedPlayoffForecast(data, settings, 2)).toBe(second);
   expect(second).not.toBe(first);
+  const fresh = structuredClone(data);
+  expect(await requestPlayoffForecast(fresh, settings, 2)).toEqual(
+    forecastPlayoffs(fresh, settings, 2),
+  );
+  const result = peekPlayoffForecast(fresh, settings, 2);
+  expect(await requestPlayoffForecast(fresh, settings, 2)).toBe(result);
+  const other = structuredClone(data);
+  const controller = new AbortController();
+  const canceled = requestPlayoffForecast(other, settings, 1, controller.signal);
+  setTimeout(() => controller.abort(), 10);
+  await expect(canceled).rejects.toMatchObject({ name: 'AbortError' });
+  expect(peekPlayoffForecast(other, settings, 1)).toBeUndefined();
 });

@@ -194,3 +194,95 @@ it('uses the external ID for a new workspace while retaining its URL ID', async 
   expect(result.leagueId).toBe('999999');
   expect(result.providerLeagueId).toBe('123');
 });
+
+describe('ESPN scoring-week calendars', () => {
+  const espnLeague = { ...league, leagueType: 1 as const };
+  it.each([
+    [{ '1': [1, 2], '2': [3, 4] }, 3, 2, [3, 4]],
+    [{ '3': [3] }, 3, 3, [3]],
+    [{ '7': [14, 15], '8': [16, 17] }, 16, 8, [16, 17]],
+  ])(
+    'resolves published period %j for scoring week %s',
+    async (periods, week, period, periodWeeks) => {
+      get.mockResolvedValueOnce({
+        data: {
+          id: 123,
+          settings: { scheduleSettings: { matchupPeriods: periods } },
+          schedule: [
+            {
+              id: 9,
+              matchupPeriodId: period,
+              home: { teamId: 1, totalPoints: 100 },
+              away: { teamId: 2, totalPoints: 80 },
+            },
+          ],
+        },
+      });
+      const rows = await new EspnProvider().getMatchups(espnLeague, 2026, week as number);
+      expect(rows[0]).toMatchObject({
+        scoringWeek: week,
+        matchupPeriodId: period,
+        periodWeeks,
+        scoreContext: (periodWeeks as number[]).length === 1 ? 'selected-week' : 'matchup-period',
+      });
+      expect((get.mock.calls[0][1]!.params as URLSearchParams).getAll('view')).toEqual([
+        'mSettings',
+        'mMatchup',
+        'mMatchupScore',
+      ]);
+    },
+  );
+  it('uses weekly scores in multiweek periods and preserves unavailable bye scores', async () => {
+    get.mockResolvedValueOnce({
+      data: {
+        id: 123,
+        settings: { scheduleSettings: { matchupPeriods: { '2': [3, 4] } } },
+        schedule: [
+          {
+            id: 1,
+            matchupPeriodId: 2,
+            home: { teamId: 1, totalPoints: 200, pointsByScoringPeriod: { '3': 80 } },
+            away: { teamId: 2, totalPoints: 180, pointsByScoringPeriod: { '3': 90 } },
+          },
+          { id: 2, matchupPeriodId: 2, home: { teamId: 3 } },
+        ],
+      },
+    });
+    expect(await new EspnProvider().getMatchups(espnLeague, 2026, 3)).toMatchObject([
+      { homeScore: 80, awayScore: 90, scoreContext: 'selected-week' },
+      { homeScore: null, awayScore: null, scoreContext: 'unavailable' },
+    ]);
+  });
+  it.each([undefined, { '14': [14, 15], '15': [16, 17] }])(
+    'uses explicit one-week regular settings with playoff calendar %j',
+    async (periods) => {
+      get.mockResolvedValueOnce({
+        data: {
+          id: 123,
+          settings: {
+            scheduleSettings: {
+              matchupPeriodCount: 13,
+              matchupPeriodLength: 1,
+              matchupPeriods: periods,
+            },
+          },
+          schedule: [{ id: 1, matchupPeriodId: 3, home: { teamId: 1, totalPoints: 0 } }],
+        },
+      });
+      expect(await new EspnProvider().getMatchups(espnLeague, 2026, 3)).toMatchObject([
+        { homeScore: 0, awayScore: null, scoreContext: 'selected-week' },
+      ]);
+    },
+  );
+  it.each([undefined, { '1': [1, 2], '2': [2, 3] }, { '1': [] }, { '1': [NaN] }, { '1': [1, 2] }])(
+    'rejects unavailable or ambiguous calendars %j',
+    async (periods) => {
+      get.mockResolvedValueOnce({
+        data: { id: 123, settings: { scheduleSettings: { matchupPeriods: periods } } },
+      });
+      await expect(new EspnProvider().getMatchups(espnLeague, 2026, 3)).rejects.toMatchObject({
+        status: 422,
+      });
+    },
+  );
+});

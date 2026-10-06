@@ -153,6 +153,24 @@ export const operations = {
   },
   listDeletingLeagues: async (owner: string) =>
     (await leagues.listDeleting(owner)).map(publicLeague),
+  getLiveLeague: async (owner: string, input: unknown) => {
+    const { leagueId } = leagueIdSchema.parse(input);
+    const league = await leagues.getLeagueById(leagueId, owner);
+    try {
+      return await loadLiveLeague(league, await leagues.espnAccess(league, owner));
+    } catch (error) {
+      logServerError('liveMatchups.league', error, 502);
+      return {
+        leagueId: league.leagueId,
+        leagueName: league.leagueName || `League ${league.leagueId}`,
+        provider: league.leagueType === 1 ? ('ESPN' as const) : ('Sleeper' as const),
+        season: league.seasonId,
+        week: 1,
+        matchups: [],
+        error: 'Live scores are unavailable for this league right now.',
+      };
+    }
+  },
   listArchivedLeagues: async (owner: string) =>
     (await leagues.listLeagues(owner, true)).map(publicLeague),
   setLeagueArchived: async (owner: string, input: unknown) => {

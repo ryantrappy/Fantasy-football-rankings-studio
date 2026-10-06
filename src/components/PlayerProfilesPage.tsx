@@ -11,7 +11,7 @@ import {
   NativeSelect,
   SimpleGrid,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../auth/session';
 import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
@@ -46,6 +46,9 @@ export function PlayerProfilesPage({
   const [poolError, setPoolError] = useState('');
   const [poolRetry, setPoolRetry] = useState(0);
   const [retry, setRetry] = useState(0);
+  const lastRead = useRef<{ api: typeof api; leagueId: string; year: number; retry: number }>(
+    undefined,
+  );
   const [customRange, setRange] = useState<number[]>();
 
   useEffect(() => {
@@ -77,6 +80,13 @@ export function PlayerProfilesPage({
 
   useEffect(() => {
     if (!leagueId) return;
+    const previous = lastRead.current;
+    const refresh =
+      previous?.api === api &&
+      previous.leagueId === leagueId &&
+      previous.year === year &&
+      previous.retry !== retry;
+    lastRead.current = { api, leagueId, year, retry };
     let active = true;
     // Clear data when the account, league or season snapshot changes.
     // oxlint-disable-next-line react/set-state-in-effect
@@ -89,8 +99,8 @@ export function PlayerProfilesPage({
     setPoolError('');
     setPoolBusy(false);
     void Promise.allSettled([
-      api.getInsights(leagueId, year, retry > 0),
-      api.getLiveMatchups(retry > 0),
+      api.getInsights(leagueId, year, refresh),
+      api.getLiveLeague(leagueId, refresh),
     ]).then(([insights, current]) => {
       if (!active) return;
       const failures: string[] = [];
@@ -99,9 +109,10 @@ export function PlayerProfilesPage({
         failures.push(...(insights.value.partialFailures ?? []).map((entry) => entry.message));
       } else failures.push('Observed scoring history unavailable.');
       if (current.status === 'fulfilled') {
-        const snapshot = current.value.find(
-          (row) => row.leagueId === leagueId && row.season === year,
-        );
+        const snapshot =
+          current.value.leagueId === leagueId && current.value.season === year
+            ? current.value
+            : undefined;
         setLive(snapshot);
         if (snapshot?.error) failures.push(snapshot.error);
       } else failures.push('Current rosters and projections unavailable.');

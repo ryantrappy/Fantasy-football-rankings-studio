@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from './ui/provider';
 import { ApiContext } from '../auth/session';
 import { TradeAnalyzerPage } from './TradeAnalyzerPage';
@@ -17,38 +17,40 @@ async function setup() {
     bye: false,
   });
   const api = {
-    getLiveMatchups: vi.fn().mockResolvedValue([
-      {
-        leagueId: '1',
-        leagueName: 'League',
-        season: 2026,
-        week: 5,
-        provider: 'Sleeper',
-        capturedAt: '2026-10-01',
-        lineupSlots: ['RB'],
-        matchups: [
-          {
-            id: '1',
-            home: {
-              teamId: '1',
-              name: 'One',
-              score: null,
-              players: [
-                player('A', 10),
-                player('C', 5),
-                { ...player('Locked', 1), locked: true, starter: false, lineupSlot: undefined },
-              ],
-            },
-            away: { teamId: '2', name: 'Two', score: null, players: [player('B', 20)] },
+    listLeagues: vi
+      .fn()
+      .mockResolvedValue([{ leagueId: '1', leagueName: 'League', seasonId: 2026, leagueType: 0 }]),
+    getLiveMatchups: vi.fn(),
+    getLiveLeague: vi.fn().mockResolvedValue({
+      leagueId: '1',
+      leagueName: 'League',
+      season: 2026,
+      week: 5,
+      provider: 'Sleeper',
+      capturedAt: '2026-10-01',
+      lineupSlots: ['RB'],
+      matchups: [
+        {
+          id: '1',
+          home: {
+            teamId: '1',
+            name: 'One',
+            score: null,
+            players: [
+              player('A', 10),
+              player('C', 5),
+              { ...player('Locked', 1), locked: true, starter: false, lineupSlot: undefined },
+            ],
           },
-          {
-            id: '2',
-            home: { teamId: '3', name: 'Three', score: null, players: [player('D', 15)] },
-            away: null,
-          },
-        ],
-      },
-    ]),
+          away: { teamId: '2', name: 'Two', score: null, players: [player('B', 20)] },
+        },
+        {
+          id: '2',
+          home: { teamId: '3', name: 'Three', score: null, players: [player('D', 15)] },
+          away: null,
+        },
+      ],
+    }),
   };
   render(
     <Provider>
@@ -77,7 +79,38 @@ it('shows both lineup impacts and receiving players without drop controls', asyn
   expect(within(two).getByText('Before: 20.00 → After: 5.00')).toBeInTheDocument();
   expect(within(two).getByLabelText('Two lineup impact')).toHaveTextContent('-15.00');
   expect(within(one).getByLabelText('One exchange')).toHaveTextContent('Receiving · 1 playerB');
-  expect(api.getLiveMatchups).toHaveBeenCalledTimes(1);
+  expect(api.getLiveLeague).toHaveBeenCalledTimes(1);
+  expect(api.getLiveLeague).toHaveBeenCalledWith('1', false);
+  expect(api.getLiveMatchups).not.toHaveBeenCalled();
+});
+
+it('allows league switching during a delayed scoped read and ignores the replaced response', async () => {
+  const api = await setup();
+  const current = await api.getLiveLeague.mock.results[0].value;
+  api.listLeagues.mockResolvedValue([
+    { leagueId: '1', leagueName: 'League', seasonId: 2026, leagueType: 0 },
+    { leagueId: '2', leagueName: 'Slow league', seasonId: 2026, leagueType: 1 },
+  ]);
+  let finish!: (value: any) => void;
+  api.getLiveLeague.mockImplementation(async (id: string) =>
+    id === '1'
+      ? current
+      : new Promise((resolve) => {
+          finish = resolve;
+        }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
+  await screen.findByRole('option', { name: 'Slow league' });
+  await screen.findByLabelText('Send A');
+  fireEvent.change(screen.getByLabelText('Trade league'), { target: { value: '2' } });
+  await waitFor(() => expect(api.getLiveLeague).toHaveBeenLastCalledWith('2', false));
+  expect(screen.getByRole('status')).toHaveTextContent('Loading rosters');
+  fireEvent.change(screen.getByLabelText('Trade league'), { target: { value: '1' } });
+  await screen.findByLabelText('Send A');
+  await act(async () => finish({ ...current, leagueId: '2', error: 'Slow provider failed' }));
+  expect(screen.getByLabelText('Trade league')).toHaveValue('1');
+  expect(screen.queryByText('Slow provider failed')).not.toBeInTheDocument();
+  expect(api.getLiveMatchups).not.toHaveBeenCalled();
 });
 
 it('allows selecting and removing players whose games are locked', async () => {
@@ -89,6 +122,17 @@ it('allows selecting and removing players whose games are locked', async () => {
   expect(screen.getByLabelText('Two lineup impact')).toHaveTextContent('-19.00');
   fireEvent.click(screen.getByRole('button', { name: 'Remove Locked from trade' }));
   expect(screen.getByLabelText('Send Locked')).not.toBeChecked();
+});
+
+it('hides stale trade rosters when refreshed league ownership cannot be loaded and recovers on retry', async () => {
+  const api = await setup();
+  api.listLeagues.mockRejectedValueOnce(new Error('Offline'));
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Trade roster data is unavailable');
+  expect(screen.queryByLabelText('Send A')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
+  await screen.findByLabelText('Send A');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('keeps selected players visible while searching and supports removing and clearing them', async () => {

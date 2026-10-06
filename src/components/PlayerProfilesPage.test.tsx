@@ -23,48 +23,51 @@ function makeApi() {
         },
       ],
     }),
-    getLiveMatchups: vi.fn().mockResolvedValue(
-      ['10', '20'].map((leagueId) => ({
-        leagueId,
-        provider: leagueId === '10' ? 'Sleeper' : 'ESPN',
-        season: leagueId === '10' ? 2026 : 2025,
-        week: 5,
-        capturedAt: '2026-10-02',
-        matchups: [
-          {
-            home: {
-              teamId: '1',
-              name: 'Roster',
-              players: [
-                {
-                  id: 'a',
-                  name: 'Alpha',
-                  position: 'RB',
-                  starter: true,
-                  points: null,
-                  owned: true,
-                  projectedPoints: 12,
-                  projectionSpread: 4,
-                  projectionNote: 'Equal-weight ESPN/Sleeper mean.',
-                  projectionSources: [
-                    { provider: 'Sleeper', playerId: 'a', points: 10, capturedAt: '2026-10-02' },
-                    { provider: 'ESPN', playerId: '90', points: 14, capturedAt: '2026-10-02' },
-                  ],
-                },
-                {
-                  id: 'b',
-                  name: 'Beta',
-                  position: 'WR',
-                  starter: false,
-                  points: null,
-                  owned: true,
-                },
-              ],
+    getLiveMatchups: vi.fn(),
+    getLiveLeague: vi.fn().mockImplementation(async (id: string) =>
+      ['10', '20']
+        .map((leagueId) => ({
+          leagueId,
+          provider: leagueId === '10' ? 'Sleeper' : 'ESPN',
+          season: leagueId === '10' ? 2026 : 2025,
+          week: 5,
+          capturedAt: '2026-10-02',
+          matchups: [
+            {
+              home: {
+                teamId: '1',
+                name: 'Roster',
+                players: [
+                  {
+                    id: 'a',
+                    name: 'Alpha',
+                    position: 'RB',
+                    starter: true,
+                    points: null,
+                    owned: true,
+                    projectedPoints: 12,
+                    projectionSpread: 4,
+                    projectionNote: 'Equal-weight ESPN/Sleeper mean.',
+                    projectionSources: [
+                      { provider: 'Sleeper', playerId: 'a', points: 10, capturedAt: '2026-10-02' },
+                      { provider: 'ESPN', playerId: '90', points: 14, capturedAt: '2026-10-02' },
+                    ],
+                  },
+                  {
+                    id: 'b',
+                    name: 'Beta',
+                    position: 'WR',
+                    starter: false,
+                    points: null,
+                    owned: true,
+                  },
+                ],
+              },
+              away: null,
             },
-            away: null,
-          },
-        ],
-      })),
+          ],
+        }))
+        .find((row) => row.leagueId === id),
     ),
     waivers: {
       get: vi
@@ -115,13 +118,38 @@ it('retains deep-linked zero observations when current rosters fail', async () =
     generatedAt: '2026-10-01',
     scores: [{ week: 1, players: [{ playerId: '1', points: 0 }] }],
   });
-  api.getLiveMatchups.mockRejectedValue(new Error('offline'));
+  api.getLiveLeague.mockRejectedValue(new Error('offline'));
   setup(api, { leagueId: '10', year: 2026, playerId: '1' });
   await screen.findByText('Current rosters and projections unavailable.');
   const profile = screen.getByRole('region', { name: 'Player 1 profile' });
   expect(profile).toHaveTextContent('Current projectionUnavailable');
   expect(profile).toHaveTextContent('Observed total0.00');
   expect(profile).toHaveTextContent('Observed average0.00');
+});
+
+it('searches and filters dropped historical players using report identities without current claims', async () => {
+  const api = makeApi();
+  const historical = await api.getInsights();
+  api.getInsights.mockResolvedValue({
+    ...historical,
+    playerIdentities: {
+      a: { name: 'Dropped Star', position: 'RB' },
+      b: { name: 'Former Receiver', position: 'WR' },
+    },
+  } as never);
+  setup(api, { leagueId: '10', year: 2024 });
+  await screen.findByLabelText('Compare Dropped Star');
+  fireEvent.change(screen.getByLabelText('Search player name, position or provider ID'), {
+    target: { value: 'Dropped' },
+  });
+  fireEvent.change(screen.getByLabelText('Position filter'), { target: { value: 'RB' } });
+  expect(screen.queryByLabelText('Compare Former Receiver')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText('Compare Dropped Star'));
+  const profile = screen.getByRole('region', { name: 'Dropped Star profile' });
+  expect(profile).toHaveTextContent('Current projectionUnavailable');
+  expect(profile).toHaveTextContent('Observed total10.00');
+  expect(profile).toHaveTextContent('RB · Unavailable');
+  expect(profile).toHaveTextContent('Status: Unavailable');
 });
 
 it('keeps selected players visible through name and position filters', async () => {
@@ -168,9 +196,34 @@ it('preserves the chosen league and season on refresh and clears selections on c
   expect(screen.getByLabelText('Player league')).toHaveValue('20');
   expect(screen.getByLabelText('Player season')).toHaveValue(2025);
   expect(api.getInsights).toHaveBeenLastCalledWith('20', 2025, true);
+  expect(api.getLiveLeague).toHaveBeenLastCalledWith('20', true);
+  expect(api.getLiveMatchups).not.toHaveBeenCalled();
   fireEvent.change(screen.getByLabelText('Player season'), { target: { value: '2024' } });
   await screen.findByLabelText('Compare Player a');
+  expect(api.getInsights).toHaveBeenLastCalledWith('20', 2024, false);
   expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();
+});
+
+it('discards a delayed refresh after switching context and preserves failure disclosure', async () => {
+  const api = setup();
+  await screen.findByLabelText('Compare Alpha');
+  let finish!: (data: any) => void;
+  api.getInsights.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh player data' }));
+  await waitFor(() => expect(api.getInsights).toHaveBeenLastCalledWith('10', 2026, true));
+  api.getInsights.mockRejectedValueOnce(new Error('Historical scores unavailable'));
+  fireEvent.change(screen.getByLabelText('Player league'), { target: { value: '20' } });
+  await screen.findByText('Observed scoring history unavailable.');
+  await act(async () =>
+    finish({ scores: [{ week: 1, players: [{ playerId: 'ghost', points: 999 }] }] }),
+  );
+  expect(screen.queryByLabelText('Compare Player ghost')).not.toBeInTheDocument();
+  expect(api.getInsights).toHaveBeenLastCalledWith('20', 2025, false);
 });
 
 it('discards a delayed unowned-pool response after switching leagues', async () => {

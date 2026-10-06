@@ -24,6 +24,11 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  playerIdentities: z
+    .record(text, z.object({ name: text.optional(), position: text.optional() }))
+    .refine((catalog) => Object.keys(catalog).length <= 10000, 'Too many player identities')
+    .optional(),
+  reportingStartWeek: count.min(1).max(18).optional(),
   regularSeasonSchedule: z
     .object({
       endWeek: count.min(1).max(18),

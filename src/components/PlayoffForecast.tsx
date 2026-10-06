@@ -1,7 +1,7 @@
 import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import type { SeasonInsights } from '../insights';
-import { cachedPlayoffForecast } from '../playoff-timeline';
+import { usePlayoffForecast } from '../hooks/usePlayoffForecast';
 import { DataTable } from './DataTable';
 import { PlayoffTimeline } from './PlayoffTimeline';
 import { describePlayoffRules } from '../playoff-rules';
@@ -12,7 +12,7 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
   const [view, setView] = useState<'table' | 'chart'>('table');
   const [metric, setMetric] = useState<'playoff' | 'championship'>('playoff');
   const cutoff = view === 'chart' ? maxWeek : Math.min(selected ?? maxWeek, maxWeek);
-  const forecast = settings ? cachedPlayoffForecast(data, settings, cutoff) : undefined;
+  const { forecast, pending, error } = usePlayoffForecast(data, settings, cutoff);
   const percent = (n: number) => `${(n * 100).toFixed(1)}%`;
   return (
     <Box
@@ -75,7 +75,11 @@ export function PlayoffForecast({ data }: { data: SeasonInsights }) {
           </NativeSelect.Root>
         </Field.Root>
       )}
-      {view === 'chart' && settings && maxWeek > 0 && forecast?.reason ? (
+      {pending ? (
+        <Text as="output">Calculating playoff forecast…</Text>
+      ) : error ? (
+        <Text role="alert">{error}</Text>
+      ) : view === 'chart' && settings && maxWeek > 0 && forecast?.reason ? (
         <PlayoffTimeline
           data={data}
           settings={settings}

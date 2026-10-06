@@ -61,6 +61,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     'matchups',
     'managed-team',
     'live-matchups',
+    'live-league',
   ]);
   async function invalidateProviderData(leagueId?: string) {
     const filters = {
@@ -138,6 +139,17 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
     return disposePromise;
   }
   const api: LeagueApi = {
+    getLiveLeague: (leagueId, refresh = false) =>
+      read(
+        'live-league',
+        [leagueId, generation(leagueId)],
+        async (signal) =>
+          unwrap(
+            await functions.getLiveLeague({ data: { leagueId }, headers: await headers(), signal }),
+          ),
+        15000,
+        refresh,
+      ),
     getLiveMatchups: (refresh = false) =>
       read(
         'live-matchups',

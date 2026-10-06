@@ -189,6 +189,10 @@ it('covers ESPN validation, teams, matchups, and report loading over a local HTT
       awayTeamId: '2',
       homeScore: 101,
       awayScore: 91,
+      scoringWeek: 1,
+      matchupPeriodId: 1,
+      periodWeeks: [1],
+      scoreContext: 'selected-week',
     },
   ]);
   expect(report.completedWeek).toBe(2);

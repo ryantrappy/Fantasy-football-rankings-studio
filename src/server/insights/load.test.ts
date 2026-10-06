@@ -186,51 +186,57 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
     'Win title',
   ]);
 });
-it('caps Sleeper at the league last-scored week even when the NFL played more weeks', async () => {
-  vi.mocked(axios.get).mockImplementation(async (url): Promise<any> =>
-    String(url).includes('/state/nfl')
-      ? { data: { season: '2026', leg: 1, season_type: 'regular' } }
-      : {
-          data: {
-            a: { full_name: 'Starter', position: 'RB' },
-            b: { full_name: 'Bench', position: 'RB' },
-          },
-        },
-  );
-  vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
-    league_id: '123',
-    name: 'League',
-    season: '2025',
-    total_rosters: 1,
-    settings: { last_scored_leg: 2, start_week: 1 },
-  });
-  vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
-  const read = vi
-    .spyOn(SleeperProvider.prototype, 'get')
-    .mockImplementation(async (path): Promise<any> =>
-      path.includes('/transactions/')
-        ? []
-        : [
-            {
-              roster_id: 1,
-              points: 0,
-              custom_points: -2,
-              starters: ['a'],
-              players_points: { a: -2 },
+it.each([1, 2, 3])(
+  'caps Sleeper at its last-scored week with configured start %s',
+  async (startWeek) => {
+    vi.mocked(axios.get).mockImplementation(async (url): Promise<any> =>
+      String(url).includes('/state/nfl')
+        ? { data: { season: '2026', leg: 1, season_type: 'regular' } }
+        : {
+            data: {
+              a: { full_name: 'Starter', position: 'RB' },
+              b: { full_name: 'Bench', position: 'RB' },
             },
-          ],
+          },
     );
-  const result = await loadInsights(
-    { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2025 },
-    2025,
-  );
-  expect(result.scores).toHaveLength(2);
-  expect(result.completedWeek).toBe(2);
-  expect(result.scores[0]).toMatchObject({ actual: -2, projected: null });
-  expect(result.scores[0].starters).toEqual([{ playerId: 'a', points: -2, position: 'RB' }]);
-  expect(read.mock.calls.map(([path]) => path)).not.toContain('123/rosters');
-  expect(read.mock.calls.map(([path]) => path)).not.toContain('123/matchups/3');
-});
+    vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
+      league_id: '123',
+      name: 'League',
+      season: '2025',
+      total_rosters: 1,
+      settings: { last_scored_leg: 2, start_week: startWeek },
+    });
+    vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
+    const read = vi
+      .spyOn(SleeperProvider.prototype, 'get')
+      .mockImplementation(async (path): Promise<any> =>
+        path.includes('/transactions/')
+          ? []
+          : [
+              {
+                roster_id: 1,
+                points: 0,
+                custom_points: -2,
+                starters: ['a'],
+                players_points: { a: -2 },
+              },
+            ],
+      );
+    const result = await loadInsights(
+      { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2025 },
+      2025,
+    );
+    expect(result.scores).toHaveLength(Math.max(0, 3 - startWeek));
+    expect(result.completedWeek).toBe(2);
+    expect(result.reportingStartWeek).toBe(startWeek);
+    if (startWeek <= 2) {
+      expect(result.scores[0]).toMatchObject({ actual: -2, projected: null });
+      expect(result.scores[0].starters).toEqual([{ playerId: 'a', points: -2, position: 'RB' }]);
+    }
+    expect(read.mock.calls.map(([path]) => path)).not.toContain('123/rosters');
+    expect(read.mock.calls.map(([path]) => path)).not.toContain('123/matchups/3');
+  },
+);
 it('keeps insights available when current Sleeper projections fail', async () => {
   const year = defaultSeason();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -633,5 +639,33 @@ it.each([
     );
     expect(!!result.playoffProjection).toBe(expected);
     if (expected) expect(result.playoffProjection?.week).toBe(15);
+  },
+);
+
+it.each([3, undefined])(
+  'retains the configured ESPN start or an unknown legacy horizon (%s)',
+  async (startWeek) => {
+    vi.spyOn(EspnProvider.prototype, 'getTeams').mockResolvedValue(teams);
+    vi.spyOn(EspnProvider.prototype, 'get').mockImplementation(
+      async (_id, _year, views): Promise<any> => ({
+        id: 123,
+        ...(views.includes('mSettings')
+          ? {
+              status: {
+                firstScoringPeriod: startWeek,
+                latestScoringPeriod: 5,
+                finalScoringPeriod: 18,
+              },
+            }
+          : {}),
+        schedule: [],
+        transactions: [],
+      }),
+    );
+    const source = await loadInsightsSource(
+      { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: 2025 },
+      2025,
+    );
+    expect(source.reportingStartWeek).toBe(startWeek);
   },
 );

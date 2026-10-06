@@ -3,6 +3,7 @@ import { calculateInsights } from '../../src/server/insights/calculate';
 
 export const strengthData = calculateInsights({
   completedWeek: 4,
+  reportingStartWeek: 1,
   teams: [
     'Fourth & Long',
     'Sunday Stunners',

@@ -35,8 +35,8 @@ interface EspnData {
     matchupPeriodId: number;
     winner?: string;
     playoffTierType?: string;
-    home?: { teamId: number; totalPoints: number };
-    away?: { teamId: number; totalPoints: number };
+    home?: { teamId: number; totalPoints: number; pointsByScoringPeriod?: Record<string, number> };
+    away?: { teamId: number; totalPoints: number; pointsByScoringPeriod?: Record<string, number> };
   }[];
 }
 
@@ -195,17 +195,70 @@ export default class EspnProvider implements LeagueProvider {
     const data = await this.get(
       league.providerLeagueId ?? league.leagueId,
       seasonId,
-      ['mMatchup'],
+      ['mSettings', 'mMatchup', 'mMatchupScore'],
       week,
     );
+    const settings = data.settings?.scheduleSettings;
+    const periods = new Map(Object.entries(settings?.matchupPeriods ?? {}));
+    const count = settings?.matchupPeriodCount;
+    if (
+      settings?.matchupPeriodLength === 1 &&
+      Number.isInteger(count) &&
+      count! >= 1 &&
+      count! <= 18
+    )
+      for (let period = 1; period <= count!; period++)
+        if (!periods.has(String(period))) periods.set(String(period), [period]);
+    const seen = new Set<number>();
+    if (!periods.size) throw new HttpException(422, 'ESPN matchup calendar is unavailable.');
+    for (const [id, weeks] of periods) {
+      if (
+        !/^[1-9]\d*$/.test(id) ||
+        !Array.isArray(weeks) ||
+        !weeks.length ||
+        weeks.some(
+          (value) => !Number.isInteger(value) || value < 1 || value > 18 || seen.has(value),
+        )
+      )
+        throw new HttpException(422, 'ESPN matchup calendar is invalid or ambiguous.');
+      for (const value of weeks) {
+        if (seen.has(value))
+          throw new HttpException(422, 'ESPN matchup calendar is invalid or ambiguous.');
+        seen.add(value);
+      }
+    }
+    const selected = [...periods].find(([, weeks]) => weeks.includes(week));
+    if (!selected)
+      throw new HttpException(
+        422,
+        'The selected scoring week is unavailable in ESPN’s matchup calendar.',
+      );
+    const [period, periodWeeks] = selected;
     return (data.schedule || [])
-      .filter((matchup) => matchup.matchupPeriodId === week && matchup.home)
-      .map((matchup) => ({
-        matchupId: String(matchup.id),
-        homeTeamId: String(matchup.home!.teamId),
-        awayTeamId: matchup.away ? String(matchup.away.teamId) : null,
-        homeScore: matchup.home!.totalPoints ?? 0,
-        awayScore: matchup.away ? (matchup.away.totalPoints ?? 0) : null,
-      }));
+      .filter((matchup) => matchup.matchupPeriodId === Number(period) && matchup.home)
+      .map((matchup) => {
+        const homeWeekly = matchup.home!.pointsByScoringPeriod?.[String(week)];
+        const awayWeekly = matchup.away?.pointsByScoringPeriod?.[String(week)];
+        const weekly =
+          Number.isFinite(homeWeekly) && (!matchup.away || Number.isFinite(awayWeekly));
+        const home = weekly ? homeWeekly : matchup.home!.totalPoints;
+        const away = matchup.away ? (weekly ? awayWeekly : matchup.away.totalPoints) : null;
+        const available = Number.isFinite(home) && (!matchup.away || Number.isFinite(away));
+        return {
+          matchupId: String(matchup.id),
+          homeTeamId: String(matchup.home!.teamId),
+          awayTeamId: matchup.away ? String(matchup.away.teamId) : null,
+          homeScore: available ? home! : null,
+          awayScore: available ? away! : null,
+          scoringWeek: week,
+          matchupPeriodId: Number(period),
+          periodWeeks,
+          scoreContext: !available
+            ? ('unavailable' as const)
+            : weekly || periodWeeks.length === 1
+              ? ('selected-week' as const)
+              : ('matchup-period' as const),
+        };
+      });
   }
 }

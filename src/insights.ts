@@ -64,6 +64,7 @@ export interface RosterSnapshot {
   }[];
 }
 export interface InsightsSource {
+  reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
   forecastContext?: {
@@ -112,6 +113,8 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  playerIdentities?: Record<string, { name?: string; position?: string }>;
+  reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: InsightsSource['forecastSchedule'];
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;

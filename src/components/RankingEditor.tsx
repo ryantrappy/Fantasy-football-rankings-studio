@@ -278,6 +278,8 @@ export const RankingEditor = forwardRef<
                 Suggested starting order uses completed scoring and point margin before this week,
                 with early results pulled toward the league average. It is a power signal, not a
                 player or season projection; adjust it with your own judgment before saving.
+                {league.leagueType === 1 &&
+                  ' ESPN matchups follow each scoring week’s published period. Multiweek aggregate scores and unavailable weekly scores are excluded from this suggestion.'}
               </Text>
             )}
             <CopyEdition

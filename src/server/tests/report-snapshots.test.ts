@@ -66,6 +66,12 @@ it('stores independent snapshots and reads them without provider calls or creden
       Promise.resolve(documents.get((filter as unknown as { publicId: string }).publicId)) as never,
   );
   const original = input();
+  original.records[0].data.reportingStartWeek = 1;
+  original.records[0].data.playerIdentities = {
+    '7': { name: 'Historical quarterback', position: 'QB' },
+  };
+  delete original.records[1].data.reportingStartWeek;
+  delete original.records[1].data.playerIdentities;
   original.records[0].data.scores[0].starters = [{ playerId: '7', points: 100, position: 'QB' }];
   original.records[0].data.forecastSchedule = [{ week: 2, homeTeamId: '1', awayTeamId: '2' }];
   original.records[0].data.regularSeasonSchedule = {
@@ -139,6 +145,10 @@ it('stores independent snapshots and reads them without provider calls or creden
   expect(first.publicId).not.toBe(second.publicId);
   const saved = await reportSnapshots.read({ publicId: first.publicId });
   expect(saved.records).toHaveLength(2);
+  expect(saved.records[0].data.reportingStartWeek).toBe(1);
+  expect(saved.records[0].data.playerIdentities).toEqual(original.records[0].data.playerIdentities);
+  expect(saved.records[1].data.reportingStartWeek).toBeUndefined();
+  expect(saved.records[1].data.playerIdentities).toBeUndefined();
   expect(saved.records[0].data.scores[0].actual).toBe(100);
   expect(saved.records[0].data.forecastSchedule).toEqual(original.records[0].data.forecastSchedule);
   expect(saved.records[0].data.regularSeasonSchedule).toEqual(

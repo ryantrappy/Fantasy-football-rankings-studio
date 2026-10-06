@@ -37,8 +37,16 @@ let namesCache:
       espnIds?: Record<string, string>;
     }
   | undefined;
-export async function sleeperNames() {
-  if (namesCache && namesCache.expires > Date.now()) return namesCache;
+let namesPending: Promise<NonNullable<typeof namesCache>> | undefined;
+export function sleeperNames() {
+  if (namesCache && namesCache.expires > Date.now()) return Promise.resolve(namesCache);
+  if (!namesPending)
+    namesPending = loadPlayerCatalog().finally(() => {
+      namesPending = undefined;
+    });
+  return namesPending;
+}
+async function loadPlayerCatalog() {
   const { data } = await axios.get<
     Record<
       string,
@@ -140,6 +148,11 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     nflCompletedWeek,
     season.settings?.last_scored_leg ?? nflCompletedWeek,
   );
+  const configuredStart = season.settings?.start_week ?? 1;
+  const reportingStartWeek =
+    Number.isInteger(configuredStart) && configuredStart >= 1 && configuredStart <= 18
+      ? configuredStart
+      : undefined;
   let rosterSnapshot: InsightsSource['rosterSnapshot'];
   let rosterSnapshotNote: string;
   if (year !== Number(state.season)) {
@@ -171,7 +184,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   }
   const [weekly, transactions] = await Promise.all([
     mapWeeks(
-      weeksThrough(completedWeek).filter((week) => week >= (season.settings?.start_week ?? 1)),
+      weeksThrough(completedWeek).filter((week) => week >= (reportingStartWeek ?? 1)),
       async (week) => ({
         week,
         rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
@@ -439,6 +452,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     playoffProjection,
     playoffSettings,
     completedWeek,
+    reportingStartWeek,
     teams,
     scores,
     moves,
@@ -495,6 +509,7 @@ interface EspnTransaction {
 interface EspnSnapshot extends EspnResultsData {
   id: number;
   status?: {
+    firstScoringPeriod?: number;
     latestScoringPeriod: number;
     finalScoringPeriod: number;
     isPlayoffMatchupEdited?: boolean;
@@ -532,6 +547,16 @@ async function loadEspn(
     0,
     Math.min(18, meta.status.finalScoringPeriod, meta.status.latestScoringPeriod - 1),
   );
+  const calendar = espnRegularSeasonSchedule(meta);
+  const configuredStart =
+    meta.status.firstScoringPeriod ??
+    (calendar
+      ? Math.min(...(meta.settings?.scheduleSettings?.matchupPeriods?.['1'] ?? [1]))
+      : undefined);
+  const reportingStartWeek =
+    Number.isInteger(configuredStart) && configuredStart! >= 1 && configuredStart! <= 18
+      ? configuredStart
+      : undefined;
   let currentRosters: EspnRosterData | undefined;
   let rosterSnapshotNote: string;
   if (year !== defaultSeason()) {
@@ -552,15 +577,18 @@ async function loadEspn(
     }
   }
   const [weekly, transactions] = await Promise.all([
-    mapWeeks(weeksThrough(completedWeek), async (week) => ({
-      week,
-      data: await provider.get<EspnSnapshot>(
-        league.providerLeagueId ?? league.leagueId,
-        year,
-        ['mMatchupScore', 'mBoxscore'],
+    mapWeeks(
+      weeksThrough(completedWeek).filter((week) => week >= (reportingStartWeek ?? 1)),
+      async (week) => ({
         week,
-      ),
-    })),
+        data: await provider.get<EspnSnapshot>(
+          league.providerLeagueId ?? league.leagueId,
+          year,
+          ['mMatchupScore', 'mBoxscore'],
+          week,
+        ),
+      }),
+    ),
     mapWeeks(weeksThrough(Math.min(18, completedWeek + 1)), (week) =>
       provider.get<EspnSnapshot>(
         league.providerLeagueId ?? league.leagueId,
@@ -837,6 +865,7 @@ async function loadEspn(
     forecastContext,
     playoffSettings,
     completedWeek,
+    reportingStartWeek,
     teams,
     scores,
     moves,

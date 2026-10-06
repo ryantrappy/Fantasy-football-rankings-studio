@@ -42,6 +42,7 @@ function deferred<T>() {
 
 function makeApi() {
   return {
+    getLiveLeague: vi.fn<LeagueApi['getLiveLeague']>(),
     getLiveMatchups: vi.fn<LeagueApi['getLiveMatchups']>().mockResolvedValue([]),
     listLeagues: vi.fn<LeagueApi['listLeagues']>().mockResolvedValue([league]),
     createLeague: vi.fn<LeagueApi['createLeague']>(),
@@ -285,5 +286,37 @@ it('preserves a conflicting local draft until the saved version is reviewed and 
     introduction: 'Local version',
     revision: 2,
   });
+  editor.unmount();
+});
+
+it('uses selected-week ESPN scores and excludes repeated multiweek aggregates from suggested ordering', async () => {
+  const api = makeApi();
+  const espnLeague = { ...league, leagueType: 1 as const };
+  api.getRankings.mockResolvedValue([]);
+  api.getTeams.mockResolvedValue(
+    ['Alpha', 'Beta'].map((teamName, index) => ({
+      ...existing.teams[0],
+      teamId: String(index + 1),
+      teamName,
+    })),
+  );
+  api.getMatchups.mockImplementation(async (_id, _year, week) => [
+    {
+      matchupId: String(week),
+      homeTeamId: '1',
+      awayTeamId: '2',
+      scoringWeek: week,
+      matchupPeriodId: week === 3 ? 2 : 1,
+      periodWeeks: week === 3 ? [3, 4] : [1, 2],
+      homeScore: week === 3 ? 10 : 9999,
+      awayScore: week === 3 ? 90 : 0,
+      scoreContext: week === 3 ? 'selected-week' : 'matchup-period',
+    },
+  ]);
+  const editor = renderHook(() => useRankingEditor(api, espnLeague, 2026, 4));
+  await act(async () => {});
+  expect(api.getMatchups).toHaveBeenCalledWith(league.leagueId, 2026, 3, false);
+  expect(editor.result.current.ranking?.teams[0].teamName).toBe('Beta');
+  expect(api.saveRanking).not.toHaveBeenCalled();
   editor.unmount();
 });

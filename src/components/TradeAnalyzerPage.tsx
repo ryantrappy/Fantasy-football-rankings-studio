@@ -12,6 +12,7 @@ import {
   SimpleGrid,
 } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
+import type { League } from '../types';
 import { useApi } from '../auth/session';
 import type { LiveLeague, LiveTeam } from '../live-matchups';
 import { PlayerProfileLink } from './PlayerProfileLink';
@@ -417,47 +418,87 @@ export function TradeAnalyzerPage({ search = {} }: { search?: StudioSearch }) {
   const api = useApi();
   return <TradeWorkspace key={api.subject} api={api} search={search} />;
 }
+
 function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; search: StudioSearch }) {
-  const [loaded, setLoaded] = useState<{ api: typeof api; leagues: LiveLeague[] }>(),
-    [scope, setScope] = useState<{ leagueId: string; year: number }>(),
-    [error, setError] = useState(''),
-    [busy, setBusy] = useState(true),
-    [retry, setRetry] = useState(0);
+  const [loaded, setLoaded] = useState<{ api: typeof api; leagues: League[] }>();
+  const [scope, setScope] = useState<{ leagueId: string; year: number }>();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(true);
+  const [retry, setRetry] = useState(0);
+  const [snapshot, setSnapshot] = useState<{
+    api: typeof api;
+    league: LiveLeague;
+    refresh: boolean;
+  }>();
+  const lastRead = useRef<{ api: typeof api; leagueId: string; year: number; retry: number }>(
+    undefined,
+  );
   useEffect(() => {
     let active = true;
-    // Load an account-owned live snapshot on entry or explicit refresh.
+    void api.listLeagues(retry > 0).then(
+      (rows) => {
+        if (!active) return;
+        setLoaded({ api, leagues: rows });
+        setScope((previous) => {
+          const preferred = search.leagueId ? search : readStudioSelection(api.subject);
+          const league =
+            rows.find((entry) => entry.leagueId === previous?.leagueId) ??
+            rows.find((entry) => entry.leagueId === preferred?.leagueId) ??
+            rows[0];
+          return league
+            ? {
+                leagueId: league.leagueId,
+                year:
+                  (previous?.leagueId === league.leagueId ? previous.year : undefined) ??
+                  (preferred?.leagueId === league.leagueId ? preferred.year : undefined) ??
+                  league.seasonId,
+              }
+            : undefined;
+        });
+        if (!rows.length) setBusy(false);
+      },
+      () => {
+        if (!active) return;
+        setLoaded({ api, leagues: [] });
+        setError('Trade roster data is unavailable. Try again.');
+        setBusy(false);
+      },
+    );
+    return () => {
+      active = false;
+    };
+    // Route scope changes remount the workspace; refresh preserves the controls.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, retry]);
+  const leagues = loaded?.api === api ? loaded.leagues : [];
+  const ownedLeague = leagues.find((league) => league.leagueId === scope?.leagueId);
+  useEffect(() => {
+    if (!scope || !ownedLeague) return;
+    let active = true;
     // oxlint-disable-next-line react/set-state-in-effect
+    setSnapshot(undefined);
+    setError('');
+    if (scope.year !== ownedLeague.seasonId) {
+      setBusy(false);
+      return;
+    }
     setBusy(true);
+    const previous = lastRead.current;
+    const refresh =
+      !!previous &&
+      previous.api === api &&
+      previous.leagueId === scope.leagueId &&
+      previous.year === scope.year &&
+      previous.retry !== retry;
+    lastRead.current = { api, ...scope, retry };
     void api
-      .getLiveMatchups(retry > 0)
+      .getLiveLeague(scope.leagueId, refresh)
       .then(
-        (rows) => {
-          if (active) {
-            setLoaded({ api, leagues: rows });
-            setScope((previous) => {
-              const preferred = search.leagueId ? search : readStudioSelection(api.subject);
-              const league =
-                rows.find((entry) => entry.leagueId === previous?.leagueId) ??
-                rows.find((entry) => entry.leagueId === preferred?.leagueId) ??
-                rows[0];
-              return league
-                ? {
-                    leagueId: league.leagueId,
-                    year:
-                      (previous?.leagueId === league.leagueId ? previous.year : undefined) ??
-                      (preferred?.leagueId === league.leagueId ? preferred.year : undefined) ??
-                      league.season,
-                  }
-                : undefined;
-            });
-            setError('');
-          }
+        (league) => {
+          if (active) setSnapshot({ api, league, refresh });
         },
         () => {
-          if (active) {
-            setLoaded({ api, leagues: [] });
-            setError('Trade roster data is unavailable. Try again.');
-          }
+          if (active) setError('Trade roster data is unavailable. Try again.');
         },
       )
       .finally(() => {
@@ -466,13 +507,16 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
     return () => {
       active = false;
     };
-    // Route search changes remount the workspace; controls preserve their scope on refresh.
+    // Metadata reloads do not require another roster read for the same scope.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, retry]);
-  const leagues = loaded?.api === api ? loaded.leagues : [];
-  const selected = leagues.find(
-    (league) => league.leagueId === scope?.leagueId && league.season === scope.year,
-  );
+  }, [api, scope?.leagueId, scope?.year, ownedLeague?.seasonId, retry]);
+  const selected =
+    ownedLeague &&
+    snapshot?.api === api &&
+    snapshot.league.leagueId === scope?.leagueId &&
+    snapshot.league.season === scope?.year
+      ? snapshot.league
+      : undefined;
   return (
     <Box maxW="1200px" mx="auto">
       <PageHeading
@@ -490,13 +534,13 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
         <Flex align="end" wrap="wrap" gap={4} mb={6} p={4} bg="bg.subtle" rounded="lg">
           <Field.Root maxW="400px">
             <Field.Label htmlFor="trade-league">Trade league</Field.Label>
-            <NativeSelect.Root bg="bg" disabled={busy}>
+            <NativeSelect.Root bg="bg">
               <NativeSelect.Field
                 id="trade-league"
                 value={scope?.leagueId ?? ''}
                 onChange={(event) => {
                   const league = leagues.find((entry) => entry.leagueId === event.target.value);
-                  if (league) setScope({ leagueId: league.leagueId, year: league.season });
+                  if (league) setScope({ leagueId: league.leagueId, year: league.seasonId });
                 }}
               >
                 {leagues.map((league) => (
@@ -510,7 +554,7 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
           </Field.Root>
           <Field.Root maxW="160px">
             <Field.Label htmlFor="trade-season">Trade season</Field.Label>
-            <NativeSelect.Root bg="bg" disabled={busy}>
+            <NativeSelect.Root bg="bg">
               <NativeSelect.Field
                 id="trade-season"
                 value={scope?.year ?? ''}
@@ -541,7 +585,7 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
           <Proposal
             key={`${api.subject}:${selected.leagueId}:${selected.season}:${selected.capturedAt}:${retry}`}
             league={selected}
-            refresh={retry > 0}
+            refresh={snapshot?.refresh ?? false}
           />
         ) : (
           !error && (

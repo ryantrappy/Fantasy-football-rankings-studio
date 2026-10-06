@@ -460,6 +460,7 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
       () => {
         if (!active) return;
         setLoaded({ api, leagues: [] });
+        setSnapshot(undefined);
         setError('Trade roster data is unavailable. Try again.');
         setBusy(false);
       },

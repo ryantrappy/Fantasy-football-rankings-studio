@@ -6,6 +6,9 @@ export function getRouter() {
   return createRouter({
     routeTree,
     context: { publicInsightsApi: createPublicInsightsApi() },
+    defaultPreload: 'intent',
+    // Route matches delegate freshness to the session/public QueryClients.
+    defaultPreloadStaleTime: 0,
     scrollRestoration: true,
     stringifySearch: (search) =>
       defaultStringifySearch(search).replace(/([?&]leagueId=)%22(\d{1,30})%22(?=&|$)/, '$1$2'),

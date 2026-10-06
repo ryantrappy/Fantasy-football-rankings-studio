@@ -1,3 +1,4 @@
+import { withOwnerInsights } from './owner-insights';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApi } from './client';
 import * as functions from '../functions/rankings.functions';
@@ -15,6 +16,11 @@ vi.mock('../functions/rankings.functions', () => ({
   getRankings: vi.fn(),
   saveRanking: vi.fn(),
   getTeams: vi.fn(),
+  getLeagueInfo: vi.fn(),
+  getLiveMatchups: vi.fn(),
+  getMatchups: vi.fn(),
+  getManagedTeam: vi.fn(),
+  setManagedTeam: vi.fn(),
   updateLeagueProviderId: vi.fn(),
   deleteLeague: vi.fn(),
 }));
@@ -200,4 +206,146 @@ it('prevents a delayed old-provider read from repopulating the new workspace cac
   await old;
   expect((await api.getInsights(league.leagueId, 2025)).generatedAt).toBe('new');
   expect(functions.getInsights).toHaveBeenCalledTimes(2);
+});
+
+describe('tab query caching', () => {
+  it('coalesces concurrent and fresh live reads, refreshes on demand, and expires live data', async () => {
+    vi.mocked(functions.getLiveMatchups).mockResolvedValue({ ok: true, data: [] });
+    const api = session('cache-owner');
+    let now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      await Promise.all([api.getLiveMatchups(), api.getLiveMatchups(), api.getLiveMatchups()]);
+      await api.getLiveMatchups();
+      expect(functions.getLiveMatchups).toHaveBeenCalledTimes(1);
+      await api.getLiveMatchups(true);
+      expect(functions.getLiveMatchups).toHaveBeenCalledTimes(2);
+      now += 15001;
+      await api.getLiveMatchups();
+      expect(functions.getLiveMatchups).toHaveBeenCalledTimes(3);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it('coalesces stale collection refreshes without canceling a sibling tab request', async () => {
+    vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+    vi.mocked(functions.getRankings).mockResolvedValue({ ok: true, data: [ranking] });
+    const api = session('collection-owner');
+    await Promise.all([api.listLeagues(), api.getRankings(league.leagueId)]);
+    await Promise.all([
+      api.listLeagues(),
+      api.listLeagues(),
+      api.getRankings(league.leagueId),
+      api.getRankings(league.leagueId),
+    ]);
+    expect(functions.listLeagues).toHaveBeenCalledTimes(1);
+    expect(functions.getRankings).toHaveBeenCalledTimes(1);
+    await Promise.all([
+      api.listLeagues(true),
+      api.listLeagues(true),
+      api.getRankings(league.leagueId, true),
+      api.getRankings(league.leagueId, true),
+    ]);
+    expect(functions.listLeagues).toHaveBeenCalledTimes(2);
+    expect(functions.getRankings).toHaveBeenCalledTimes(2);
+  });
+  it('isolates scopes and sessions, and preserves historical reads until explicit refresh', async () => {
+    vi.mocked(functions.getTeams).mockResolvedValue({ ok: true, data: [] });
+    const owner = session('one');
+    const other = session('two');
+    let now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    try {
+      await Promise.all([owner.getTeams('123', 2025, 1), owner.getTeams('123', 2025, 1)]);
+      now += 360000;
+      await owner.getTeams('123', 2025, 1);
+      expect(functions.getTeams).toHaveBeenCalledTimes(1);
+      await Promise.all([
+        owner.getTeams('123', 2025, 2),
+        owner.getTeams('456', 2025, 1),
+        other.getTeams('123', 2025, 1),
+      ]);
+      expect(functions.getTeams).toHaveBeenCalledTimes(4);
+      await owner.getTeams('123', 2025, 1, true);
+      expect(functions.getTeams).toHaveBeenCalledTimes(5);
+      await owner.dispose();
+      await expect(owner.getTeams('123', 2025, 1)).rejects.toThrow('session has ended');
+      expect(functions.getTeams).toHaveBeenCalledTimes(5);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it('drops warmed live and team data after changing credentials or provider IDs', async () => {
+    vi.mocked(functions.getLiveMatchups).mockResolvedValue({ ok: true, data: [] });
+    vi.mocked(functions.getTeams).mockResolvedValue({ ok: true, data: [] });
+    vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [league] });
+    vi.mocked(functions.updateLeagueProviderId).mockResolvedValue({
+      ok: true,
+      data: { ...league, providerLeagueId: '99' },
+    });
+    vi.mocked(functions.removeEspnCredentials).mockResolvedValue({
+      ok: true,
+      data: { configured: false, onboardingComplete: true },
+    });
+    const api = session('provider-owner');
+    const read = () => Promise.all([api.getLiveMatchups(), api.getTeams(league.leagueId, 2025, 1)]);
+    await read();
+    await api.management!.updateProviderId(league.leagueId, '99');
+    await read();
+    await api.removeEspnCredentials();
+    await read();
+    expect(functions.getLiveMatchups).toHaveBeenCalledTimes(3);
+    expect(functions.getTeams).toHaveBeenCalledTimes(3);
+  });
+  it('publishes a saved managed-team selection into the shared read cache', async () => {
+    vi.mocked(functions.getManagedTeam).mockResolvedValue({
+      ok: true,
+      data: { teamId: null, needsReselection: false, teams: [] },
+    });
+    vi.mocked(functions.setManagedTeam).mockResolvedValue({
+      ok: true,
+      data: { teamId: '1', needsReselection: false, teams: [] },
+    });
+    const api = session('selection-owner');
+    await api.managedTeam!.get('123', 2026);
+    await api.managedTeam!.set('123', 2026, '1');
+    expect(await api.managedTeam!.get('123', 2026)).toMatchObject({ teamId: '1' });
+    expect(functions.getManagedTeam).toHaveBeenCalledTimes(1);
+    await api.managedTeam!.get('123', 2026, true);
+    expect(functions.getManagedTeam).toHaveBeenCalledTimes(2);
+  });
+});
+
+it('keeps owner report access during a sibling league lookup and clears it after lookup failure', async () => {
+  const publicApi = {
+    listLeagues: vi.fn().mockResolvedValue([]),
+    getLeague: vi.fn(),
+    getLeagueSeasons: vi.fn(),
+    getInsights: vi.fn(),
+    dispose: vi.fn(),
+  };
+  let rejectLookup!: (error: Error) => void;
+  const privateApi = {
+    listLeagues: vi
+      .fn()
+      .mockResolvedValueOnce([league])
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            rejectLookup = reject;
+          }),
+      ),
+    getLeagueSeasons: vi.fn(),
+    getInsights: vi.fn(),
+  };
+  const api = withOwnerInsights(publicApi, privateApi);
+  await api.listLeagues();
+  const pending = api.listLeagues();
+  await api.getInsights(league.leagueId, 2026);
+  expect(privateApi.getInsights).toHaveBeenCalledTimes(1);
+  expect(publicApi.getInsights).not.toHaveBeenCalled();
+  rejectLookup(new Error('League lookup failed'));
+  await expect(pending).rejects.toThrow('League lookup failed');
+  await api.getInsights(league.leagueId, 2026);
+  expect(publicApi.getInsights).toHaveBeenCalledTimes(1);
 });

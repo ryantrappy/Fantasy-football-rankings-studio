@@ -26,7 +26,7 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
     setLoading(true);
     setError('');
     void Promise.all([
-      archived ? api.management!.archived() : api.listLeagues(),
+      archived ? api.management!.archived() : api.listLeagues(retry > 0),
       api.management?.deleting?.() ?? Promise.resolve([]),
     ])
       .then(

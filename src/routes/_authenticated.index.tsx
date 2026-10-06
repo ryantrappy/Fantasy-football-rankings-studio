@@ -1,3 +1,4 @@
+import { warmTab } from '../tab-data';
 import { HeaderControls } from '../components/AppShell';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { logClientError } from '../logging';
@@ -30,6 +31,8 @@ import {
 
 export const Route = createFileRoute('/_authenticated/')({
   validateSearch: validateStudioSearch,
+  loaderDeps: ({ search }) => ({ leagueId: search.leagueId, year: search.year, week: search.week }),
+  loader: ({ context, deps }) => warmTab('studio', context, deps),
   component: RankingsPage,
 });
 
@@ -81,7 +84,7 @@ function RankingsPage() {
   useEffect(() => {
     let cancelled = false;
     api
-      .listLeagues()
+      .listLeagues(retry > 0)
       .then((entries) => {
         if (cancelled) return;
         const selection = resolveStudioSelection(
@@ -128,7 +131,10 @@ function RankingsPage() {
         setWeek(nextWeek);
       }
     };
-    Promise.allSettled([api.getLeagueInfo(selected, year), api.getRankings(selected)])
+    Promise.allSettled([
+      api.getLeagueInfo(selected, year, retry > 0),
+      api.getRankings(selected, retry > 0),
+    ])
       .then(([infoResult, rankingsResult]) => {
         if (cancelled) return;
         const rankings = rankingsResult.status === 'fulfilled' ? rankingsResult.value : [];

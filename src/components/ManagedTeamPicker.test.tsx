@@ -66,7 +66,7 @@ it('loads the saved team, saves commissioner mode, and requests season-specific 
   await screen.findByText('Commissioner mode saved.');
   expect(api.set).toHaveBeenCalledWith('10', 2026, null);
   fireEvent.change(screen.getByLabelText('My team season'), { target: { value: '2025' } });
-  await waitFor(() => expect(api.get).toHaveBeenLastCalledWith('10', 2025));
+  await waitFor(() => expect(api.get).toHaveBeenLastCalledWith('10', 2025, false));
 });
 it('shows reselection and a retry after provider failure', async () => {
   const api = {

@@ -13,6 +13,9 @@ interface SleeperLeagueData {
   total_rosters: number;
   status?: string;
   settings?: {
+    trade_deadline?: number;
+    disable_trades?: number;
+    trade_review_days?: number;
     last_scored_leg?: number;
     playoff_teams?: number;
     playoff_week_start?: number;

@@ -51,8 +51,8 @@ function PreviewApp() {
           <SeasonStrengthPreview />
         ) : mode === 'players' ? (
           <PlayersPreview />
-        ) : mode === 'trade' ? (
-          <TradePreview />
+        ) : mode === 'trade' || mode === 'trade-suggestions' ? (
+          <TradePreview suggestions={mode === 'trade-suggestions'} />
         ) : mode === 'overview' ? (
           <OverviewPreview />
         ) : mode === 'palette' ? (

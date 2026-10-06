@@ -78,37 +78,51 @@ export function bestProjectedLineup(players: ProjectedPlayer[], slots: Slot[]) {
         .map((player) => [player.id, player]),
     ).values(),
   ];
-  let states = new Map<
-    string,
-    { chosen: number[]; assignments: number[]; points: number; benchSelections: number }
-  >([['', { chosen: [], assignments: [], points: 0, benchSelections: 0 }]]);
-  for (const slot of slots) {
-    const next = new Map<
-      string,
-      { chosen: number[]; assignments: number[]; points: number; benchSelections: number }
-    >();
-    for (const state of states.values())
-      for (let index = 0; index < candidates.length; index++) {
-        const player = candidates[index];
-        if (state.chosen.includes(index) || !slot.accepts(player.position, player.id)) continue;
-        const chosen = [...state.chosen, index].sort((a, b) => a - b);
+  type State = { chosen: number[]; assignments: number[]; points: number; benchSelections: number };
+  // Process each player once, retaining the best assignment for each filled-slot mask.
+  // The search grows with starting slots rather than all combinations of bench players.
+  let states = new Map<bigint, State>([
+    [0n, { chosen: [], assignments: slots.map(() => -1), points: 0, benchSelections: 0 }],
+  ]);
+  const slotBits = slots.map((_, index) => 1n << BigInt(index));
+  for (let index = 0; index < candidates.length; index++) {
+    const player = candidates[index];
+    const eligibleSlots = slots.flatMap((slot, slotIndex) =>
+      slot.accepts(player.position, player.id) ? [slotIndex] : [],
+    );
+    if (!eligibleSlots.length) continue;
+    const next = new Map(states);
+    for (const [mask, state] of states)
+      for (const slotIndex of eligibleSlots) {
+        if (mask & slotBits[slotIndex]) continue;
+        const assignments = [...state.assignments];
+        assignments[slotIndex] = index;
         const candidate = {
-          chosen,
-          assignments: [...state.assignments, index],
+          chosen: [...state.chosen, index],
+          assignments,
           points: state.points + player.points,
           benchSelections: state.benchSelections + Number(!player.starter),
         };
-        const key = chosen.join(',');
-        if (!next.has(key) || next.get(key)!.points < candidate.points) next.set(key, candidate);
+        const key = mask | slotBits[slotIndex];
+        const existing = next.get(key);
+        const firstDifference =
+          existing?.assignments.findIndex((value, i) => value !== assignments[i]) ?? -1;
+        if (
+          !existing ||
+          existing.points < candidate.points ||
+          (existing.points === candidate.points &&
+            firstDifference >= 0 &&
+            assignments[firstDifference] < existing.assignments[firstDifference])
+        )
+          next.set(key, candidate);
       }
     states = next;
-    if (!states.size) return undefined;
   }
-  const best = [...states.values()].reduce((best, candidate) =>
-    candidate.points > best.points ? candidate : best,
-  );
+  const best = states.get((1n << BigInt(slots.length)) - 1n);
+  if (!best) return undefined;
   return {
     ...best,
+    points: best.assignments.reduce((sum, index) => sum + candidates[index].points, 0),
     assignedPlayerIds: best.assignments.map((index) => candidates[index].id),
     playerIds: best.chosen.map((index) => candidates[index].id),
   };

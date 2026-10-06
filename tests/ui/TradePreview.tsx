@@ -35,9 +35,61 @@ const league: LiveLeague = {
     },
   ],
 };
-export function TradePreview() {
+const discoveryLeague: LiveLeague = {
+  ...league,
+  lineupSlots: ['RB', 'WR'],
+  tradeRules: { deadlineWeek: 10, reviewDays: 2 },
+  matchups: [
+    {
+      id: 'discovery',
+      home: {
+        teamId: '1',
+        name: 'Fourth & Long',
+        score: null,
+        players: [
+          { ...roster('Home')[1], id: '101', name: 'Home Lead RB', projectedPoints: 20 },
+          { ...roster('Home')[6], id: '102', name: 'Home Depth RB', projectedPoints: 18 },
+          { ...roster('Home')[3], id: '103', name: 'Home Weak WR', projectedPoints: 5 },
+        ],
+      },
+      away: {
+        teamId: '2',
+        name: 'Sunday Stunners',
+        score: null,
+        players: [
+          { ...roster('Away')[3], id: '201', name: 'Away Lead WR', projectedPoints: 22 },
+          { ...roster('Away')[7], id: '202', name: 'Away Depth WR', projectedPoints: 17 },
+          { ...roster('Away')[1], id: '203', name: 'Away Weak RB', projectedPoints: 6 },
+        ],
+      },
+    },
+  ],
+};
+export function TradePreview({ suggestions = false }: { suggestions?: boolean }) {
+  const teams = [
+    { teamId: '1', teamName: 'Fourth & Long', managerName: 'Home manager' },
+    { teamId: '2', teamName: 'Sunday Stunners', managerName: 'Away manager' },
+  ];
   return (
-    <ApiContext value={{ getLiveMatchups: async () => afterPreviewData([league]) } as never}>
+    <ApiContext
+      value={
+        {
+          getLiveMatchups: async () => afterPreviewData([suggestions ? discoveryLeague : league]),
+          ...(suggestions
+            ? {
+                managedTeam: {
+                  get: async () => ({ teamId: '1', teams, needsReselection: false }),
+                  set: async (_id: string, _year: number, teamId: string | null) => ({
+                    teamId,
+                    teams,
+                    needsReselection: false,
+                  }),
+                },
+              }
+            : {}),
+        } as never
+      }
+    >
       <TradeAnalyzerPage />
     </ApiContext>
   );

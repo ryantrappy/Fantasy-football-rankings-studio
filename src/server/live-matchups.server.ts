@@ -3,6 +3,7 @@ import axios from 'axios';
 import type { League } from './interfaces/league.interface';
 import {
   sleeperLineupSlots,
+  sleeperTradeRules,
   espnLineupSlot,
   type LiveLeague,
   type LivePlayer,
@@ -108,6 +109,7 @@ export async function loadLiveLeague(
     result.lineupSlots = (season.roster_positions ?? []).filter(
       (slot) => !['BN', 'BENCH', 'IR', 'TAXI'].includes(slot),
     );
+    result.tradeRules = sleeperTradeRules(season.settings ?? {}, result.week, remaining);
     const projected = new Map(
       projections
         .filter((row) => row.player_id && row.stats && Object.keys(row.stats).length)

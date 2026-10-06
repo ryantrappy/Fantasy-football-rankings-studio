@@ -82,6 +82,18 @@ export function evaluateTrade(
       before: before.proposed,
       after: after.proposed,
       difference: complete ? after.proposed! - before.proposed! : null,
+      beforeCoverage: [
+        ...new Set(
+          team.players
+            .filter((player) => player.owned && !player.reserve)
+            .map((player) => player.position ?? 'Unknown'),
+        ),
+      ].map((position) => ({
+        position,
+        count: team.players.filter(
+          (player) => player.owned && !player.reserve && player.position === position,
+        ).length,
+      })),
       coverage: [
         ...new Set(
           players.filter((player) => !player.reserve).map((player) => player.position ?? 'Unknown'),

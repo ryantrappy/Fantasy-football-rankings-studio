@@ -45,8 +45,41 @@ export interface LiveLeague {
   week: number;
   lineupSlots?: string[];
   capturedAt?: string;
+  tradeRules?: {
+    disabled?: boolean;
+    deadlineWeek?: number;
+    deadlinePassed?: boolean;
+    reviewDays?: number;
+  };
   matchups: LiveMatchup[];
   error?: string;
+}
+
+export function sleeperTradeRules(
+  settings: { trade_deadline?: number; disable_trades?: number; trade_review_days?: number },
+  week: number,
+  remaining?: Map<string, number>,
+): NonNullable<LiveLeague['tradeRules']> {
+  const deadline = settings.trade_deadline;
+  const deadlineWeek =
+    Number.isInteger(deadline) && deadline! >= 1 && deadline! <= 18 ? deadline : undefined;
+  return {
+    disabled:
+      settings.disable_trades === 1 ? true : settings.disable_trades === 0 ? false : undefined,
+    deadlineWeek,
+    // Sleeper closes trading when the last NFL game in the deadline week ends.
+    deadlinePassed:
+      deadlineWeek === undefined
+        ? undefined
+        : week > deadlineWeek ||
+          (week === deadlineWeek &&
+            Boolean(remaining?.size) &&
+            [...remaining!.values()].every((fraction) => fraction === 0)),
+    reviewDays:
+      Number.isFinite(settings.trade_review_days) && settings.trade_review_days! >= 0
+        ? settings.trade_review_days
+        : undefined,
+  };
 }
 
 const positions = [

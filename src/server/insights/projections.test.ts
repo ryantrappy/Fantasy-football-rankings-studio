@@ -5,7 +5,69 @@ import {
   sleeperProjectionSnapshot,
   remainingProjectionWeeks,
   sleeperByeWeeks,
+  bestProjectedLineup,
+  type Slot,
 } from './projections';
+
+it('matches an exhaustive legal assignment search across overlapping slots and negative projections', () => {
+  let seed = 73;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed;
+  };
+  for (let scenario = 0; scenario < 60; scenario++) {
+    const players = Array.from({ length: 7 }, (_, index) => ({
+      id: String(index),
+      position: ['QB', 'RB', 'WR', 'TE'][random() % 4],
+      points: (random() % 30) - 5,
+      starter: index < 4,
+    }));
+    const allowed = Array.from(
+      { length: 4 },
+      () => new Set(players.filter(() => random() % 3 > 0).map((player) => player.id)),
+    );
+    const slots: Slot[] = allowed.map((ids) => ({ accepts: (_position, id) => ids.has(id!) }));
+    const search = (slot: number, used: Set<string>, points: number): number => {
+      if (slot === slots.length) return points;
+      return Math.max(
+        -Infinity,
+        ...players
+          .filter((player) => !used.has(player.id) && allowed[slot].has(player.id))
+          .map((player) => search(slot + 1, new Set([...used, player.id]), points + player.points)),
+      );
+    };
+    const expected = search(0, new Set(), 0);
+    const result = bestProjectedLineup(players, slots);
+    if (expected === -Infinity) expect(result).toBeUndefined();
+    else {
+      expect(result?.points).toBe(expected);
+      expect(new Set(result!.assignedPlayerIds).size).toBe(slots.length);
+      expect(result!.assignedPlayerIds.every((id, index) => allowed[index].has(id))).toBe(true);
+      expect(result!.benchSelections).toBe(
+        result!.playerIds.filter((id) => !players.find((player) => player.id === id)!.starter)
+          .length,
+      );
+    }
+  }
+});
+
+it('keeps ties deterministic and filters duplicate identities and non-finite forecasts', () => {
+  const players = [
+    { id: 'a', position: 'RB', points: 10, starter: true },
+    { id: 'b', position: 'RB', points: 10, starter: false },
+    { id: 'a', position: 'RB', points: 10, starter: true },
+    { id: 'missing', position: 'RB', points: NaN, starter: false },
+  ];
+  const result = bestProjectedLineup(players, [{ accepts: () => true }]);
+  expect(result!.assignedPlayerIds).toEqual(['a']);
+  expect(result!.benchSelections).toBe(0);
+  expect(
+    bestProjectedLineup(
+      players,
+      Array.from({ length: 3 }, () => ({ accepts: () => true })),
+    ),
+  ).toBeUndefined();
+});
 
 it('uses the best legal Sleeper lineup from starters and bench players', () => {
   const result = sleeperProjectionSnapshot(

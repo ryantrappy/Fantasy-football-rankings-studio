@@ -8,16 +8,21 @@ export function ManagedTeamPicker({
   leagueId,
   initialYear,
   subject,
+  fixedYear,
+  onSaved,
 }: {
   api: NonNullable<LeagueApi['managedTeam']>;
   leagueId: string;
   initialYear: number;
   subject?: string;
+  fixedYear?: number;
+  onSaved?: (selection: ManagedTeamSelection) => void;
 }) {
   const seasonKey = subject
     ? `managed-team-season:v1:${JSON.stringify([subject, leagueId])}`
     : undefined;
   const [year, setYear] = useState(() => {
+    if (fixedYear !== undefined) return fixedYear;
     try {
       const remembered = seasonKey ? Number(window.localStorage.getItem(seasonKey)) : 0;
       return Number.isInteger(remembered) && remembered >= 2000 && remembered <= 2100
@@ -56,26 +61,30 @@ export function ManagedTeamPicker({
   }, [api, leagueId, year, retry]);
   return (
     <Box mt={4} mb={4} className="managed-team-picker">
-      <label htmlFor={`my-team-year-${leagueId}`}>My team season</label>{' '}
-      <input
-        id={`my-team-year-${leagueId}`}
-        type="number"
-        min={2000}
-        max={2100}
-        value={year}
-        disabled={busy}
-        onChange={(event) => {
-          const next = Number(event.target.value);
-          if (Number.isInteger(next) && next >= 2000 && next <= 2100) {
-            setYear(next);
-            try {
-              if (seasonKey) window.localStorage.setItem(seasonKey, String(next));
-            } catch {
-              /* Selection still saves on the server when browser storage is unavailable. */
-            }
-          }
-        }}
-      />
+      {fixedYear === undefined && (
+        <>
+          <label htmlFor={`my-team-year-${leagueId}`}>My team season</label>{' '}
+          <input
+            id={`my-team-year-${leagueId}`}
+            type="number"
+            min={2000}
+            max={2100}
+            value={year}
+            disabled={busy}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (Number.isInteger(next) && next >= 2000 && next <= 2100) {
+                setYear(next);
+                try {
+                  if (seasonKey) window.localStorage.setItem(seasonKey, String(next));
+                } catch {
+                  /* Selection still saves on the server when browser storage is unavailable. */
+                }
+              }
+            }}
+          />
+        </>
+      )}
       {selection ? (
         <Box
           as="form"
@@ -90,6 +99,7 @@ export function ManagedTeamPicker({
               const result = await api.set(leagueId, year, teamId || null);
               setSelection(result);
               setTeamId(result.teamId ?? '');
+              onSaved?.(result);
               setNotice(
                 result.teamId ? 'Your managed team was saved.' : 'Commissioner mode saved.',
               );

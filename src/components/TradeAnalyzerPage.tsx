@@ -11,23 +11,21 @@ import {
   NativeSelect,
   SimpleGrid,
 } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../auth/session';
 import type { LiveLeague, LiveTeam } from '../live-matchups';
 import { PlayerProfileLink } from './PlayerProfileLink';
 import { evaluateTrade } from '../trade-analysis';
+import { TradeSuggestions } from './TradeSuggestions';
+import { tradeTeams } from '../trade-suggestions';
+import { readStudioSelection, type StudioSearch } from '../studio-selection';
 
 const points = (value: number | null | undefined) =>
   value == null ? 'Unavailable' : value.toFixed(2);
 
-function Proposal({ league }: { league: LiveLeague }) {
-  const teams = [
-    ...new Map(
-      league.matchups
-        .flatMap((matchup) => [matchup.home, ...(matchup.away ? [matchup.away] : [])])
-        .map((team) => [team.teamId, team]),
-    ).values(),
-  ];
+function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean }) {
+  const scenarioHeading = useRef<HTMLHeadingElement>(null);
+  const teams = tradeTeams(league);
   const [ids, setIds] = useState([teams[0]?.teamId ?? '', teams[1]?.teamId ?? '']);
   const [send, setSend] = useState<string[][]>([[], []]);
   const [search, setSearch] = useState(['', '']);
@@ -67,9 +65,22 @@ function Proposal({ league }: { league: LiveLeague }) {
 
   return (
     <Box>
+      <TradeSuggestions
+        league={league}
+        refresh={refresh}
+        onSelectionChange={reset}
+        onInspect={(suggestion) => {
+          reset();
+          setIds([suggestion.sides[0].teamId, suggestion.counterpart.teamId]);
+          setSend([[suggestion.send.id], [suggestion.receive.id]]);
+          setSearch(['', '']);
+          scenarioHeading.current?.scrollIntoView?.({ block: 'start' });
+          scenarioHeading.current?.focus({ preventScroll: true });
+        }}
+      />
       <Flex justify="space-between" align="center" wrap="wrap" gap={3} mb={4}>
         <Box>
-          <Heading as="h2" size="lg">
+          <Heading as="h2" size="lg" ref={scenarioHeading} tabIndex={-1}>
             Build your trade
           </Heading>
           <Text color="fg.muted" mt={1}>
@@ -402,10 +413,13 @@ function Proposal({ league }: { league: LiveLeague }) {
     </Box>
   );
 }
-export function TradeAnalyzerPage() {
+export function TradeAnalyzerPage({ search = {} }: { search?: StudioSearch }) {
   const api = useApi();
-  const [leagues, setLeagues] = useState<LiveLeague[]>([]),
-    [id, setId] = useState(''),
+  return <TradeWorkspace key={api.subject} api={api} search={search} />;
+}
+function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; search: StudioSearch }) {
+  const [loaded, setLoaded] = useState<{ api: typeof api; leagues: LiveLeague[] }>(),
+    [scope, setScope] = useState<{ leagueId: string; year: number }>(),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(true),
     [retry, setRetry] = useState(0);
@@ -419,18 +433,29 @@ export function TradeAnalyzerPage() {
       .then(
         (rows) => {
           if (active) {
-            setLeagues(rows);
-            setId((previous) =>
-              rows.some((league) => league.leagueId === previous)
-                ? previous
-                : (rows[0]?.leagueId ?? ''),
-            );
+            setLoaded({ api, leagues: rows });
+            setScope((previous) => {
+              const preferred = search.leagueId ? search : readStudioSelection(api.subject);
+              const league =
+                rows.find((entry) => entry.leagueId === previous?.leagueId) ??
+                rows.find((entry) => entry.leagueId === preferred?.leagueId) ??
+                rows[0];
+              return league
+                ? {
+                    leagueId: league.leagueId,
+                    year:
+                      (previous?.leagueId === league.leagueId ? previous.year : undefined) ??
+                      (preferred?.leagueId === league.leagueId ? preferred.year : undefined) ??
+                      league.season,
+                  }
+                : undefined;
+            });
             setError('');
           }
         },
         () => {
           if (active) {
-            setLeagues([]);
+            setLoaded({ api, leagues: [] });
             setError('Trade roster data is unavailable. Try again.');
           }
         },
@@ -441,8 +466,13 @@ export function TradeAnalyzerPage() {
     return () => {
       active = false;
     };
+    // Route search changes remount the workspace; controls preserve their scope on refresh.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [api, retry]);
-  const selected = leagues.find((league) => league.leagueId === id);
+  const leagues = loaded?.api === api ? loaded.leagues : [];
+  const selected = leagues.find(
+    (league) => league.leagueId === scope?.leagueId && league.season === scope.year,
+  );
   return (
     <Box maxW="1200px" mx="auto">
       <PageHeading
@@ -463,12 +493,34 @@ export function TradeAnalyzerPage() {
             <NativeSelect.Root bg="bg" disabled={busy}>
               <NativeSelect.Field
                 id="trade-league"
-                value={id}
-                onChange={(event) => setId(event.target.value)}
+                value={scope?.leagueId ?? ''}
+                onChange={(event) => {
+                  const league = leagues.find((entry) => entry.leagueId === event.target.value);
+                  if (league) setScope({ leagueId: league.leagueId, year: league.season });
+                }}
               >
                 {leagues.map((league) => (
                   <option key={league.leagueId} value={league.leagueId}>
                     {league.leagueName}
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </Field.Root>
+          <Field.Root maxW="160px">
+            <Field.Label htmlFor="trade-season">Trade season</Field.Label>
+            <NativeSelect.Root bg="bg" disabled={busy}>
+              <NativeSelect.Field
+                id="trade-season"
+                value={scope?.year ?? ''}
+                onChange={(event) => {
+                  if (scope) setScope({ ...scope, year: Number(event.target.value) });
+                }}
+              >
+                {Array.from({ length: 101 }, (_, index) => 2100 - index).map((year) => (
+                  <option key={year} value={year}>
+                    {year}
                   </option>
                 ))}
               </NativeSelect.Field>
@@ -487,11 +539,18 @@ export function TradeAnalyzerPage() {
           <Text as="output">{selected.error}</Text>
         ) : selected ? (
           <Proposal
-            key={`${selected.leagueId}:${selected.capturedAt}:${retry}`}
+            key={`${api.subject}:${selected.leagueId}:${selected.season}:${selected.capturedAt}:${retry}`}
             league={selected}
+            refresh={retry > 0}
           />
         ) : (
-          !error && <Text>Connect a league to compare hypothetical trades.</Text>
+          !error && (
+            <Text>
+              {leagues.length
+                ? 'Current-week rosters and projections are unavailable for the selected season. Choose the league’s live season to find or inspect trades.'
+                : 'Connect a league to compare hypothetical trades.'}
+            </Text>
+          )
         ))}
     </Box>
   );

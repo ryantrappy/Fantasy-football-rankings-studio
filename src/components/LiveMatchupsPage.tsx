@@ -253,7 +253,7 @@ export function LiveMatchupsPage() {
       inFlight = true;
       setRefreshing(true);
       try {
-        const next = await api.getLiveMatchups();
+        const next = await api.getLiveMatchups(retry > 0);
         if (!active) return;
         setLeagues(next);
         const managedTeams = api.managedTeam;

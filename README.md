@@ -432,6 +432,23 @@ five minutes. Use Refresh insights or Refresh selected seasons to fetch fresh da
 any time. Private caches belong to the signed-in session and are cleared when it ends
 or ESPN credentials change; reloading the browser starts a fresh cache.
 
+### Tab preloading and shared queries
+
+After sign-in and setup, TanStack Router preloads the other main workspace tabs in
+the background while the current page renders. Preloads use the navigation's league,
+season and week parameters; History warms its selected seasons or its three-season
+default. Shared report pages preload their public tabs through a separate public API.
+
+Route loaders and page reads use the same session QueryClient and query keys. Insights
+and Playoffs reuse season reports; Players, Trades, Live and Overview reuse live reads.
+Router uses `defaultPreloadStaleTime: 0` so the query cache controls freshness: live data
+for 15 seconds, leagues/rankings/team selections for 30 seconds, current-season reports
+and provider context for five minutes, and historical season data until invalidated.
+Idle provider queries have one hour of retention. Refresh buttons bypass freshness;
+team-selection saves update the cached selection, and league/provider/credential changes
+clear affected provider data. Ending the session cancels reads and clears its caches.
+Preloads do not perform writes, exports, waiver searches or AI generation.
+
 ### Season and league summaries
 
 Season Insights summarizes trade quality, waiver quality, median scoring, and schedule luck. League History discovers linked provider seasons, defaults to the three most recent prior seasons, and aggregates managers by provider account ID. Select more seasons or inspect individual manager years. Failed seasons are reported and excluded.

@@ -50,7 +50,7 @@ export function PlayerProfilesPage({
 
   useEffect(() => {
     let active = true;
-    void api.listLeagues().then(
+    void api.listLeagues(retry > 0).then(
       (rows) => {
         if (!active) return;
         setLeagues(rows);
@@ -88,25 +88,26 @@ export function PlayerProfilesPage({
     setError('');
     setPoolError('');
     setPoolBusy(false);
-    void Promise.allSettled([api.getInsights(leagueId, year), api.getLiveMatchups()]).then(
-      ([insights, current]) => {
-        if (!active) return;
-        const failures: string[] = [];
-        if (insights.status === 'fulfilled') {
-          setReport(insights.value);
-          failures.push(...(insights.value.partialFailures ?? []).map((entry) => entry.message));
-        } else failures.push('Observed scoring history unavailable.');
-        if (current.status === 'fulfilled') {
-          const snapshot = current.value.find(
-            (row) => row.leagueId === leagueId && row.season === year,
-          );
-          setLive(snapshot);
-          if (snapshot?.error) failures.push(snapshot.error);
-        } else failures.push('Current rosters and projections unavailable.');
-        setNotices(failures);
-        setBusy(false);
-      },
-    );
+    void Promise.allSettled([
+      api.getInsights(leagueId, year, retry > 0),
+      api.getLiveMatchups(retry > 0),
+    ]).then(([insights, current]) => {
+      if (!active) return;
+      const failures: string[] = [];
+      if (insights.status === 'fulfilled') {
+        setReport(insights.value);
+        failures.push(...(insights.value.partialFailures ?? []).map((entry) => entry.message));
+      } else failures.push('Observed scoring history unavailable.');
+      if (current.status === 'fulfilled') {
+        const snapshot = current.value.find(
+          (row) => row.leagueId === leagueId && row.season === year,
+        );
+        setLive(snapshot);
+        if (snapshot?.error) failures.push(snapshot.error);
+      } else failures.push('Current rosters and projections unavailable.');
+      setNotices(failures);
+      setBusy(false);
+    });
     return () => {
       active = false;
     };

@@ -415,7 +415,7 @@ export function TradeAnalyzerPage() {
     // oxlint-disable-next-line react/set-state-in-effect
     setBusy(true);
     void api
-      .getLiveMatchups()
+      .getLiveMatchups(retry > 0)
       .then(
         (rows) => {
           if (active) {

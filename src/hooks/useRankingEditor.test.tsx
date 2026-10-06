@@ -88,7 +88,7 @@ describe('useRankingEditor', () => {
     await act(async () => pending.resolve([existing]));
     await act(async () => vi.advanceTimersByTimeAsync(5000));
 
-    expect(api.getTeams).toHaveBeenCalledExactlyOnceWith('league-1', 2026, 3);
+    expect(api.getTeams).toHaveBeenCalledExactlyOnceWith('league-1', 2026, 3, false);
     expect(result.current.ranking).toMatchObject({ year: 2026, week: 3 });
     expect(api.saveRanking).not.toHaveBeenCalled();
     await act(async () => result.current.flush(true));

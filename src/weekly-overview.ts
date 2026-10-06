@@ -23,10 +23,15 @@ export interface WeeklyOverviewRow {
   completedWeek?: number;
   notices: string[];
 }
-export async function loadWeeklyOverview(api: OverviewApi): Promise<WeeklyOverviewRow[]> {
+export async function loadWeeklyOverview(
+  api: OverviewApi,
+  refresh = false,
+): Promise<WeeklyOverviewRow[]> {
   const leagues = await api.listLeagues();
   if (!leagues.length) return [];
-  const live = await api.getLiveMatchups().catch(() => [] as LiveLeague[]);
+  const live = await (refresh ? api.getLiveMatchups(true) : api.getLiveMatchups()).catch(
+    () => [] as LiveLeague[],
+  );
   const rows: WeeklyOverviewRow[] = [];
   // Three concurrent league reads at most; no automatic full-report refresh.
   for (let offset = 0; offset < leagues.length; offset += 3) {

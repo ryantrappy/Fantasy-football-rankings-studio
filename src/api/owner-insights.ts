@@ -13,12 +13,17 @@ export function withOwnerInsights(
   let ownedIds = new Set<string>();
   return {
     ...publicApi,
-    listLeagues: async () => {
-      ownedIds = new Set();
-      const leagues = await privateApi.listLeagues();
-      ownedIds = new Set(leagues.map((league) => league.leagueId));
-      // Pages may append a shared league to the picker without granting private access.
-      return [...leagues];
+    listLeagues: async (refresh = false) => {
+      try {
+        const leagues = await privateApi.listLeagues(refresh);
+        // Publish atomically: sibling preloads must not temporarily lose owner access.
+        ownedIds = new Set(leagues.map((league) => league.leagueId));
+        // Pages may append a shared league to the picker without granting private access.
+        return [...leagues];
+      } catch (error) {
+        ownedIds = new Set();
+        throw error;
+      }
     },
     getLeagueSeasons: (leagueId: string) =>
       ownedIds.has(leagueId)

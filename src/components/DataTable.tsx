@@ -25,6 +25,8 @@ export interface DataColumn<T> {
   cell: (row: T) => ReactNode;
   rowHeader?: boolean;
   className?: string;
+  // Coverage columns remain visible whenever any row is incomplete.
+  coverageComplete?: (row: T) => boolean;
 }
 
 export interface ReportExportContextValue {
@@ -116,10 +118,18 @@ export function DataTable<T extends object>({
 }) {
   const exportScope = useContext(ReportExportContext);
   const descriptionId = useId();
+  const visibleColumns = useMemo(
+    () =>
+      columns.filter(
+        (column) =>
+          !column.coverageComplete || !data.length || !data.every(column.coverageComplete),
+      ),
+    [columns, data],
+  );
   const definitions = useMemo(() => {
     const helper = createColumnHelper<typeof features, T>();
     return helper.columns(
-      columns.map((column) =>
+      visibleColumns.map((column) =>
         helper.accessor((row) => column.value(row) ?? undefined, {
           id: column.id,
           header: column.header,
@@ -130,7 +140,7 @@ export function DataTable<T extends object>({
         }),
       ),
     );
-  }, [columns]);
+  }, [visibleColumns]);
   const table = useTable({
     features,
     data,

@@ -1,10 +1,11 @@
-import { Button, Flex, Text } from '@chakra-ui/react';
+import { Flex, Text } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
 import { InsightsAccess } from '../auth/InsightsAccess';
 import { snapshotInsightsApi } from '../api/snapshot-insights';
 import type { ReportSnapshot, SnapshotView } from '../report-snapshot';
 import { InsightsPage } from './InsightsPage';
 import { HistoryPage } from './HistoryPage';
+import { Icon } from './Icon';
 
 export function SnapshotReport({ report }: { report: ReportSnapshot }) {
   const api = useMemo(() => snapshotInsightsApi(report), [report]);
@@ -40,20 +41,25 @@ export function SnapshotReport({ report }: { report: ReportSnapshot }) {
         {snapshot.years.join(', ')}. This link always shows the saved data; live refresh is
         disabled. Expires {new Date(report.expiresAt).toLocaleString()}.
       </Text>
-      <Flex as="nav" aria-label="Snapshot reports" gap={3} flexWrap="wrap">
-        {(['insights', 'history', 'playoffs'] as const).map((tab) => (
-          <Button
+      <Flex as="nav" aria-label="Snapshot reports" className="app-nav snapshot-nav">
+        {(['insights', 'playoffs', 'history'] as const).map((tab) => (
+          <button
             key={tab}
-            variant={view === tab ? 'solid' : 'outline'}
+            type="button"
+            data-status={view === tab ? 'active' : undefined}
             aria-pressed={view === tab}
             onClick={() => setView(tab)}
           >
+            <Icon
+              name={tab === 'insights' ? 'chart' : tab === 'history' ? 'archive' : 'trophy'}
+              size={16}
+            />
             {tab === 'insights'
               ? 'Season insights'
               : tab === 'history'
                 ? 'League history'
                 : 'Playoff simulation'}
-          </Button>
+          </button>
         ))}
       </Flex>
       {view === 'history' ? (

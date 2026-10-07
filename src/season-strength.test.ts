@@ -81,6 +81,28 @@ it('leaves incomplete, inconsistent, stale and legacy position snapshots unavail
   expect(model.rows.every((row) => row.total === null)).toBe(true);
 });
 
+it.each(['Sleeper', 'ESPN'] as const)(
+  'uses the same available weeks when %s publishes only the next week',
+  (provider) => {
+    const data = fixture();
+    data.playoffProjection!.provider = provider;
+    const future = data.playoffProjection!.weekly![1];
+    future.teamPoints = {};
+    future.positionPoints = {};
+    const model = positionStrength(data);
+    expect(model.weeks).toEqual([2]);
+    expect(model.rows.map((row) => row.total)).toEqual([100, 110, 120, 130]);
+    expect(model.rows.every((row) => row.coveredWeeks === 1)).toBe(true);
+    expect(model.notice).toContain('unavailable for weeks 3');
+    expect(model.notice).toContain('Totals do not cover the full remaining season');
+    // A partially covered team cannot be ranked against teams with more weeks.
+    future.teamPoints.D = 130;
+    future.positionPoints.D = { RB: 90, WR: 40 };
+    expect(positionStrength(data).weeks).toEqual([2, 3]);
+    expect(positionStrength(data).rows.map((row) => row.total)).toEqual([null, null, null, 260]);
+  },
+);
+
 it('ranks completed actual starters, ignoring projections, bench, optimal lineups and unfinished weeks', () => {
   const data = fixture();
   data.scores.forEach((score, i) => {

@@ -119,7 +119,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
             label:
               model.mode === 'completed'
                 ? 'Completed-week starter fantasy points'
-                : 'Remaining projected fantasy points',
+                : 'Projected fantasy points for available weeks',
           },
         },
         y: {
@@ -253,6 +253,14 @@ export function SeasonStrength({
             {positions.notice}
           </Text>
         )}
+        {!completed &&
+          data.playoffProjection?.weekly
+            ?.filter((week) => positions.weeks.includes(week.week) && week.note)
+            .map((week) => (
+              <Text key={week.week} className="insights-meta" mb={4}>
+                Week {week.week}: {week.note}
+              </Text>
+            ))}
         {hasPositions ? (
           <>
             <Text mb={4} className="insights-meta">
@@ -267,11 +275,10 @@ export function SeasonStrength({
               ) : (
                 <>
                   {data.playoffProjection?.provider} native projections · selected league scoring
-                  and lineup rules · weeks {positions.weeks.join(', ')} (including configured
-                  playoff weeks) · captured {data.playoffProjection?.capturedAt ?? data.generatedAt}
-                  . Published byes score zero. Confirmed absences are excluded in the current week
-                  only; future injury recovery is unknown. Rankings use the same full horizon for
-                  every team.
+                  and lineup rules · available weeks {positions.weeks.join(', ')} · captured{' '}
+                  {data.playoffProjection?.capturedAt ?? data.generatedAt}. Published byes score
+                  zero. Confirmed absences are excluded in the current week only; future injury
+                  recovery is unknown. Rankings use the same available weeks for every team.
                 </>
               )}
             </Text>
@@ -357,6 +364,10 @@ export function SeasonStrength({
                   {
                     id: 'coverage',
                     header: 'Weeks covered',
+                    coverageComplete: (row) =>
+                      row.total !== null &&
+                      row.coveredWeeks === positions.weeks.length &&
+                      !positions.notice,
                     value: (row) => row.coveredWeeks,
                     cell: (row) => `${row.coveredWeeks} / ${positions.weeks.length}`,
                   },
@@ -374,10 +385,10 @@ export function SeasonStrength({
               )
             ) : (
               <>
-                Position projections are unavailable for this report. Refresh an active-season
-                report to load the new positional breakdown. Historical and completed seasons do not
-                substitute current projections; missing or unsupported lineup positions are not
-                scored as zero.
+                Position projections are unavailable for this report. Use Completed weeks only to
+                view actual starter scoring. Projections require provider data for legal lineups;
+                missing or unsupported lineup positions are not scored as zero. Historical and
+                completed seasons do not substitute current projections.
               </>
             )}
           </Text>
@@ -398,6 +409,10 @@ export function SeasonStrength({
               {
                 id: 'coverage',
                 header: 'Starter week coverage',
+                coverageComplete: (row) =>
+                  row.total !== null &&
+                  row.coveredWeeks === positions.weeks.length &&
+                  !positions.notice,
                 value: (row) => row.coveredWeeks,
                 cell: (row) => `${row.coveredWeeks} / ${positions.weeks.length}`,
               },
@@ -463,6 +478,8 @@ export function SeasonStrength({
                   {
                     id: 'coverage',
                     header: 'Opponent weeks measured',
+                    coverageComplete: (row) =>
+                      row.unknownWeeks === 0 && row.measuredWeeks === row.scheduledWeeks,
                     value: (row) => row.measuredWeeks,
                     cell: (row) =>
                       `${row.measuredWeeks} / ${row.scheduledWeeks} known${row.unknownWeeks ? ` · ${row.unknownWeeks} unknown` : ''}`,
@@ -470,6 +487,7 @@ export function SeasonStrength({
                   {
                     id: 'historical',
                     header: 'Historical fallback weeks',
+                    coverageComplete: (row) => row.historicalWeeks === 0,
                     value: (row) => row.historicalWeeks,
                     cell: (row) => row.historicalWeeks,
                   },

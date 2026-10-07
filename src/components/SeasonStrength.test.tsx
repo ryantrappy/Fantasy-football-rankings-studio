@@ -15,6 +15,15 @@ const wrap = (data = strengthData) => (
 it('shows exact position values, highlights the managed team, sorts and explains schedule sources', () => {
   render(wrap());
   const ranks = screen.getByRole('table', { name: 'Position group rankings' });
+  expect(
+    within(ranks).queryByRole('columnheader', { name: 'Weeks covered' }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('table', { name: 'Remaining schedule difficulty' })).queryByRole(
+      'columnheader',
+      { name: 'Opponent weeks measured' },
+    ),
+  ).not.toBeInTheDocument();
   expect(within(ranks).getByText('The Underdogs with a very long team name')).toBeInTheDocument();
   expect(within(ranks).getByText('Your team')).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Sort roster charts by'), { target: { value: 'WR' } });
@@ -67,6 +76,28 @@ it('switches rankings and bars to actual completed-week starter points and back'
   expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
   expect(screen.getByRole('heading', { name: 'Roster projections' })).toBeInTheDocument();
 });
+
+it.each(['Sleeper', 'ESPN'] as const)(
+  'shows saved %s next-week rankings when later projection weeks are empty',
+  (provider) => {
+    const data = structuredClone(strengthData);
+    data.playoffProjection!.provider = provider;
+    data.playoffProjection!.weekly!.slice(1).forEach((week) => {
+      week.teamPoints = {};
+      week.positionPoints = {};
+    });
+    render(wrap(data));
+    expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
+    expect(screen.getByRole('table', { name: 'Position group rankings' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Totals do not cover the full remaining season',
+    );
+    expect(screen.getByRole('columnheader', { name: 'Weeks covered' })).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Position projections are unavailable for this report/),
+    ).not.toBeInTheDocument();
+  },
+);
 
 it('offers completed mode without forecasts and explains missing positions or no completed weeks', () => {
   const data = structuredClone(strengthData);

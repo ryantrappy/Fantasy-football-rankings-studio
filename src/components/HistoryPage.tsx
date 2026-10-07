@@ -213,48 +213,52 @@ export function HistoryPage({
             </Link>
           </Button>
         )}
-        <ShareReport
-          key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
-          path="/history"
-          search={{ leagueId, years }}
-          disabled={loading || !records.length}
-          snapshotHref={snapshot?.href}
-          espn={currentCatalog?.leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
-          snapshotData={
-            !loading && records.length === years.length && records.length
-              ? {
-                  leagueId,
-                  view: 'history',
-                  records,
-                  activeManagerKeys: currentCatalog?.activeManagerKeys || [],
-                  activeSeason: currentCatalog?.activeSeason || records[0].year,
-                }
-              : undefined
-          }
-        />
+        {!shared && (
+          <ShareReport
+            key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
+            path="/history"
+            search={{ leagueId, years }}
+            disabled={loading || !records.length}
+            snapshotHref={snapshot?.href}
+            espn={currentCatalog?.leagues.find((l) => l.leagueId === leagueId)?.leagueType === 1}
+            snapshotData={
+              !loading && records.length === years.length && records.length
+                ? {
+                    leagueId,
+                    view: 'history',
+                    records,
+                    activeManagerKeys: currentCatalog?.activeManagerKeys || [],
+                    activeSeason: currentCatalog?.activeSeason || records[0].year,
+                  }
+                : undefined
+            }
+          />
+        )}
       </Flex>
-      <HeaderControls>
-        <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
-          <Field.Label>League</Field.Label>
-          <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
-            <NativeSelect.Field
-              value={leagueId}
-              onChange={(e) => {
-                setManager('');
-                void navigate({ search: { leagueId: e.target.value } });
-              }}
-            >
-              {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
-              {currentCatalog?.leagues.map((l) => (
-                <option key={l.leagueId} value={l.leagueId}>
-                  {l.leagueName}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </Field.Root>
-      </HeaderControls>
+      {!shared && (
+        <HeaderControls>
+          <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
+            <Field.Label>League</Field.Label>
+            <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
+              <NativeSelect.Field
+                value={leagueId}
+                onChange={(e) => {
+                  setManager('');
+                  void navigate({ search: { leagueId: e.target.value } });
+                }}
+              >
+                {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
+                {currentCatalog?.leagues.map((l) => (
+                  <option key={l.leagueId} value={l.leagueId}>
+                    {l.leagueName}
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+          </Field.Root>
+        </HeaderControls>
+      )}
       {!currentCatalog ? (
         <LoadingSkeleton label="Finding linked seasons…" />
       ) : currentCatalog.error ? (

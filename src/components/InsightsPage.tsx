@@ -29,7 +29,8 @@ import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
 import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
-import { LeagueSummary } from './LeagueSummary';
+import { LeagueSummary, ScheduleLuck } from './LeagueSummary';
+import { summarizeLeague, visibleManagers } from '../league-summary';
 import { ScoreTrend } from './ScoreTrend';
 import { reportFreshnessLabel } from './report-freshness';
 
@@ -524,6 +525,13 @@ export function InsightsPage({
                   />
                 </Box>
               </Box>
+              <ScheduleLuck
+                rows={visibleManagers(
+                  summarizeLeague([{ year, data }]),
+                  result?.activeManagerKeys || [],
+                  includeFormer,
+                )}
+              />
               <SeasonStrength
                 key={reportScope}
                 data={data}
@@ -547,6 +555,7 @@ export function InsightsPage({
                 Include former managers in summary
               </label>
               <LeagueSummary
+                showScheduleLuck={false}
                 records={[{ year, data }]}
                 activeManagerKeys={result?.activeManagerKeys || []}
                 includeFormer={includeFormer}

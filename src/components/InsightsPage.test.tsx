@@ -13,7 +13,10 @@ vi.mock('./AppShell', () => ({
   HeaderControls: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 vi.mock('./ShareReport', () => ({ ShareReport: () => null }));
-vi.mock('./LeagueSummary', () => ({ LeagueSummary: () => null }));
+vi.mock('./LeagueSummary', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./LeagueSummary')>()),
+  LeagueSummary: () => null,
+}));
 vi.mock('@tanstack/charts/react', () => ({
   Chart: ({ ariaLabel }: { ariaLabel: string }) => <img alt={ariaLabel} />,
 }));
@@ -34,6 +37,7 @@ it('starts with league-wide trends and the scoring table, and can focus on one t
   );
   const scoring = await screen.findByRole('table', { name: 'Team scoring' });
   expect(screen.getAllByRole('table')[0]).toBe(scoring);
+  expect(screen.getAllByRole('table')[1]).toHaveAccessibleName('Schedule luck');
   const selector = screen.getByRole('combobox', { name: 'Team' });
   expect(selector).toHaveValue('');
   const legend = screen.getByLabelText('Team colors');

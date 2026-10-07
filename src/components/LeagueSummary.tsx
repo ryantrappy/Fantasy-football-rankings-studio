@@ -20,11 +20,13 @@ export function LeagueSummary({
   historical = false,
   activeManagerKeys,
   includeFormer = false,
+  showScheduleLuck = true,
 }: {
   records: SeasonRecord[];
   historical?: boolean;
   activeManagerKeys?: string[];
   includeFormer?: boolean;
+  showScheduleLuck?: boolean;
 }) {
   const rows = useMemo(() => {
     const all = summarizeLeague(records);
@@ -99,83 +101,7 @@ export function LeagueSummary({
           </Text>
         </Box>
       </SimpleGrid>
-      <Box
-        bg="bg"
-        borderWidth="1px"
-        borderStyle="solid"
-        borderColor="border"
-        rounded="lg"
-        p={{ base: 4, md: 6 }}
-        className="panel"
-      >
-        <Heading as="h3" size="lg" mb={4}>
-          Schedule luck index
-        </Heading>
-        <Text mb={4}>
-          Positive means a favorable schedule; negative means an unfavorable one. Extra wins compare
-          actual head-to-head results with expected wins from playing a random league opponent each
-          week. The index is extra wins per game × 100, in percentage points. Ties count as half a
-          win.
-        </Text>
-        <Box overflowX="auto" className="insight-table-wrap">
-          <DataTable
-            label="Schedule luck"
-            data={rows}
-            getRowId={(r) => r.key}
-            initialSorting={[{ id: '1', desc: true }]}
-            columns={[
-              {
-                id: '0',
-                header: 'Manager',
-                value: (r) => r.managerName,
-                rowHeader: true,
-                cell: (r) => <>{r.managerName}</>,
-              },
-              {
-                id: '1',
-                header: 'Luck index',
-                value: (r) => luckIndex(r),
-                cell: (r) => <>{signed(luckIndex(r))} pp</>,
-              },
-              {
-                id: '2',
-                header: 'Extra wins',
-                value: (r) => (r.luckGames ? r.actualWins - r.expectedWins : null),
-                cell: (r) => <>{signed(r.luckGames ? r.actualWins - r.expectedWins : null)}</>,
-              },
-              {
-                id: '3',
-                header: 'Actual wins',
-                value: (r) => (r.luckGames ? r.actualWins : null),
-                cell: (r) => <>{n(r.luckGames ? r.actualWins : null)}</>,
-              },
-              {
-                id: '4',
-                header: 'Expected wins',
-                value: (r) => (r.luckGames ? r.expectedWins : null),
-                cell: (r) => <>{n(r.luckGames ? r.expectedWins : null)}</>,
-              },
-              {
-                id: '5',
-                header: 'Games measured',
-                coverageComplete: (r) => r.weeks > 0 && r.luckGames === r.weeks,
-                value: (r) => r.luckGames,
-                cell: (r) => (
-                  <>
-                    {r.luckGames}
-                    {r.luckGames < 4 ? ' · small sample' : ''}
-                  </>
-                ),
-              },
-            ]}
-          />
-        </Box>
-        <Text mb={4} className="insights-meta">
-          Regular-season matchups with complete league scores only; byes, playoffs, and missing
-          opponents are excluded. History weights every measured game equally. This measures
-          schedule luck, not injuries or projection errors.
-        </Text>
-      </Box>
+      {showScheduleLuck && <ScheduleLuck rows={rows} />}
       <Box
         bg="bg"
         borderWidth="1px"
@@ -399,6 +325,88 @@ export function LeagueSummary({
           from that percentage.
         </Text>
       </Box>
+    </Box>
+  );
+}
+
+export function ScheduleLuck({ rows }: { rows: ReturnType<typeof summarizeLeague> }) {
+  return (
+    <Box
+      bg="bg"
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor="border"
+      rounded="lg"
+      p={{ base: 4, md: 6 }}
+      className="panel"
+    >
+      <Heading as="h3" size="lg" mb={4}>
+        Schedule luck index
+      </Heading>
+      <Text mb={4}>
+        Positive means a favorable schedule; negative means an unfavorable one. Extra wins compare
+        actual head-to-head results with expected wins from playing a random league opponent each
+        week. The index is extra wins per game × 100, in percentage points. Ties count as half a
+        win.
+      </Text>
+      <Box overflowX="auto" className="insight-table-wrap">
+        <DataTable
+          label="Schedule luck"
+          data={rows}
+          getRowId={(r) => r.key}
+          initialSorting={[{ id: '1', desc: true }]}
+          columns={[
+            {
+              id: '0',
+              header: 'Manager',
+              value: (r) => r.managerName,
+              rowHeader: true,
+              cell: (r) => <>{r.managerName}</>,
+            },
+            {
+              id: '1',
+              header: 'Luck index',
+              value: (r) => luckIndex(r),
+              cell: (r) => <>{signed(luckIndex(r))} pp</>,
+            },
+            {
+              id: '2',
+              header: 'Extra wins',
+              value: (r) => (r.luckGames ? r.actualWins - r.expectedWins : null),
+              cell: (r) => <>{signed(r.luckGames ? r.actualWins - r.expectedWins : null)}</>,
+            },
+            {
+              id: '3',
+              header: 'Actual wins',
+              value: (r) => (r.luckGames ? r.actualWins : null),
+              cell: (r) => <>{n(r.luckGames ? r.actualWins : null)}</>,
+            },
+            {
+              id: '4',
+              header: 'Expected wins',
+              value: (r) => (r.luckGames ? r.expectedWins : null),
+              cell: (r) => <>{n(r.luckGames ? r.expectedWins : null)}</>,
+            },
+            {
+              id: '5',
+              header: 'Games measured',
+              coverageComplete: (r) => r.weeks > 0 && r.luckGames === r.weeks,
+              value: (r) => r.luckGames,
+              cell: (r) => (
+                <>
+                  {r.luckGames}
+                  {r.luckGames < 4 ? ' · small sample' : ''}
+                </>
+              ),
+            },
+          ]}
+        />
+      </Box>
+      <Text mb={4} className="insights-meta">
+        Regular-season matchups with complete league scores only; byes, playoffs, and missing
+        opponents are excluded. History weights every measured game equally. This measures schedule
+        luck, not injuries or projection errors.
+      </Text>
     </Box>
   );
 }

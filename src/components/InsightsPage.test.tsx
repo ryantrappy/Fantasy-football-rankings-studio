@@ -34,7 +34,7 @@ it('starts with league-wide trends and the scoring table, and can focus on one t
   );
   const scoring = await screen.findByRole('table', { name: 'Team scoring' });
   expect(screen.getAllByRole('table')[0]).toBe(scoring);
-  const selector = screen.getByRole('combobox', { name: 'Team', exact: true });
+  const selector = screen.getByRole('combobox', { name: 'Team' });
   expect(selector).toHaveValue('');
   const legend = screen.getByLabelText('Team colors');
   strengthData.teams.forEach((team) =>

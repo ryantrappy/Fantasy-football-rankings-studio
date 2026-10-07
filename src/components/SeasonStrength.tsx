@@ -253,6 +253,14 @@ export function SeasonStrength({
             {positions.notice}
           </Text>
         )}
+        {!completed &&
+          data.playoffProjection?.weekly
+            ?.filter((week) => positions.weeks.includes(week.week) && week.note)
+            .map((week) => (
+              <Text key={week.week} className="insights-meta" mb={4}>
+                Week {week.week}: {week.note}
+              </Text>
+            ))}
         {hasPositions ? (
           <>
             <Text mb={4} className="insights-meta">
@@ -356,6 +364,10 @@ export function SeasonStrength({
                   {
                     id: 'coverage',
                     header: 'Weeks covered',
+                    coverageComplete: (row) =>
+                      row.total !== null &&
+                      row.coveredWeeks === positions.weeks.length &&
+                      !positions.notice,
                     value: (row) => row.coveredWeeks,
                     cell: (row) => `${row.coveredWeeks} / ${positions.weeks.length}`,
                   },
@@ -397,6 +409,10 @@ export function SeasonStrength({
               {
                 id: 'coverage',
                 header: 'Starter week coverage',
+                coverageComplete: (row) =>
+                  row.total !== null &&
+                  row.coveredWeeks === positions.weeks.length &&
+                  !positions.notice,
                 value: (row) => row.coveredWeeks,
                 cell: (row) => `${row.coveredWeeks} / ${positions.weeks.length}`,
               },
@@ -462,6 +478,8 @@ export function SeasonStrength({
                   {
                     id: 'coverage',
                     header: 'Opponent weeks measured',
+                    coverageComplete: (row) =>
+                      row.unknownWeeks === 0 && row.measuredWeeks === row.scheduledWeeks,
                     value: (row) => row.measuredWeeks,
                     cell: (row) =>
                       `${row.measuredWeeks} / ${row.scheduledWeeks} known${row.unknownWeeks ? ` · ${row.unknownWeeks} unknown` : ''}`,
@@ -469,6 +487,7 @@ export function SeasonStrength({
                   {
                     id: 'historical',
                     header: 'Historical fallback weeks',
+                    coverageComplete: (row) => row.historicalWeeks === 0,
                     value: (row) => row.historicalWeeks,
                     cell: (row) => row.historicalWeeks,
                   },

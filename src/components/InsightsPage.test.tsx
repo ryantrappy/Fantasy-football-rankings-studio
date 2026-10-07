@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 import { InsightsPage } from './InsightsPage';
@@ -14,13 +14,47 @@ vi.mock('./AppShell', () => ({
 }));
 vi.mock('./ShareReport', () => ({ ShareReport: () => null }));
 vi.mock('./LeagueSummary', () => ({ LeagueSummary: () => null }));
-vi.mock('./ScoreTrend', () => ({ ScoreTrend: () => null }));
 vi.mock('@tanstack/charts/react', () => ({
   Chart: ({ ariaLabel }: { ariaLabel: string }) => <img alt={ariaLabel} />,
 }));
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
+
+it('starts with league-wide trends and the scoring table, and can focus on one team', async () => {
+  api.listLeagues.mockResolvedValue([
+    { leagueId: 'one', leagueName: 'League', leagueType: 0, seasonId: 2026 },
+  ]);
+  api.getLeagueSeasons.mockResolvedValue({ activeManagerKeys: [], activeSeason: 2026 });
+  api.getInsights.mockResolvedValue(strengthData);
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <InsightsPage search={{ leagueId: 'one', year: 2026 }} navigate={vi.fn()} />
+    </ChakraProvider>,
+  );
+  const scoring = await screen.findByRole('table', { name: 'Team scoring' });
+  expect(screen.getAllByRole('table')[0]).toBe(scoring);
+  const selector = screen.getByRole('combobox', { name: 'Team', exact: true });
+  expect(selector).toHaveValue('');
+  const legend = screen.getByLabelText('Team colors');
+  strengthData.teams.forEach((team) =>
+    expect(within(legend).getByText(team.teamName)).toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByText('View exact weekly scores'));
+  const weekly = screen.getByRole('table', { name: 'Weekly scores' });
+  expect(within(weekly).getByRole('columnheader', { name: 'Team' })).toBeInTheDocument();
+  expect(within(weekly).getAllByRole('row')).toHaveLength(strengthData.scores.length + 1);
+  fireEvent.change(selector, { target: { value: strengthData.teams[0].teamId } });
+  expect(
+    within(screen.getByLabelText('Team colors')).getByText(strengthData.teams[0].teamName),
+  ).toBeInTheDocument();
+  expect(
+    within(screen.getByLabelText('Team colors')).queryByText(strengthData.teams[1].teamName),
+  ).not.toBeInTheDocument();
+  expect(within(weekly).getAllByRole('row')).toHaveLength(
+    strengthData.scores.filter((score) => score.teamId === strengthData.teams[0].teamId).length + 1,
+  );
+});
 
 it('clears charts and managed-team identity while a new league report is pending', async () => {
   api.listLeagues.mockResolvedValue(

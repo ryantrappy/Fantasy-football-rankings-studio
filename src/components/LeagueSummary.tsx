@@ -158,6 +158,7 @@ export function LeagueSummary({
               {
                 id: '5',
                 header: 'Games measured',
+                coverageComplete: (r) => r.weeks > 0 && r.luckGames === r.weeks,
                 value: (r) => r.luckGames,
                 cell: (r) => (
                   <>
@@ -218,10 +219,24 @@ export function LeagueSummary({
               {
                 id: '1',
                 header: 'Seasons',
+                coverageComplete: (r) => r.seasons.length === records.length,
                 value: (r) => r.seasons.length,
                 cell: (r) => r.seasons.length,
               },
-              { id: 'weeks', header: 'Weeks', value: (r) => r.weeks, cell: (r) => r.weeks },
+              {
+                id: 'weeks',
+                header: 'Weeks',
+                coverageComplete: (r) =>
+                  records.every(({ data }) => data.reportingStartWeek !== undefined) &&
+                  r.weeks ===
+                    records.reduce(
+                      (sum, { data }) =>
+                        sum + Math.max(0, data.completedWeek - data.reportingStartWeek! + 1),
+                      0,
+                    ),
+                value: (r) => r.weeks,
+                cell: (r) => r.weeks,
+              },
               {
                 id: '2',
                 header: 'Avg. vs. median',

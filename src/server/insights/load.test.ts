@@ -5,7 +5,11 @@ import EspnProvider from '../providers/espn.provider';
 import SleeperProvider from '../providers/sleeper.provider';
 import { forecastPlayoffs } from '../../playoff-forecast';
 import { defaultSeason } from '../../util/rankings';
+import { cachedFutureProjection } from './projection-cache.server';
 vi.mock('axios', () => ({ default: { get: vi.fn() } }));
+vi.mock('./projection-cache.server', () => ({
+  cachedFutureProjection: vi.fn((_context, read) => read()),
+}));
 afterEach(() => vi.restoreAllMocks());
 const teams = [{ teamId: '1', teamName: 'One', managerName: 'A', wins: 0, loss: 0, ties: 0 }];
 it('loads historical ESPN playoff labels without requiring current managers', async () => {
@@ -500,6 +504,12 @@ it('loads Sleeper weekly means through a two-week final using fixed ownership, b
     ]);
     expect(result.playoffProjection?.weekly?.[1].lineups?.['1']).toEqual(['b']);
     expect(result.playoffProjection?.weekly?.[2].lineups?.['1']).toEqual(['a']);
+    expect(
+      vi
+        .mocked(cachedFutureProjection)
+        .mock.calls.slice(-3)
+        .map(([context]) => (context as { week: number }).week),
+    ).toEqual([5, 6, 7]);
   } finally {
     vi.useRealTimers();
   }
@@ -604,6 +614,12 @@ it('loads ESPN projections for later rounds and isolates a failed future week', 
     10,
   ]);
   expect(result.playoffProjection?.weekly?.[3].lineups?.['1']).toEqual(['2']);
+  expect(
+    vi
+      .mocked(cachedFutureProjection)
+      .mock.calls.slice(-3)
+      .map(([context]) => (context as { week: number }).week),
+  ).toEqual([5, 6, 7]);
   expect(result.partialFailures?.some((failure) => /weeks 5/.test(failure.message))).toBe(true);
 });
 

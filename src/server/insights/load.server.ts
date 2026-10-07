@@ -11,6 +11,7 @@ import EspnProvider, { type EspnAccess } from '../providers/espn.provider';
 import { espnPlayoffSettings, sleeperPlayoffSettings } from './playoff-settings';
 import { calculateInsights } from './calculate';
 import { archivePlayoffForecast } from './archive.server';
+import { cachedFutureProjection } from './projection-cache.server';
 import {
   espnBestLineup,
   espnProjectionSnapshot,
@@ -270,27 +271,49 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       playoffSettings ? remainingProjectionWeeks(playoffSettings, completedWeek) : [projectionWeek],
       async (week) => {
         try {
-          const response = await axios.get<SleeperProjectionRow[]>(
-            `https://api.sleeper.app/projections/nfl/${year}/${week}`,
-            {
-              params: {
-                season_type: 'regular',
-                'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF', 'DL', 'LB', 'DB'],
+          const read = async () => {
+            const response = await axios.get<SleeperProjectionRow[]>(
+              `https://api.sleeper.app/projections/nfl/${year}/${week}`,
+              {
+                params: {
+                  season_type: 'regular',
+                  'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF', 'DL', 'LB', 'DB'],
+                },
+                timeout: 10000,
               },
-              timeout: 10000,
-            },
-          );
-          return sleeperProjectionSnapshot(
-            week,
-            teams.map((team) => team.teamId),
-            rosterSnapshot?.teams || [],
-            response.data,
-            season.scoring_settings || {},
-            season.roster_positions || [],
-            catalog.positions,
-            week === projectionWeek ? catalog.availability : {},
-            byeWeekByPlayer,
-          );
+            );
+            return sleeperProjectionSnapshot(
+              week,
+              teams.map((team) => team.teamId),
+              rosterSnapshot?.teams || [],
+              response.data,
+              season.scoring_settings || {},
+              season.roster_positions || [],
+              catalog.positions,
+              week === projectionWeek ? catalog.availability : {},
+              byeWeekByPlayer,
+            );
+          };
+          return week === projectionWeek
+            ? await read()
+            : await cachedFutureProjection(
+                {
+                  provider: 'Sleeper',
+                  leagueId: league.leagueId,
+                  providerLeagueId: league.providerLeagueId ?? league.leagueId,
+                  year,
+                  week,
+                  teams: teams.map((team) => team.teamId),
+                  rosters: rosterSnapshot?.teams,
+                  scoring: season.scoring_settings,
+                  slots: season.roster_positions,
+                  positions: Object.fromEntries(
+                    Object.entries(catalog.positions).filter(([id]) => ownedIds.has(id)),
+                  ),
+                  byeWeeks: forecastContext?.byeWeeks,
+                },
+                read,
+              );
         } catch (error) {
           logServerError('insights.sleeperProjections', error, 502);
           failed.push(week);
@@ -761,27 +784,54 @@ async function loadEspn(
         : [projectionWeek],
       async (week) => {
         try {
-          const projectionData = await provider.get<EspnSnapshot>(
-            league.providerLeagueId ?? league.leagueId,
-            year,
-            ['mMatchupScore', 'mBoxscore'],
-            week,
-          );
-          const sides = (projectionData.schedule || []).flatMap((matchup) =>
-            [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
-          );
-          return espnProjectionSnapshot(
-            year,
-            week,
-            teams.map((team) => team.teamId),
-            sides,
-            meta.settings?.rosterSettings?.lineupSlotCounts,
-            {
-              useCurrentAvailability: week === projectionWeek,
-              byeWeekByProTeam,
-              ownership: ownership ?? (week === projectionWeek ? undefined : []),
-            },
-          );
+          const read = async () => {
+            const projectionData = await provider.get<EspnSnapshot>(
+              league.providerLeagueId ?? league.leagueId,
+              year,
+              ['mMatchupScore', 'mBoxscore'],
+              week,
+            );
+            const sides = (projectionData.schedule || []).flatMap((matchup) =>
+              [matchup.home, matchup.away].filter((side): side is EspnSide => !!side),
+            );
+            return espnProjectionSnapshot(
+              year,
+              week,
+              teams.map((team) => team.teamId),
+              sides,
+              meta.settings?.rosterSettings?.lineupSlotCounts,
+              {
+                useCurrentAvailability: week === projectionWeek,
+                byeWeekByProTeam,
+                ownership: ownership ?? (week === projectionWeek ? undefined : []),
+              },
+            );
+          };
+          return week === projectionWeek
+            ? await read()
+            : await cachedFutureProjection(
+                {
+                  provider: 'ESPN',
+                  leagueId: league.leagueId,
+                  providerLeagueId: league.providerLeagueId ?? league.leagueId,
+                  access: access === 'public' ? 'public' : 'owner',
+                  year,
+                  week,
+                  teams: teams.map((team) => team.teamId),
+                  ownership: ownership?.map((team) => ({
+                    teamId: team.teamId,
+                    entries: team.rosterForCurrentScoringPeriod.entries.map((entry) => ({
+                      playerId: entry.playerId ?? entry.playerPoolEntry?.player?.id,
+                      lineupSlotId: entry.lineupSlotId,
+                      position: entry.playerPoolEntry?.player?.defaultPositionId,
+                      proTeamId: entry.playerPoolEntry?.player?.proTeamId,
+                    })),
+                  })),
+                  settings: meta.settings,
+                  byeWeekByProTeam,
+                },
+                read,
+              );
         } catch (error) {
           logServerError('insights.espnProjections', error, 502);
           failed.push(week);

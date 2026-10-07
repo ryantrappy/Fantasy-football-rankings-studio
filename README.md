@@ -298,6 +298,18 @@ breakdown; older saved reports and historical seasons may not have this data.
 When later weeks have no usable provider projections, rankings use the available
 weeks for every team and list the excluded weeks. These totals cover only the
 displayed weeks, not the full remaining season. Shared reports use the same rule.
+Complete future-week projections are cached in MongoDB for one hour for both
+providers. A matching cached breakdown can cover a failed or empty provider
+refresh for up to 24 hours, with its original capture time displayed. Cache keys
+include the workspace, provider, season, week, roster, lineup and scoring settings;
+ESPN public and owner reads are separate. Current-week projections always refresh.
+Empty or incomplete responses never overwrite usable cached data. Weeks the
+provider has not published remain unavailable. Saved shared snapshots remain
+fixed; a newly loaded report captures any available cached projections.
+
+Coverage columns such as games measured and weeks covered are hidden when every
+row is fully measured. They remain visible for incomplete data, and CSV exports
+retain them. Schedule fallback counts appear only when historical estimates are used.
 
 Use **Completed weeks only** to switch both positional views to actual points
 from the starters each manager fielded through the report's completed-week cutoff.

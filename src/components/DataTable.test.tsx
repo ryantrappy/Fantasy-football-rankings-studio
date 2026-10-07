@@ -25,6 +25,42 @@ const names = () =>
     .slice(1)
     .map((row) => within(row).getByRole('rowheader').textContent);
 
+it('hides complete coverage columns and restores them when any row is incomplete', () => {
+  const coverageColumns: DataColumn<Entry>[] = [
+    ...columns,
+    {
+      id: 'coverage',
+      header: 'Games measured',
+      value: (row) => row.score,
+      cell: (row) => row.score,
+      coverageComplete: (row) => row.score !== null,
+    },
+  ];
+  const view = render(
+    <DataTable
+      label="Scores"
+      columns={coverageColumns}
+      data={entries.filter((row) => row.score !== null)}
+      getRowId={(row) => row.id}
+    />,
+  );
+  expect(screen.queryByRole('columnheader', { name: 'Games measured' })).not.toBeInTheDocument();
+  view.rerender(
+    <DataTable
+      label="Scores"
+      columns={coverageColumns}
+      data={entries}
+      getRowId={(row) => row.id}
+      limit={1}
+    />,
+  );
+  expect(screen.getByRole('columnheader', { name: 'Games measured' })).toBeInTheDocument();
+  // Downloaded reports retain coverage even when the display column is hidden.
+  expect(
+    buildTableCsv({ label: 'Scores', columns: coverageColumns, rows: entries, context: {} }),
+  ).toContain('Games measured');
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

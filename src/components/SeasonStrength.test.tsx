@@ -15,6 +15,15 @@ const wrap = (data = strengthData) => (
 it('shows exact position values, highlights the managed team, sorts and explains schedule sources', () => {
   render(wrap());
   const ranks = screen.getByRole('table', { name: 'Position group rankings' });
+  expect(
+    within(ranks).queryByRole('columnheader', { name: 'Weeks covered' }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('table', { name: 'Remaining schedule difficulty' })).queryByRole(
+      'columnheader',
+      { name: 'Opponent weeks measured' },
+    ),
+  ).not.toBeInTheDocument();
   expect(within(ranks).getByText('The Underdogs with a very long team name')).toBeInTheDocument();
   expect(within(ranks).getByText('Your team')).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Sort roster charts by'), { target: { value: 'WR' } });
@@ -83,6 +92,7 @@ it.each(['Sleeper', 'ESPN'] as const)(
     expect(screen.getByRole('status')).toHaveTextContent(
       'Totals do not cover the full remaining season',
     );
+    expect(screen.getByRole('columnheader', { name: 'Weeks covered' })).toBeInTheDocument();
     expect(
       screen.queryByText(/Position projections are unavailable for this report/),
     ).not.toBeInTheDocument();

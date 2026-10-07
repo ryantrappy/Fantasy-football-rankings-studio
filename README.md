@@ -423,6 +423,8 @@ expired snapshots immediately even if MongoDB’s background deletion has not ru
 The viewer displays the expiration date. Disabling a league’s public reports also
 blocks its snapshot links. Only report fields are saved: cookies and account metadata
 are excluded, and manager identifiers are replaced with snapshot-local identifiers.
+Empty projection maps and division maps are preserved when saving. Older snapshots
+whose empty maps were omitted remain readable; missing projections stay unavailable.
 
 ### Historical report caching
 

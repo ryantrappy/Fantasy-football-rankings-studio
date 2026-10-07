@@ -13,7 +13,8 @@ const weeklyProjection = z.object({
   uncertainPlayers: count.optional(),
   availabilityChecked: z.boolean().optional(),
   week: count.min(1).max(18),
-  teamPoints: z.record(text, num),
+  // Older snapshots lost empty maps through Mongoose's default minimization.
+  teamPoints: z.record(text, num).default({}),
   positionPoints: z.record(text, z.record(text, num)).optional(),
   coveredStarters: count,
   totalStarters: count,
@@ -58,7 +59,7 @@ const season: z.ZodType<SeasonInsights> = z.object({
           tiebreakers: z
             .array(z.enum(['head-to-head', 'points-for', 'division-record', 'points-against']))
             .max(4),
-          divisionByTeam: z.record(text, text),
+          divisionByTeam: z.record(text, text).default({}),
           divisionWinnersFirst: z.boolean(),
           // Preserve unsupported provider calendars too; the forecast reports their reason.
           roundWeeks: z.array(z.array(count.max(52)).max(18)).max(8),

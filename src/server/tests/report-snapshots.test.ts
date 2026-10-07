@@ -57,7 +57,7 @@ it('stores independent snapshots and reads them without provider calls or creden
   const owned = vi.spyOn(LeaguesService.prototype, 'getLeagueById').mockResolvedValue(league);
   const documents = new Map<string, unknown>();
   vi.spyOn(reportSnapshotModel, 'create').mockImplementation((doc) => {
-    const value = JSON.parse(JSON.stringify(doc));
+    const value = new reportSnapshotModel(doc).toObject();
     documents.set(value.publicId, value);
     return Promise.resolve(value) as never;
   });
@@ -175,6 +175,77 @@ it('stores independent snapshots and reads them without provider calls or creden
   await expect(reportSnapshots.read({ publicId: first.publicId })).rejects.toMatchObject({
     status: 404,
   });
+});
+
+function inputWithEmptyMaps() {
+  const report = input();
+  const projection = {
+    week: 2,
+    teamPoints: {},
+    positionPoints: { '1': {} },
+    lineups: {},
+    coveredStarters: 0,
+    totalStarters: 1,
+  };
+  report.records[0].data.playoffProjection = {
+    ...projection,
+    provider: 'ESPN',
+    weekly: [projection, { ...projection, week: 3, teamPoints: { '1': 105 } }],
+  };
+  report.records[0].data.playoffSettings = {
+    regularSeasonEnd: 1,
+    playoffTeams: 2,
+    rules: {
+      provider: 'ESPN',
+      season: 2025,
+      tiebreakers: ['points-for'],
+      divisionByTeam: {},
+      divisionWinnersFirst: false,
+      roundWeeks: [[2, 3]],
+      reseed: false,
+    },
+  };
+  return report;
+}
+
+it('preserves empty report maps through Mongoose serialization', () => {
+  const report = inputWithEmptyMaps();
+  const stored = new reportSnapshotModel({ report }).toObject();
+  expect(stored.report).toEqual(report);
+});
+
+it('reads legacy snapshots whose empty required maps were removed by Mongoose', async () => {
+  vi.spyOn(LeaguesService.prototype, 'getLeagueById').mockResolvedValue(league);
+  const publicId = '0a460a85-0fa7-4daa-8617-56de7c568bba';
+  const stored = new reportSnapshotModel({
+    publicId,
+    savedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 86400000),
+    leagueId: '123',
+    ownerSubject: 'owner',
+    league,
+    report: inputWithEmptyMaps(),
+  }).toObject({ minimize: true });
+  expect(stored.report.records[0].data.playoffProjection.teamPoints).toBeUndefined();
+  expect(stored.report.records[0].data.playoffSettings.rules.divisionByTeam).toBeUndefined();
+  // Older persisted reports also lost empty maps inside weekly projection arrays.
+  delete stored.report.records[0].data.playoffProjection.weekly[0].teamPoints;
+  vi.spyOn(reportSnapshotModel, 'findOne').mockResolvedValue(stored);
+  const saved = await reportSnapshots.read({ publicId });
+  expect(saved.records[0].data.playoffProjection?.teamPoints).toEqual({});
+  expect(saved.records[0].data.playoffProjection?.weekly?.map((week) => week.teamPoints)).toEqual([
+    {},
+    { '1': 105 },
+  ]);
+  expect(saved.records[0].data.playoffSettings?.rules?.divisionByTeam).toEqual({});
+  expect(loadInsights).not.toHaveBeenCalled();
+  expect(getEspnCredentials).not.toHaveBeenCalled();
+
+  stored.report.records[0].data.playoffProjection.teamPoints = null;
+  await expect(reportSnapshots.read({ publicId })).rejects.toThrow();
+  delete stored.report.records[0].data.playoffProjection.teamPoints;
+  stored.report.records[0].data.playoffSettings.rules.divisionByTeam = [];
+  await expect(reportSnapshots.read({ publicId })).rejects.toThrow();
 });
 
 it('rejects non-owners, disabled sharing and malformed requests before writing', async () => {

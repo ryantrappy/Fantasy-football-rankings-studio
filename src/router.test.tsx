@@ -726,8 +726,7 @@ test('a successfully loaded partial report names every affected section', async 
     'League summary and final finishes: Some bracket results are unavailable.',
   );
 });
-test('shared history loads the selected seasons and preserves them in a copied link', async () => {
-  const user = userEvent.setup();
+test('shared history loads the selected seasons without sharing or league selection controls', async () => {
   await openPage('/shared/history?leagueId=123&years=%5B2024%5D');
   expect(
     await screen.findByRole('heading', { name: 'Track the manager, not the team name' }),
@@ -740,11 +739,8 @@ test('shared history loads the selected seasons and preserves them in a copied l
       .mocked(publicFunctions.getPublicInsights)
       .mock.calls.filter(([call]) => call.data?.year === 2024),
   ).toHaveLength(1);
-  await user.click(screen.getByRole('button', { name: 'Copy share link' }));
-  expect(await screen.findByRole('button', { name: 'Link copied' })).toBeInTheDocument();
-  const copied = await navigator.clipboard.readText();
-  expect(new URL(copied).pathname).toBe('/shared/history');
-  expect(JSON.parse(new URL(copied).searchParams.get('years')!)).toEqual([2024]);
+  expect(screen.queryByRole('button', { name: 'Copy share link' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'League' })).not.toBeInTheDocument();
   expect(auth.getAccessTokenSilently).not.toHaveBeenCalled();
   expect(
     screen.getByRole('button', { name: 'Download Manager scorecard CSV' }),
@@ -753,20 +749,15 @@ test('shared history loads the selected seasons and preserves them in a copied l
   expect(history).toHaveTextContent('Regular-season placement');
   expect(history).toHaveTextContent('Final placement');
 });
-test('shared history accepts a quoted league ID and copies a canonical link', async () => {
-  const user = userEvent.setup();
-  const writeText = vi.fn().mockResolvedValue(undefined);
-  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+test('shared history accepts a quoted league ID without sharing or league selection controls', async () => {
   await openPage('/shared/history?leagueId="123"&years=%5B2024%5D');
 
   await screen.findByRole('heading', { name: 'Track the manager, not the team name' });
   expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
     expect.objectContaining({ data: { leagueId: '123', year: 2024 } }),
   );
-  await user.click(screen.getByRole('button', { name: 'Copy share link' }));
-  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-  const copied = writeText.mock.calls[0][0];
-  expect(new URL(copied).searchParams.get('leagueId')).toBe('123');
+  expect(screen.queryByRole('button', { name: 'Copy share link' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('combobox', { name: 'League' })).not.toBeInTheDocument();
 });
 test('shared history reports determinate progress while seasons load and refresh', async () => {
   const user = userEvent.setup();

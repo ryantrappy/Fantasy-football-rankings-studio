@@ -57,7 +57,7 @@ export function LeagueSummary({
         scored weeks.
       </Text>
       <CalculationGuide />
-      <SeasonAchievements rows={rows} />
+      {historical && <SeasonAchievements rows={rows} />}
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={6} my={6} className="insight-cards">
         <Box as="article">
           <Text mb={4} className="eyebrow">

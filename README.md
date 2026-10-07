@@ -295,6 +295,9 @@ total or position. Both use optimized legal lineups from the current roster,
 not the sum of every bench player's forecast. The exact-value table shows ranks,
 points, and coverage. Refresh an active-season report to populate the positional
 breakdown; older saved reports and historical seasons may not have this data.
+When later weeks have no usable provider projections, rankings use the available
+weeks for every team and list the excluded weeks. These totals cover only the
+displayed weeks, not the full remaining season. Shared reports use the same rule.
 
 Use **Completed weeks only** to switch both positional views to actual points
 from the starters each manager fielded through the report's completed-week cutoff.
@@ -586,7 +589,7 @@ catching an exception to repair corrupted process state. No process-wide handler
 are duplicated by the application. Framework/development diagnostics may additionally
 write their own console output.
 
-Season and history summaries also show **Playoffs and final finishes**: playoff
+History summaries also show **Playoffs and final finishes**: playoff
 appearances, championships, last-place finishes, average regular-season placement and average final
 placement. Regular-season placement uses completed head-to-head records through the configured
 cutoff, with points scored as the tiebreaker; it is never substituted for postseason placement.

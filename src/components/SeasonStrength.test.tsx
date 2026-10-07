@@ -68,6 +68,27 @@ it('switches rankings and bars to actual completed-week starter points and back'
   expect(screen.getByRole('heading', { name: 'Roster projections' })).toBeInTheDocument();
 });
 
+it.each(['Sleeper', 'ESPN'] as const)(
+  'shows saved %s next-week rankings when later projection weeks are empty',
+  (provider) => {
+    const data = structuredClone(strengthData);
+    data.playoffProjection!.provider = provider;
+    data.playoffProjection!.weekly!.slice(1).forEach((week) => {
+      week.teamPoints = {};
+      week.positionPoints = {};
+    });
+    render(wrap(data));
+    expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
+    expect(screen.getByRole('table', { name: 'Position group rankings' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Totals do not cover the full remaining season',
+    );
+    expect(
+      screen.queryByText(/Position projections are unavailable for this report/),
+    ).not.toBeInTheDocument();
+  },
+);
+
 it('offers completed mode without forecasts and explains missing positions or no completed weeks', () => {
   const data = structuredClone(strengthData);
   delete data.playoffProjection;

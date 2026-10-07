@@ -21,6 +21,20 @@ export type PositionStrengthMode = 'projected' | 'completed';
 const primaryPosition = (position: string) =>
   position.toUpperCase() === 'DST' ? 'DEF' : position.toUpperCase();
 
+function projectedPositionPoints(row: ReturnType<typeof currentWeekly>[number], teamId: string) {
+  const points = row.positionPoints?.[teamId];
+  if (
+    !row.optimizedLineup ||
+    !points ||
+    !Object.keys(points).length ||
+    !Object.values(points).every(finite) ||
+    !finite(row.teamPoints[teamId]) ||
+    Math.abs(Object.values(points).reduce((a, b) => a + b, 0) - row.teamPoints[teamId]) > 0.01
+  )
+    return undefined;
+  return points;
+}
+
 export function positionStrength(data: SeasonInsights, mode: PositionStrengthMode = 'projected') {
   const weekly = currentWeekly(data);
   const end = data.regularSeasonSchedule?.endWeek ?? data.playoffSettings?.regularSeasonEnd;
@@ -59,7 +73,11 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
           { length: Math.max(0, data.completedWeek - firstCompletedWeek + 1) },
           (_, i) => firstCompletedWeek + i,
         )
-      : projectedWeeks;
+      : projectedWeeks.filter((week) => {
+          const row = weekly.find((row) => row.week === week);
+          return row && data.teams.some((team) => projectedPositionPoints(row, team.teamId));
+        });
+  const missingProjectionWeeks = projectedWeeks.filter((week) => !weeks.includes(week));
   const positionSet = new Set(
     mode === 'completed'
       ? completedScores.flatMap((score) =>
@@ -98,22 +116,8 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
         return [points];
       }
       const row = weekly.find((r) => r.week === week);
-      const points = row?.positionPoints?.[team.teamId];
-      if (
-        !row?.optimizedLineup ||
-        !points ||
-        !Object.keys(points).length ||
-        !Object.values(points).every(finite) ||
-        !finite(row.teamPoints[team.teamId])
-      )
-        return [];
-      // Reject inconsistent old or partial snapshots rather than inventing contributions.
-      if (
-        Math.abs(Object.values(points).reduce((a, b) => a + b, 0) - row.teamPoints[team.teamId]) >
-        0.01
-      )
-        return [];
-      return [points];
+      const points = row && projectedPositionPoints(row, team.teamId);
+      return points ? [points] : [];
     });
     const complete =
       (mode !== 'completed' || horizonKnown) && weeks.length > 0 && covered.length === weeks.length;
@@ -155,7 +159,9 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
     notice:
       mode === 'completed' && !horizonKnown
         ? 'The configured season start is unavailable in this report. Completed-week rankings are unavailable until you refresh the report; coverage shown assumes week 1 and cannot verify the full horizon.'
-        : undefined,
+        : mode === 'projected' && weeks.length > 0 && missingProjectionWeeks.length > 0
+          ? `Rankings use available projection weeks ${weeks.join(', ')} for every team. Position projections are unavailable for weeks ${missingProjectionWeeks.join(', ')}; these weeks are excluded, not scored as zero. Totals do not cover the full remaining season.`
+          : undefined,
   };
 }
 

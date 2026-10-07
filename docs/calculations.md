@@ -432,8 +432,12 @@ confirmed unavailable players are excluded for the current week only. Future
 injury recovery is not inferred from today's absence. Availability and projection
 coverage limitations remain the same as the weekly forecast inputs.
 
-A team is ranked only with valid positional contributions over every displayed
-week. Each weekly position sum must reconcile with its optimized team total.
+A remaining week is displayed when at least one team has a valid optimized
+positional breakdown. Weeks with no usable breakdown for any team are excluded
+and listed in a coverage notice; totals then cover only the available weeks,
+not the full remaining season. A team is ranked only with valid positional
+contributions over every displayed week. Each weekly position sum must reconcile
+with its optimized team total.
 Missing breakdowns, duplicate forecast weeks, and snapshots whose first week
 is not the completed cutoff plus one are unavailable. Competition ranks use
 points rounded to two decimals: equal values share rank 1, for example, and the
@@ -445,8 +449,8 @@ separate negative bar stack and in exact values.
 Historical and completed seasons do not substitute current projections. A saved
 report preserves its captured positional inputs if present; older snapshots
 without those inputs remain unavailable. Refresh an active-season report to
-load the new breakdown. All teams share the same horizon, including projected
-playoff weeks regardless of whether that team will qualify.
+load the new breakdown. All teams share the same available weeks, including
+projected playoff weeks regardless of whether that team will qualify.
 
 The **Completed weeks only** toggle instead sums the actual points of the starters
 each manager fielded, using completed team-week box scores through the report

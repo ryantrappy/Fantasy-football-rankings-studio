@@ -13,7 +13,8 @@ export interface Game {
   week: number;
   a: Competitor;
   b: Competitor;
-  phase: 'regular' | 'unknown';
+  phase: 'regular' | 'playoff' | 'unknown';
+  weeks: number[];
 }
 export const result = (a: number, b: number) => (a > b ? 1 : a === b ? 0.5 : 0);
 export function competitionGames(records: SeasonRecord[]) {
@@ -26,7 +27,44 @@ export function competitionGames(records: SeasonRecord[]) {
     const scores = data.scores.filter(
       (s) => s.week <= data.completedWeek && Number.isFinite(s.actual),
     );
+    const postseason = (data.playoffGames ?? []).filter(
+      (g) =>
+        g.weeks.length > 0 &&
+        g.weeks.every((w) => w <= data.completedWeek) &&
+        Number.isFinite(g.homePoints) &&
+        Number.isFinite(g.awayPoints),
+    );
+    for (const g of postseason) {
+      const a = teams.get(g.homeTeamId),
+        b = teams.get(g.awayTeamId);
+      if (!a || !b || a === b || games.some((x) => x.id === `${year}:${g.id}`)) continue;
+      games.push({
+        id: `${year}:${g.id}`,
+        year,
+        week: Math.max(...g.weeks),
+        weeks: g.weeks,
+        phase: 'playoff',
+        a: {
+          key: managerKey(a, year),
+          name: a.managerName,
+          teamId: a.teamId,
+          points: g.homePoints,
+        },
+        b: {
+          key: managerKey(b, year),
+          name: b.managerName,
+          teamId: b.teamId,
+          points: g.awayPoints,
+        },
+      });
+    }
     for (const s of scores) {
+      if (
+        postseason.some(
+          (g) => g.weeks.includes(s.week) && [g.homeTeamId, g.awayTeamId].includes(s.teamId),
+        )
+      )
+        continue;
       if (!s.opponentTeamId) continue;
       const peers = scores.filter((o) => o.week === s.week && o.teamId === s.opponentTeamId);
       const own = scores.filter((o) => o.week === s.week && o.teamId === s.teamId);
@@ -50,6 +88,7 @@ export function competitionGames(records: SeasonRecord[]) {
         id: `${year}:${s.week}:${s.teamId}:${o.teamId}`,
         year,
         week: s.week,
+        weeks: [s.week],
         a: { key: managerKey(a, year), name: a.managerName, teamId: a.teamId, points: s.actual },
         b: { key: managerKey(b, year), name: b.managerName, teamId: b.teamId, points: o.actual },
         phase: end && s.week <= end ? 'regular' : 'unknown',

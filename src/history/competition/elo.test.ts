@@ -16,3 +16,24 @@ it('uses half-result ties and fresh prior for new identity', () => {
   b.data.teams[0].managerKey = 'new';
   expect(historicalElo([r, b]).movements.find((m) => m.key === 'new')?.before).toBe(1500);
 });
+
+it('rates a verified multiweek playoff series as one chronological result', () => {
+  const r = season();
+  r.data.scores.forEach((s) => (s.opponentTeamId = null));
+  r.data.playoffGames = [
+    {
+      id: 'final',
+      homeTeamId: 'a',
+      awayTeamId: 'b',
+      weeks: [1, 2],
+      homePoints: 180,
+      awayPoints: 170,
+      elimination: true,
+    },
+  ];
+  expect(historicalElo([r]).rankings.find((r) => r.key === 'a')).toMatchObject({
+    rating: 1516,
+    games: 1,
+  });
+  expect(historicalElo([r]).movements[0].week).toBe(2);
+});

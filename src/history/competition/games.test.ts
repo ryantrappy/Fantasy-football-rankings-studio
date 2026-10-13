@@ -37,3 +37,21 @@ describe('verified historical games', () => {
     expect(competitionGames([r]).games).toHaveLength(0);
   });
 });
+
+it('includes verified playoff series once in head-to-head while suppressing weekly duplicates', () => {
+  const r = season();
+  r.data.playoffGames = [
+    {
+      id: 'final',
+      homeTeamId: 'a',
+      awayTeamId: 'b',
+      weeks: [1, 2],
+      homePoints: 180,
+      awayPoints: 170,
+      elimination: true,
+    },
+  ];
+  const x = competitionGames([r]);
+  expect(pairRecord(x.games, 'a', 'b')).toMatchObject({ games: 1, wins: 1, pointsFor: 180 });
+  expect(x.games.find((g) => g.phase === 'playoff')?.week).toBe(2);
+});

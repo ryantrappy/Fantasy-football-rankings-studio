@@ -1,3 +1,4 @@
+import { RecordsHistory } from './RecordsHistory';
 import { PlayoffsHistory } from './PlayoffsHistory';
 import { ErasHistory } from './ErasHistory';
 import { HonorsHistory } from './HonorsHistory';
@@ -14,7 +15,7 @@ export interface CompetitionProps {
   years: number[];
   leagueId?: string;
 }
-export function CompetitionHistory({ records, years }: CompetitionProps) {
+export function CompetitionHistory({ records, years, leagueId }: CompetitionProps) {
   const { games, managers, skipped } = competitionGames(records);
   const [selected, setSelected] = useState('');
   const key = managers.has(selected) ? selected : [...managers.keys()][0];
@@ -146,6 +147,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       <HonorsHistory records={records} years={years} />
       <ErasHistory records={records} years={years} />
       <PlayoffsHistory records={records} years={years} />
+      <RecordsHistory records={records} years={years} leagueId={leagueId} />
     </section>
   );
 }

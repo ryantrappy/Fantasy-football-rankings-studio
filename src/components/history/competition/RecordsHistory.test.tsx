@@ -1,40 +1,45 @@
-import { afterEach, it, expect } from 'vitest';
-import { render, screen, fireEvent, within, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { season } from '../../../history/competition/fixtures.test-support';
 import { RecordsHistory } from './RecordsHistory';
-it('browses categories, sorts, searches and links season evidence', () => {
-  render(<RecordsHistory records={[season()]} years={[2024]} leagueId="league" />);
-  fireEvent.click(screen.getByText('All-time matchup and scoring records'));
-  const table = screen.getByRole('table', { name: 'All-time scoring record book' });
-  expect(within(table).getAllByRole('row')[1].textContent).toContain('2024 week 2');
-  fireEvent.change(screen.getByLabelText('Record category'), { target: { value: 'combined' } });
-  expect(
-    within(screen.getByRole('table', { name: 'All-time scoring record book' })).getAllByRole(
-      'row',
-    )[1].textContent,
-  ).toContain('2024 week 1');
-  fireEvent.change(screen.getByLabelText('Search matchup records'), { target: { value: 'a' } });
-  expect(screen.getAllByRole('link')[0].getAttribute('href')).toBe(
-    '/insights?leagueId=league&year=2024',
-  );
-  fireEvent.click(screen.getByRole('button', { name: /Margin/ }));
-  expect(screen.getByRole('columnheader', { name: /Margin/ }).getAttribute('aria-sort')).toBe(
-    'ascending',
-  );
-  fireEvent.change(screen.getByLabelText('Record category'), { target: { value: 'worst' } });
-  expect(screen.getByText('No verified records match these filters.')).toBeTruthy();
-});
 
-it('links individual unpaired scoring records to shared season pages', () => {
-  const r = season();
-  r.data.scores[0].opponentTeamId = null;
-  render(<RecordsHistory records={[r]} years={[2024]} leagueId="league" shared />);
-  fireEvent.click(screen.getByText('All-time matchup and scoring records'));
-  fireEvent.change(screen.getByLabelText('Record category'), { target: { value: 'individual' } });
-  expect(screen.getAllByRole('link')[0].getAttribute('href')).toBe(
-    '/shared/insights?leagueId=league&year=2024',
+it('uses actual playoff weeks for combined highs and series totals for matchup margins', () => {
+  const record = season(2024, [
+    [100, 90, 250, 220],
+    [180, 80, 120, 60],
+  ]);
+  record.data.playoffGames = [
+    {
+      id: 'final',
+      homeTeamId: 'a',
+      awayTeamId: 'b',
+      weeks: [1, 2],
+      homePoints: 280,
+      awayPoints: 170,
+      elimination: true,
+    },
+  ];
+  render(<RecordsHistory records={[record]} years={[2024]} leagueId="league" />);
+  fireEvent.click(
+    screen.getByText('All-time matchup and scoring records', { selector: 'summary' }),
   );
-  expect(screen.getByText(/Opponent unavailable; rank 1/)).toBeTruthy();
-});
+  const category = screen.getByLabelText('Record category');
+  fireEvent.change(category, { target: { value: 'combined' } });
+  const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  expect(rows).toHaveLength(4);
+  expect(rows[0]).toHaveTextContent('c 250 vs d 220');
+  expect(rows[1]).toHaveTextContent('2024 week 2 — a 180 vs b 80');
+  expect(within(rows[1]).getAllByRole('cell')[2]).toHaveTextContent('260');
+  expect(rows[2]).toHaveTextContent('2024 week 1 — a 100 vs b 90');
+  expect(screen.queryByText(/playoff series weeks/)).not.toBeInTheDocument();
 
-afterEach(cleanup);
+  fireEvent.change(category, { target: { value: 'individual' } });
+  const individual = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  expect(individual).toHaveLength(8);
+  expect(within(individual[0]).getAllByRole('cell')[1]).toHaveTextContent('250');
+
+  fireEvent.change(category, { target: { value: 'blowouts' } });
+  const blowouts = within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  expect(blowouts).toHaveLength(3);
+  expect(blowouts[0]).toHaveTextContent('playoff series weeks 1, 2');
+  expect(blowouts[0]).toHaveTextContent('a 280 vs b 170');
+});

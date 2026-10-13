@@ -1,3 +1,4 @@
+import { Button, Flex } from '@chakra-ui/react';
 import { TradeContributions } from './TradeContributions';
 import { TradeNetwork } from './TradeNetwork';
 import { LineupRegrets } from './LineupRegrets';
@@ -34,31 +35,33 @@ export function MomentsHistory({
   return (
     <section aria-label="Historical moments">
       <h2>Historical moments</h2>
-      <label>
-        Moments season{' '}
-        <select
-          value={season}
-          onChange={(e) => {
-            setSeason(Number(e.target.value));
-            setManager('');
-          }}
-        >
-          {years.map((y) => (
-            <option key={y}>{y}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Moments manager{' '}
-        <select value={manager} onChange={(e) => setManager(e.target.value)}>
-          <option value="">League-wide</option>
-          {data?.teams.map((t) => (
-            <option key={t.teamId} value={t.teamId}>
-              {t.managerName}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="history-filters">
+        <label>
+          Moments season{' '}
+          <select
+            value={season}
+            onChange={(e) => {
+              setSeason(Number(e.target.value));
+              setManager('');
+            }}
+          >
+            {years.map((y) => (
+              <option key={y}>{y}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Moments manager{' '}
+          <select value={manager} onChange={(e) => setManager(e.target.value)}>
+            <option value="">League-wide</option>
+            {data?.teams.map((t) => (
+              <option key={t.teamId} value={t.teamId}>
+                {t.managerName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <details open>
         <summary>Monday miracles</summary>
         <label>
@@ -115,36 +118,42 @@ export function MomentsHistory({
         <label>
           Archive JSON <textarea value={json} onChange={(e) => setJson(e.target.value)} />
         </label>
-        <button
-          disabled={!data}
-          onClick={() => {
-            try {
-              setImports({ ...imports, [season]: importArchive(json, data!) });
-              setError('');
-            } catch (e) {
-              setError(e instanceof Error ? e.message : 'Invalid archive');
-            }
-          }}
-        >
-          Import archive
-        </button>
-        <button
-          disabled={!data?.matchupArchive}
-          onClick={() => {
-            const url = URL.createObjectURL(
-              new Blob([JSON.stringify(data?.matchupArchive, null, 2)], {
-                type: 'application/json',
-              }),
-            );
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${leagueId || 'league'}-${season}-archive.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          Export archive
-        </button>
+        <Flex gap={3} wrap="wrap" mt={4}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!data}
+            onClick={() => {
+              try {
+                setImports({ ...imports, [season]: importArchive(json, data!) });
+                setError('');
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'Invalid archive');
+              }
+            }}
+          >
+            Import archive
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!data?.matchupArchive}
+            onClick={() => {
+              const url = URL.createObjectURL(
+                new Blob([JSON.stringify(data?.matchupArchive, null, 2)], {
+                  type: 'application/json',
+                }),
+              );
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${leagueId || 'league'}-${season}-archive.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Export archive
+          </Button>
+        </Flex>
         {error && <p role="alert">{error}</p>}
       </details>
     </section>

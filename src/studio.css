@@ -47,6 +47,9 @@
   align-items: center;
   gap: 7px;
   padding: 10px 12px;
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
   color: #e0e7f5;
   border-radius: 8px;
   border-bottom: 0;
@@ -75,10 +78,10 @@
   margin-top: 10px;
   background: transparent;
   border: 0;
-  font: inherit;
+  font-family: inherit;
   cursor: pointer;
 }
-.snapshot-nav button:focus-visible {
+:is(.workspace-header .app-nav a, .snapshot-nav button):focus-visible {
   outline: 2px solid #f1bd81;
   outline-offset: 2px;
 }
@@ -607,4 +610,32 @@
 }
 .history-analytics [role='tabpanel'] > section {
   min-width: 0;
+  padding: 24px;
+}
+.history-analytics [role='tabpanel'] > section > h2:first-child {
+  margin-top: 0;
+}
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 16px;
+  margin: 20px 0;
+}
+.history-analytics .history-filters > label {
+  flex: 0 1 280px;
+  min-width: 0;
+  margin: 0;
+}
+.history-analytics .history-filters > label:has(input[type='number']) {
+  flex-basis: 180px;
+}
+@media (max-width: 767px) {
+  .history-analytics [role='tabpanel'] > section {
+    padding: 16px;
+  }
+  .history-analytics .history-filters > label,
+  .history-analytics .history-filters > label:has(input[type='number']) {
+    flex-basis: 100%;
+  }
 }

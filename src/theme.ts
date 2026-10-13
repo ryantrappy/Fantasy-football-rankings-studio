@@ -24,9 +24,10 @@ export const system = createSystem(
     theme: {
       recipes: {
         button: defineRecipe({
-          base: { minHeight: '44px' },
+          base: { minHeight: '44px', colorPalette: 'gray' },
           variants: {
             variant: {
+              outline: { borderColor: 'border' },
               plain: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
               ghost: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
             },

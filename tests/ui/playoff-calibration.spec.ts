@@ -11,6 +11,11 @@ for (const viewport of [
     await expect(page.getByRole('button', { name: 'Export calibration JSON' })).toBeDisabled();
     await page.getByRole('button', { name: 'Run historical calibration' }).click();
     await expect(page.getByText('Backtest complete.')).toBeVisible({ timeout: 60_000 });
+    // All season cutoffs share a live worker; a worker startup failure would
+    // otherwise silently pass via the cooperative main-thread fallback.
+    expect(
+      page.workers().filter((worker) => worker.url().includes('playoff-forecast.worker')),
+    ).toHaveLength(1);
     await expect(page.getByRole('img', { name: /Brier score by completed week/ })).toBeVisible();
     const modelPoint = page.locator('svg circle[aria-label^="Model Brier score"]').first();
     await modelPoint.hover();

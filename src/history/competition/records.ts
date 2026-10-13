@@ -1,8 +1,36 @@
 import type { SeasonRecord } from '../../league-summary';
 import { competitionGames } from './games';
-export function matchupRecords(records: SeasonRecord[]) {
+export function matchupRecords(records: SeasonRecord[], { weekly = false } = {}) {
   const { games } = competitionGames(records);
-  return games.map((g) => {
+  const scopedGames = weekly
+    ? games.flatMap((g) => {
+        if (g.weeks.length === 1) return [g];
+        const { data } = records.find((r) => r.year === g.year)!;
+        return g.weeks.flatMap((week) => {
+          const a = data.scores.filter((s) => s.week === week && s.teamId === g.a.teamId),
+            b = data.scores.filter((s) => s.week === week && s.teamId === g.b.teamId);
+          if (
+            week > data.completedWeek ||
+            a.length !== 1 ||
+            b.length !== 1 ||
+            !Number.isFinite(a[0].actual) ||
+            !Number.isFinite(b[0].actual)
+          )
+            return [];
+          return [
+            {
+              ...g,
+              id: `${g.id}:week:${week}`,
+              week,
+              weeks: [week],
+              a: { ...g.a, points: a[0].actual },
+              b: { ...g.b, points: b[0].actual },
+            },
+          ];
+        });
+      })
+    : games;
+  return scopedGames.map((g) => {
     const record = records.find((r) => r.year === g.year)!;
     const scores = record.data.scores.filter(
       (s) => s.week === g.week && s.week <= record.data.completedWeek && Number.isFinite(s.actual),

@@ -45,3 +45,63 @@ it('preserves individual weekly scores without opponents and excludes duplicates
   r.data.scores.push(r.data.scores[0]);
   expect(individualScoreRecords([r]).some((s) => s.name === 'a' && s.week === 1)).toBe(false);
 });
+
+it('compares each playoff week separately for scoring highs while retaining series records', () => {
+  const r = season(2024, [
+    [100, 90, 250, 220],
+    [180, 80, 120, 60],
+  ]);
+  r.data.playoffGames = [
+    {
+      id: 'final',
+      homeTeamId: 'a',
+      awayTeamId: 'b',
+      weeks: [1, 2],
+      homePoints: 280,
+      awayPoints: 170,
+      elimination: true,
+    },
+  ];
+  const aggregate = matchupRecords([r]).find((g) => g.phase === 'playoff');
+  expect(aggregate).toMatchObject({ combined: 450, margin: 110, aRank: null, weeks: [1, 2] });
+  const weekly = matchupRecords([r], { weekly: true });
+  const playoff = weekly.filter((g) => g.phase === 'playoff');
+  expect(playoff).toHaveLength(2);
+  expect(playoff[0]).toMatchObject({
+    week: 1,
+    weeks: [1],
+    combined: 190,
+    individual: 100,
+    margin: 10,
+    aRank: 3,
+    bRank: 4,
+  });
+  expect(playoff[1]).toMatchObject({
+    week: 2,
+    weeks: [2],
+    combined: 260,
+    individual: 180,
+    margin: 100,
+    aRank: 1,
+    bRank: 3,
+  });
+  expect(new Set(weekly.map((g) => g.id)).size).toBe(weekly.length);
+  expect(weekly.filter((g) => g.phase !== 'playoff')).toEqual(
+    matchupRecords([r]).filter((g) => g.phase !== 'playoff'),
+  );
+  expect(Math.max(...individualScoreRecords([r]).map((s) => s.points))).toBe(250);
+
+  r.data.scores.push(r.data.scores[0]);
+  expect(matchupRecords([r], { weekly: true }).filter((g) => g.phase === 'playoff')).toEqual([
+    playoff[1],
+  ]);
+  r.data.scores.pop();
+  r.data.scores[0].actual = NaN;
+  expect(matchupRecords([r], { weekly: true }).filter((g) => g.phase === 'playoff')).toEqual([
+    playoff[1],
+  ]);
+  r.data.scores.shift();
+  expect(matchupRecords([r], { weekly: true }).filter((g) => g.phase === 'playoff')).toEqual([
+    playoff[1],
+  ]);
+});

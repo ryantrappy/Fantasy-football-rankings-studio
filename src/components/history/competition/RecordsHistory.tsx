@@ -5,7 +5,7 @@ import { number, type CompetitionProps } from './CompetitionHistory';
 export function RecordsHistory({ records, years, leagueId, shared }: CompetitionProps) {
   const [category, setCategory] = useState('closest'),
     [query, setQuery] = useState('');
-  const all = matchupRecords(records);
+  const all = matchupRecords(records, { weekly: category === 'combined' });
   const scores = individualScoreRecords(records).filter((r) =>
     `${r.name} ${r.year} week ${r.week}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -34,17 +34,18 @@ export function RecordsHistory({ records, years, leagueId, shared }: Competition
         seasons and unpaired/nonfinite scores are excluded; record leaders can change as history
         loads. Weekly ranks require one finite score for every rostered team; ties share competition
         rank. Worst beats mean the losing team finished in the top quarter of weekly scoring
-        (rounded up). Multiweek playoff series use aggregate points and have no weekly scoring rank.
-        Individual weekly scores include unique finite completed scores even when opponent metadata
-        is absent or a confirmed bye. Scores from different scoring-rule eras are shown in native
-        points.
+        (rounded up). Combined scoring highs use single-week scores, including each week of a
+        multiweek playoff series separately. Closest games and blowouts use aggregate playoff series
+        points and have no weekly scoring rank for multiweek series. Individual weekly scores
+        include unique finite completed scores even when opponent metadata is absent or a confirmed
+        bye. Scores from different scoring-rule eras are shown in native points.
       </p>
       <label>
         Record category{' '}
         <select value={category} onChange={(e) => setCategory(e.target.value)}>
           <option value="closest">Closest games</option>
           <option value="blowouts">Largest blowouts</option>
-          <option value="combined">Highest combined scores</option>
+          <option value="combined">Highest combined weekly scores</option>
           <option value="individual">Highest individual weekly scores</option>
           <option value="worst">Worst beats</option>
         </select>

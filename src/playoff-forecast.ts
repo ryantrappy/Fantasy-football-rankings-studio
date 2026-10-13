@@ -6,6 +6,7 @@ import {
   type ForecastValidation,
 } from './forecast-statistics';
 import { playoffRulesReason, seedPlayoffTeams, type PlayoffRules } from './playoff-rules';
+import { requestForecastInWorker } from './playoff-forecast-worker-client';
 export const PLAYOFF_FORECAST_MODEL_VERSION = 'joint-posterior-weekly-lineup-v1';
 export interface PlayoffSettings {
   regularSeasonEnd: number;
@@ -383,13 +384,25 @@ export async function forecastPlayoffsAsync(
   settings: PlayoffSettings,
   cutoff: number,
   signal?: AbortSignal,
+  simulations = 20000,
+  scoreModel: 'historical' | 'equal-strength' = 'historical',
 ): Promise<PlayoffForecast> {
-  const iterator = simulatePlayoffs(data, settings, cutoff);
+  signal?.throwIfAborted();
+  const result = await requestForecastInWorker(
+    { data, settings, cutoff, simulations, scoreModel },
+    signal,
+  );
+  signal?.throwIfAborted();
+  if (result) return result;
+  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel);
   for (;;) {
     await pause(signal);
     signal?.throwIfAborted();
-    const step = iterator.next();
-    if (step.done) return step.value;
+    const deadline = performance.now() + 8;
+    do {
+      const step = iterator.next();
+      if (step.done) return step.value;
+    } while (performance.now() < deadline);
   }
 }
 

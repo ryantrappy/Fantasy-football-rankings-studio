@@ -1,4 +1,5 @@
 import { SeasonStrengthPreview } from './SeasonStrengthPreview';
+import { HistoryPreview } from './HistoryPreview';
 import { createRoot } from 'react-dom/client';
 import { Container } from '@chakra-ui/react';
 import {
@@ -47,7 +48,9 @@ function PreviewApp() {
         </header>
       )}
       <Container className="studio-surface" maxW="1280px" p={4}>
-        {mode === 'season-strength' ? (
+        {mode === 'history' ? (
+          <HistoryPreview />
+        ) : mode === 'season-strength' ? (
           <SeasonStrengthPreview />
         ) : mode === 'players' ? (
           <PlayersPreview />

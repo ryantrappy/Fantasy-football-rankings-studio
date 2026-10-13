@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { connectDatabase } from './database.server';
 import LeaguesService from './services/leagues.service';
-import { leagueSchema } from './validation';
+import { leagueSchema, leagueIdSchema } from './validation';
 import { snapshotInputSchema } from './report-snapshot-schema';
 import HttpException from './exceptions/HttpException';
 import type { ReportSnapshot } from '../report-snapshot';
@@ -12,13 +12,14 @@ export { reportSnapshotModel } from './models/report-snapshot.model';
 const leagues = new LeaguesService();
 export const reportSnapshots = {
   async create(owner: string, input: unknown) {
-    const { leagueId } = snapshotInputSchema.pick({ leagueId: true }).parse(input);
+    const { leagueId } = leagueIdSchema.parse(input);
     await connectDatabase();
     const league = await leagues.getLeagueById(leagueId, owner);
-    if (league.leagueType !== 1) throw new HttpException(400, 'Snapshots are for ESPN reports.');
+    const report = snapshotInputSchema.parse(input);
+    if (league.leagueType !== 1 && report.view !== 'wrapped')
+      throw new HttpException(400, 'Snapshots are for ESPN reports.');
     if (league.publicReports === false)
       throw new HttpException(409, 'Enable public report sharing before creating a snapshot.');
-    const report = snapshotInputSchema.parse(input);
     if (Buffer.byteLength(JSON.stringify(report)) > 12 * 1024 * 1024)
       throw new HttpException(413, 'This snapshot is too large. Select fewer seasons and retry.');
     // Preserve manager matching without publishing provider account identifiers.
@@ -69,6 +70,7 @@ export const reportSnapshots = {
       expiresAt: new Date(found.expiresAt).toISOString(),
       league: leagueSchema.parse(found.league),
       view: report.view,
+      wrapped: report.wrapped,
       records: report.records,
       activeSeason: report.activeSeason,
       activeManagerKeys: report.activeManagerKeys,

@@ -1,3 +1,27 @@
+export interface MoveCoverage {
+  weeks: number[];
+  types: ('trade' | 'pickup' | 'drop')[];
+  complete: boolean;
+  note: string;
+}
+export interface DraftPick {
+  playerId: string;
+  teamId: string;
+  overallPick: number;
+  round?: number;
+}
+export interface MatchupArchive {
+  week: number;
+  teamId: string;
+  opponentTeamId: string;
+  source: string;
+  preMondayAt: string;
+  snapshots: {
+    capturedAt: string;
+    probability: number;
+    contributors: { playerId: string; points: number }[];
+  }[];
+}
 export interface SeasonResult {
   teamId: string;
   playoff: boolean | null;
@@ -12,12 +36,14 @@ export interface ScoreWeek {
   projected: number | null;
   opponentTeamId?: string | null;
   lineupAvailable?: boolean;
+  rosterComplete?: boolean;
   starters: { playerId: string; points: number; position?: string }[];
   players?: { playerId: string; points: number }[];
   bestLineup?: {
     points: number;
     correctStarts: number;
     slots: number;
+    playerIds?: string[];
   };
 }
 export interface RegularSeasonSchedule {
@@ -64,6 +90,11 @@ export interface RosterSnapshot {
   }[];
 }
 export interface InsightsSource {
+  matchupArchive?: MatchupArchive[];
+  moveCoverage?: MoveCoverage;
+  draftPicks?: DraftPick[];
+  draftCoverage?: string;
+  draftFormat?: 'snake' | 'linear' | 'auction' | 'unknown';
   reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
@@ -75,6 +106,7 @@ export interface InsightsSource {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
+  playoffGames?: import('./history/competition/playoff-games').VerifiedPlayoffGame[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
   scores: ScoreWeek[];
@@ -113,6 +145,13 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  draftPickTradeIds?: string[];
+  matchupArchive?: MatchupArchive[];
+  moves?: PlayerMove[];
+  moveCoverage?: MoveCoverage;
+  draftPicks?: DraftPick[];
+  draftCoverage?: string;
+  draftFormat?: 'snake' | 'linear' | 'auction' | 'unknown';
   playerIdentities?: Record<string, { name?: string; position?: string }>;
   reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;
@@ -120,6 +159,7 @@ export interface SeasonInsights {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
+  playoffGames?: import('./history/competition/playoff-games').VerifiedPlayoffGame[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;
   generatedAt: string;

@@ -1,3 +1,5 @@
+import { sleeperDraft } from './draft';
+import { sleeperPlayoffGames, espnPlayoffGames } from '../../history/competition/playoff-games';
 import { espnRegularSeasonSchedule } from './schedule';
 import { sleeperResults, espnResults, type BracketMatch, type EspnResultsData } from './results';
 import { logServerError } from '../logging.server';
@@ -98,6 +100,7 @@ async function loadPlayerCatalog() {
   return namesCache;
 }
 interface SleeperScore {
+  players?: string[];
   matchup_id?: number | null;
   roster_id: number;
   points: number;
@@ -213,6 +216,10 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       players: Object.entries(r.players_points || {})
         .filter(([, points]) => Number.isFinite(points))
         .map(([playerId, points]) => ({ playerId, points })),
+      rosterComplete:
+        Array.isArray(r.players) &&
+        r.players.length > 0 &&
+        r.players.every((id) => Number.isFinite(r.players_points?.[id])),
       lineupAvailable:
         Array.isArray(r.starters) &&
         r.starters
@@ -376,6 +383,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     return [...adds, ...drops];
   });
   let results: InsightsSource['results'];
+  let playoffGames: InsightsSource['playoffGames'];
   const resultNotes: string[] = [];
   if (
     season.status === 'complete' ||
@@ -398,6 +406,15 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
               'Some playoff bracket results are unavailable; missing achievements are excluded rather than counted as zero.',
           });
       }
+    playoffGames =
+      brackets[0].status === 'fulfilled' && Array.isArray(brackets[0].value)
+        ? sleeperPlayoffGames(
+            brackets[0].value,
+            playoffSettings?.rules?.roundWeeks ?? [],
+            scores,
+            completedWeek,
+          )
+        : undefined;
     results = sleeperResults(
       teams.map((t) => t.teamId),
       season.settings?.playoff_teams,
@@ -427,7 +444,10 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
           'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
       }
     }
-  for (const score of scores)
+  for (const score of scores) {
+    score.rosterComplete =
+      score.rosterComplete === true &&
+      !!score.players?.every((p) => !!(catalog.positions as Record<string, string>)[p.playerId]);
     if (season.roster_positions?.length && score.players?.length)
       score.bestLineup = sleeperBestLineup(
         score.starters.map((player) => player.playerId),
@@ -435,6 +455,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         season.roster_positions,
         catalog.positions,
       );
+  }
   const regularEnd = season.settings?.playoff_week_start
     ? Math.min(18, season.settings.playoff_week_start - 1)
     : completedWeek;
@@ -464,6 +485,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       .map(([homeTeamId, awayTeamId]) => ({ week, homeTeamId, awayTeamId }));
   });
   return {
+    ...(await sleeperDraft(season.league_id)),
     forecastSchedule,
     regularSeasonSchedule: season.settings?.playoff_week_start
       ? {
@@ -479,7 +501,14 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     teams,
     scores,
     moves,
+    moveCoverage: {
+      weeks: weeksThrough(Math.min(18, completedWeek + 1)),
+      types: ['trade', 'pickup', 'drop'],
+      complete: true,
+      note: 'All requested Sleeper transaction weeks and trade/pickup/drop categories were retrieved. Completeness covers only these weeks, excluding pre-season and deleted provider records; waiver/free-agent subtype is unsupported.',
+    },
     results,
+    playoffGames,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
     rosterSnapshot,
@@ -700,6 +729,17 @@ async function loadEspn(
           lineup.length && projections.every((p) => p != null)
             ? projections.reduce<number>((sum, p) => sum + p!, 0)
             : null,
+        rosterComplete:
+          !!side.rosterForCurrentScoringPeriod &&
+          entries.length > 0 &&
+          entries
+            .filter((e) => e.lineupSlotId !== 21)
+            .every(
+              (e) =>
+                e.playerId != null &&
+                Number.isFinite(stat(e, 0)) &&
+                !!playerPositions[String(e.playerId)],
+            ),
         bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)
@@ -893,6 +933,8 @@ async function loadEspn(
       })),
   );
   return {
+    draftCoverage: 'Unavailable: ESPN historical draft/ADP are not exposed by this report loader.',
+    draftFormat: 'unknown',
     regularSeasonSchedule,
     forecastSchedule:
       meta.settings?.scheduleSettings?.matchupPeriodLength === 1
@@ -919,6 +961,18 @@ async function loadEspn(
     teams,
     scores,
     moves,
+    moveCoverage: {
+      weeks: weeksThrough(Math.min(18, completedWeek + 1)),
+      types: ['trade', 'pickup', 'drop'],
+      complete: false,
+      note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
+    },
+    playoffGames: espnPlayoffGames(
+      meta.schedule ?? [],
+      meta.settings?.scheduleSettings?.matchupPeriods,
+      scores,
+      completedWeek,
+    ),
     results: espnResults(
       teams.map((t) => t.teamId),
       meta,

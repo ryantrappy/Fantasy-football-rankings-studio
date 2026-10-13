@@ -1,3 +1,4 @@
+import { WrappedPreview } from './history/personalities/Wrapped';
 import { Flex, Text } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
 import { InsightsAccess } from '../auth/InsightsAccess';
@@ -8,6 +9,19 @@ import { HistoryPage } from './HistoryPage';
 import { Icon } from './Icon';
 
 export function SnapshotReport({ report }: { report: ReportSnapshot }) {
+  if (report.view === 'wrapped' && report.wrapped)
+    return (
+      <>
+        <Text role="note">
+          Saved Wrapped snapshot. Expires {new Date(report.expiresAt).toLocaleString()}. Sharing can
+          be revoked by the league owner.
+        </Text>
+        <WrappedPreview recap={report.wrapped} />
+      </>
+    );
+  return <InteractiveSnapshotReport report={report} />;
+}
+function InteractiveSnapshotReport({ report }: { report: ReportSnapshot }) {
   const api = useMemo(() => snapshotInsightsApi(report), [report]);
   const [view, setView] = useState<SnapshotView>(report.view);
   const [year, setYear] = useState(report.records[0].year);

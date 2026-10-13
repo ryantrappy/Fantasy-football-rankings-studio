@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { matchupArchiveSchema } from '../history/moments/archive';
 import { leagueIdSchema } from './validation';
 import type { SeasonInsights } from '../insights';
 
@@ -25,6 +26,43 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  draftPickTradeIds: strings.optional(),
+  matchupArchive: z.array(matchupArchiveSchema).max(1800).optional(),
+  moves: z
+    .array(
+      z.object({
+        id: text,
+        week: count.max(18),
+        timestamp: count,
+        type: z.enum(['trade', 'pickup', 'drop']),
+        playerId: text,
+        from: text.nullable(),
+        to: text.nullable(),
+      }),
+    )
+    .max(50000)
+    .optional(),
+  moveCoverage: z
+    .object({
+      weeks: z.array(count.max(18)).max(18),
+      types: z.array(z.enum(['trade', 'pickup', 'drop'])).max(3),
+      complete: z.boolean(),
+      note: text,
+    })
+    .optional(),
+  draftPicks: z
+    .array(
+      z.object({
+        playerId: text,
+        teamId: text,
+        overallPick: count.min(1).max(10000),
+        round: count.min(1).max(100).optional(),
+      }),
+    )
+    .max(10000)
+    .optional(),
+  draftCoverage: text.optional(),
+  draftFormat: z.enum(['snake', 'linear', 'auction', 'unknown']).optional(),
   playerIdentities: z
     .record(text, z.object({ name: text.optional(), position: text.optional() }))
     .refine((catalog) => Object.keys(catalog).length <= 10000, 'Too many player identities')
@@ -76,6 +114,20 @@ const season: z.ZodType<SeasonInsights> = z.object({
       weekly: z.array(weeklyProjection).max(18).optional(),
     })
     .optional(),
+  playoffGames: z
+    .array(
+      z.object({
+        id: text,
+        homeTeamId: text,
+        awayTeamId: text,
+        weeks: z.array(count).max(18),
+        homePoints: num,
+        awayPoints: num,
+        elimination: z.boolean(),
+      }),
+    )
+    .max(100)
+    .optional(),
   results: z
     .array(
       z.object({
@@ -124,9 +176,17 @@ const season: z.ZodType<SeasonInsights> = z.object({
         projected: num.nullable(),
         opponentTeamId: text.nullable().optional(),
         lineupAvailable: z.boolean().optional(),
+        rosterComplete: z.boolean().optional(),
         starters: z.array(player).max(200),
         players: z.array(player).max(200).optional(),
-        bestLineup: z.object({ points: num, correctStarts: count, slots: count }).optional(),
+        bestLineup: z
+          .object({
+            points: num,
+            correctStarts: count,
+            slots: count,
+            playerIds: strings.optional(),
+          })
+          .optional(),
       }),
     )
     .max(1800),
@@ -192,16 +252,41 @@ const season: z.ZodType<SeasonInsights> = z.object({
 });
 
 // Zod objects strip unknown fields at every level before anything is persisted or returned.
-export const snapshotInputSchema = leagueIdSchema.extend({
-  view: z.enum(['insights', 'history', 'playoffs']),
-  activeSeason: year,
-  activeManagerKeys: strings,
-  records: z
-    .array(z.object({ year, data: season }))
-    .min(1)
-    .max(101)
-    .refine(
-      (records) => new Set(records.map((r) => r.year)).size === records.length,
-      'Each season may appear only once.',
-    ),
-});
+export const snapshotInputSchema = leagueIdSchema
+  .extend({
+    view: z.enum(['insights', 'history', 'playoffs', 'wrapped']),
+    wrapped: z
+      .object({
+        year,
+        title: z.string().max(300),
+        scope: z.enum(['personal', 'league']),
+        highlights: z.array(z.string().max(2000)).max(30),
+        coverage: z.array(z.string().max(2000)).max(100),
+      })
+      .optional(),
+    activeSeason: year,
+    activeManagerKeys: strings,
+    records: z
+      .array(z.object({ year, data: season }))
+      .min(0)
+      .max(101)
+      .refine(
+        (records) => new Set(records.map((r) => r.year)).size === records.length,
+        'Each season may appear only once.',
+      ),
+  })
+  .superRefine((input, ctx) => {
+    const valid =
+      input.view === 'wrapped'
+        ? !!input.wrapped &&
+          input.records.length === 0 &&
+          input.activeManagerKeys.length === 0 &&
+          input.activeSeason === input.wrapped.year
+        : !input.wrapped && input.records.length > 0;
+    if (!valid)
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Wrapped snapshots require only a matching recap payload; other reports require season records.',
+      });
+  });

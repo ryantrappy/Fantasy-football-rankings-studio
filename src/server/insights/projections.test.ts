@@ -288,7 +288,7 @@ it('records historical best legal lineups and correct starts without guessing mi
       ['QB', 'RB'],
       { a: 'QB', b: 'RB', c: 'RB' },
     ),
-  ).toEqual({ points: 36, correctStarts: 1, slots: 2 });
+  ).toEqual({ points: 36, correctStarts: 1, slots: 2, playerIds: ['a', 'c'] });
   expect(
     sleeperBestLineup(['a'], [{ playerId: 'a', points: 20 }], ['QB', 'RB'], { a: 'QB' }),
   ).toBeUndefined();
@@ -301,7 +301,7 @@ it('uses historical ESPN player totals from bench players for the best lineup', 
       actualEntry(2, 2, 2, 5),
       actualEntry(20, 3, 2, 15),
     ]),
-  ).toEqual({ points: 35, correctStarts: 1, slots: 2 });
+  ).toEqual({ points: 35, correctStarts: 1, slots: 2, playerIds: ['1', '3'] });
 });
 
 it('excludes confirmed absences without arbitrarily discounting questionable players', () => {

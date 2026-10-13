@@ -67,3 +67,18 @@ export function publishedEditionMeta(
     : null;
   return [...sharedReportMeta(preview), { name: 'robots', content: 'noindex, nofollow' }];
 }
+
+export function snapshotReportMeta(
+  result:
+    | { ok: true; data: { view: string; wrapped?: { title: string; year: number } } }
+    | { ok: false; error: unknown }
+    | undefined,
+) {
+  const recap = result?.ok && result.data.view === 'wrapped' ? result.data.wrapped : undefined;
+  return [
+    ...sharedReportMeta(
+      recap ? { leagueName: recap.title, context: `${recap.year} saved recap` } : null,
+    ),
+    { name: 'robots', content: 'noindex, nofollow' },
+  ];
+}

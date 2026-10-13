@@ -33,3 +33,11 @@ You MUST read the overview resource to understand the complete workflow. The inf
 </CRITICAL_INSTRUCTION>
 
 <!-- BACKLOG.MD MCP GUIDELINES END -->
+
+
+## Codex background model-routing authorization
+- The user authorizes Codex to automatically spin up background tasks for complex, parallelizable sub-features.
+- The lead agent maintains the main context window for planning, validation, and final integration.
+- Max concurrency: 4 background tasks.
+- Forbidden Actions: Do not auto-dispatch simple questions, production deployments, or critical security file edits.
+

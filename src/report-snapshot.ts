@@ -1,8 +1,9 @@
 import type { SeasonRecord } from './league-summary';
 import type { League } from './types';
 
-export type SnapshotView = 'insights' | 'history' | 'playoffs';
+export type SnapshotView = 'insights' | 'history' | 'playoffs' | 'wrapped';
 export interface SnapshotInput {
+  wrapped?: import('./history/personalities/wrapped').WrappedRecap;
   leagueId: string;
   view: SnapshotView;
   records: SeasonRecord[];

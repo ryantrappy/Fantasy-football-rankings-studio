@@ -32,6 +32,7 @@ import {
 import { LeagueSummary } from '../components/LeagueSummary';
 import { reportFreshnessLabel } from './report-freshness';
 import { ManagerComparison } from './ManagerComparison';
+import { HistoryAnalytics } from './history/HistoryAnalytics';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -458,6 +459,14 @@ export function HistoryPage({
                     includeFormer={includeFormer}
                   />
                   <ManagerComparison records={records} years={years} />
+                  <HistoryAnalytics
+                    key={reportScope}
+                    records={records}
+                    years={years}
+                    leagueId={leagueId}
+                    shared={shared}
+                    snapshot={!!snapshot}
+                  />
                   <Box
                     as="section"
                     bg="bg"

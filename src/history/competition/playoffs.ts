@@ -12,7 +12,9 @@ export function historicalPlayoffs(records: SeasonRecord[], minimum = 3) {
       0,
     );
     const evidence = records.flatMap((r) =>
-      (r.data.playoffGames ?? []).flatMap((g) => {
+      [...new Map((r.data.playoffGames ?? []).map((g) => [g.id, g])).values()].flatMap((g) => {
+        if (!games.some((game) => game.phase === 'playoff' && game.id === `${r.year}:${g.id}`))
+          return [];
         const team = r.data.teams.find(
           (t) =>
             managerKey(t, r.year) === key &&

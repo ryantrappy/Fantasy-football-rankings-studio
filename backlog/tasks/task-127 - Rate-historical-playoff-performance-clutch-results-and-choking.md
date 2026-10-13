@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-13 18:22'
-updated_date: '2026-10-13 18:46'
+updated_date: '2026-10-13 19:15'
 labels:
   - historical-analytics
 dependencies: []
@@ -38,6 +38,12 @@ The app forecasts playoff qualification and championships, but it does not summa
 <!-- SECTION:PLAN:BEGIN -->
 Add explicit provider-verified championship-path playoff series with complete round scores; compare regular/postseason samples, elimination must-win evidence and thresholded descriptive labels; preserve unknown/byes/consolation and test provider mappings and UI.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Final integration review tightened missing bracket/calendar semantics: provider helpers return undefined for unsupported evidence, [] only for supported bracket/calendar with no completed series. Summary independently rejects incomplete/nonfinite series and duplicate IDs. Fifty-seven relevant tests plus TypeScript pass.
+<!-- SECTION:NOTES:END -->
 
 ## Final Summary
 

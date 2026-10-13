@@ -45,3 +45,5 @@ A playful descriptive score ranks verified single-week losses, excluding ties/by
 Missing components are excluded and available weights renormalized. Separate selectable coverage cohorts prevent sorting scores with different component sets together. Every loss lists raw scores/margin, ranks and population, normalized component values/weights, and archive source/timestamp if present. This is league context, not emotional certainty or prediction.
 
 Individual weekly scoring records independently include every unique finite completed team/week score, including confirmed byes and scores with unknown opponents. They never use multiweek series aggregates. Season links follow shared/private report context; snapshot consumers may omit leagueId to keep evidence local.
+
+Bracket metadata is omitted entirely when the championship bracket or published round calendar is unavailable. An empty metadata array means the bracket/calendar are supported but no complete series has yet been observed. Postseason summaries independently reject incomplete/nonfinite metadata and deduplicate series IDs before counting games; missing coverage never becomes a zero-loss or zero-win claim.

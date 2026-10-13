@@ -20,7 +20,7 @@ it('counts complete multiweek championship series once and excludes placement/by
   expect(sleeperPlayoffGames(bracket, [[1], [2]], scores, 2)).toHaveLength(3);
   expect(sleeperPlayoffGames(bracket, [[1], [2]], scores, 1)).toHaveLength(2);
   const final = [{ m: 1, r: 1, p: 1, t1: 1, t2: 2, w: 1, l: 2 }];
-  expect(sleeperPlayoffGames(final, [[1, 2]], scores, 2)[0]).toMatchObject({
+  expect(sleeperPlayoffGames(final, [[1, 2]], scores, 2)![0]).toMatchObject({
     homePoints: 180,
     awayPoints: 170,
     weeks: [1, 2],
@@ -39,14 +39,14 @@ it('requires explicit ESPN winners bracket and published scoring-period mapping'
     matchupPeriodId: 3,
     playoffTierType: 'WINNERS_BRACKET',
   };
-  expect(espnPlayoffGames([match], { '3': [1, 2] }, scores, 2)[0]).toMatchObject({
+  expect(espnPlayoffGames([match], { '3': [1, 2] }, scores, 2)![0]).toMatchObject({
     elimination: false,
     homePoints: 180,
   });
   expect(
     espnPlayoffGames([{ ...match, playoffTierType: 'LOSERS_BRACKET' }], { '3': [1, 2] }, scores, 2),
-  ).toHaveLength(0);
-  expect(espnPlayoffGames([match], undefined, scores, 2)).toHaveLength(0);
+  ).toBeUndefined();
+  expect(espnPlayoffGames([match], undefined, scores, 2)).toBeUndefined();
 });
 it('keeps unavailable brackets unknown and labels only sufficient elimination evidence', () => {
   const a = season();
@@ -57,6 +57,7 @@ it('keeps unavailable brackets unknown and labels only sufficient elimination ev
   });
   const records = [2022, 2023, 2024].map((y) => {
     const r = season(y);
+    r.data.completedWeek = 3;
     r.data.playoffGames = [
       {
         id: 'final',
@@ -78,4 +79,35 @@ it('keeps unavailable brackets unknown and labels only sufficient elimination ev
   expect(historicalPlayoffs(records, 4).find((r) => r.key === 'a')?.label).toBe(
     'Insufficient elimination-game evidence',
   );
+});
+
+it('omits unsupported bracket/calendar evidence and distinguishes zero completed games', () => {
+  const scores = season().data.scores;
+  expect(sleeperPlayoffGames([], [[3]], scores, 2)).toBeUndefined();
+  expect(sleeperPlayoffGames([{ p: 1, r: 1, t1: 1, t2: 2 }], [], scores, 2)).toBeUndefined();
+  expect(sleeperPlayoffGames([{ p: 1, r: 1, t1: 1, t2: 2 }], [[3]], scores, 2)).toEqual([]);
+  expect(espnPlayoffGames([], {}, scores, 2)).toBeUndefined();
+  const r = season();
+  expect(historicalPlayoffs([r])[0].knownSeasons).toBe(0);
+  r.data.playoffGames = [];
+  expect(historicalPlayoffs([r])[0].knownSeasons).toBe(1);
+});
+it('independently rejects incomplete or nonfinite playoff metadata and duplicate IDs', () => {
+  const r = season();
+  const g = {
+    id: 'final',
+    homeTeamId: 'a',
+    awayTeamId: 'b',
+    weeks: [3],
+    homePoints: 100,
+    awayPoints: 90,
+    elimination: true,
+  };
+  r.data.playoffGames = [g];
+  expect(historicalPlayoffs([r])[0].playoffGames).toBe(0);
+  r.data.completedWeek = 3;
+  r.data.playoffGames = [g, g];
+  expect(historicalPlayoffs([r])[0].playoffGames).toBe(1);
+  r.data.playoffGames = [{ ...g, homePoints: NaN }];
+  expect(historicalPlayoffs([r])[0].playoffGames).toBe(0);
 });

@@ -30,7 +30,7 @@ function scored(
 ): VerifiedPlayoffGame | undefined {
   if (
     !weeks.length ||
-    weeks.some((w) => w > completedWeek) ||
+    weeks.some((w) => !Number.isInteger(w) || w < 1 || w > completedWeek) ||
     new Set(weeks).size !== weeks.length ||
     a === b
   )
@@ -59,7 +59,7 @@ export function sleeperPlayoffGames(
   completedWeek: number,
 ) {
   const final = bracket.find((m) => m.p === 1);
-  if (!final) return [];
+  if (!final) return undefined;
   const path: Bracket[] = [];
   const seen = new Set<Bracket>();
   function visit(m: Bracket) {
@@ -74,6 +74,15 @@ export function sleeperPlayoffGames(
     }
   }
   visit(final);
+  if (
+    path.some(
+      (m) =>
+        !m.r ||
+        !roundWeeks[m.r - 1]?.length ||
+        roundWeeks[m.r - 1].some((w) => !Number.isInteger(w) || w < 1),
+    )
+  )
+    return undefined;
   return path.flatMap((m) => {
     if (
       typeof m.t1 !== 'number' ||
@@ -110,7 +119,18 @@ export function espnPlayoffGames(
   scores: ScoreWeek[],
   completedWeek: number,
 ) {
-  return schedule.flatMap((m) => {
+  const bracket = schedule.filter((m) => m.playoffTierType === 'WINNERS_BRACKET');
+  if (
+    !bracket.length ||
+    bracket.some(
+      (m) =>
+        m.matchupPeriodId == null ||
+        !periods?.[String(m.matchupPeriodId)]?.length ||
+        periods[String(m.matchupPeriodId)].some((w) => !Number.isInteger(w) || w < 1),
+    )
+  )
+    return undefined;
+  return bracket.flatMap((m) => {
     if (m.playoffTierType !== 'WINNERS_BRACKET' || !m.home || !m.away || m.matchupPeriodId == null)
       return [];
     const a = String(m.home.teamId),

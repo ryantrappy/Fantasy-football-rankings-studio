@@ -1,3 +1,4 @@
+import { LineupRegrets } from './LineupRegrets';
 import { DroppedBreakouts } from './DroppedBreakouts';
 import { DraftSkill } from './DraftSkill';
 import { ProbabilityReplay } from './ProbabilityReplay';
@@ -96,6 +97,7 @@ export function MomentsHistory({
           ))}
         </ul>
       </details>
+      {data && <LineupRegrets data={data} manager={manager} />}
       {data && <DroppedBreakouts data={data} manager={manager} />}
       {record && <DraftSkill record={record} records={records} manager={manager} />}
       {data && <ProbabilityReplay data={data} manager={manager} />}

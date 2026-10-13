@@ -36,12 +36,14 @@ export interface ScoreWeek {
   projected: number | null;
   opponentTeamId?: string | null;
   lineupAvailable?: boolean;
+  rosterComplete?: boolean;
   starters: { playerId: string; points: number; position?: string }[];
   players?: { playerId: string; points: number }[];
   bestLineup?: {
     points: number;
     correctStarts: number;
     slots: number;
+    playerIds?: string[];
   };
 }
 export interface RegularSeasonSchedule {

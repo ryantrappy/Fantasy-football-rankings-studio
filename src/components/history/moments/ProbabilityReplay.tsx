@@ -40,6 +40,8 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
       </p>
       <svg
         viewBox="0 0 600 260"
+        // SVG provides the plotted geometry while its image role exposes the title to assistive tools.
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="img"
         aria-label={`Observed win probability for ${name(archive.teamId)}`}
         style={{ width: '100%', maxWidth: 800 }}

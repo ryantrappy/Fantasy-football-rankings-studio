@@ -292,6 +292,7 @@ export function sleeperBestLineup(
   return lineup
     ? {
         points: lineup.points,
+        playerIds: lineup.playerIds,
         correctStarts: lineup.playerIds.filter((id) => current.has(id)).length,
         slots: slots.length,
       }
@@ -489,6 +490,7 @@ export function espnBestLineup(
   return lineup
     ? {
         points: lineup.points,
+        playerIds: lineup.playerIds,
         correctStarts: lineup.playerIds.filter((id) => starterIds.has(id)).length,
         slots: slots.length,
       }

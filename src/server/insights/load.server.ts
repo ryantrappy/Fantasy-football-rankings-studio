@@ -99,6 +99,7 @@ async function loadPlayerCatalog() {
   return namesCache;
 }
 interface SleeperScore {
+  players?: string[];
   matchup_id?: number | null;
   roster_id: number;
   points: number;
@@ -214,6 +215,10 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       players: Object.entries(r.players_points || {})
         .filter(([, points]) => Number.isFinite(points))
         .map(([playerId, points]) => ({ playerId, points })),
+      rosterComplete:
+        Array.isArray(r.players) &&
+        r.players.length > 0 &&
+        r.players.every((id) => Number.isFinite(r.players_points?.[id])),
       lineupAvailable:
         Array.isArray(r.starters) &&
         r.starters
@@ -428,7 +433,10 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
           'Current Sleeper roster player details could not be loaded, so current depth claims are omitted.';
       }
     }
-  for (const score of scores)
+  for (const score of scores) {
+    score.rosterComplete =
+      score.rosterComplete === true &&
+      !!score.players?.every((p) => !!(catalog.positions as Record<string, string>)[p.playerId]);
     if (season.roster_positions?.length && score.players?.length)
       score.bestLineup = sleeperBestLineup(
         score.starters.map((player) => player.playerId),
@@ -436,6 +444,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         season.roster_positions,
         catalog.positions,
       );
+  }
   const regularEnd = season.settings?.playoff_week_start
     ? Math.min(18, season.settings.playoff_week_start - 1)
     : completedWeek;
@@ -708,6 +717,17 @@ async function loadEspn(
           lineup.length && projections.every((p) => p != null)
             ? projections.reduce<number>((sum, p) => sum + p!, 0)
             : null,
+        rosterComplete:
+          !!side.rosterForCurrentScoringPeriod &&
+          entries.length > 0 &&
+          entries
+            .filter((e) => e.lineupSlotId !== 21)
+            .every(
+              (e) =>
+                e.playerId != null &&
+                Number.isFinite(stat(e, 0)) &&
+                !!playerPositions[String(e.playerId)],
+            ),
         bestLineup: espnBestLineup(year, week, entries),
         starters: lineup
           .filter((e) => e.playerId != null && stat(e, 0) != null)

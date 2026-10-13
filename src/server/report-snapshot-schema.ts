@@ -161,9 +161,17 @@ const season: z.ZodType<SeasonInsights> = z.object({
         projected: num.nullable(),
         opponentTeamId: text.nullable().optional(),
         lineupAvailable: z.boolean().optional(),
+        rosterComplete: z.boolean().optional(),
         starters: z.array(player).max(200),
         players: z.array(player).max(200).optional(),
-        bestLineup: z.object({ points: num, correctStarts: count, slots: count }).optional(),
+        bestLineup: z
+          .object({
+            points: num,
+            correctStarts: count,
+            slots: count,
+            playerIds: strings.optional(),
+          })
+          .optional(),
       }),
     )
     .max(1800),

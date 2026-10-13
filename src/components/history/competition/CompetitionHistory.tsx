@@ -28,7 +28,7 @@ export function CompetitionHistory({ records, years, leagueId, shared }: Competi
     <section className="panel insight-section">
       <h2>Competition history</h2>
       <p>
-        {records.length} of {years.length} selected seasons loaded. Missing seasons:{' '}
+        Competition coverage: {records.length}/{years.length} selected seasons. Missing seasons:{' '}
         {years.filter((y) => !records.some((r) => r.year === y)).join(', ') || 'none'}.{' '}
         {games.length} verified completed games; {skipped} unusable score rows.{' '}
         {records.reduce(

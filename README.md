@@ -16,6 +16,28 @@ page headings retained while data arrives and progress preserved for season read
 header, sign-in page and browser tab. Matching ICO, 192/512px app icons and a
 180px Apple touch icon are registered in the root document and web manifest.
 
+## Historical analytics
+
+League history includes three keyboard-accessible groups: **Competition** for
+rivalries, expected wins, schedule comparisons, Elo, honors, eras, playoff
+performance and game records; **Matchup stories** for probability archives,
+draft value, dropped-player breakouts, optimal lineups and trade histories; and
+**Manager profiles** for activity, player relationships, draft overlap,
+archetypes and Fantasy Wrapped recaps. Each report explains its sample and
+excludes unsupported history. Wide tables scroll within the report on mobile.
+
+Refresh selected seasons to populate newly supported draft and transaction
+details in older cached reports. Historical in-game probabilities require a
+supplied archive; final scores cannot reconstruct them. Private draft queues
+and unobserved player production remain unavailable. Wrapped sharing creates
+an intentional public snapshot of recap cards, with the existing expiry and
+league sharing controls.
+
+See [competition methods](docs/history-competition.md),
+[matchup story methods](docs/history-moments.md) and
+[manager profile methods](docs/history-personalities.md) for definitions and
+coverage rules.
+
 ## Run with Docker
 
 Copy `.env.example` to `.env`, fill in the required Auth0 settings and

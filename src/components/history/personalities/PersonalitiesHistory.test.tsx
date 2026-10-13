@@ -3,7 +3,7 @@ import { PersonalitiesHistory } from './PersonalitiesHistory';
 import { fixture } from '../../../history/personalities/activity.test';
 it('compares managers and explains opt-in labels', () => {
   render(<PersonalitiesHistory records={[fixture()]} years={[2025, 2024]} />);
-  expect(screen.getByText(/1 of 2 selected/)).toBeInTheDocument();
+  expect(screen.getByText(/Activity coverage: 1\/2 selected seasons/)).toBeInTheDocument();
   expect(
     screen.getByRole('table', { name: 'Transactions per manager and season' }),
   ).toHaveTextContent('Alex');

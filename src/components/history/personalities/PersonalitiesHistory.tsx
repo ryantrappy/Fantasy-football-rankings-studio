@@ -24,8 +24,8 @@ export function PersonalitiesHistory({
       <details>
         <summary>Transaction activity</summary>
         <p>
-          {records.length} of {years.length} selected seasons loaded. Waiver claims are unsupported
-          when providers do not distinguish them from free-agent pickups.
+          Activity coverage: {records.length}/{years.length} selected seasons. Waiver claims are
+          unsupported when providers do not distinguish them from free-agent pickups.
         </p>
         <label>
           <input type="checkbox" checked={labels} onChange={(e) => setLabels(e.target.checked)} />{' '}

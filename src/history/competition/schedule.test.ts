@@ -22,8 +22,29 @@ it('reports byes and unknown boundaries', () => {
   const r = season();
   r.data.scores[2].opponentTeamId = null;
   r.data.scores[6].opponentTeamId = null;
+  expect(alternateSchedule(r, 'a', 'c').byes).toBe(0);
+  expect(alternateSchedule(r, 'a', 'c').skipped).toBe(2);
+  r.data.regularSeasonSchedule = {
+    endWeek: 2,
+    fixtures: [
+      { week: 1, homeTeamId: 'c', awayTeamId: null },
+      { week: 2, homeTeamId: 'c', awayTeamId: null },
+    ],
+  };
   expect(alternateSchedule(r, 'a', 'c').byes).toBe(2);
+  delete r.data.regularSeasonSchedule;
   delete r.data.playoffSettings;
   expect(alternateSchedule(r, 'a', 'c').known).toBe(false);
   expect(historicalSchedules(r)[0].expected).toBeNull();
+});
+
+it('excludes incomplete league populations from expected and actual comparison', () => {
+  const r = season();
+  r.data.scores[2].actual = NaN;
+  expect(historicalSchedules(r)[0]).toMatchObject({
+    actual: 0.5,
+    expected: 0.5,
+    weeks: 1,
+    games: 2,
+  });
 });

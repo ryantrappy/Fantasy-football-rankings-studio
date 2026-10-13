@@ -13,7 +13,7 @@ export function historicalSchedules(record: SeasonRecord) {
       usable = 0;
     for (const g of own) {
       const [a, b] = g.a.key === key ? [g.a, g.b] : [g.b, g.a];
-      actual += result(a.points, b.points);
+
       opponentPoints += b.points;
       const peers = data.scores.filter(
         (s) =>
@@ -22,7 +22,12 @@ export function historicalSchedules(record: SeasonRecord) {
           s.week <= data.completedWeek &&
           Number.isFinite(s.actual),
       );
-      if (peers.length) {
+      if (
+        peers.length === data.teams.length - 1 &&
+        new Set(peers.map((s) => s.teamId)).size === peers.length &&
+        peers.every((s) => data.teams.some((t) => t.teamId === s.teamId))
+      ) {
+        actual += result(a.points, b.points);
         expected += peers.reduce((n, s) => n + result(a.points, s.actual), 0) / peers.length;
         usable++;
       }
@@ -67,13 +72,9 @@ export function alternateSchedule(record: SeasonRecord, teamId: string, donorId:
       (s) => s.week === week && s.teamId === teamId && Number.isFinite(s.actual),
     );
     if (!donor) {
-      const bye =
-        data.regularSeasonSchedule?.fixtures.some(
-          (f) => f.week === week && f.homeTeamId === donorId && f.awayTeamId === null,
-        ) ||
-        data.scores.some(
-          (s) => s.week === week && s.teamId === donorId && s.opponentTeamId === null,
-        );
+      const bye = data.regularSeasonSchedule?.fixtures.some(
+        (f) => f.week === week && f.homeTeamId === donorId && f.awayTeamId === null,
+      );
       if (bye) byes++;
       else skipped++;
       continue;

@@ -1,3 +1,4 @@
+import { EloHistory } from './EloHistory';
 import { ScheduleHistory } from './ScheduleHistory';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
@@ -23,8 +24,15 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       <p>
         {records.length} of {years.length} selected seasons loaded. Missing seasons:{' '}
         {years.filter((y) => !records.some((r) => r.year === y)).join(', ') || 'none'}.{' '}
-        {games.length} verified completed games; {skipped} unusable score rows. Renames follow
-        provider manager identity; unidentified owners stay separate by season.
+        {games.length} verified completed games; {skipped} unusable score rows.{' '}
+        {records.reduce(
+          (n, r) =>
+            n +
+            r.data.scores.filter((s) => s.week <= r.data.completedWeek && !s.opponentTeamId).length,
+          0,
+        )}{' '}
+        score rows without an opponent (byes or unavailable matchup links). Renames follow provider
+        manager identity; unidentified owners stay separate by season.
       </p>
       <label>
         Head-to-head manager{' '}
@@ -47,7 +55,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       </label>
       {Object.entries(labels).map(([label, r]) => (
         <p key={label}>
-          {label === 'punchingBag' ? 'Punching bag' : label}:{' '}
+          {label === 'punchingBag' ? 'Punching bag' : label === 'rival' ? 'Rival' : 'Kryptonite'}:{' '}
           {r
             ? `${managers.get(r.opponent)} — ${r.wins}-${r.losses}-${r.ties}, ${r.games} games, ${number(r.rate! * 100)}% wins`
             : 'Insufficient samples'}
@@ -82,7 +90,16 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
             ] as const
           ).map((id) => ({
             id,
-            header: id,
+            header: {
+              games: 'Games',
+              wins: 'Wins',
+              losses: 'Losses',
+              ties: 'Ties',
+              pointsFor: 'Points for',
+              pointsAgainst: 'Points against',
+              rate: 'Win %',
+              margin: 'Avg. margin',
+            }[id],
             value: (r: (typeof rows)[number]) => r[id],
             cell: (r: (typeof rows)[number]) =>
               id === 'rate' ? `${number(r.rate == null ? null : r.rate * 100)}%` : number(r[id]),
@@ -122,6 +139,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
         </table>
       </div>
       <ScheduleHistory records={records} years={years} />
+      <EloHistory records={records} years={years} />
     </section>
   );
 }

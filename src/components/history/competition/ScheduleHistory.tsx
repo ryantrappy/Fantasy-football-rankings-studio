@@ -16,10 +16,10 @@ export function ScheduleHistory({ records }: CompetitionProps) {
     <details>
       <summary>Expected wins and historical schedule difficulty</summary>
       <p>
-        Expected wins sum weekly all-play scoring percentiles for verified regular-season matchups,
-        ties worth half. Difficulty is opponent points per completed game; scoring systems differ
-        across years. Partial seasons are provisional. Byes add no wins. Missing scores are
-        excluded.
+        Expected wins sum weekly all-play scoring percentiles for verified regular-season matchups
+        with a unique finite score for every rostered team, ties worth half. Difficulty is opponent
+        points per completed game; scoring systems differ across years. Partial seasons are
+        provisional. Byes add no wins. Missing scores are excluded.
       </p>
       <DataTable
         label="Historical expected wins"

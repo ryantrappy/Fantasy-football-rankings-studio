@@ -10,6 +10,6 @@ it('changes rivalry threshold and reports missing history and empty pairs', () =
   fireEvent.change(screen.getByLabelText('Minimum rivalry games'), { target: { value: '2' } });
   expect(screen.getByText(/Punching bag: b/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText('Head-to-head manager'), { target: { value: 'b' } });
-  expect(screen.getByText(/kryptonite: a/)).toBeTruthy();
+  expect(screen.getByText(/Kryptonite: a/)).toBeTruthy();
   expect(screen.getByRole('table', { name: /matrix/ })).toBeTruthy();
 });

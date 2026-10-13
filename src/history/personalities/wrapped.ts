@@ -1,6 +1,6 @@
 import type { SeasonRecord } from '../../league-summary';
 import { summarizeLeague } from '../../league-summary';
-import { managerKey, playerName } from './common';
+import { managerKey, playerName, verifiedScores } from './common';
 import { playerImpact } from './player-impact';
 import { managerArchetypes } from './archetypes';
 export interface WrappedRecap {
@@ -11,8 +11,9 @@ export interface WrappedRecap {
   coverage: string[];
 }
 export function buildWrapped(record: SeasonRecord, key = ''): WrappedRecap {
-  const { year, data } = record,
-    summaries = summarizeLeague([record]);
+  const { year } = record;
+  const data = { ...record.data, scores: verifiedScores(record.data) };
+  const summaries = summarizeLeague([{ year, data }]);
   const team = data.teams.find((t) => managerKey(year, t) === key),
     summary = summaries.find((s) => s.key === key);
   const highlights: string[] = [],
@@ -70,7 +71,7 @@ export function buildWrapped(record: SeasonRecord, key = ''): WrappedRecap {
     if (rival)
       highlights.push(`Most frequent rivalry: ${name(rival[0])}, ${rival[1]} verified matchups.`);
     const pickup = data.pickups
-      .filter((p) => p.teamId === team.teamId && p.lift !== null)
+      .filter((p) => p.teamId === team.teamId && p.lift !== null && Number.isFinite(p.lift))
       .sort((a, b) => b.lift! - a.lift!)[0];
     if (pickup)
       highlights.push(
@@ -116,8 +117,8 @@ export function buildWrapped(record: SeasonRecord, key = ''): WrappedRecap {
     const upset = matches
       .filter(
         (m) =>
-          m.a.projected !== null &&
-          m.b.projected !== null &&
+          Number.isFinite(m.a.projected) &&
+          Number.isFinite(m.b.projected) &&
           (m.a.actual - m.b.actual) * (m.a.projected! - m.b.projected!) < 0,
       )
       .sort(
@@ -129,7 +130,7 @@ export function buildWrapped(record: SeasonRecord, key = ''): WrappedRecap {
         `Projection upset: ${describe(upset)}; projected underdog overcame ${Math.abs(upset.a.projected! - upset.b.projected!).toFixed(1)} projected points.`,
       );
     const pickup = [...data.pickups]
-      .filter((p) => p.lift !== null)
+      .filter((p) => p.lift !== null && Number.isFinite(p.lift))
       .sort((a, b) => b.lift! - a.lift!)[0];
     if (pickup)
       highlights.push(

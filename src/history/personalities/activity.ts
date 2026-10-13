@@ -28,7 +28,9 @@ export function transactionActivity(records: SeasonRecord[]) {
       const pickups = count('pickup'),
         drops = count('drop'),
         trades = count('trade');
-      const weeks = new Set(coverage?.weeks.filter((w) => w <= data.completedWeek)).size;
+      const weeks = new Set(
+        coverage?.weeks.filter((w) => Number.isInteger(w) && w >= 1 && w <= data.completedWeek),
+      ).size;
       return {
         year: record.year,
         key: managerKey(record.year, team),

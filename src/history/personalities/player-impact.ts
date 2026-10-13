@@ -1,5 +1,5 @@
 import type { SeasonRecord } from '../../league-summary';
-import { managerKey, playerName } from './common';
+import { managerKey, playerName, verifiedScores } from './common';
 export function playerImpact(records: SeasonRecord[]) {
   const rows = new Map<
     string,
@@ -18,11 +18,16 @@ export function playerImpact(records: SeasonRecord[]) {
   let excluded = 0;
   for (const { year, data } of records)
     for (const team of data.teams) {
+      const verified = verifiedScores(data);
       const key = managerKey(year, team);
       for (const score of data.scores.filter(
         (s) => s.teamId === team.teamId && s.week <= data.completedWeek,
       )) {
-        const opponent = data.scores.find(
+        if (!verified.includes(score)) {
+          excluded++;
+          continue;
+        }
+        const opponent = verified.find(
           (s) =>
             s.week === score.week &&
             s.teamId === score.opponentTeamId &&

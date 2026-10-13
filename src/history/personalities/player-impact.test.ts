@@ -48,3 +48,14 @@ it('does not join changed player IDs even with identical names', () => {
   second.year = 2024;
   expect(playerImpact([fixture({ scores }), second]).rows).toHaveLength(4);
 });
+it.each([NaN, Infinity, undefined])('excludes nonfinite or missing actual score %s', (actual) => {
+  const result = playerImpact([
+    fixture({ scores: scores.map((s, i) => (i === 1 ? { ...s, actual } : s)) }),
+  ]);
+  expect(result.rows).toEqual([]);
+  expect(result.excluded).toBeGreaterThan(0);
+});
+it('excludes ambiguous duplicate team/week scores for either matchup side', () => {
+  expect(playerImpact([fixture({ scores: [...scores, scores[0]] })]).rows).toEqual([]);
+  expect(playerImpact([fixture({ scores: [...scores, scores[1]] })]).rows).toEqual([]);
+});

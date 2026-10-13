@@ -34,3 +34,22 @@ it('deduplicates transaction IDs and counts covered zero distinctly from unsuppo
   expect(rows[0]).toMatchObject({ trades: 1, pickups: 0, drops: null, label: null });
   expect(transactionActivity([fixture()])[0].pickups).toBeNull();
 });
+it('counts only valid declared covered weeks and excludes outside-week moves', () => {
+  const row = transactionActivity([
+    fixture({
+      moves: [
+        { id: 'inside', type: 'pickup', week: 1, to: '1' },
+        { id: 'outside', type: 'pickup', week: 2, to: '1' },
+        { id: 'preseason', type: 'pickup', week: 0, to: '1' },
+      ],
+      moveCoverage: {
+        weeks: [0, 1, 1, NaN, Infinity],
+        types: ['pickup'],
+        complete: false,
+        note: 'one verified week',
+      },
+    }),
+  ])[0];
+  expect(row.pickups).toBe(1);
+  expect(row.weeks).toBe(1);
+});

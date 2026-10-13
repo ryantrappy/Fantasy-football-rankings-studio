@@ -55,3 +55,25 @@ it('includes supported lineup/player/archetype and graded trade highlights', () 
     /Trade highlight: week 1, Alex led the 2-week assessment/,
   );
 });
+it.each([NaN, Infinity, undefined])(
+  'never treats incomplete/nonfinite score %s as a tie or matchup highlight',
+  (actual) => {
+    const season = record();
+    season.data.scores[1].actual = actual as number;
+    const personal = buildWrapped(season, 'a').highlights.join(' '),
+      league = buildWrapped(season).highlights.join(' ');
+    expect(personal).toContain('Record: 0–0–0 in 0 verified matchups');
+    expect(personal).not.toMatch(/Best matchup:|Worst matchup:|Expected wins:|NaN|Infinity/);
+    expect(league).not.toMatch(/Closest game:|Biggest blowout:|Projection upset:|NaN|Infinity/);
+  },
+);
+it('excludes duplicated reciprocal scores rather than counting repeated matchups', () => {
+  const season = record();
+  season.data.scores.push({ ...season.data.scores[0] });
+  expect(buildWrapped(season, 'a').highlights.join(' ')).toContain(
+    'Record: 0–0–0 in 0 verified matchups',
+  );
+  expect(buildWrapped(season).highlights.join(' ')).not.toMatch(
+    /Closest game:|Biggest blowout:|Projection upset:/,
+  );
+});

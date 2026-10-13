@@ -1,3 +1,4 @@
+import { DraftOverlap } from './DraftOverlap';
 import { PlayerLoyalty } from './PlayerLoyalty';
 import { PlayerImpact } from './PlayerImpact';
 import { useState } from 'react';
@@ -64,6 +65,7 @@ export function PersonalitiesHistory({
       </details>
       <PlayerImpact records={records} />
       <PlayerLoyalty records={records} />
+      <DraftOverlap records={records} />
     </section>
   );
 }

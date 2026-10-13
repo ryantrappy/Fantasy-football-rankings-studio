@@ -15,11 +15,12 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
   const moves = [...source.moves].sort(
     (a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id),
   );
-  const represented = new Set(
-    scores.flatMap((score) =>
+  const represented = new Set([
+    ...moves.map((move) => move.playerId),
+    ...scores.flatMap((score) =>
       [...score.starters, ...(score.players ?? [])].map((player) => player.playerId),
     ),
-  );
+  ]);
   const playerIdentities = Object.fromEntries(
     [...represented].flatMap((id) => {
       const rawName = source.playerNames[id]?.trim();
@@ -147,6 +148,12 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     };
   });
   return {
+    moves,
+    moveCoverage: source.moveCoverage,
+    draftPicks: source.draftPicks,
+    draftCoverage: source.draftCoverage,
+    draftFormat: source.draftFormat,
+    matchupArchive: source.matchupArchive,
     forecastSchedule: source.forecastSchedule,
     regularSeasonSchedule: source.regularSeasonSchedule,
     playoffSettings: source.playoffSettings,

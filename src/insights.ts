@@ -1,3 +1,27 @@
+export interface MoveCoverage {
+  weeks: number[];
+  types: ('trade' | 'pickup' | 'drop')[];
+  complete: boolean;
+  note: string;
+}
+export interface DraftPick {
+  playerId: string;
+  teamId: string;
+  overallPick: number;
+  round?: number;
+}
+export interface MatchupArchive {
+  week: number;
+  teamId: string;
+  opponentTeamId: string;
+  source: string;
+  preMondayAt: string;
+  snapshots: {
+    capturedAt: string;
+    probability: number;
+    contributors: { playerId: string; points: number }[];
+  }[];
+}
 export interface SeasonResult {
   teamId: string;
   playoff: boolean | null;
@@ -64,6 +88,11 @@ export interface RosterSnapshot {
   }[];
 }
 export interface InsightsSource {
+  matchupArchive?: MatchupArchive[];
+  moveCoverage?: MoveCoverage;
+  draftPicks?: DraftPick[];
+  draftCoverage?: string;
+  draftFormat?: 'snake' | 'linear' | 'auction' | 'unknown';
   reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;
   forecastSchedule?: { week: number; homeTeamId: string; awayTeamId: string }[];
@@ -113,6 +142,12 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  matchupArchive?: MatchupArchive[];
+  moves?: PlayerMove[];
+  moveCoverage?: MoveCoverage;
+  draftPicks?: DraftPick[];
+  draftCoverage?: string;
+  draftFormat?: 'snake' | 'linear' | 'auction' | 'unknown';
   playerIdentities?: Record<string, { name?: string; position?: string }>;
   reportingStartWeek?: number;
   regularSeasonSchedule?: RegularSeasonSchedule;

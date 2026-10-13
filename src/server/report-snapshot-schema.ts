@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { matchupArchiveSchema } from '../history/moments/archive';
 import { leagueIdSchema } from './validation';
 import type { SeasonInsights } from '../insights';
 
@@ -25,6 +26,42 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  matchupArchive: z.array(matchupArchiveSchema).max(1800).optional(),
+  moves: z
+    .array(
+      z.object({
+        id: text,
+        week: count.max(18),
+        timestamp: count,
+        type: z.enum(['trade', 'pickup', 'drop']),
+        playerId: text,
+        from: text.nullable(),
+        to: text.nullable(),
+      }),
+    )
+    .max(50000)
+    .optional(),
+  moveCoverage: z
+    .object({
+      weeks: z.array(count.max(18)).max(18),
+      types: z.array(z.enum(['trade', 'pickup', 'drop'])).max(3),
+      complete: z.boolean(),
+      note: text,
+    })
+    .optional(),
+  draftPicks: z
+    .array(
+      z.object({
+        playerId: text,
+        teamId: text,
+        overallPick: count.min(1).max(10000),
+        round: count.min(1).max(100).optional(),
+      }),
+    )
+    .max(10000)
+    .optional(),
+  draftCoverage: text.optional(),
+  draftFormat: z.enum(['snake', 'linear', 'auction', 'unknown']).optional(),
   playerIdentities: z
     .record(text, z.object({ name: text.optional(), position: text.optional() }))
     .refine((catalog) => Object.keys(catalog).length <= 10000, 'Too many player identities')

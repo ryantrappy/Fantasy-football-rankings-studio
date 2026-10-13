@@ -479,6 +479,12 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     teams,
     scores,
     moves,
+    moveCoverage: {
+      weeks: weeksThrough(Math.min(18, completedWeek + 1)),
+      types: ['trade', 'pickup', 'drop'],
+      complete: false,
+      note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
+    },
     results,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
@@ -919,6 +925,12 @@ async function loadEspn(
     teams,
     scores,
     moves,
+    moveCoverage: {
+      weeks: weeksThrough(Math.min(18, completedWeek + 1)),
+      types: ['trade', 'pickup', 'drop'],
+      complete: false,
+      note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
+    },
     results: espnResults(
       teams.map((t) => t.teamId),
       meta,

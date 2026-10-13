@@ -1,3 +1,4 @@
+import { DraftSkill } from './DraftSkill';
 import { ProbabilityReplay } from './ProbabilityReplay';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
@@ -94,6 +95,7 @@ export function MomentsHistory({
           ))}
         </ul>
       </details>
+      {record && <DraftSkill record={record} records={records} manager={manager} />}
       {data && <ProbabilityReplay data={data} manager={manager} />}
       <details>
         <summary>Import or export an archive</summary>

@@ -17,6 +17,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
   );
   const represented = new Set([
     ...moves.map((move) => move.playerId),
+    ...(source.draftPicks || []).map((pick) => pick.playerId),
     ...scores.flatMap((score) =>
       [...score.starters, ...(score.players ?? [])].map((player) => player.playerId),
     ),

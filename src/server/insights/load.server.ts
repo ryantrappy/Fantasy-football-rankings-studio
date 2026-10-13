@@ -1,3 +1,4 @@
+import { sleeperDraft } from './draft';
 import { espnRegularSeasonSchedule } from './schedule';
 import { sleeperResults, espnResults, type BracketMatch, type EspnResultsData } from './results';
 import { logServerError } from '../logging.server';
@@ -464,6 +465,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       .map(([homeTeamId, awayTeamId]) => ({ week, homeTeamId, awayTeamId }));
   });
   return {
+    ...(await sleeperDraft(season.league_id)),
     forecastSchedule,
     regularSeasonSchedule: season.settings?.playoff_week_start
       ? {
@@ -899,6 +901,8 @@ async function loadEspn(
       })),
   );
   return {
+    draftCoverage: 'Unavailable: ESPN historical draft/ADP are not exposed by this report loader.',
+    draftFormat: 'unknown',
     regularSeasonSchedule,
     forecastSchedule:
       meta.settings?.scheduleSettings?.matchupPeriodLength === 1

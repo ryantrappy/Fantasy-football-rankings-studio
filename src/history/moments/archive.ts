@@ -57,7 +57,8 @@ export function importArchive(json: string, data: SeasonInsights) {
 }
 export function mondayComebacks(data: SeasonInsights, threshold = 0.1) {
   return (data.matchupArchive || []).flatMap((archive) => {
-    const before = archive.snapshots.find((s) => s.capturedAt === archive.preMondayAt)!;
+    const before = archive.snapshots.find((s) => s.capturedAt === archive.preMondayAt);
+    if (!before) return [];
     const own = data.scores.find((s) => s.teamId === archive.teamId && s.week === archive.week);
     const opponent = data.scores.find(
       (s) => s.teamId === archive.opponentTeamId && s.week === archive.week,

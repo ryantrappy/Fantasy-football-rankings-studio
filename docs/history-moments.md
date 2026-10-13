@@ -15,3 +15,9 @@ Import validates size, bounded counts, finite scores/probabilities, probability 
 ## TASK-131: Matchup probability replay
 
 The replay plots supplied chronological checkpoint probabilities on a time-proportional axis. The accessible table is authoritative for exact timing, changes and available contributors. A change of at least 20 percentage points is labeled a major swing. Events are supplied by the archive and do not establish independent causality. Lines join known points; nothing fills the unknown intervals. At least two checkpoints are required. Season and manager controls apply to replay archives. Report snapshot validation preserves the archive and strips unknown fields, including credentials.
+
+## TASK-132: Draft value and skill
+
+Completed historical Sleeper drafts are read from the resolved season's league drafts endpoint and its draft picks endpoint ([provider contract](https://docs.sleeper.com/#get-all-picks-in-a-draft)). Multiple drafts, unassigned picks and endpoint failures remain explicit gaps. ESPN draft data, ADP and private queues are currently unavailable. Format is preserved; unknown/auction formats are unranked.
+
+The baseline averages other drafted players within one league-width of overall pick, with at least two observed peers. Production sums the configured completed season weeks using league-scored player records; every week must be present and duplicate observations must agree. Free agent weeks absent from roster scoring are unknown, never zero. Best/worst pick ordering uses points above baseline. Cross-season skill averages relative points above baseline within format and stable provider manager identity; missing manager keys stay season-specific. Sample sizes and seasons are displayed. This is a local draft-position comparison, not an external ADP prediction or a causal ability measure.

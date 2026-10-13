@@ -84,14 +84,16 @@ export function TradeNetwork({
         <ul key={r.year}>
           {[
             ...new Set([
-              ...(r.data.moves || []).filter((m) => m.type === 'trade').map((m) => m.id),
+              ...(r.data.moves || [])
+                .filter((m) => m.type === 'trade' && m.week <= r.data.completedWeek)
+                .map((m) => m.id),
               ...(r.data.draftPickTradeIds || []),
             ]),
           ].map((id) => (
             <li id={anchor(r.year, id)} key={id}>
               {r.year} / {id}:{' '}
               {(r.data.moves || [])
-                .filter((m) => m.type === 'trade' && m.id === id)
+                .filter((m) => m.type === 'trade' && m.week <= r.data.completedWeek && m.id === id)
                 .map(
                   (m) =>
                     `${r.data.playerIdentities?.[m.playerId]?.name || m.playerId}: ${m.from || '?'} → ${m.to || '?'}`,

@@ -76,3 +76,32 @@ it('links network counts to underlying transactions and explicitly labels pick l
   );
   expect(screen.getByText(/Cross-season asset continuity/)).toBeInTheDocument();
 });
+
+it('excludes uncompleted and invalid-time movements from historical networks and trees', () => {
+  const invalid = {
+    ...data,
+    moves: [
+      ...data.moves!,
+      {
+        id: 'future',
+        week: 7,
+        timestamp: 3000,
+        type: 'trade' as const,
+        playerId: 'p',
+        from: 'a',
+        to: 'b',
+      },
+      {
+        id: 'bad',
+        week: 3,
+        timestamp: NaN,
+        type: 'trade' as const,
+        playerId: 'p',
+        from: 'a',
+        to: 'b',
+      },
+    ],
+  };
+  expect(tradeNetwork([{ year: 2025, data: invalid }])[0].transactions).toHaveLength(2);
+  expect(tradeTrees({ year: 2025, data: invalid })).toHaveLength(3);
+});

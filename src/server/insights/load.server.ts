@@ -504,8 +504,8 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     moveCoverage: {
       weeks: weeksThrough(Math.min(18, completedWeek + 1)),
       types: ['trade', 'pickup', 'drop'],
-      complete: false,
-      note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
+      complete: true,
+      note: 'All requested Sleeper transaction weeks and trade/pickup/drop categories were retrieved. Completeness covers only these weeks, excluding pre-season and deleted provider records; waiver/free-agent subtype is unsupported.',
     },
     results,
     playoffGames,

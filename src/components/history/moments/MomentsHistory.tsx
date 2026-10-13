@@ -1,3 +1,4 @@
+import { TradeContributions } from './TradeContributions';
 import { TradeNetwork } from './TradeNetwork';
 import { LineupRegrets } from './LineupRegrets';
 import { DroppedBreakouts } from './DroppedBreakouts';
@@ -98,6 +99,7 @@ export function MomentsHistory({
           ))}
         </ul>
       </details>
+      {data && <TradeContributions data={data} manager={manager} />}
       {record && <TradeNetwork record={record} records={records} manager={manager} />}
       {data && <LineupRegrets data={data} manager={manager} />}
       {data && <DroppedBreakouts data={data} manager={manager} />}

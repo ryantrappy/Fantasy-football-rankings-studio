@@ -9,9 +9,19 @@ export function tradeNetwork(records: SeasonRecord[]) {
       data.teams.find((t) => t.teamId === id)?.managerKey || `${year}:${id}`;
     const name = (id: string) => data.teams.find((t) => t.teamId === id)?.managerName || id;
     for (const id of new Set(
-      (data.moves || []).filter((m) => m.type === 'trade').map((m) => m.id),
+      (data.moves || [])
+        .filter(
+          (m) => m.type === 'trade' && m.week <= data.completedWeek && Number.isFinite(m.timestamp),
+        )
+        .map((m) => m.id),
     )) {
-      const moves = data.moves!.filter((m) => m.id === id && m.type === 'trade');
+      const moves = data.moves!.filter(
+        (m) =>
+          m.id === id &&
+          m.type === 'trade' &&
+          m.week <= data.completedWeek &&
+          Number.isFinite(m.timestamp),
+      );
       const participants = [
         ...new Set(moves.flatMap((m) => [m.from, m.to]).filter((id): id is string => !!id)),
       ];
@@ -31,11 +41,13 @@ export function tradeNetwork(records: SeasonRecord[]) {
 }
 export function tradeTrees(record: SeasonRecord) {
   const { data } = record;
-  const moves = [...(data.moves || [])].sort(
-    (a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id),
-  );
+  const moves = [...(data.moves || [])]
+    .filter((m) => m.week <= data.completedWeek && Number.isFinite(m.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id));
   return moves
-    .filter((m) => m.type === 'trade')
+    .filter(
+      (m) => m.type === 'trade' && m.week <= data.completedWeek && Number.isFinite(m.timestamp),
+    )
     .map((move) => {
       const later = moves.filter(
         (m) => m.playerId === move.playerId && m.id !== move.id && m.timestamp > move.timestamp,

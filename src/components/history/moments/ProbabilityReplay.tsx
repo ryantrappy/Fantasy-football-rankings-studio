@@ -6,10 +6,23 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
   const key = (a: (typeof archives)[number]) => `${a.week}:${a.teamId}:${a.opponentTeamId}`;
   const archive = archives.find((a) => key(a) === selected) || archives[0];
   const name = (id: string) => data.teams.find((t) => t.teamId === id)?.managerName || id;
+  const chooser = archives.length ? (
+    <label>
+      Replay matchup{' '}
+      <select value={archive ? key(archive) : ''} onChange={(e) => setSelected(e.target.value)}>
+        {archives.map((a) => (
+          <option key={key(a)} value={key(a)}>
+            Week {a.week}: {name(a.teamId)} vs {name(a.opponentTeamId)}
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : null;
   if (!archive || archive.snapshots.length < 2)
     return (
       <details open>
         <summary>Matchup probability replay</summary>
+        {chooser}
         <p>
           Replay unavailable: at least two archived game-time checkpoints are required. Final scores
           and weekly projections cannot reconstruct this timeline.
@@ -23,16 +36,7 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
   return (
     <details open>
       <summary>Matchup probability replay</summary>
-      <label>
-        Replay matchup{' '}
-        <select value={key(archive)} onChange={(e) => setSelected(e.target.value)}>
-          {archives.map((a) => (
-            <option key={key(a)} value={key(a)}>
-              Week {a.week}: {name(a.teamId)} vs {name(a.opponentTeamId)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {chooser}
       <p>
         Source: {archive.source}. {archive.snapshots.length} observed checkpoints,{' '}
         {archive.snapshots[0].capturedAt} through {archive.snapshots.at(-1)!.capturedAt}. Gaps are

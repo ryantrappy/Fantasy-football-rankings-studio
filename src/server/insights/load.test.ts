@@ -232,6 +232,12 @@ it.each([1, 2, 3])(
     );
     expect(result.scores).toHaveLength(Math.max(0, 3 - startWeek));
     expect(result.completedWeek).toBe(2);
+    expect(result.moveCoverage).toMatchObject({
+      complete: true,
+      weeks: [1, 2, 3],
+      types: ['trade', 'pickup', 'drop'],
+    });
+    expect(result.moveCoverage?.note).toContain('excluding pre-season');
     expect(result.reportingStartWeek).toBe(startWeek);
     if (startWeek <= 2) {
       expect(result.scores[0]).toMatchObject({ actual: -2, projected: null });

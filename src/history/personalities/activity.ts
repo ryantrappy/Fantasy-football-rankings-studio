@@ -7,7 +7,10 @@ export function transactionActivity(records: SeasonRecord[]) {
     return data.teams.map((team) => {
       const moves = (data.moves || []).filter(
         (move) =>
-          move.week >= 1 && move.week <= data.completedWeek && !!coverage?.weeks.includes(move.week) && (move.to === team.teamId || move.from === team.teamId),
+          move.week >= 1 &&
+          move.week <= data.completedWeek &&
+          !!coverage?.weeks.includes(move.week) &&
+          (move.to === team.teamId || move.from === team.teamId),
       );
       const count = (type: 'trade' | 'pickup' | 'drop') =>
         coverage?.types.includes(type)

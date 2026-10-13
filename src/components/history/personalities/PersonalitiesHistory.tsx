@@ -1,3 +1,4 @@
+import { PlayerLoyalty } from './PlayerLoyalty';
 import { PlayerImpact } from './PlayerImpact';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
@@ -62,6 +63,7 @@ export function PersonalitiesHistory({
         </div>
       </details>
       <PlayerImpact records={records} />
+      <PlayerLoyalty records={records} />
     </section>
   );
 }

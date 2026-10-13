@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-13 18:22'
-updated_date: '2026-10-13 18:49'
+updated_date: '2026-10-13 18:50'
 labels:
   - historical-analytics
 dependencies: []
@@ -45,6 +45,8 @@ The product opportunity is to tell the story of a fantasy league, but there is n
 41 targeted tests pass: personal and league story calculations incl lineup/player/archetype/trade, manager selection and intentional card-only snapshot publishing, privacy schema rejection, Sleeper snapshot roundtrip, owner/sharing revocation, share metadata. Typecheck and focused lint pass. Responsive DOM structure tested; real browser mobile verification pending lead integration, so AC4 remains unchecked and task In Progress.
 
 Lead integration verified in real Chrome at 390px: all three analytics tabs and all details opened; Wrapped preview/coverage rendered without page overflow or errors (tests/ui/history-analytics.spec.ts). Added safeguards/tests for missing/NaN/infinite and duplicate team/week scores: no false tie, matchup or player-impact highlights. Explicit covered-week activity test added. 61 targeted tests, typecheck and focused lint pass.
+
+Fixed in-flight snapshot selection race: season, manager and publish consent are disabled while saving, preventing a returned snapshot link from appearing beside another preview. Delayed-promise user-event DOM test verifies controls remain unchanged, then re-enable and clear link/consent on subsequent selection. Wrapped test file passes (5 tests), typecheck passes.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

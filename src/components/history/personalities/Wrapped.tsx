@@ -80,6 +80,7 @@ export function Wrapped({
       <label>
         Wrapped season{' '}
         <select
+          disabled={saving}
           value={record.year}
           onChange={(e) => {
             setYear(Number(e.target.value));
@@ -97,6 +98,7 @@ export function Wrapped({
       <label>
         Wrapped manager{' '}
         <select
+          disabled={saving}
           value={key}
           onChange={(e) => {
             setKey(e.target.value);
@@ -122,6 +124,7 @@ export function Wrapped({
           <label>
             <input
               type="checkbox"
+              disabled={saving}
               checked={consent}
               onChange={(e) => setConsent(e.target.checked)}
             />{' '}

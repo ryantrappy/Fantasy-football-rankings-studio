@@ -1,5 +1,5 @@
 import type { SeasonInsights } from './insights';
-import { forecastPlayoffs, type PlayoffForecast } from './playoff-forecast';
+import { forecastPlayoffsAsync, type PlayoffForecast } from './playoff-forecast';
 import { playoffRulesReason } from './playoff-rules';
 
 export interface CalibrationObservation {
@@ -154,27 +154,36 @@ export async function backtestPlayoffSeason(
   year: number,
   data: SeasonInsights,
   onWeek: (rows: CalibrationObservation[]) => void,
-  cancelled: () => boolean = () => false,
+  cancellation: (() => boolean) | AbortSignal = () => false,
 ): Promise<string | undefined> {
+  const signal = typeof cancellation === 'function' ? undefined : cancellation;
+  const cancelled = typeof cancellation === 'function' ? cancellation : () => signal!.aborted;
   const reason = calibrationEligibility(data);
   if (reason) return reason;
   // Archived provider projections are not available. Explicitly remove today's snapshot at ALL cutoffs.
   const historical = { ...data, playoffProjection: undefined };
   const observations: CalibrationObservation[][] = [];
   for (let week = 1; week <= data.playoffSettings!.regularSeasonEnd; week++) {
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
     if (cancelled()) return;
-    const forecast = forecastPlayoffs(historical, data.playoffSettings!, week);
-    if (forecast.reason) return forecast.reason;
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    let forecast: PlayoffForecast;
+    let standings: PlayoffForecast;
+    try {
+      forecast = await forecastPlayoffsAsync(historical, data.playoffSettings!, week, signal);
+      if (cancelled()) return;
+      if (forecast.reason) return forecast.reason;
+      standings = await forecastPlayoffsAsync(
+        historical,
+        data.playoffSettings!,
+        week,
+        signal,
+        20000,
+        'equal-strength',
+      );
+    } catch (error) {
+      if (cancelled()) return;
+      throw error;
+    }
     if (cancelled()) return;
-    const standings = forecastPlayoffs(
-      historical,
-      data.playoffSettings!,
-      week,
-      20000,
-      'equal-strength',
-    );
     if (standings.reason) return standings.reason;
     observations.push(calibrationObservations(year, data, forecast, standings));
   }

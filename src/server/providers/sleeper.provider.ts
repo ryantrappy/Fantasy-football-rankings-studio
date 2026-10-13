@@ -4,6 +4,8 @@ import HttpException from '../exceptions/HttpException';
 import { League, LeagueInfo } from '../interfaces/league.interface';
 import { Matchup, Team } from '../interfaces/teams.interface';
 import { LeagueProvider } from './league-provider';
+import { providerRequest } from './request-limit';
+import { mapConcurrent } from '../../util/map-concurrent';
 
 interface SleeperLeagueData {
   league_id: string;
@@ -47,11 +49,23 @@ interface SleeperMatchup {
 }
 
 export default class SleeperProvider implements LeagueProvider {
-  async get<T>(path: string): Promise<T> {
-    const response = await axios.get<T>(`https://api.sleeper.app/v1/league/${path}`, {
-      timeout: 10000,
-    });
-    return response.data;
+  // Opt in only for a single report load; ordinary provider calls remain fresh.
+  constructor(private readonly reuseReads = false) {}
+  private readonly reads = new Map<string, Promise<unknown>>();
+
+  get<T>(path: string): Promise<T> {
+    const saved = this.reads.get(path);
+    if (saved) return saved as Promise<T>;
+    const request = providerRequest(() =>
+      axios.get<T>(`https://api.sleeper.app/v1/league/${path}`, { timeout: 10000 }),
+    )
+      .then((response) => response.data)
+      .catch((error) => {
+        this.reads.delete(path);
+        throw error;
+      });
+    if (this.reuseReads) this.reads.set(path, request);
+    return request;
   }
 
   async resolveSeason(leagueId: string, seasonId: number): Promise<SleeperLeagueData> {
@@ -107,8 +121,15 @@ export default class SleeperProvider implements LeagueProvider {
     };
   }
 
-  async getTeams(league: League, seasonId: number, _week: number): Promise<Team[]> {
-    const data = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
+  async getTeams(
+    league: League,
+    seasonId: number,
+    _week: number,
+    resolvedSeason?: SleeperLeagueData,
+  ): Promise<Team[]> {
+    const data =
+      resolvedSeason ??
+      (await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId));
     const [rosters, users] = await Promise.all([
       this.get<Roster[]>(`${data.league_id}/rosters`),
       this.get<User[]>(`${data.league_id}/users`),
@@ -140,12 +161,14 @@ export default class SleeperProvider implements LeagueProvider {
 
   async getHistoricalTeams(league: League, seasonId: number, week: number): Promise<Team[]> {
     const season = await this.resolveSeason(league.providerLeagueId ?? league.leagueId, seasonId);
-    const teams = await this.getTeams(league, seasonId, week);
+    const teams = await this.getTeams(league, seasonId, week, season);
     // Median-game records require league-wide completeness and distinct scoring rules.
     if (season.settings?.league_average_match) unavailableRecords();
-    const { data: state } = await axios.get<{ season: string; season_type: string; leg: number }>(
-      'https://api.sleeper.app/v1/state/nfl',
-      { timeout: 10000 },
+    const { data: state } = await providerRequest(() =>
+      axios.get<{ season: string; season_type: string; leg: number }>(
+        'https://api.sleeper.app/v1/state/nfl',
+        { timeout: 10000 },
+      ),
     );
     if (!state || !Number.isFinite(Number(state.season))) unavailableRecords();
     const nflLast =
@@ -159,8 +182,12 @@ export default class SleeperProvider implements LeagueProvider {
     if (!end) unavailableRecords();
     const last = Math.min(week, nflLast, season.settings?.last_scored_leg ?? nflLast, end - 1);
     const games: RecordGame[] = [];
-    for (let w = season.settings?.start_week ?? 1; w <= last; w++) {
-      const rows = await this.get<SleeperMatchup[]>(`${season.league_id}/matchups/${w}`);
+    const first = season.settings?.start_week ?? 1;
+    const weeks = Array.from({ length: Math.max(0, last - first + 1) }, (_, i) => first + i);
+    const weekly = await mapConcurrent(weeks, 3, (w) =>
+      this.get<SleeperMatchup[]>(`${season.league_id}/matchups/${w}`),
+    );
+    for (const rows of weekly) {
       if (
         !Array.isArray(rows) ||
         teams.some((t) => rows.filter((r) => String(r.roster_id) === t.teamId).length !== 1)

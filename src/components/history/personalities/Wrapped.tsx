@@ -1,3 +1,4 @@
+import { Button } from '@chakra-ui/react';
 import { useContext, useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { ApiContext } from '../../../auth/session';
@@ -130,7 +131,8 @@ export function Wrapped({
             />{' '}
             Publish this preview to anyone with its link
           </label>
-          <button
+          <Button
+            mt={4}
             type="button"
             disabled={!consent || saving}
             onClick={async () => {
@@ -154,7 +156,7 @@ export function Wrapped({
             }}
           >
             {saving ? 'Saving snapshot…' : 'Create public Wrapped snapshot'}
-          </button>
+          </Button>
           {href && (
             <p>
               <a href={href}>Open saved Wrapped snapshot</a>

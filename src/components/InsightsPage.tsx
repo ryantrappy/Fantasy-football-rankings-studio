@@ -275,7 +275,9 @@ export function InsightsPage({
           <IconButton
             aria-label="Refresh insights"
             title="Refresh insights"
-            variant="ghost"
+            variant="outline"
+            borderRadius="8px"
+            flexShrink={0}
             type="button"
             disabled={loading || !!snapshot}
             onClick={() => setReload((v) => v + 1)}

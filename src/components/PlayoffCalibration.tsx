@@ -56,6 +56,7 @@ export function PlayoffCalibration({
   useEffect(() => {
     if (!run || frozen) return;
     let cancelled = false;
+    const controller = new AbortController();
     const observations: CalibrationObservation[] = [],
       notes: string[] = [];
     const seasons: CalibrationReplaySeason[] = [];
@@ -92,7 +93,7 @@ export function PlayoffCalibration({
               season,
               data,
               (rows) => observations.push(...rows),
-              () => cancelled,
+              controller.signal,
             );
             if (cancelled) return;
             if (reason) notes.push(`${season} excluded: ${reason}`);
@@ -109,6 +110,7 @@ export function PlayoffCalibration({
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [api, leagueId, year, run, frozen]);
   const predictive = predictiveObservations(state.observations);

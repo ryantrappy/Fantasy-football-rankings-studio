@@ -152,7 +152,7 @@ export function SeasonStrength({
   data: SeasonInsights;
   managedTeamId?: string | null;
 }) {
-  const [mode, setMode] = useState<PositionStrengthMode>('projected');
+  const [mode, setMode] = useState<PositionStrengthMode>('completed');
   const completed = mode === 'completed';
   const positions = useMemo(() => positionStrength(data, mode), [data, mode]);
   const schedule = useMemo(() => remainingScheduleStrength(data), [data]);

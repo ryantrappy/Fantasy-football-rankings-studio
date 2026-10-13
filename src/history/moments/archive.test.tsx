@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { calculateInsights } from '../../server/insights/calculate';
 import { importArchive, mondayComebacks } from './archive';
 import { MomentsHistory } from '../../components/history/moments/MomentsHistory';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 export const data = calculateInsights({
   completedWeek: 1,
   teams: [
@@ -59,7 +60,11 @@ it('validates real input, strips private extras, and requires chronological expl
   ).toHaveLength(0);
 });
 it('imports, filters, and reports provenance and verified comeback outcome', () => {
-  render(<MomentsHistory records={[{ year: 2025, data }]} years={[2025]} />);
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <MomentsHistory records={[{ year: 2025, data }]} years={[2025]} />
+    </ChakraProvider>,
+  );
   expect(screen.getByText(/Unavailable: no in-game/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Archive JSON'), {
     target: { value: JSON.stringify([archive]) },

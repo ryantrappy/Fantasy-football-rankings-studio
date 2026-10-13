@@ -6,6 +6,7 @@ import { League, LeagueInfo } from '../interfaces/league.interface';
 import { Matchup, Team } from '../interfaces/teams.interface';
 import { LeagueProvider } from './league-provider';
 import { defaultSeason } from '../../util/rankings';
+import { providerRequest } from './request-limit';
 
 interface EspnData {
   id: number;
@@ -61,9 +62,12 @@ export default class EspnProvider implements LeagueProvider {
     if (this.access !== 'public') {
       headers.Cookie = `espn_s2=${this.access.espnS2}; SWID=${this.access.swid}`;
     }
-    const { data } = await axios.get<T>(
-      `${this.apiBaseUrl}/seasons/${seasonId}/segments/0/leagues/${leagueId}`,
-      { params, headers, timeout: 10000 },
+    const { data } = await providerRequest(() =>
+      axios.get<T>(`${this.apiBaseUrl}/seasons/${seasonId}/segments/0/leagues/${leagueId}`, {
+        params,
+        headers,
+        timeout: 10000,
+      }),
     );
     if (!data?.id)
       throw new HttpException(

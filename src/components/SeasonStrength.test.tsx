@@ -14,6 +14,7 @@ const wrap = (data = strengthData) => (
 
 it('shows exact position values, highlights the managed team, sorts and explains schedule sources', () => {
   render(wrap());
+  fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
   const ranks = screen.getByRole('table', { name: 'Position group rankings' });
   expect(
     within(ranks).queryByRole('columnheader', { name: 'Weeks covered' }),
@@ -38,6 +39,7 @@ it('shows exact position values, highlights the managed team, sorts and explains
 
 it('replaces projections with unavailable states for completed seasons and exposes fallback coverage', () => {
   const view = render(wrap());
+  fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
   const old = structuredClone(strengthData);
   delete old.playoffProjection;
   view.rerender(wrap(old));
@@ -57,11 +59,9 @@ it('replaces projections with unavailable states for completed seasons and expos
   ).not.toBeInTheDocument();
 });
 
-it('switches rankings and bars to actual completed-week starter points and back', () => {
+it('defaults to completed-week starter points and switches to projections and back', () => {
   render(wrap());
   const completed = screen.getByRole('button', { name: 'Completed weeks only' });
-  expect(completed).toHaveAttribute('aria-pressed', 'false');
-  fireEvent.click(completed);
   expect(completed).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('heading', { name: 'Completed-week scoring' })).toBeInTheDocument();
   expect(screen.getByRole('img')).toHaveAccessibleName(/Completed-week actual starter points/);
@@ -73,8 +73,12 @@ it('switches rankings and bars to actual completed-week starter points and back'
   expect(within(ranks).getByText('344')).toBeInTheDocument();
   expect(screen.getByRole('table', { name: 'Remaining schedule difficulty' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
+  expect(completed).toHaveAttribute('aria-pressed', 'false');
   expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
   expect(screen.getByRole('heading', { name: 'Roster projections' })).toBeInTheDocument();
+  fireEvent.click(completed);
+  expect(completed).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('heading', { name: 'Completed-week scoring' })).toBeInTheDocument();
 });
 
 it.each(['Sleeper', 'ESPN'] as const)(
@@ -87,6 +91,7 @@ it.each(['Sleeper', 'ESPN'] as const)(
       week.positionPoints = {};
     });
     render(wrap(data));
+    fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
     expect(screen.getByRole('img')).toHaveAccessibleName(/Roster projections by position/);
     expect(screen.getByRole('table', { name: 'Position group rankings' })).toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(
@@ -103,7 +108,6 @@ it('offers completed mode without forecasts and explains missing positions or no
   const data = structuredClone(strengthData);
   delete data.playoffProjection;
   const view = render(wrap(data));
-  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
   expect(screen.getByRole('img')).toHaveAccessibleName(/Completed-week actual starter points/);
   data.scores.forEach((score) => score.starters.forEach((player) => delete player.position));
   view.rerender(wrap({ ...data }));
@@ -117,7 +121,6 @@ it('counts a missing opening week even when every team is missing it', () => {
   const data = structuredClone(strengthData);
   data.scores = data.scores.filter((score) => score.week !== 1);
   render(wrap(data));
-  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
   const coverage = screen.getByRole('table', { name: 'Completed-week position coverage' });
   expect(within(coverage).getAllByText('3 / 4')).toHaveLength(data.teams.length);
@@ -127,7 +130,6 @@ it('explains unknown legacy horizons and keeps completed rankings unavailable', 
   const data = structuredClone(strengthData);
   delete data.reportingStartWeek;
   render(wrap(data));
-  fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
   expect(screen.getByRole('status')).toHaveTextContent('configured season start is unavailable');
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
 });

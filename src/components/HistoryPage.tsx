@@ -138,32 +138,37 @@ export function HistoryPage({
       const recordByYear = new Map(priorRecords.map((record) => [record.year, record]));
       const completed = new Set<number>();
       const errors: { year: number; message: string; retained: boolean }[] = [];
-      for (const year of years) {
-        if (cancelled) return;
-        try {
-          const data = await api.getInsights(leagueId, year, refresh > 0);
+      let nextIndex = 0;
+      async function loadNextSeason() {
+        while (!cancelled && nextIndex < years.length) {
+          const year = years[nextIndex++];
+          try {
+            const data = await api.getInsights(leagueId, year, refresh > 0);
+            if (cancelled) return;
+            recordByYear.set(year, { year, data });
+          } catch (error) {
+            logClientError('HistoryPage', error);
+            if (cancelled) return;
+            errors.push({ year, message: errorMessage(error), retained: recordByYear.has(year) });
+          }
           if (cancelled) return;
-          recordByYear.set(year, { year, data });
-        } catch (error) {
-          logClientError('HistoryPage', error);
-          if (cancelled) return;
-          errors.push({ year, message: errorMessage(error), retained: recordByYear.has(year) });
+          completed.add(year);
+          setLoaded({
+            api,
+            key,
+            scope: reportScope,
+            records: years.flatMap((selectedYear) => {
+              const record = recordByYear.get(selectedYear);
+              return record ? [record] : [];
+            }),
+            errors: [...errors].sort((a, b) => years.indexOf(a.year) - years.indexOf(b.year)),
+            done: completed.size === years.length,
+            refreshed: refresh > 0,
+            completed: completed.size,
+          });
         }
-        completed.add(year);
-        setLoaded({
-          api,
-          key,
-          scope: reportScope,
-          records: years.flatMap((selectedYear) => {
-            const record = recordByYear.get(selectedYear);
-            return record ? [record] : [];
-          }),
-          errors: [...errors],
-          done: completed.size === years.length,
-          refreshed: refresh > 0,
-          completed: completed.size,
-        });
       }
+      await Promise.all(Array.from({ length: Math.min(3, years.length) }, loadNextSeason));
     })();
     return () => {
       cancelled = true;

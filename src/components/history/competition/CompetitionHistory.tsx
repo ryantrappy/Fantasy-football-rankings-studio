@@ -40,25 +40,27 @@ export function CompetitionHistory({ records, years, leagueId, shared }: Competi
         score rows without an opponent (byes or unavailable matchup links). Renames follow provider
         manager identity; unidentified owners stay separate by season.
       </p>
-      <label>
-        Head-to-head manager{' '}
-        <select value={key || ''} onChange={(e) => setSelected(e.target.value)}>
-          {[...managers].map(([k, n]) => (
-            <option key={k} value={k}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Minimum rivalry games{' '}
-        <input
-          type="number"
-          min={1}
-          value={minimum}
-          onChange={(e) => setMinimum(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
-        />
-      </label>
+      <div className="history-filters">
+        <label>
+          Head-to-head manager{' '}
+          <select value={key || ''} onChange={(e) => setSelected(e.target.value)}>
+            {[...managers].map(([k, n]) => (
+              <option key={k} value={k}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Minimum rivalry games{' '}
+          <input
+            type="number"
+            min={1}
+            value={minimum}
+            onChange={(e) => setMinimum(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+          />
+        </label>
+      </div>
       {Object.entries(labels).map(([label, r]) => (
         <p key={label}>
           {label === 'punchingBag' ? 'Punching bag' : label === 'rival' ? 'Rival' : 'Kryptonite'}:{' '}
@@ -112,7 +114,7 @@ export function CompetitionHistory({ records, years, leagueId, shared }: Competi
           })),
         ]}
       />
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', marginTop: 24 }}>
         <table>
           <caption>League rivalry matrix — row manager W-L-T (games)</caption>
           <thead>

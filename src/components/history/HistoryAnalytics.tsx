@@ -22,6 +22,11 @@ export function HistoryAnalytics({
 }) {
   const id = useId();
   const [active, setActive] = useState(0);
+  const [visited, setVisited] = useState([0]);
+  function selectGroup(index: number) {
+    setActive(index);
+    setVisited((previous) => (previous.includes(index) ? previous : [...previous, index]));
+  }
   return (
     <Box as="section" className="history-analytics" mt={8}>
       <Heading as="h2" size="xl" mb={3}>
@@ -42,7 +47,7 @@ export function HistoryAnalytics({
             aria-controls={`${id}-panel-${index}`}
             tabIndex={index === active ? 0 : -1}
             variant={index === active ? 'solid' : 'outline'}
-            onClick={() => setActive(index)}
+            onClick={() => selectGroup(index)}
             onKeyDown={(event) => {
               const next =
                 event.key === 'Home'
@@ -56,7 +61,7 @@ export function HistoryAnalytics({
                         : null;
               if (next === null) return;
               event.preventDefault();
-              setActive(next);
+              selectGroup(next);
               document.getElementById(`${id}-tab-${next}`)?.focus();
             }}
           >
@@ -73,7 +78,7 @@ export function HistoryAnalytics({
           hidden={index !== active}
           tabIndex={0}
         >
-          {index === 0 && (
+          {visited.includes(index) && index === 0 && (
             <CompetitionHistory
               records={records}
               years={years}
@@ -81,8 +86,10 @@ export function HistoryAnalytics({
               shared={shared}
             />
           )}
-          {index === 1 && <MomentsHistory records={records} years={years} leagueId={leagueId} />}
-          {index === 2 && (
+          {visited.includes(index) && index === 1 && (
+            <MomentsHistory records={records} years={years} leagueId={leagueId} />
+          )}
+          {visited.includes(index) && index === 2 && (
             <PersonalitiesHistory
               records={records}
               years={years}

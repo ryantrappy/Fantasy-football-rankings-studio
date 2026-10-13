@@ -74,7 +74,7 @@ function PreviewApp() {
           </div>
         ) : mode === 'chart' ? (
           <ScoreTrend
-            teamName="Fourth & Long"
+            teams={[{ teamId: '1', teamName: 'Fourth & Long' }]}
             scores={[1, 2, 3].map((week) => ({
               teamId: '1',
               week,

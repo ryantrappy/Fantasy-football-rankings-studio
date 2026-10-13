@@ -7,6 +7,12 @@ test('shows real stacked bars, heatmap values, sort controls and remaining oppon
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/tests/ui/?mode=season-strength');
+  await expect(page.getByRole('heading', { name: 'Completed-week scoring' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Completed weeks only' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByRole('button', { name: 'Projected remaining weeks' }).click();
   await expect(
     page.getByRole('heading', { name: 'Roster projections', exact: true }),
   ).toBeVisible();
@@ -51,7 +57,6 @@ test('keeps wide chart and tables inside scrollable panels on mobile', async ({ 
   await page.goto('/tests/ui/?mode=season-strength');
   await expect(page.getByRole('heading', { name: 'Remaining schedule strength' })).toBeVisible();
   await expect(page.locator('.season-strength svg rect').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Completed weeks only' }).click();
   await expect(page.getByRole('heading', { name: 'Completed-week scoring' })).toBeVisible();
   const dimensions = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,

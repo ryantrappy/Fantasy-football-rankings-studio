@@ -113,6 +113,15 @@ it('stops cancelled work without publishing observations', async () => {
   expect(publish).not.toHaveBeenCalled();
 });
 
+it('aborts a running replay without publishing an incomplete season', async () => {
+  const publish = vi.fn();
+  const controller = new AbortController();
+  const pending = backtestPlayoffSeason(2025, calibrationFixture(), publish, controller.signal);
+  setTimeout(() => controller.abort(), 0);
+  await pending;
+  expect(publish).not.toHaveBeenCalled();
+});
+
 it('records standings probabilities, preserves cutoff information and separates predictive from resolved observations', async () => {
   const { predictiveObservations, summarizeCalibrationSeasons } =
     await import('./playoff-calibration');

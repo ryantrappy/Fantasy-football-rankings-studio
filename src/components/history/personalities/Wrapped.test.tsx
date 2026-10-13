@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from '../../ui/provider';
 import { ApiContext } from '../../../auth/session';
 import { fixture } from '../../../history/personalities/activity.test';
 import { Wrapped, WrappedPreview } from './Wrapped';
@@ -10,6 +11,7 @@ it('selects manager, previews cards and requires intentional publish with no raw
     <ApiContext.Provider value={{ createReportSnapshot } as never}>
       <Wrapped records={[fixture()]} leagueId="123" />
     </ApiContext.Provider>,
+    { wrapper: Provider },
   );
   fireEvent.change(screen.getByLabelText('Wrapped manager'), { target: { value: 'a' } });
   expect(screen.getByRole('heading', { name: "Alex's 2025 Fantasy Wrapped" })).toBeInTheDocument();
@@ -51,6 +53,7 @@ it('locks the preview selection and consent while its snapshot request is pendin
     <ApiContext.Provider value={{ createReportSnapshot } as never}>
       <Wrapped records={[fixture(), previous]} leagueId="123" />
     </ApiContext.Provider>,
+    { wrapper: Provider },
   );
   await user.selectOptions(screen.getByLabelText('Wrapped manager'), 'a');
   await user.click(screen.getByLabelText('Publish this preview to anyone with its link'));

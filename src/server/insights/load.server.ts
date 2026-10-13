@@ -14,6 +14,8 @@ import { espnPlayoffSettings, sleeperPlayoffSettings } from './playoff-settings'
 import { calculateInsights } from './calculate';
 import { archivePlayoffForecast } from './archive.server';
 import { cachedFutureProjection } from './projection-cache.server';
+import { providerRequest } from '../providers/request-limit';
+import { mapConcurrent } from '../../util/map-concurrent';
 import {
   espnBestLineup,
   espnProjectionSnapshot,
@@ -24,10 +26,7 @@ import {
 } from './projections';
 
 async function mapWeeks<T>(weeks: number[], read: (week: number) => Promise<T>): Promise<T[]> {
-  const results: T[] = [];
-  for (let i = 0; i < weeks.length; i += 3)
-    results.push(...(await Promise.all(weeks.slice(i, i + 3).map(read))));
-  return results;
+  return mapConcurrent(weeks, 3, read);
 }
 const weeksThrough = (last: number) => Array.from({ length: Math.max(0, last) }, (_, i) => i + 1);
 let namesCache:
@@ -50,21 +49,23 @@ export function sleeperNames() {
   return namesPending;
 }
 async function loadPlayerCatalog() {
-  const { data } = await axios.get<
-    Record<
-      string,
-      {
-        full_name?: string;
-        first_name?: string;
-        last_name?: string;
-        position?: string;
-        team?: string;
-        injury_status?: string | null;
-        status?: string;
-        espn_id?: number | string | null;
-      }
-    >
-  >('https://api.sleeper.app/v1/players/nfl', { timeout: 20000 });
+  const { data } = await providerRequest(() =>
+    axios.get<
+      Record<
+        string,
+        {
+          full_name?: string;
+          first_name?: string;
+          last_name?: string;
+          position?: string;
+          team?: string;
+          injury_status?: string | null;
+          status?: string;
+          espn_id?: number | string | null;
+        }
+      >
+    >('https://api.sleeper.app/v1/players/nfl', { timeout: 20000 }),
+  );
   const names = Object.fromEntries(
     Object.entries(data).map(([id, p]) => [
       id,
@@ -131,14 +132,33 @@ interface SleeperRosterSnapshot {
   taxi?: string[] | null;
 }
 async function loadSleeper(league: League, year: number): Promise<InsightsSource> {
-  const provider = new SleeperProvider();
+  const provider = new SleeperProvider(true);
   const season = await provider.resolveSeason(league.providerLeagueId ?? league.leagueId, year);
+  const draftRead = sleeperDraft(season.league_id);
+  // Handle early catalog failures immediately; consumers keep their existing fallbacks.
+  let catalogRead = season.roster_positions?.length
+    ? sleeperNames().then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      )
+    : undefined;
+  const readCatalog = async () => {
+    if (!catalogRead) return sleeperNames();
+    const result = await catalogRead;
+    if ('error' in result) {
+      catalogRead = undefined;
+      throw result.error;
+    }
+    return result.value;
+  };
   const [{ data: state }, teams] = await Promise.all([
-    axios.get<{ season: string; leg: number; season_type: string }>(
-      'https://api.sleeper.app/v1/state/nfl',
-      { timeout: 10000 },
+    providerRequest(() =>
+      axios.get<{ season: string; leg: number; season_type: string }>(
+        'https://api.sleeper.app/v1/state/nfl',
+        { timeout: 10000 },
+      ),
     ),
-    provider.getTeams(league, year, 1),
+    provider.getTeams(league, year, 1, season),
   ]);
   const nflCompletedWeek =
     year < Number(state.season)
@@ -156,6 +176,30 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   const reportingStartWeek =
     Number.isInteger(configuredStart) && configuredStart >= 1 && configuredStart <= 18
       ? configuredStart
+      : undefined;
+  const regularEnd = season.settings?.playoff_week_start
+    ? Math.min(18, season.settings.playoff_week_start - 1)
+    : completedWeek;
+  const futureRead = mapWeeks(
+    weeksThrough(regularEnd).filter((w) => w > completedWeek),
+    async (week) => {
+      try {
+        return {
+          week,
+          rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
+        };
+      } catch {
+        return { week, rows: [] as SleeperScore[] };
+      }
+    },
+  );
+  const bracketRead =
+    season.status === 'complete' ||
+    (season.settings?.playoff_week_start && completedWeek >= season.settings.playoff_week_start)
+      ? Promise.allSettled([
+          provider.get<BracketMatch[]>(`${season.league_id}/winners_bracket`),
+          provider.get<BracketMatch[]>(`${season.league_id}/losers_bracket`),
+        ])
       : undefined;
   let rosterSnapshot: InsightsSource['rosterSnapshot'];
   let rosterSnapshotNote: string;
@@ -249,16 +293,17 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     projectionWeek === state.leg &&
     projectionWeek <= Math.min(18, season.settings?.playoff_week_start ?? 18)
   ) {
-    const catalog = await sleeperNames().catch(() => ({
+    const catalog = await readCatalog().catch(() => ({
       positions: {},
       availability: {},
       teams: {},
     }));
-    const byeWeekByPlayer = await axios
-      .get<{ week: number; home: string; away: string }[]>(
+    const byeWeekByPlayer = await providerRequest(() =>
+      axios.get<{ week: number; home: string; away: string }[]>(
         `https://api.sleeper.app/schedule/nfl/regular/${year}`,
         { timeout: 10000 },
-      )
+      ),
+    )
       .then(({ data }) => sleeperByeWeeks(data, catalog.teams))
       .catch(() => ({}));
     const ownedIds = new Set(
@@ -279,15 +324,17 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       async (week) => {
         try {
           const read = async () => {
-            const response = await axios.get<SleeperProjectionRow[]>(
-              `https://api.sleeper.app/projections/nfl/${year}/${week}`,
-              {
-                params: {
-                  season_type: 'regular',
-                  'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF', 'DL', 'LB', 'DB'],
+            const response = await providerRequest(() =>
+              axios.get<SleeperProjectionRow[]>(
+                `https://api.sleeper.app/projections/nfl/${year}/${week}`,
+                {
+                  params: {
+                    season_type: 'regular',
+                    'position[]': ['FLEX', 'K', 'QB', 'RB', 'TE', 'WR', 'DEF', 'DL', 'LB', 'DB'],
+                  },
+                  timeout: 10000,
                 },
-                timeout: 10000,
-              },
+              ),
             );
             return sleeperProjectionSnapshot(
               week,
@@ -385,14 +432,8 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   let results: InsightsSource['results'];
   let playoffGames: InsightsSource['playoffGames'];
   const resultNotes: string[] = [];
-  if (
-    season.status === 'complete' ||
-    (season.settings?.playoff_week_start && completedWeek >= season.settings.playoff_week_start)
-  ) {
-    const brackets = await Promise.allSettled([
-      provider.get<BracketMatch[]>(`${season.league_id}/winners_bracket`),
-      provider.get<BracketMatch[]>(`${season.league_id}/losers_bracket`),
-    ]);
+  if (bracketRead) {
+    const brackets = await bracketRead;
     for (const result of brackets)
       if (result.status === 'rejected') {
         logServerError('insights.sleeperResults', result.reason, 502);
@@ -435,7 +476,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     scores.some((score) => score.starters.length)
   )
     try {
-      catalog = await sleeperNames();
+      catalog = await readCatalog();
     } catch (error) {
       logServerError('insights.sleeperRosterCatalog', error, 502);
       if (rosterSnapshot) {
@@ -456,22 +497,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         catalog.positions,
       );
   }
-  const regularEnd = season.settings?.playoff_week_start
-    ? Math.min(18, season.settings.playoff_week_start - 1)
-    : completedWeek;
-  const future = await mapWeeks(
-    weeksThrough(regularEnd).filter((w) => w > completedWeek),
-    async (week) => {
-      try {
-        return {
-          week,
-          rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
-        };
-      } catch {
-        return { week, rows: [] as SleeperScore[] };
-      }
-    },
-  );
+  const future = await futureRead;
   const forecastSchedule = [...weekly, ...future].flatMap(({ week, rows }) => {
     const groups = new Map<number, string[]>();
     for (const row of rows)
@@ -485,7 +511,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       .map(([homeTeamId, awayTeamId]) => ({ week, homeTeamId, awayTeamId }));
   });
   return {
-    ...(await sleeperDraft(season.league_id)),
+    ...(await draftRead),
     forecastSchedule,
     regularSeasonSchedule: season.settings?.playoff_week_start
       ? {
@@ -769,13 +795,14 @@ async function loadEspn(
           0) + 1,
       )
   ) {
-    const byeWeekByProTeam = await axios
-      .get<{
+    const byeWeekByProTeam = await providerRequest(() =>
+      axios.get<{
         settings?: { proTeams?: { id: number; byeWeek?: number }[] };
       }>(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}`, {
         params: { view: 'proTeamSchedules_wl' },
         timeout: 10000,
-      })
+      }),
+    )
       .then(({ data }) =>
         Object.fromEntries(
           (data.settings?.proTeams || [])

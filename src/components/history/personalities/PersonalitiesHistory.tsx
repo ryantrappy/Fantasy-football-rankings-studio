@@ -1,3 +1,4 @@
+import { Archetypes } from './Archetypes';
 import { DraftOverlap } from './DraftOverlap';
 import { PlayerLoyalty } from './PlayerLoyalty';
 import { PlayerImpact } from './PlayerImpact';
@@ -66,6 +67,7 @@ export function PersonalitiesHistory({
       <PlayerImpact records={records} />
       <PlayerLoyalty records={records} />
       <DraftOverlap records={records} />
+      <Archetypes records={records} />
     </section>
   );
 }

@@ -26,6 +26,7 @@ const weeklyProjection = z.object({
   note: text.optional(),
 });
 const season: z.ZodType<SeasonInsights> = z.object({
+  draftPickTradeIds: strings.optional(),
   matchupArchive: z.array(matchupArchiveSchema).max(1800).optional(),
   moves: z
     .array(

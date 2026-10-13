@@ -150,6 +150,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
   });
   return {
     moves,
+    draftPickTradeIds: source.draftPickTradeIds,
     moveCoverage: source.moveCoverage,
     draftPicks: source.draftPicks,
     draftCoverage: source.draftCoverage,

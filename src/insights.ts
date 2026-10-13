@@ -145,6 +145,7 @@ export interface PickupComparison {
   averageBaseline: number | null;
 }
 export interface SeasonInsights {
+  draftPickTradeIds?: string[];
   matchupArchive?: MatchupArchive[];
   moves?: PlayerMove[];
   moveCoverage?: MoveCoverage;

@@ -25,3 +25,9 @@ Shame records show season and game evidence: worst regular win rate requires eve
 ## Competitive eras
 
 Configurable span (2–10 calendar seasons), titles (default2), and sustained regular winning rate (default70%) define overlapping observed windows. Title eras require all team championship outcomes known and exactly one champion in every season of the full span. Missing years never bridge an era. Regular success requires full configured game and league scoring coverage in every season for that manager; ties count half. Every claim lists the seasons, accomplishments and threshold. Unknown title windows are explicitly excluded, independently of regular-season evidence.
+
+## Playoff and clutch records
+
+Only explicit provider winners-bracket series count, with finite scores for every published scoring week. Sleeper uses the p=1 championship final's winner-linked ancestors, excluding third-place/consolation paths, placeholders, byes and unresolved results; round IDs map to the published playoff settings. ESPN needs WINNERS_BRACKET and explicit matchup-period mappings; its elimination status stays unknown because placement rounds may share that tier. Multiweek series are aggregated once. Old snapshots without metadata show unknown playoff history. Metadata is validated and persisted in report snapshots.
+
+Must-win is a verified championship-path elimination series; final regular-season standings cannot prove a regular-season must-win scenario. Clutch requires the configured minimum (default3) elimination games with at least65% wins. The descriptive underperformance/choker context requires that minimum plus elimination losses in two different strong regular seasons (65% wins, minimum regular samples each) and at least20 percentage points of regular-to-playoff win-rate decline. This is league context, never a prediction. All contributing series, weeks and scores are visible.

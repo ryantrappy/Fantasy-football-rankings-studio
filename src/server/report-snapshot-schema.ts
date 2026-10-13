@@ -113,6 +113,20 @@ const season: z.ZodType<SeasonInsights> = z.object({
       weekly: z.array(weeklyProjection).max(18).optional(),
     })
     .optional(),
+  playoffGames: z
+    .array(
+      z.object({
+        id: text,
+        homeTeamId: text,
+        awayTeamId: text,
+        weeks: z.array(count).max(18),
+        homePoints: num,
+        awayPoints: num,
+        elimination: z.boolean(),
+      }),
+    )
+    .max(100)
+    .optional(),
   results: z
     .array(
       z.object({

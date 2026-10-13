@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { historicalHonors, fameWeights } from '../../../history/competition/honors';
 import { number, type CompetitionProps } from './CompetitionHistory';
-import { DataTable } from '../../DataTable';
+import { CompetitionTable as DataTable } from './CompetitionTable';
 export function HonorsHistory({ records }: CompetitionProps) {
   const { rankings, shame } = historicalHonors(records);
   const [kind, setKind] = useState('Worst season');

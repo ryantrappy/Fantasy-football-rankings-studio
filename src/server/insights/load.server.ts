@@ -1,4 +1,5 @@
 import { sleeperDraft } from './draft';
+import { sleeperPlayoffGames, espnPlayoffGames } from '../../history/competition/playoff-games';
 import { espnRegularSeasonSchedule } from './schedule';
 import { sleeperResults, espnResults, type BracketMatch, type EspnResultsData } from './results';
 import { logServerError } from '../logging.server';
@@ -382,6 +383,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     return [...adds, ...drops];
   });
   let results: InsightsSource['results'];
+  let playoffGames: InsightsSource['playoffGames'];
   const resultNotes: string[] = [];
   if (
     season.status === 'complete' ||
@@ -404,6 +406,15 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
               'Some playoff bracket results are unavailable; missing achievements are excluded rather than counted as zero.',
           });
       }
+    playoffGames =
+      brackets[0].status === 'fulfilled' && Array.isArray(brackets[0].value)
+        ? sleeperPlayoffGames(
+            brackets[0].value,
+            playoffSettings?.rules?.roundWeeks ?? [],
+            scores,
+            completedWeek,
+          )
+        : undefined;
     results = sleeperResults(
       teams.map((t) => t.teamId),
       season.settings?.playoff_teams,
@@ -497,6 +508,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
     },
     results,
+    playoffGames,
     playerNames: catalog.names,
     playerPositions: catalog.positions,
     rosterSnapshot,
@@ -955,6 +967,12 @@ async function loadEspn(
       complete: false,
       note: 'Observed provider transactions only; pre-season moves, deleted records and waiver subtype coverage are not guaranteed.',
     },
+    playoffGames: espnPlayoffGames(
+      meta.schedule ?? [],
+      meta.settings?.scheduleSettings?.matchupPeriods,
+      scores,
+      completedWeek,
+    ),
     results: espnResults(
       teams.map((t) => t.teamId),
       meta,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { historicalElo } from '../../../history/competition/elo';
 import { number, type CompetitionProps } from './CompetitionHistory';
-import { DataTable } from '../../DataTable';
+import { CompetitionTable as DataTable } from './CompetitionTable';
 export function EloHistory({ records }: CompetitionProps) {
   const { rankings, movements } = historicalElo(records);
   const [selected, setSelected] = useState('');

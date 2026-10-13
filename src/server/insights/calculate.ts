@@ -159,6 +159,7 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
     regularSeasonSchedule: source.regularSeasonSchedule,
     playoffSettings: source.playoffSettings,
     results: source.results,
+    playoffGames: source.playoffGames,
     playoffProjection: source.playoffProjection,
     tradeComparisons: normalized.trades,
     completedWeek: source.completedWeek,

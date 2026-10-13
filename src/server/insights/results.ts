@@ -1,5 +1,7 @@
 import type { SeasonResult } from '../../insights';
 export interface BracketMatch {
+  m?: number;
+  r?: number;
   p?: number;
   t1?: number | null | object;
   t2?: number | null | object;

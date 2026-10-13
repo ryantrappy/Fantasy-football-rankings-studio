@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { historicalSchedules, alternateSchedule } from '../../../history/competition/schedule';
-import { DataTable } from '../../DataTable';
+import { CompetitionTable as DataTable } from './CompetitionTable';
 import { number, type CompetitionProps } from './CompetitionHistory';
 export function ScheduleHistory({ records }: CompetitionProps) {
   const [year, setYear] = useState(0),

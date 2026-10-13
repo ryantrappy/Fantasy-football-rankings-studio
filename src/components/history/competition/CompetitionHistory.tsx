@@ -1,3 +1,4 @@
+import { PlayoffsHistory } from './PlayoffsHistory';
 import { ErasHistory } from './ErasHistory';
 import { HonorsHistory } from './HonorsHistory';
 import { EloHistory } from './EloHistory';
@@ -5,7 +6,7 @@ import { ScheduleHistory } from './ScheduleHistory';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { competitionGames, pairRecord, rivalryLabels } from '../../../history/competition/games';
-import { DataTable } from '../../DataTable';
+import { CompetitionTable as DataTable } from './CompetitionTable';
 export const number = (n: number | null | undefined) =>
   n == null ? 'Unavailable' : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 export interface CompetitionProps {
@@ -144,6 +145,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       <EloHistory records={records} years={years} />
       <HonorsHistory records={records} years={years} />
       <ErasHistory records={records} years={years} />
+      <PlayoffsHistory records={records} years={years} />
     </section>
   );
 }

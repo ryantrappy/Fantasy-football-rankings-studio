@@ -106,6 +106,7 @@ export interface InsightsSource {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
+  playoffGames?: import('./history/competition/playoff-games').VerifiedPlayoffGame[];
   completedWeek: number;
   teams: { teamId: string; teamName: string; managerName: string; managerKey?: string }[];
   scores: ScoreWeek[];
@@ -157,6 +158,7 @@ export interface SeasonInsights {
   playoffSettings?: import('./playoff-forecast').PlayoffSettings;
   playoffProjection?: PlayoffProjection;
   results?: SeasonResult[];
+  playoffGames?: import('./history/competition/playoff-games').VerifiedPlayoffGame[];
   tradeComparisons: TradeComparison[];
   completedWeek: number;
   generatedAt: string;

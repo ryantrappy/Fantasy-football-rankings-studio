@@ -1,3 +1,4 @@
+import { ProbabilityReplay } from './ProbabilityReplay';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { importArchive, mondayComebacks } from '../../../history/moments/archive';
@@ -93,6 +94,7 @@ export function MomentsHistory({
           ))}
         </ul>
       </details>
+      {data && <ProbabilityReplay data={data} manager={manager} />}
       <details>
         <summary>Import or export an archive</summary>
         <p>

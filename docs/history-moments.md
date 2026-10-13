@@ -11,3 +11,7 @@ Use the Moments archive importer with a JSON array of these records. Archives ar
 ```
 
 Import validates size, bounded counts, finite scores/probabilities, probability range, increasing timestamps, explicit checkpoint and verified completed opponents. Source labels establish provenance, not independent certification. Raw provider transactions are retained with explicit weeks/types/coverage; absence never implies a complete history, and waiver subtype is unsupported.
+
+## TASK-131: Matchup probability replay
+
+The replay plots supplied chronological checkpoint probabilities on a time-proportional axis. The accessible table is authoritative for exact timing, changes and available contributors. A change of at least 20 percentage points is labeled a major swing. Events are supplied by the archive and do not establish independent causality. Lines join known points; nothing fills the unknown intervals. At least two checkpoints are required. Season and manager controls apply to replay archives. Report snapshot validation preserves the archive and strips unknown fields, including credentials.

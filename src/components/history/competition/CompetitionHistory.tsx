@@ -1,3 +1,4 @@
+import { ScheduleHistory } from './ScheduleHistory';
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { competitionGames, pairRecord, rivalryLabels } from '../../../history/competition/games';
@@ -120,6 +121,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
           </tbody>
         </table>
       </div>
+      <ScheduleHistory records={records} years={years} />
     </section>
   );
 }

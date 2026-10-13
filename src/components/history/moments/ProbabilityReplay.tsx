@@ -82,44 +82,48 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
           Last checkpoint
         </text>
       </svg>
-      <table>
-        <caption>Observed probability and scoring events</caption>
-        <thead>
-          <tr>
-            <th>Time (UTC)</th>
-            <th>Win probability</th>
-            <th>Change</th>
-            <th>Supplied contributing events</th>
-          </tr>
-        </thead>
-        <tbody>
-          {archive.snapshots.map((s, i) => {
-            const change = i ? (s.probability - archive.snapshots[i - 1].probability) * 100 : null;
-            return (
-              <tr key={s.capturedAt}>
-                <td>
-                  {s.capturedAt}
-                  {s.capturedAt === archive.preMondayAt ? ' (pre-Monday)' : ''}
-                </td>
-                <td>{(s.probability * 100).toFixed(1)}%</td>
-                <td>
-                  {change === null
-                    ? 'First checkpoint'
-                    : `${change.toFixed(1)} percentage points${Math.abs(change) >= 20 ? ' — major swing' : ''}`}
-                </td>
-                <td>
-                  {s.contributors
-                    .map(
-                      (p) =>
-                        `${data.playerIdentities?.[p.playerId]?.name || p.playerId}: ${p.points} points`,
-                    )
-                    .join('; ') || 'Events unavailable; cause unknown'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+        <table>
+          <caption>Observed probability and scoring events</caption>
+          <thead>
+            <tr>
+              <th>Time (UTC)</th>
+              <th>Win probability</th>
+              <th>Change</th>
+              <th>Supplied contributing events</th>
+            </tr>
+          </thead>
+          <tbody>
+            {archive.snapshots.map((s, i) => {
+              const change = i
+                ? (s.probability - archive.snapshots[i - 1].probability) * 100
+                : null;
+              return (
+                <tr key={s.capturedAt}>
+                  <td>
+                    {s.capturedAt}
+                    {s.capturedAt === archive.preMondayAt ? ' (pre-Monday)' : ''}
+                  </td>
+                  <td>{(s.probability * 100).toFixed(1)}%</td>
+                  <td>
+                    {change === null
+                      ? 'First checkpoint'
+                      : `${change.toFixed(1)} percentage points${Math.abs(change) >= 20 ? ' — major swing' : ''}`}
+                  </td>
+                  <td>
+                    {s.contributors
+                      .map(
+                        (p) =>
+                          `${data.playerIdentities?.[p.playerId]?.name || p.playerId}: ${p.points} points`,
+                      )
+                      .join('; ') || 'Events unavailable; cause unknown'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </details>
   );
 }

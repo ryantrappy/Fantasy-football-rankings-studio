@@ -1,3 +1,4 @@
+import { DroppedBreakouts } from './DroppedBreakouts';
 import { DraftSkill } from './DraftSkill';
 import { ProbabilityReplay } from './ProbabilityReplay';
 import { useState } from 'react';
@@ -95,6 +96,7 @@ export function MomentsHistory({
           ))}
         </ul>
       </details>
+      {data && <DroppedBreakouts data={data} manager={manager} />}
       {record && <DraftSkill record={record} records={records} manager={manager} />}
       {data && <ProbabilityReplay data={data} manager={manager} />}
       <details>

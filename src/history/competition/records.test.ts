@@ -1,6 +1,6 @@
 import { it, expect } from 'vitest';
 import { season } from './fixtures.test-support';
-import { matchupRecords } from './records';
+import { individualScoreRecords, matchupRecords } from './records';
 it('ranks full-population worst beats and tied weekly scores with margins', () => {
   const r = season(2024, [
     [100, 110, 80, 70],
@@ -29,4 +29,19 @@ it('recognizes top-quarter losses and suppresses ranks on incomplete weeks', () 
   expect(matchupRecords([r])[0].worstBeat).toBe(true);
   r.data.scores.pop();
   expect(matchupRecords([r])[0]).toMatchObject({ worstBeat: false, aRank: null });
+});
+
+it('preserves individual weekly scores without opponents and excludes duplicates', () => {
+  const r = season();
+  r.data.scores[0].opponentTeamId = null;
+  r.data.regularSeasonSchedule = {
+    endWeek: 2,
+    fixtures: [{ week: 1, homeTeamId: 'a', awayTeamId: null }],
+  };
+  expect(individualScoreRecords([r]).find((s) => s.name === 'a' && s.week === 1)).toMatchObject({
+    points: 100,
+    opponent: 'Confirmed bye',
+  });
+  r.data.scores.push(r.data.scores[0]);
+  expect(individualScoreRecords([r]).some((s) => s.name === 'a' && s.week === 1)).toBe(false);
 });

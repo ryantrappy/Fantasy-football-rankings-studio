@@ -37,3 +37,11 @@ Must-win is a verified championship-path elimination series; final regular-seaso
 Browse closest games (ties included), blowouts, combined scoring, top individual matchup score and worst beats; every metric supports numeric sorting and names/year/week are searchable. Records show both native point totals, margin, season link where league context exists, and weekly scoring ranks. Competition ranks share ties. Full unique roster score coverage is required for ranks and worst beats. A worst beat is a top-quarter scoring loss (ceil(team count/4)); this definition is visible. Scores are not normalized across scoring-system eras. Unpaired scores cannot establish game records.
 
 Verified playoff series also feed all-time head-to-head and Elo, once per series at its last scoring week. Their weekly score rows are suppressed to avoid duplicate game results. Record-book entries label multiweek aggregate series explicitly and withhold weekly scoring ranks for those totals.
+
+## Weekly Pain Index
+
+A playful descriptive score ranks verified single-week losses, excluding ties/byes and multiweek aggregate playoff series. Closeness (30%) is 1−min(1,margin/max(1,abs(opponent score))); own scoring percentile (30%) and opponent percentile (20%) require full unique finite roster scoring; documented pre-Monday win expectation (20%) is available only from an explicit matching source archive. The forecast expectation that ended in a loss is labeled, never called an observed live swing. Final box scores cannot reconstruct one.
+
+Missing components are excluded and available weights renormalized. Separate selectable coverage cohorts prevent sorting scores with different component sets together. Every loss lists raw scores/margin, ranks and population, normalized component values/weights, and archive source/timestamp if present. This is league context, not emotional certainty or prediction.
+
+Individual weekly scoring records independently include every unique finite completed team/week score, including confirmed byes and scores with unknown opponents. They never use multiweek series aggregates. Season links follow shared/private report context; snapshot consumers may omit leagueId to keep evidence local.

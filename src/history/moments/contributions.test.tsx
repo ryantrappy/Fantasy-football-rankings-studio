@@ -23,7 +23,20 @@ const base = calculateInsights({
   notes: [],
   draftPickTrades: 0,
 });
-const data = { ...base, playoffGames: [{ homeTeamId: 'b', awayTeamId: 'a', weeks: [4, 5] }] };
+const data = {
+  ...base,
+  playoffGames: [
+    {
+      id: 'final',
+      homeTeamId: 'b',
+      awayTeamId: 'a',
+      weeks: [4, 5],
+      homePoints: 20,
+      awayPoints: 10,
+      elimination: true,
+    },
+  ],
+};
 it('separates observed points, actual starts and explicitly documented playoff contribution', () => {
   expect(tradeContributions(data)[0]).toMatchObject({
     weeks: [3, 4, 5],
@@ -43,7 +56,7 @@ it('excludes trade/next-movement weeks and unknown lineups; missing playoff evid
     scores: base.scores.map((s) => ({ ...s, lineupAvailable: false })),
   })[0];
   expect(row).toMatchObject({
-    starts: 0,
+    starts: null,
     startingPoints: null,
     playoffStarts: null,
     playoffPoints: null,
@@ -53,10 +66,61 @@ it('excludes trade/next-movement weeks and unknown lineups; missing playoff evid
 });
 it('renders window, championship evidence, coverage and unranked context', () => {
   render(<TradeContributions data={data} manager="b" />);
-  expect(screen.getByText('Documented champion roster')).toBeInTheDocument();
+  expect(
+    screen.getByText('Recipient later champion; asset championship role unverified'),
+  ).toBeInTheDocument();
   expect(screen.getAllByText('2 / 20.0')).toHaveLength(2);
   expect(screen.getByText(/3\/3 observed player weeks/)).toHaveTextContent(
     'Unranked: context-dependent',
   );
   expect(screen.getByText(/Weeks 3–5/)).toHaveTextContent('before next observed trade, week 6');
+});
+
+it('never attributes championship membership to a player dropped before postseason', () => {
+  const dropped = {
+    ...data,
+    moves: [
+      base.moves![0],
+      {
+        id: 'drop',
+        type: 'drop' as const,
+        week: 4,
+        timestamp: 1500,
+        playerId: 'p',
+        from: 'b',
+        to: null,
+      },
+    ],
+  };
+  const row = tradeContributions(dropped)[0];
+  expect(row).toMatchObject({ weeks: [3], playoffPoints: 0, playoffStarts: 0, champion: true });
+  render(<TradeContributions data={dropped} manager="b" />);
+  expect(screen.getByRole('columnheader', { name: 'Recipient season result' })).toBeInTheDocument();
+  expect(
+    screen.getByText('Recipient later champion; asset championship role unverified'),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('Documented champion roster')).not.toBeInTheDocument();
+});
+it('excludes ambiguous duplicate weeks, invalid totals and nonfinite player evidence instead of zero', () => {
+  for (const scores of [
+    [],
+    [...base.scores, ...base.scores],
+    base.scores.map((s) => ({ ...s, actual: NaN })),
+    base.scores.map((s) => ({
+      ...s,
+      players: [{ playerId: 'p', points: Infinity }],
+      starters: [{ playerId: 'p', points: Infinity }],
+    })),
+  ]) {
+    const row = tradeContributions({ ...data, scores })[0];
+    expect(row).toMatchObject({
+      observedPoints: null,
+      startingPoints: null,
+      starts: null,
+      playoffPoints: null,
+      playoffStarts: null,
+      observedWeeks: 0,
+      lineupWeeks: 0,
+    });
+  }
 });

@@ -22,22 +22,35 @@ export function tradeContributions(data: SeasonInsights) {
         { length: Math.max(0, end - move.week) },
         (_, i) => move.week + i + 1,
       );
-      const rows = weeks.map((week) =>
-        data.scores.find((s) => s.teamId === move.to && s.week === week),
-      );
+      const rows = weeks.map((week) => {
+        const matches = data.scores.filter((s) => s.teamId === move.to && s.week === week);
+        return matches.length === 1 && Number.isFinite(matches[0].actual) ? matches[0] : undefined;
+      });
       const observations = rows.flatMap((row) => {
         if (!row) return [];
-        const player =
-          (row.players || []).find((p) => p.playerId === move.playerId) ||
-          row.starters.find((p) => p.playerId === move.playerId);
-        return player ? [{ week: row.week, points: player.points }] : [];
+        const roster = (row.players || []).filter((p) => p.playerId === move.playerId);
+        const starters = row.starters.filter((p) => p.playerId === move.playerId);
+        const observed = [...roster, ...starters];
+        if (
+          roster.length > 1 ||
+          starters.length > 1 ||
+          !observed.length ||
+          observed.some((p) => !Number.isFinite(p.points) || p.points !== observed[0].points)
+        )
+          return [];
+        return [{ week: row.week, points: observed[0].points }];
       });
-      const starts = rows.flatMap((row) =>
-        row?.lineupAvailable === true
-          ? row.starters
-              .filter((p) => p.playerId === move.playerId)
-              .map((p) => ({ week: row.week, points: p.points }))
-          : [],
+      const completeLineups = rows.filter(
+        (row) =>
+          row?.lineupAvailable === true &&
+          row.starters.every((p) => Number.isFinite(p.points)) &&
+          new Set(row.starters.map((p) => p.playerId)).size === row.starters.length &&
+          observations.some((o) => o.week === row.week),
+      );
+      const starts = completeLineups.flatMap((row) =>
+        row!.starters
+          .filter((p) => p.playerId === move.playerId)
+          .map((p) => ({ week: row!.week, points: p.points })),
       );
       const playoffWeeks = new Set(
         (playoffs || [])
@@ -50,17 +63,28 @@ export function tradeContributions(data: SeasonInsights) {
         move,
         weeks,
         observedWeeks: observations.length,
-        lineupWeeks: rows.filter((r) => r?.lineupAvailable === true).length,
+        lineupWeeks: completeLineups.length,
         observedPoints: observations.length ? total(observations) : null,
-        starts: starts.length,
+        starts:
+          starts.length || (weeks.length > 0 && completeLineups.length === weeks.length)
+            ? starts.length
+            : null,
         startingPoints: starts.length
           ? total(starts)
-          : rows.some((r) => r?.lineupAvailable === true)
+          : weeks.length > 0 && completeLineups.length === weeks.length
             ? 0
             : null,
         playoffKnown: playoffs !== undefined,
-        playoffStarts: playoffs === undefined ? null : playoffStarts.length,
-        playoffPoints: playoffs === undefined ? null : total(playoffStarts),
+        playoffStarts:
+          playoffs === undefined ||
+          (playoffStarts.length === 0 && (!weeks.length || completeLineups.length !== weeks.length))
+            ? null
+            : playoffStarts.length,
+        playoffPoints:
+          playoffs === undefined ||
+          (playoffStarts.length === 0 && (!weeks.length || completeLineups.length !== weeks.length))
+            ? null
+            : total(playoffStarts),
         champion: data.results?.find((r) => r.teamId === move.to)?.champion ?? null,
         cutoff: next
           ? `before next observed ${next.type}, week ${next.week}`

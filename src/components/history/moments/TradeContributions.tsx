@@ -9,9 +9,9 @@ export function TradeContributions({ data, manager }: { data: SeasonInsights; ma
         Observed league-scored roster points and actual starting points are separate. Evaluation
         starts after the trade week and ends before the next observed asset movement or at the
         completed cutoff. Verified postseason matchup weeks establish playoff contribution.
-        Championship roster status comes only from documented season results; points never imply a
-        title was caused by the trade. No winner is forced: context, picks, future seasons and
-        unobserved ownership remain unvalued.
+        Recipient season results do not establish whether this asset remained on the championship
+        roster; points never imply a title was caused by the trade. No winner is forced: context,
+        picks, future seasons and unobserved ownership remain unvalued.
       </p>
       <p>
         {data.moveCoverage?.note || 'Transaction coverage unavailable.'} Missing transactions may
@@ -27,7 +27,7 @@ export function TradeContributions({ data, manager }: { data: SeasonInsights; ma
               <th>Observed roster points</th>
               <th>Actual starts / points</th>
               <th>Verified playoff starts / points</th>
-              <th>Championship roster</th>
+              <th>Recipient season result</th>
               <th>Coverage / verdict</th>
             </tr>
           </thead>
@@ -47,18 +47,18 @@ export function TradeContributions({ data, manager }: { data: SeasonInsights; ma
                 </td>
                 <td>{r.observedPoints?.toFixed(1) ?? 'Unavailable'}</td>
                 <td>
-                  {r.starts} / {r.startingPoints?.toFixed(1) ?? 'Unavailable'}
+                  {r.starts ?? 'Unavailable'} / {r.startingPoints?.toFixed(1) ?? 'Unavailable'}
                 </td>
                 <td>
                   {r.playoffKnown
-                    ? `${r.playoffStarts} / ${r.playoffPoints?.toFixed(1)}`
+                    ? `${r.playoffStarts ?? 'Unavailable'} / ${r.playoffPoints?.toFixed(1) ?? 'Unavailable'}`
                     : 'Unavailable: verified playoff games missing'}
                 </td>
                 <td>
                   {r.champion === true
-                    ? 'Documented champion roster'
+                    ? 'Recipient later champion; asset championship role unverified'
                     : r.champion === false
-                      ? 'Documented non-champion'
+                      ? 'Recipient documented non-champion'
                       : 'Unknown'}
                 </td>
                 <td>

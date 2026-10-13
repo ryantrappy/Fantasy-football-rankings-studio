@@ -77,3 +77,32 @@ it('renders exact legal decision, coverage and outcome consequence', () => {
   expect(screen.getByText('Start Bench runner; sit a-s')).toBeInTheDocument();
   expect(screen.getByText(/Coverage: 1\/1/)).toHaveTextContent('0–1–0');
 });
+
+it('missing or nonfinite opponent scores cannot produce ties; duplicate team weeks stay unknown', () => {
+  for (const scores of [
+    [data.scores[0]],
+    data.scores.map((s) => ({ ...s, actual: NaN })),
+    [...data.scores, data.scores[1]],
+    [...data.scores, data.scores[0]],
+  ]) {
+    const rows = lineupRegrets({ ...data, scores }).rows;
+    expect(rows[0]).toMatchObject({
+      actual: null,
+      optimal: null,
+      unilateral: null,
+      bothOptimal: null,
+    });
+  }
+});
+it('nonfinite roster scores and optimal values remain unsupported', () => {
+  for (const patch of [
+    { players: [{ playerId: 'a-b', points: NaN }] },
+    { starters: [{ playerId: 'a-s', points: Infinity }] },
+    { bestLineup: { ...data.scores[0].bestLineup!, points: Infinity } },
+  ]) {
+    expect(
+      lineupRegrets({ ...data, scores: [{ ...data.scores[0], ...patch }, data.scores[1]] }).rows[0]
+        .optimal,
+    ).toBeNull();
+  }
+});

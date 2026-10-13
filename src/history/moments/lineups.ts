@@ -1,7 +1,12 @@
 import type { ScoreWeek, SeasonInsights } from '../../insights';
-const outcome = (a: number, b: number) => (a > b ? 'W' : a < b ? 'L' : 'T');
+const outcome = (a: number, b: number) =>
+  !Number.isFinite(a) || !Number.isFinite(b) ? null : a > b ? 'W' : a < b ? 'L' : 'T';
 export function lineupRegrets(data: SeasonInsights) {
   const supported = (s: ScoreWeek) =>
+    Number.isFinite(s.actual) &&
+    s.starters.every((p) => Number.isFinite(p.points)) &&
+    (s.players || []).every((p) => Number.isFinite(p.points)) &&
+    Number.isFinite(s.bestLineup?.points) &&
     s.rosterComplete === true &&
     s.lineupAvailable !== false &&
     !!s.bestLineup?.playerIds &&
@@ -11,12 +16,17 @@ export function lineupRegrets(data: SeasonInsights) {
   const rows = data.scores
     .filter((s) => s.week <= data.completedWeek && s.opponentTeamId)
     .map((score) => {
-      const opponent = data.scores.find(
-        (s) =>
-          s.week === score.week &&
-          s.teamId === score.opponentTeamId &&
-          s.opponentTeamId === score.teamId,
+      const ownRows = data.scores.filter((s) => s.teamId === score.teamId && s.week === score.week);
+      const opponents = data.scores.filter(
+        (s) => s.week === score.week && s.teamId === score.opponentTeamId,
       );
+      const opponent =
+        ownRows.length === 1 &&
+        opponents.length === 1 &&
+        opponents[0].opponentTeamId === score.teamId &&
+        Number.isFinite(opponents[0].actual)
+          ? opponents[0]
+          : undefined;
       const complete = !!opponent && supported(score);
       const optimal = complete ? score.bestLineup!.points : null;
       const opponentOptimal = opponent && supported(opponent) ? opponent.bestLineup!.points : null;

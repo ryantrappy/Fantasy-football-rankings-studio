@@ -7,7 +7,23 @@ Threshold defaults to 10% and is adjustable. Only a completed, reciprocal matchu
 Use the Moments archive importer with a JSON array of these records. Archives are user-supplied evidence: the author must verify the checkpoint occurred before the relevant Monday kickoff. UTC date strings alone cannot establish an NFL kickoff schedule. No score/projection interpolation or implied full coverage occurs. Imports are temporary in the current view; use Export archive to retain them, then import again later. The optional SeasonInsights.matchupArchive field also roundtrips through saved report snapshots for applications supplying it before snapshot creation. Credentials and extra fields are stripped; exports include public player/team identifiers only.
 
 ```json
-[{"week":1,"teamId":"1","opponentTeamId":"2","source":"Service export, captured live","preMondayAt":"2025-09-08T23:00:00.000Z","snapshots":[{"capturedAt":"2025-09-08T23:00:00.000Z","probability":0.05,"contributors":[]},{"capturedAt":"2025-09-09T03:00:00.000Z","probability":1,"contributors":[{"playerId":"123","points":27}]}]}]
+[
+  {
+    "week": 1,
+    "teamId": "1",
+    "opponentTeamId": "2",
+    "source": "Service export, captured live",
+    "preMondayAt": "2025-09-08T23:00:00.000Z",
+    "snapshots": [
+      { "capturedAt": "2025-09-08T23:00:00.000Z", "probability": 0.05, "contributors": [] },
+      {
+        "capturedAt": "2025-09-09T03:00:00.000Z",
+        "probability": 1,
+        "contributors": [{ "playerId": "123", "points": 27 }]
+      }
+    ]
+  }
+]
 ```
 
 Import validates size, bounded counts, finite scores/probabilities, probability range, increasing timestamps, explicit checkpoint and verified completed opponents. Source labels establish provenance, not independent certification. Raw provider transactions are retained with explicit weeks/types/coverage; absence never implies a complete history, and waiver subtype is unsupported.
@@ -44,6 +60,6 @@ Asset trails follow same-season player IDs through their next observed ownership
 
 Each acquired player has an explicit conservative window: next week after the trade through the completed cutoff, stopping before the next recorded ownership movement. Actual team roster observations produce observed league-scored points; actual starters from complete lineup records separately produce starting points/counts. Missing roster or lineup weeks remain visible in coverage. The trade week and subsequent movement week are excluded because lineup lock timing is unavailable. No assumption of uninterrupted ownership fills missing transaction records.
 
-Optional verified playoff game metadata (TASK-127 provider normalization) establishes playoff weeks, including all weeks of a multiweek round. Only actual starts in those documented games receive playoff credit. Missing metadata remains unavailable; a known empty postseason list has zero observed contribution. Season champion results label a documented championship roster, not a causal title attribution or an inferred championship-game performance. Cross-season output, draft picks and future dynasty value remain unvalued. All outcomes can remain unranked and context-dependent rather than assigning a simplistic winner.
+Optional verified playoff game metadata (TASK-127 provider normalization) establishes playoff weeks, including all weeks of a multiweek round. Only actual starts in those documented games receive playoff credit. Missing metadata remains unavailable; a known empty postseason list has zero observed contribution. Season champion results identify the recipient’s later season result only. They do not prove that the acquired asset remained on a championship roster or contributed to the title. Missing/duplicate weekly records and nonfinite scores remain unavailable, never zero or ties. Cross-season output, draft picks and future dynasty value remain unvalued. All outcomes can remain unranked and context-dependent rather than assigning a simplistic winner.
 
 Transaction coverage scope: successful Sleeper weekly transaction reads mark generic trade/pickup/drop coverage complete only for the enumerated requested weeks, matching the provider's all-transactions-per-week contract. This excludes pre-season, provider-deleted records and waiver/free-agent subtype attribution. ESPN remains incomplete because this loader cannot guarantee pagination completeness. Historical trade networks/trees exclude movements after the completed cutoff and invalid timestamps.

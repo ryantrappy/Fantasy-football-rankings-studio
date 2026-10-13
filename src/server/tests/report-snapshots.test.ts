@@ -306,3 +306,65 @@ it('removes a snapshot written after its workspace was deleted', async () => {
   await expect(reportSnapshots.create('owner', input())).rejects.toMatchObject({ status: 404 });
   expect(cleanup).toHaveBeenCalledWith({ publicId: expect.any(String), ownerSubject: 'owner' });
 });
+
+it('roundtrips card-only Sleeper Wrapped snapshots and revokes against original owner', async () => {
+  const owned = vi
+    .spyOn(LeaguesService.prototype, 'getLeagueById')
+    .mockResolvedValue({ ...league, leagueType: 0, leagueName: 'Sleeper' });
+  let stored: unknown;
+  vi.spyOn(reportSnapshotModel, 'create').mockImplementation((doc) => {
+    stored = new reportSnapshotModel(doc).toObject();
+    return Promise.resolve(stored) as never;
+  });
+  vi.spyOn(reportSnapshotModel, 'findOne').mockImplementation(
+    () => Promise.resolve(stored) as never,
+  );
+  const wrapped = {
+    leagueId: '123',
+    view: 'wrapped',
+    activeSeason: 2025,
+    activeManagerKeys: [],
+    records: [],
+    wrapped: {
+      year: 2025,
+      title: "Alex's Fantasy Wrapped",
+      scope: 'personal',
+      highlights: ['Record: 1–0'],
+      coverage: ['One observed week'],
+    },
+  };
+  const saved = await reportSnapshots.create('owner', wrapped);
+  const result = await reportSnapshots.read({ publicId: saved.publicId });
+  expect(result.records).toEqual([]);
+  expect(result.wrapped).toEqual(wrapped.wrapped);
+  expect(JSON.stringify(result)).not.toMatch(/espn-owner|secret|ownerSubject/);
+  expect(owned).toHaveBeenLastCalledWith('123', 'owner');
+  owned.mockResolvedValue({ ...league, leagueType: 0, publicReports: false });
+  await expect(reportSnapshots.read({ publicId: saved.publicId })).rejects.toMatchObject({
+    status: 404,
+  });
+  await expect(reportSnapshots.create('owner', wrapped)).rejects.toMatchObject({ status: 409 });
+  owned.mockRejectedValue(new HttpException(404, 'Not found'));
+  await expect(reportSnapshots.create('other', wrapped)).rejects.toMatchObject({ status: 404 });
+});
+it('rejects Wrapped payloads with raw records, account keys or mismatched season/view', async () => {
+  vi.spyOn(LeaguesService.prototype, 'getLeagueById').mockResolvedValue(league);
+  const write = vi.spyOn(reportSnapshotModel, 'create');
+  const wrapped = {
+    ...input(),
+    view: 'wrapped',
+    records: [],
+    activeManagerKeys: [],
+    activeSeason: 2025,
+    wrapped: { year: 2025, title: 'Recap', scope: 'league', highlights: [], coverage: [] },
+  };
+  for (const invalid of [
+    { ...wrapped, records: input().records },
+    { ...wrapped, activeManagerKeys: ['private-id'] },
+    { ...wrapped, activeSeason: 2024 },
+    { ...wrapped, view: 'history' },
+    { ...wrapped, wrapped: undefined },
+  ])
+    await expect(reportSnapshots.create('owner', invalid)).rejects.toThrow();
+  expect(write).not.toHaveBeenCalled();
+});

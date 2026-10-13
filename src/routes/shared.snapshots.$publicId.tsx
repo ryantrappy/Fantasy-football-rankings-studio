@@ -1,14 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Box, Heading, Text } from '@chakra-ui/react';
 import { readReportSnapshot } from '../functions/report-snapshots.functions';
+import { snapshotReportMeta } from '../shared-report-meta';
 import { SnapshotReport } from '../components/SnapshotReport';
 
 export const Route = createFileRoute('/shared/snapshots/$publicId')({
   loader: ({ params }) => readReportSnapshot({ data: { publicId: params.publicId } }),
   staleTime: 0,
-  head: () => ({
-    meta: [{ title: 'Saved league report' }, { name: 'robots', content: 'noindex' }],
-  }),
+  head: ({ loaderData }) => ({ meta: snapshotReportMeta(loaderData) }),
   component: SavedReport,
 });
 function SavedReport() {

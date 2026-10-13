@@ -1,3 +1,4 @@
+import { Wrapped } from './Wrapped';
 import { Archetypes } from './Archetypes';
 import { DraftOverlap } from './DraftOverlap';
 import { PlayerLoyalty } from './PlayerLoyalty';
@@ -8,6 +9,8 @@ import { transactionActivity } from '../../../history/personalities/activity';
 export function PersonalitiesHistory({
   records,
   years,
+  leagueId,
+  shared,
 }: {
   records: SeasonRecord[];
   years: number[];
@@ -68,6 +71,7 @@ export function PersonalitiesHistory({
       <PlayerLoyalty records={records} />
       <DraftOverlap records={records} />
       <Archetypes records={records} />
+      <Wrapped records={records} leagueId={leagueId} shared={shared} />
     </section>
   );
 }

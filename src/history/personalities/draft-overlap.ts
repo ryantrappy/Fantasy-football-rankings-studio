@@ -36,15 +36,15 @@ export function draftOverlap(records: SeasonRecord[]) {
     union: number;
   }[] = [];
   const entries = [...managers.entries()];
-  entries.forEach(([key, a], index) => {
-    for (const [otherKey, b] of entries.slice(index + 1)) {
+  entries.forEach(([, a], index) => {
+    for (const [, b] of entries.slice(index + 1)) {
       for (const [format, aPlayers] of a.formats) {
         const bPlayers = b.formats.get(format);
         if (!bPlayers || !aPlayers.size || !bPlayers.size) continue;
         const shared = [...aPlayers.keys()].filter((id) => bPlayers.has(id));
         rows.push({
-          a: `${a.name} (${key})`,
-          b: `${b.name} (${otherKey})`,
+          a: a.name,
+          b: b.name,
           format,
           players: shared.map((id) => ({
             id,

@@ -237,16 +237,41 @@ const season: z.ZodType<SeasonInsights> = z.object({
 });
 
 // Zod objects strip unknown fields at every level before anything is persisted or returned.
-export const snapshotInputSchema = leagueIdSchema.extend({
-  view: z.enum(['insights', 'history', 'playoffs']),
-  activeSeason: year,
-  activeManagerKeys: strings,
-  records: z
-    .array(z.object({ year, data: season }))
-    .min(1)
-    .max(101)
-    .refine(
-      (records) => new Set(records.map((r) => r.year)).size === records.length,
-      'Each season may appear only once.',
-    ),
-});
+export const snapshotInputSchema = leagueIdSchema
+  .extend({
+    view: z.enum(['insights', 'history', 'playoffs', 'wrapped']),
+    wrapped: z
+      .object({
+        year,
+        title: z.string().max(300),
+        scope: z.enum(['personal', 'league']),
+        highlights: z.array(z.string().max(2000)).max(30),
+        coverage: z.array(z.string().max(2000)).max(100),
+      })
+      .optional(),
+    activeSeason: year,
+    activeManagerKeys: strings,
+    records: z
+      .array(z.object({ year, data: season }))
+      .min(0)
+      .max(101)
+      .refine(
+        (records) => new Set(records.map((r) => r.year)).size === records.length,
+        'Each season may appear only once.',
+      ),
+  })
+  .superRefine((input, ctx) => {
+    const valid =
+      input.view === 'wrapped'
+        ? !!input.wrapped &&
+          input.records.length === 0 &&
+          input.activeManagerKeys.length === 0 &&
+          input.activeSeason === input.wrapped.year
+        : !input.wrapped && input.records.length > 0;
+    if (!valid)
+      ctx.addIssue({
+        code: 'custom',
+        message:
+          'Wrapped snapshots require only a matching recap payload; other reports require season records.',
+      });
+  });

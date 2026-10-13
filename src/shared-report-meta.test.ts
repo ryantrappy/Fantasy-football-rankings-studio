@@ -41,3 +41,19 @@ describe('shared report metadata', () => {
     expect(meta).not.toContain('Unpublished secret draft title');
   });
 });
+
+import { snapshotReportMeta } from './shared-report-meta';
+it('builds safe Wrapped share previews only from saved recap and hides unavailable titles', () => {
+  const meta = snapshotReportMeta({
+    ok: true,
+    data: { view: 'wrapped', wrapped: { title: "Alex's Fantasy Wrapped", year: 2025 } },
+  });
+  expect(meta).toContainEqual({
+    property: 'og:title',
+    content: "Alex's Fantasy Wrapped 2025 saved recap | Trapp Fantasy Studio",
+  });
+  expect(meta).toContainEqual({ name: 'robots', content: 'noindex, nofollow' });
+  expect(JSON.stringify(snapshotReportMeta({ ok: false, error: 'private' }))).not.toContain(
+    'private',
+  );
+});

@@ -1,3 +1,4 @@
+import { HonorsHistory } from './HonorsHistory';
 import { EloHistory } from './EloHistory';
 import { ScheduleHistory } from './ScheduleHistory';
 import { useState } from 'react';
@@ -140,6 +141,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       </div>
       <ScheduleHistory records={records} years={years} />
       <EloHistory records={records} years={years} />
+      <HonorsHistory records={records} years={years} />
     </section>
   );
 }

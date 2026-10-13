@@ -15,3 +15,9 @@ Expected wins sum (teams outscored + half tied) / other finite team scores each 
 Ratings start at 1500 and use K=32 with expected win probability 1/(1+10^((opponent−own)/400)). Results are 1/0.5/0 for wins/ties/losses. Scores do not affect movement beyond the result. Reciprocal completed games are replayed chronologically; games in the same week use stable matchup-ID order. Ratings carry across seasons. The UI exposes every game, prior/post rating, expectation and delta. Missing history is never synthesized. New identities start at 1500, renamed identities retain ratings, and a manager with no eligible games retains an explicitly labeled prior.
 
 Expected-vs-actual comparisons require one finite score for every rostered team in the week; both totals use precisely that usable sample. Difficulty still uses all verified regular games and reports its own game count. Only an explicit schedule bye fixture is counted as a bye; absent opponent metadata alone remains unavailable.
+
+## Hall of Fame / Shame
+
+Fame uses a weighted mean over available metrics: championship rate 40, playoff reciprocal final finish (confirmed appearances only) 20, regular-season win rate 20, expected scoring percentile 15, and longevity (seasons/5 capped at1) 5. Unknown outcomes are omitted from denominators; coverage therefore matters more than small rank differences. Components and each sample are visible. This is a configurable-source descriptive honor, not an objective measure of talent.
+
+Shame records show season and game evidence: worst regular win rate requires every configured game; longest regular losing streak resets at missing weeks and year boundaries; lowest finite completed score includes its week; collapse requires complete regular history and at least two games in each half, measured by first-half minus second-half win rate. Byes preclude the complete-game records rather than being counted as losses. Unsupported results remain unknown.

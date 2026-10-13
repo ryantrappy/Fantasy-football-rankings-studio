@@ -1,3 +1,4 @@
+import { ErasHistory } from './ErasHistory';
 import { HonorsHistory } from './HonorsHistory';
 import { EloHistory } from './EloHistory';
 import { ScheduleHistory } from './ScheduleHistory';
@@ -142,6 +143,7 @@ export function CompetitionHistory({ records, years }: CompetitionProps) {
       <ScheduleHistory records={records} years={years} />
       <EloHistory records={records} years={years} />
       <HonorsHistory records={records} years={years} />
+      <ErasHistory records={records} years={years} />
     </section>
   );
 }

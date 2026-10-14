@@ -1,3 +1,9 @@
+## Feature preservation (mandatory)
+
+- Before planning changes, read the small [feature index](docs/feature-preservation.md), then only the relevant area contracts/sections and shared dependencies. Do not load the full catalogue archive or all contracts by default.
+- Preserve existing features and important details, including reachable workflows, exports, saved content, calculations, provider support, privacy, accessibility and state. Unlisted behavior is protected too; refactor/redesign requests do not authorize reductions.
+- Before removing, disabling, narrowing, hiding or changing the meaning of a feature, explain its impact, ask the user and receive explicit approval. Record the approval wording/reference, date, affected IDs and exact scope in the [approval log](docs/features/approved-changes.md) BEFORE implementing the reduction. Silence, agent proposals, Done status and passing tests are not approval; never manufacture or expand it.
+- Validate affected feature IDs, retain meaningful tests, and update only affected contracts when features are completed/changed. Keep source links, user constraints and approval history. Behavior-preserving changes need no extra approval.
 
 <!-- BACKLOG.MD MCP GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.51.0 -->

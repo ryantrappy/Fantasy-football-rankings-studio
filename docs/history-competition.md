@@ -1,5 +1,15 @@
 # Historical competition
 
+## Manager Explorer navigation
+
+League history uses one manager context across Competition, Season history, Matchup stories, and Manager profiles. The manager header shows verified matchup W-L-T, tie-adjusted win rate, and the contributing game count. This includes verified playoff series once per series; unavailable games never become losses. The manager picker preserves provider identity across team renames and switches to a compact selector on phones or for larger manager lists. Former managers remain reachable through the membership toggle and league rivalry matrix.
+
+Each group shows one category at a time. Visited categories retain their controls while hidden, and unused analytics mount only when first opened. Rivalries provide compact opponent records and a separate league matrix; selecting either an opponent or a matrix cell opens its actual game evidence. The inspector sits beside the table on desktop and follows it on smaller screens. Definitions, source coverage, full game logs, and detailed season metrics use expandable disclosures.
+
+Season selection, loading progress, refresh failures, and previously loaded reports keep their existing behavior. Changing selected years retains manager context where possible. Story and recap season pickers fall back to an available selection when a year is removed; a requested season with unavailable data remains explicitly unavailable. Team IDs are resolved independently for each season. Calculations retain the full roster and league scoring inputs before filtering display rows. League-wide draft overlap and trade-network evidence are labeled as such.
+
+The archive library contains the long-term league overview, paired manager comparison, honors, competitive eras, matchup records, and Pain Index. Only the chosen library view is shown. Public season links use the shared route; saved snapshots keep their evidence local and do not expose live season links or Wrapped sharing controls. Existing table CSV exports remain available in the report context.
+
 The competition panel uses loaded SeasonRecord snapshots only. Every game requires exactly one finite completed-week score per team and reciprocal opponent IDs. Byes, future scores, ambiguous duplicate rows and unmatched opponents never become wins or losses. Selected seasons missing from the snapshots are explicitly reported. Account manager keys survive renames; unknown identities are scoped to season and team.
 
 ## Rivalries

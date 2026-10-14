@@ -25,14 +25,19 @@ export function MomentsHistory({
   years,
   leagueId,
   managerKey,
+  seasonYear,
+  onSeasonChange,
 }: {
   records: SeasonRecord[];
   years: number[];
   leagueId?: string;
   managerKey?: string;
+  seasonYear?: number;
+  onSeasonChange?: (year: number) => void;
 }) {
   const [selectedSeason, setSeason] = useState<number>(records[0]?.year || years[0]);
-  const season = years.includes(selectedSeason) ? selectedSeason : years[0];
+  const requestedSeason = seasonYear ?? selectedSeason;
+  const season = years.includes(requestedSeason) ? requestedSeason : years[0];
   const [localManager, setManager] = useState('');
   const [view, setView] = useState<(typeof views)[number][0]>('miracles');
   const [visited, setVisited] = useState(() => new Set<string>(['miracles']));
@@ -48,7 +53,7 @@ export function MomentsHistory({
   };
   const selectedTeam = data?.teams.find((team) => identityKey(team, season) === managerKey);
   const manager = managerKey === undefined ? localManager : selectedTeam?.teamId || '';
-  const missingManager = !!managerKey && !selectedTeam;
+  const missingManager = !!data && !!managerKey && !selectedTeam;
   const rows = data
     ? mondayComebacks(data, threshold).filter((r) => !manager || r.teamId === manager)
     : [];
@@ -63,6 +68,7 @@ export function MomentsHistory({
             value={season}
             onChange={(e) => {
               setSeason(Number(e.target.value));
+              onSeasonChange?.(Number(e.target.value));
               setManager('');
             }}
           >

@@ -1,0 +1,469 @@
+/* Decision workspaces share the Manager Explorer's quiet surfaces and evidence hierarchy. */
+.decision-explorer {
+  min-width: 0;
+  color: #17223b;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --decision-explorer-line: #dce2ee;
+}
+.decision-explorer :where(h1, h2, h3, h4, p) {
+  overflow-wrap: anywhere;
+}
+.decision-explorer :where(button, input, select, summary, a):focus-visible {
+  outline: 2px solid #3949ab;
+  outline-offset: 3px;
+}
+.decision-explorer :where(a) {
+  color: #3949ab;
+}
+.decision-explorer :where(input, select) {
+  max-width: 100%;
+}
+.decision-explorer .decision-explorer-context {
+  background: white;
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+}
+.decision-explorer-workspace {
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  background: white;
+  overflow: hidden;
+}
+.decision-explorer-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  border-bottom: 1px solid #dce2ee;
+  padding: 0 20px;
+}
+.decision-explorer-tabs button {
+  background: transparent;
+  color: #526078;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.decision-explorer-tabs button[aria-pressed='true'] {
+  color: #3949ab;
+  border-bottom-color: #3949ab;
+}
+.decision-explorer [hidden] {
+  display: none !important;
+}
+.decision-explorer-scenario {
+  padding: 20px;
+}
+.decision-explorer-ideas {
+  border: 0;
+  margin: 0;
+  border-radius: 0;
+}
+.decision-explorer-ideas article {
+  background: white;
+}
+.decision-explorer-ideas article h3 {
+  font-size: 16px;
+}
+.decision-explorer-overview .overview-card {
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  background: white;
+  box-shadow: none;
+  padding: 22px;
+}
+.decision-explorer-overview .overview-card > h2 {
+  font-size: 20px;
+}
+.decision-explorer-matchup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 20px 0;
+  border-bottom: 1px solid #dce2ee;
+}
+.decision-explorer-matchup > div:last-child {
+  text-align: right;
+}
+.decision-explorer-matchup h3 {
+  font-size: 16px;
+}
+.decision-explorer-matchup strong {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+}
+.decision-explorer-overview .overview-stats {
+  background: #f3f5fb;
+  border: 1px solid #dce2ee;
+  border-radius: 7px;
+}
+.decision-explorer-overview .overview-links {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.decision-explorer-overview .overview-links a {
+  border: 1px solid #dce2ee;
+  border-radius: 5px;
+  padding: 7px 10px;
+}
+.decision-explorer-overview .overview-card > details {
+  margin: 14px 0;
+}
+.decision-explorer-overview .overview-card > details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 9px 12px;
+  border: 1px solid #dce2ee;
+  border-radius: 5px;
+}
+.decision-explorer-advisor {
+  padding: 12px;
+  background: #f3f5fb;
+  border-radius: 7px;
+}
+.decision-explorer-advisor p {
+  margin: 8px 0;
+}
+.decision-explorer-advisor label {
+  display: block;
+  padding: 7px 0;
+}
+.decision-explorer-advisor :where(select) {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  border: 1px solid #b8c4dd;
+  border-radius: 5px;
+  background: white;
+}
+.decision-explorer-advisor summary,
+.decision-explorer-lineup-evidence summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.decision-explorer-table-wrap {
+  max-width: 100%;
+  overflow: auto;
+  margin: 12px 0;
+}
+.decision-explorer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.decision-explorer-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding: 8px 0;
+}
+.decision-explorer-table th,
+.decision-explorer-table td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #dce2ee;
+}
+.decision-explorer-table th {
+  background: #eef1ff;
+}
+.decision-explorer-table :where(th, td):last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.decision-explorer-risks {
+  font-size: 12px;
+}
+.decision-explorer-risks h4 {
+  font-size: 14px;
+}
+.decision-explorer-risks .roster-risk {
+  box-shadow: none;
+  border-radius: 6px;
+}
+.decision-explorer-live.live-workspace {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  background: #f3f5fb;
+}
+.decision-explorer-live .live-sidebar {
+  border: 1px solid #dce2ee;
+  border-radius: 8px;
+  background: white;
+  padding: 12px;
+}
+.decision-explorer-live .live-board,
+.decision-explorer-live .live-board[data-count] {
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.decision-explorer-live .live-board[data-count] .live-matchup-card {
+  grid-column: auto;
+  padding: 0;
+  border-radius: 10px;
+  border-color: #dce2ee;
+  background: white;
+}
+.decision-explorer-live
+  .live-board
+  > div:first-child:not(.live-matchup-card):not(.decision-explorer-live-empty) {
+  display: none;
+}
+.decision-explorer-live .live-board[data-count] .live-matchup-heading {
+  min-height: 46px;
+  margin: 0;
+  padding: 6px 8px;
+  background: #eef1ff;
+  border-color: #dce2ee;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.decision-explorer-live .live-matchup-heading h2 {
+  font-size: 12px;
+  line-height: 1.2;
+}
+.decision-explorer-live .live-rosters {
+  overflow: hidden;
+  align-items: stretch;
+  gap: 10px;
+  padding: 6px 8px;
+}
+.decision-explorer-live .decision-explorer-live-roster {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.decision-explorer-live .live-team-heading {
+  height: 23px;
+}
+.decision-explorer-live .live-roster-name {
+  font-size: 12px;
+}
+.decision-explorer-live .live-roster-score {
+  font-size: 16px;
+}
+.decision-explorer-live .live-roster-group {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 13px;
+  margin: 3px 0 1px;
+  padding: 1px 4px;
+}
+.decision-explorer-live .live-board[data-count] .live-player-row {
+  height: 14px;
+  padding: 0;
+  line-height: 14px;
+  font-size: 11px;
+  display: grid;
+  grid-template-columns: 30px minmax(50px, 1fr) 45px 30px 32px;
+  gap: 3px;
+  border-top: 1px solid #edf0f7;
+}
+.decision-explorer-live .live-player-name a {
+  color: #17223b;
+  text-decoration: underline;
+}
+.decision-explorer-live-status {
+  color: #526078;
+  font-size: 9px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.decision-explorer-live-projection {
+  color: #526078;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+}
+.decision-explorer-live .live-player-points {
+  text-align: right;
+}
+.decision-explorer-live-columns {
+  font-weight: 400;
+  font-size: 9px;
+}
+.decision-explorer-live .live-probability {
+  min-width: 100px;
+  flex: 0 0 110px;
+  order: initial;
+}
+.decision-explorer-live .live-probability-label {
+  text-transform: none;
+  font-weight: 400;
+}
+.decision-explorer-live .live-probability-track {
+  background: #dce2ee;
+}
+.decision-explorer-live .live-probability-track span {
+  background: #3949ab;
+  transition: none;
+}
+.decision-explorer-live-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  color: #526078;
+  background: white;
+  border: 1px dashed #dce2ee;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+@media (min-width: 1800px) {
+  .decision-explorer-live.live-workspace {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+  .decision-explorer-live .live-board[data-count] .live-player-row {
+    height: 16px;
+    line-height: 16px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .decision-explorer-scenario {
+    padding: 14px;
+  }
+  .decision-explorer-overview .overview-card {
+    padding: 16px;
+  }
+  .decision-explorer-live.live-workspace {
+    height: auto;
+    overflow: visible;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .decision-explorer-live .live-sidebar {
+    overflow: visible;
+  }
+  .decision-explorer-live .live-board,
+  .decision-explorer-live .live-board[data-count] {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .decision-explorer-live .live-board[data-count] .live-matchup-card {
+    height: auto;
+    overflow: visible;
+  }
+  .decision-explorer-live .live-rosters {
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+  .decision-explorer-live .decision-explorer-live-roster {
+    overflow: visible;
+  }
+  .decision-explorer-live .live-matchup-heading > div:first-child {
+    flex-basis: auto;
+  }
+  .decision-explorer-live .live-board[data-count] .live-player-row {
+    height: 22px;
+    line-height: 22px;
+    font-size: 12px;
+    grid-template-columns: 32px minmax(70px, 1fr) 65px 35px 35px;
+  }
+  .decision-explorer-live .live-roster-name {
+    font-size: 14px;
+  }
+  .decision-explorer-live-empty {
+    min-height: 120px;
+  }
+}
+
+.decision-explorer .decision-explorer-panel {
+  border-color: #dce2ee;
+  border-radius: 10px;
+  background: white;
+}
+.decision-explorer .decision-explorer-panel > div {
+  border-color: #dce2ee;
+}
+.decision-explorer .decision-explorer-player-option {
+  border-width: 0 0 1px;
+  border-color: #dce2ee;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 10px 8px;
+}
+.decision-explorer .decision-explorer-player-option:has(input:checked) {
+  background: #eef1ff;
+}
+.decision-explorer-live-caveat {
+  display: block;
+  font-size: 9px;
+  text-align: center;
+  color: #526078;
+}
+.decision-explorer-live .explorer-info-trigger {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+}
+
+.decision-explorer-live-controls {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  margin: 10px 0;
+}
+.decision-explorer-live-controls > div {
+  flex: 1;
+  min-width: 0;
+}
+.decision-explorer-live-controls select {
+  min-height: 32px;
+  height: 32px;
+  font-size: 12px;
+}
+.decision-explorer-live .compact-matchup[aria-pressed='true'] {
+  background: #eef1ff;
+  color: #3949ab;
+  border: 1px solid #3949ab;
+  box-shadow: none;
+}
+.decision-explorer-live .compact-matchup[aria-pressed='false'] {
+  border-color: #dce2ee;
+  color: #526078;
+  box-shadow: none;
+  background: white;
+}
+/* Complete provider names/statuses may add a line; roster scrolling absorbs real data length. */
+.decision-explorer-live .live-board[data-count] .live-player-row {
+  height: auto;
+  min-height: 14px;
+  line-height: 13px;
+}
+.decision-explorer-live .live-board .live-player-name,
+.decision-explorer-live .live-board .decision-explorer-live-status,
+.decision-explorer-live .live-board .live-roster-name {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+.decision-explorer-live .live-board .live-team-heading {
+  height: auto;
+  min-height: 24px;
+}
+@media (max-width: 767px) {
+  .decision-explorer-live .live-board[data-count] .live-player-row {
+    min-height: 22px;
+    line-height: 22px;
+  }
+}

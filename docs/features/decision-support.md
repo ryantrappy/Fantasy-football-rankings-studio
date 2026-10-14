@@ -159,3 +159,9 @@ Source: [TASK-117](../../backlog/tasks/task-117%20-%20Fetch-live-data-only-for-t
 - Tests cover historical seasons without live data, dropped players, duplicate names across IDs, missing metadata and snapshot round trips; profile coverage documentation is updated.
 
 Source: [TASK-118](../../backlog/tasks/task-118%20-%20Retain-player-names-and-primary-positions-for-historical-profile-browsing.md).
+
+## TASK-146 presentation validation — October 14, 2026
+
+The Manager Explorer presentation keeps the contracts above and their existing production calculations/reads. Weekly overview retains all managed leagues together and adds two-sided matchup evidence plus context-preserving Live navigation. Complete lineup assignments, submitted roster/source evidence and alternative exclusions remain per league. Players retains individual comparison evidence, ranges, sources, disagreement and clear/remove controls. Trade scenarios and ideas use focused views with retained editing state; inspection prefills an editable scenario, with both legal starting-lineup assignments, before/after position coverage and explicit uneven-trade capacity confirmation. Live retains four fixed desktop quarters, eight full starter/bench rosters, profile links, observed points, projections and provided status/remaining-time fractions; each roster scrolls independently, and phone rosters follow the page flow. Definitions use accessible tooltips without replacing source evidence or missing-data notices.
+
+Coverage and genuine data boundaries are recorded in [the decision coverage checklist](../manager-explorer-decision-coverage.md). Validation: 128 focused component/calculation/provider tests, 16 Chrome browser checks, scoped lint/formatting and application typecheck. TASK-146 overall completion remains with its app-wide integration; this note establishes the decision support slice only. No feature reductions are approved.

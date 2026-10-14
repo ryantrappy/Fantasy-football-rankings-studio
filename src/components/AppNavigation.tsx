@@ -3,14 +3,19 @@ import { Link, useRouterState, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { defaultSeason } from '../util/rankings';
 import { Icon } from './Icon';
+
 export function AppNavigation({ shared = false }: { shared?: boolean }) {
   const search = useSearch({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const navigation = useRef<HTMLDivElement>(null);
   const leagueId = search.leagueId || '';
+  const year = search.year || search.years?.[0] || defaultSeason();
+  const toolsActive = ['/tools', '/players', '/trades'].includes(pathname);
   useEffect(() => {
     const nav = navigation.current;
-    const active = nav?.querySelector<HTMLElement>('a[data-status="active"]');
+    const active = nav?.querySelector<HTMLElement>(
+      'a[data-status="active"], a[aria-current="page"]',
+    );
     if (!nav || !active) return;
     const keepActiveVisible = () => {
       const bounds = nav.getBoundingClientRect();
@@ -23,57 +28,39 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
     return () => window.removeEventListener('resize', keepActiveVisible);
   }, [pathname]);
   return (
-    <Flex
-      ref={navigation}
-      as="nav"
-      gap={{ base: 4, md: 6 }}
-      flexWrap="wrap"
-      mb={8}
-      borderBottom="1px solid"
-      borderColor="border"
-      className="app-nav"
-      aria-label="Main navigation"
-    >
+    <Flex ref={navigation} as="nav" className="app-nav" aria-label="Main navigation">
       {!shared && (
-        <ChakraLink asChild>
-          <Link to="/" activeOptions={{ exact: true }}>
-            <Icon name="edit" size={16} /> Rankings studio
-          </Link>
-        </ChakraLink>
-      )}
-      {!shared && (
-        <ChakraLink asChild>
-          <Link to="/players" search={{ leagueId, year: search.year }}>
-            <Icon name="players" size={16} /> Players
-          </Link>
-        </ChakraLink>
-      )}
-      {!shared && (
-        <ChakraLink asChild>
-          <Link to="/trades">
-            <Icon name="exchange" size={16} /> Trade analyzer
-          </Link>
-        </ChakraLink>
-      )}
-      {!shared && (
-        <ChakraLink asChild>
-          <Link to="/overview">
-            <Icon name="grid" size={16} /> My weekly overview
-          </Link>
-        </ChakraLink>
-      )}
-      {!shared && (
-        <ChakraLink asChild>
-          <Link to="/live">
-            <Icon name="ball" size={16} /> Live matchups
-          </Link>
-        </ChakraLink>
+        <>
+          <ChakraLink asChild>
+            <Link
+              to="/"
+              search={{
+                leagueId: search.leagueId || undefined,
+                year: search.year || search.years?.[0],
+                week: search.week,
+              }}
+              activeOptions={{ exact: true }}
+            >
+              <Icon name="edit" size={16} /> Rankings studio
+            </Link>
+          </ChakraLink>
+          <ChakraLink asChild>
+            <Link to="/overview">
+              <Icon name="grid" size={16} /> Weekly overview
+            </Link>
+          </ChakraLink>
+          <ChakraLink asChild>
+            <Link to="/live">
+              <Icon name="ball" size={16} /> Live matchups
+            </Link>
+          </ChakraLink>
+        </>
       )}
       <ChakraLink asChild>
         <Link
           to={shared ? '/shared/insights' : '/insights'}
           activeOptions={{ includeSearch: false }}
-          search={{ leagueId, year: search.year || defaultSeason() }}
+          search={{ leagueId, year }}
         >
           <Icon name="chart" size={16} /> Season insights
         </Link>
@@ -82,20 +69,31 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
         <Link
           to={shared ? '/shared/playoffs' : '/playoffs'}
           activeOptions={{ includeSearch: false }}
-          search={{ leagueId, year: search.year || defaultSeason() }}
+          search={{ leagueId, year }}
         >
-          <Icon name="trophy" size={16} /> Playoff simulation
+          <Icon name="trophy" size={16} /> Playoff simulator
         </Link>
       </ChakraLink>
       <ChakraLink asChild>
         <Link
           to={shared ? '/shared/history' : '/history'}
           activeOptions={{ includeSearch: false }}
-          search={{ leagueId }}
+          search={{ leagueId, years: search.years || (search.year ? [search.year] : undefined) }}
         >
           <Icon name="archive" size={16} /> League history
         </Link>
       </ChakraLink>
+      {!shared && (
+        <ChakraLink asChild>
+          <Link
+            to="/tools"
+            search={{ leagueId, year }}
+            aria-current={toolsActive ? 'page' : undefined}
+          >
+            <Icon name="players" size={16} /> Other tools
+          </Link>
+        </ChakraLink>
+      )}
     </Flex>
   );
 }

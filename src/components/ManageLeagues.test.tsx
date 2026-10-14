@@ -194,12 +194,13 @@ it('renders cross-provider ID collisions independently and edits the chosen work
       <ManageLeagues api={api} />
     </Provider>,
   );
-  const buttons = await screen.findAllByRole('button', { name: 'Edit display name' });
-  fireEvent.click(buttons[1]);
+  fireEvent.click(await screen.findByRole('button', { name: /ESPN league/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit display name' }));
   fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'ESPN renamed' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save display name' }));
   await screen.findByRole('heading', { name: 'ESPN renamed' });
-  expect(screen.getByRole('heading', { name: 'Sleeper league' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /Sleeper league/ }));
+  expect(screen.getByRole('heading', { name: 'Sleeper league' })).toBeVisible();
   expect(rename).toHaveBeenCalledWith('20', 'ESPN renamed');
   expect(errors.mock.calls.flat().join(' ')).not.toMatch(/same key/);
   errors.mockRestore();

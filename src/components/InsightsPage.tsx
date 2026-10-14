@@ -1,3 +1,5 @@
+import './analytics-explorer.css';
+import { InfoTooltip } from './InfoTooltip';
 import { SeasonStrength } from './SeasonStrength';
 import { ApiContext } from '../auth/session';
 import { Icon } from './Icon';
@@ -16,14 +18,13 @@ import {
   Flex,
   Heading,
   NativeSelect,
-  SimpleGrid,
   Text,
   chakra,
   Field,
   Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useInsightsApi } from '../auth/InsightsAccess';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
@@ -73,11 +74,13 @@ export function InsightsPage({
   }>();
   const [reload, setReload] = useState(0);
   const [teamId, setTeamId] = useState('');
+  const [view, setView] = useState('Team scoring');
   const [pickupTeam, setPickupTeam] = useState('');
   const [allPickups, setAllPickups] = useState(false);
   const [includeFormer, setIncludeFormer] = useState(false);
   const requestKey = `${leagueId}:${year}:${reload}`;
   const reportScope = `${leagueId}:${year}`;
+  const loadedScope = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (shared || snapshot || !leagueId || !privateApi?.managedTeam) return;
     let cancelled = false;
@@ -143,9 +146,12 @@ export function InsightsPage({
             activeSeason: context.activeSeason,
             refreshed: reload > 0,
           });
-          setTeamId('');
-          setPickupTeam('');
-          setAllPickups(false);
+          if (loadedScope.current !== reportScope) {
+            setTeamId('');
+            setPickupTeam('');
+            setAllPickups(false);
+          }
+          loadedScope.current = reportScope;
         }
       } catch (failure) {
         logClientError('InsightsPage', failure);
@@ -185,7 +191,7 @@ export function InsightsPage({
     .filter((t) => t.average !== null)
     .sort((a, b) => b.average! - a.average!)[0];
   return (
-    <>
+    <Box className="analytics-explorer">
       <Flex
         align="center"
         justify="space-between"
@@ -196,16 +202,13 @@ export function InsightsPage({
         className="page-heading"
       >
         <Box>
-          <Text mb={4} className="eyebrow">
-            {playoff ? 'Looking toward the postseason' : 'The season, by the numbers'}
-          </Text>
           <Heading as="h1" size="3xl" mb={4}>
-            {playoff ? 'Playoff simulation' : 'Did the moves pay off?'}
+            {playoff ? 'Playoff simulation' : 'Season insights'}
           </Heading>
           <Text mb={4}>
             {playoff
               ? 'Explore playoff and championship chances using completed season scores.'
-              : 'Follow the points. Find the steals. See who keeps beating expectations.'}
+              : 'Scoring, roster strength and decisions, one focused view at a time.'}
           </Text>
         </Box>
         {!shared && (
@@ -377,344 +380,187 @@ export function InsightsPage({
             </Box>
           )}
           {playoff ? (
-            <>
-              <PlayoffForecast key={`${leagueId}:${year}`} data={data} />
-              <PlayoffCalibration
-                key={`calibration:${leagueId}:${year}`}
-                api={api}
-                leagueId={leagueId}
-                year={year}
-                frozen={!!snapshot}
-              />
-            </>
+            <PlayoffForecast
+              key={`${leagueId}:${year}`}
+              data={data}
+              advanced={(active) => (
+                <PlayoffCalibration
+                  key={`calibration:${leagueId}:${year}`}
+                  api={api}
+                  leagueId={leagueId}
+                  year={year}
+                  frozen={!!snapshot}
+                  active={active}
+                />
+              )}
+            />
           ) : (
             <>
-              <SimpleGrid columns={{ base: 1, md: 3 }} gap={6} my={6} className="insight-cards">
-                <Box as="article">
-                  <Text mb={4} className="eyebrow">
-                    Scoring pace
-                  </Text>
-                  <Heading as="h2" size="xl" mb={4}>
-                    {number(leader?.average ?? null)} <small>pts / week</small>
-                  </Heading>
-                  <Text mb={4}>{leader?.teamName || 'Waiting for completed scores'}</Text>
-                </Box>
-                <Box as="article">
-                  <Text mb={4} className="eyebrow">
-                    Best pickup above baseline
-                  </Text>
-                  <Heading as="h2" size="xl" mb={4}>
-                    {bestPickup?.player || 'Not yet evaluated'}
-                  </Heading>
-                  <Text mb={4}>
-                    {bestPickup
-                      ? `${signed(bestPickup.lift)} pts / start vs. ${bestPickup.baseline} · ${bestPickup.comparisonWeeks.length} starts`
-                      : 'At least two comparable starts are needed.'}
-                  </Text>
-                </Box>
-                <Box as="article">
-                  <Text mb={4} className="eyebrow">
-                    Trade verdicts
-                  </Text>
-                  <Heading as="h2" size="xl" mb={4}>
-                    {judgedTrades} <small>with a scoring leader</small>
-                  </Heading>
-                  <Text mb={4}>
-                    {data.tradeComparisons.length} player trades assessed individually over equal
-                    post-trade windows.
-                  </Text>
-                </Box>
-              </SimpleGrid>
-              <Box
-                as="section"
-                bg="bg"
-                borderWidth="1px"
-                borderStyle="solid"
-                borderColor="border"
-                rounded="lg"
-                p={{ base: 4, md: 6 }}
-                className="panel insight-section"
-              >
-                <Text mb={4} className="eyebrow">
-                  The whole league
-                </Text>
-                <Heading as="h2" size="xl" mb={4}>
-                  Who delivers every week?
-                </Heading>
-                <Box overflowX="auto" className="insight-table-wrap">
-                  <DataTable
-                    label="Team scoring"
-                    data={data.teams}
-                    getRowId={(t) => t.teamId}
-                    initialSorting={[{ id: '1', desc: true }]}
-                    columns={[
-                      {
-                        id: '0',
-                        header: 'Team',
-                        value: (t) => t.teamName,
-                        rowHeader: true,
-                        cell: (t) => (
-                          <>
-                            {t.teamName}
-                            <small>{t.managerName}</small>
-                          </>
-                        ),
-                      },
-                      {
-                        id: '1',
-                        header: 'Avg. points',
-                        value: (t) => t.average,
-                        cell: (t) => <>{number(t.average)}</>,
-                      },
-                      {
-                        id: '2',
-                        header: 'Best week',
-                        value: (t) => t.best,
-                        cell: (t) => <>{number(t.best)}</>,
-                      },
-                      {
-                        id: '3',
-                        header: 'Above median',
-                        value: (t) => (t.weeks ? t.aboveMedian / t.weeks : null),
-                        cell: (t) => (
-                          <>
-                            {t.aboveMedian} / {t.weeks}
-                          </>
-                        ),
-                      },
-                      {
-                        id: '4',
-                        header: 'Avg. vs. projection',
-                        value: (t) => t.projectionDelta,
-                        cell: (t) => <>{signed(t.projectionDelta)}</>,
-                      },
-                      {
-                        id: '5',
-                        header: 'Beat projection',
-                        value: (t) =>
-                          t.projectedWeeks ? t.beatProjection / t.projectedWeeks : null,
-                        cell: (t) => (
-                          <>
-                            {t.projectedWeeks ? `${t.beatProjection} / ${t.projectedWeeks}` : '—'}
-                          </>
-                        ),
-                      },
-                      {
-                        id: '6',
-                        header: 'Best lineup / wk',
-                        value: (t) => (t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null),
-                        cell: (t) => (
-                          <>{number(t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null)}</>
-                        ),
-                      },
-                      {
-                        id: '7',
-                        header: 'Start accuracy',
-                        value: (t) => accuracy(t.correctStarts, t.lineupSlots),
-                        exportValue: (t) =>
-                          t.lineupSlots
-                            ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
-                            : null,
-                        cell: (t) => (
-                          <>
-                            {t.lineupSlots
-                              ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
-                              : '—'}
-                          </>
-                        ),
-                      },
-                    ]}
-                  />
-                </Box>
-              </Box>
-              <ScheduleLuck
-                rows={visibleManagers(
-                  summarizeLeague([{ year, data }]),
-                  result?.activeManagerKeys || [],
-                  includeFormer,
-                )}
-              />
-              <SeasonStrength
-                key={reportScope}
-                data={data}
-                managedTeamId={
-                  !shared &&
-                  !snapshot &&
-                  managed?.api === privateApi &&
-                  managed?.scope === reportScope
-                    ? managed.teamId
-                    : null
-                }
-              />
-              <label className="history-toggle">
-                <chakra.input
-                  accentColor="green.700"
-                  width="auto"
-                  type="checkbox"
-                  checked={includeFormer}
-                  onChange={(e) => setIncludeFormer(e.target.checked)}
-                />{' '}
-                Include former managers in summary
-              </label>
-              <LeagueSummary
-                showScheduleLuck={false}
-                records={[{ year, data }]}
-                activeManagerKeys={result?.activeManagerKeys || []}
-                includeFormer={includeFormer}
-              />
-              {!snapshot && (
-                <Text mb={4}>
-                  <ChakraLink asChild>
-                    <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
-                      Explore this league’s history →
-                    </Link>
-                  </ChakraLink>
-                </Text>
-              )}
-              <Box
-                as="section"
-                bg="bg"
-                borderWidth="1px"
-                borderStyle="solid"
-                borderColor="border"
-                rounded="lg"
-                p={{ base: 4, md: 6 }}
-                className="panel insight-section"
-              >
-                <Flex
-                  direction={{ base: 'column', md: 'row' }}
-                  align={{ base: 'stretch', md: 'center' }}
-                  justify="space-between"
-                  gap={4}
-                  className="insight-heading"
-                >
-                  <Box>
-                    <Text mb={4} className="eyebrow">
-                      Expectation vs. reality
-                    </Text>
-                    <Heading as="h2" size="xl" mb={4}>
-                      Weekly scoring trends
-                    </Heading>
-                  </Box>
-                  <Field.Root width="auto" minW="120px" gap={2}>
+              <Box className="analytics-explorer-workspace">
+                <Flex className="analytics-explorer-toolbar" gap={4} align="center" flexWrap="wrap">
+                  <Field.Root width="auto" minW="180px" gap={2}>
                     <Field.Label>Team</Field.Label>
                     <NativeSelect.Root>
                       <NativeSelect.Field
                         value={teamId}
-                        onChange={(e) => setTeamId(e.target.value)}
+                        onChange={(event) => {
+                          setTeamId(event.target.value);
+                          setPickupTeam(event.target.value);
+                          setAllPickups(false);
+                        }}
                       >
                         <option value="">All teams</option>
-                        {data.teams.map((t) => (
-                          <option key={t.teamId} value={t.teamId}>
-                            {t.teamName}
+                        {data.teams.map((team) => (
+                          <option key={team.teamId} value={team.teamId}>
+                            {team.teamName}
                           </option>
                         ))}
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
                   </Field.Root>
+                  <Text className="analytics-explorer-context">
+                    {selectedTeam
+                      ? `${selectedTeam.teamName}: ${number(selectedTeam.average)} points / week`
+                      : `${data.teams.length} teams · ${leader?.teamName || 'No scoring leader yet'}`}
+                  </Text>
+                  <Box as="details" className="analytics-explorer-summary">
+                    <summary>League summary</summary>
+                    <Text>
+                      Scoring leader: {leader?.teamName || 'Unavailable'} (
+                      {number(leader?.average ?? null)} points per week). Best evaluated pickup:{' '}
+                      {bestPickup?.player || 'Not yet evaluated'}
+                      {bestPickup
+                        ? `, ${signed(bestPickup.lift)} points per start vs. ${bestPickup.baseline} across ${bestPickup.comparisonWeeks.length} starts.`
+                        : '. At least two comparable starts are needed.'}{' '}
+                      {judgedTrades} of {data.tradeComparisons.length} trades have a scoring leader,
+                      using equal post-trade windows.
+                    </Text>
+                  </Box>
                 </Flex>
-                {scoreRows.length ? (
-                  <>
-                    {selectedTeam ? (
-                      <Text mb={4}>
-                        <strong>{number(selectedTeam.average)}</strong> points per week ·{' '}
-                        <strong>{selectedTeam.aboveMedian}</strong> of {selectedTeam.weeks} weeks
-                        above the league median
-                        {selectedTeam.projectedWeeks ? (
-                          <>
-                            {' '}
-                            · <strong>{signed(selectedTeam.projectionDelta)}</strong> average vs.
-                            projection across {selectedTeam.projectedWeeks} weeks
-                          </>
-                        ) : (
-                          ''
-                        )}
+                <nav className="analytics-explorer-tabs" aria-label="Season insight views">
+                  {[
+                    'Team scoring',
+                    'Weekly trends',
+                    'Roster strength',
+                    'Remaining schedule',
+                    'Manager report card',
+                    'Trades',
+                    'Pickups',
+                  ].map((name) => (
+                    <Button
+                      key={name}
+                      variant="plain"
+                      aria-pressed={view === name}
+                      onClick={() => setView(name)}
+                    >
+                      {name}
+                    </Button>
+                  ))}
+                </nav>
+                <Box className="analytics-explorer-content">
+                  <div hidden={view !== 'Team scoring'}>
+                    <Box
+                      as="section"
+                      bg="bg"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      borderColor="border"
+                      rounded="lg"
+                      p={{ base: 4, md: 6 }}
+                      className="panel insight-section"
+                    >
+                      <Text mb={4} className="eyebrow">
+                        The whole league
                       </Text>
-                    ) : (
-                      <Text mb={4}>
-                        Completed weekly scores for all teams. Choose a team to focus on its
-                        results.
-                      </Text>
-                    )}
-                    <ScoreTrend scores={scoreRows} teams={data.teams} />
-                    <details>
-                      <summary>View exact weekly scores</summary>
+                      <Heading as="h2" size="xl" mb={4}>
+                        Who delivers every week?
+                      </Heading>
                       <Box overflowX="auto" className="insight-table-wrap">
                         <DataTable
-                          label="Weekly scores"
-                          data={scoreRows}
-                          getRowId={(s) => `${s.teamId}:${s.week}`}
-                          initialSorting={[{ id: '0', desc: false }]}
+                          label="Team scoring"
+                          data={data.teams}
+                          getRowId={(t) => t.teamId}
+                          initialSorting={[{ id: '1', desc: true }]}
                           columns={[
-                            ...(!teamId
-                              ? [
-                                  {
-                                    id: 'team',
-                                    header: 'Team',
-                                    value: (s: SeasonInsights['scores'][number]) =>
-                                      names.get(s.teamId),
-                                    cell: (s: SeasonInsights['scores'][number]) => (
-                                      <>{names.get(s.teamId)}</>
-                                    ),
-                                  },
-                                ]
-                              : []),
                             {
                               id: '0',
-                              header: 'Week',
-                              value: (s) => s.week,
-                              cell: (s) => <>{s.week}</>,
+                              header: 'Team',
+                              value: (t) => t.teamName,
+                              rowHeader: true,
+                              cell: (t) => (
+                                <>
+                                  {t.teamName}
+                                  <small>{t.managerName}</small>
+                                </>
+                              ),
                             },
                             {
                               id: '1',
-                              header: 'Actual points',
-                              value: (s) => s.actual,
-                              cell: (s) => <>{number(s.actual)}</>,
+                              header: 'Avg. points',
+                              value: (t) => t.average,
+                              cell: (t) => <>{number(t.average)}</>,
                             },
                             {
                               id: '2',
-                              header: 'Projected points',
-                              value: (s) => s.projected,
-                              cell: (s) => <>{number(s.projected)}</>,
+                              header: 'Best week',
+                              value: (t) => t.best,
+                              cell: (t) => <>{number(t.best)}</>,
                             },
                             {
                               id: '3',
-                              header: 'Difference',
-                              value: (s) => (s.projected === null ? null : s.actual - s.projected),
-                              cell: (s) => (
-                                <>{signed(s.projected === null ? null : s.actual - s.projected)}</>
+                              header: 'Above median',
+                              value: (t) => (t.weeks ? t.aboveMedian / t.weeks : null),
+                              cell: (t) => (
+                                <>
+                                  {t.aboveMedian} / {t.weeks}
+                                </>
                               ),
                             },
                             {
                               id: '4',
-                              header: 'Best lineup',
-                              value: (s) => s.bestLineup?.points ?? null,
-                              cell: (s) => <>{number(s.bestLineup?.points ?? null)}</>,
+                              header: 'Avg. vs. projection',
+                              value: (t) => t.projectionDelta,
+                              cell: (t) => <>{signed(t.projectionDelta)}</>,
                             },
                             {
                               id: '5',
-                              header: 'Missed points',
-                              value: (s) => (s.bestLineup ? s.bestLineup.points - s.actual : null),
-                              cell: (s) => (
-                                <>{signed(s.bestLineup ? s.bestLineup.points - s.actual : null)}</>
+                              header: 'Beat projection',
+                              value: (t) =>
+                                t.projectedWeeks ? t.beatProjection / t.projectedWeeks : null,
+                              cell: (t) => (
+                                <>
+                                  {t.projectedWeeks
+                                    ? `${t.beatProjection} / ${t.projectedWeeks}`
+                                    : '—'}
+                                </>
                               ),
                             },
                             {
                               id: '6',
-                              header: 'Start accuracy',
-                              value: (s) =>
-                                s.bestLineup
-                                  ? accuracy(s.bestLineup.correctStarts, s.bestLineup.slots)
-                                  : null,
-                              exportValue: (s) =>
-                                s.bestLineup
-                                  ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
-                                  : null,
-                              cell: (s) => (
+                              header: 'Best lineup / wk',
+                              value: (t) =>
+                                t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null,
+                              cell: (t) => (
                                 <>
-                                  {s.bestLineup
-                                    ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                  {number(
+                                    t.lineupWeeks ? t.bestLineupPoints / t.lineupWeeks : null,
+                                  )}
+                                </>
+                              ),
+                            },
+                            {
+                              id: '7',
+                              header: 'Start accuracy',
+                              value: (t) => accuracy(t.correctStarts, t.lineupSlots),
+                              exportValue: (t) =>
+                                t.lineupSlots
+                                  ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
+                                  : null,
+                              cell: (t) => (
+                                <>
+                                  {t.lineupSlots
+                                    ? `${number(accuracy(t.correctStarts, t.lineupSlots))}% (${t.correctStarts} / ${t.lineupSlots})`
                                     : '—'}
                                 </>
                               ),
@@ -722,37 +568,74 @@ export function InsightsPage({
                           ]}
                         />
                       </Box>
-                    </details>
-                  </>
-                ) : (
-                  <Text mb={4}>No completed scores for this team and season.</Text>
-                )}
-              </Box>
-              <Box
-                as="section"
-                bg="bg"
-                borderWidth="1px"
-                borderStyle="solid"
-                borderColor="border"
-                rounded="lg"
-                p={{ base: 4, md: 6 }}
-                className="panel insight-section"
-              >
-                <Text mb={4} className="eyebrow">
-                  Head to head
-                </Text>
-                <Heading as="h2" size="xl" mb={4}>
-                  Who won each trade?
-                </Heading>
-                <Text mb={4}>
-                  Compare the value each side gained over the same first four post-trade weeks.
-                  Value means points above the league’s median starter at each player’s position,
-                  per week. Bench scoring is included to evaluate the players exchanged, independent
-                  of lineup choices.
-                </Text>
-                {data.tradeComparisons.length ? (
-                  data.tradeComparisons.map((trade) => (
-                    <Box as="article" className="trade-detail" key={trade.id}>
+                    </Box>
+                  </div>
+                  <div hidden={view !== 'Roster strength' && view !== 'Remaining schedule'}>
+                    <SeasonStrength
+                      key={reportScope}
+                      data={data}
+                      view={view === 'Remaining schedule' ? 'schedule' : 'positions'}
+                      teamId={teamId}
+                      onTeamChange={(id) => {
+                        setTeamId(id);
+                        setPickupTeam(id);
+                        setAllPickups(false);
+                      }}
+                      managedTeamId={
+                        !shared &&
+                        !snapshot &&
+                        managed?.api === privateApi &&
+                        managed?.scope === reportScope
+                          ? managed.teamId
+                          : null
+                      }
+                    />
+                  </div>
+                  <div hidden={view !== 'Manager report card'}>
+                    <label className="history-toggle">
+                      <chakra.input
+                        accentColor="#3949ab"
+                        width="auto"
+                        type="checkbox"
+                        checked={includeFormer}
+                        onChange={(e) => setIncludeFormer(e.target.checked)}
+                      />{' '}
+                      Include former managers in summary
+                    </label>
+                    <ScheduleLuck
+                      rows={visibleManagers(
+                        summarizeLeague([{ year, data }]),
+                        result?.activeManagerKeys || [],
+                        includeFormer,
+                      )}
+                    />
+                    <LeagueSummary
+                      showScheduleLuck={false}
+                      records={[{ year, data }]}
+                      activeManagerKeys={result?.activeManagerKeys || []}
+                      includeFormer={includeFormer}
+                    />
+                    {!snapshot && (
+                      <Text mb={4}>
+                        <ChakraLink asChild>
+                          <Link to={shared ? '/shared/history' : '/history'} search={{ leagueId }}>
+                            Explore this league’s history →
+                          </Link>
+                        </ChakraLink>
+                      </Text>
+                    )}
+                  </div>
+                  <div hidden={view !== 'Weekly trends'}>
+                    <Box
+                      as="section"
+                      bg="bg"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      borderColor="border"
+                      rounded="lg"
+                      p={{ base: 4, md: 6 }}
+                      className="panel insight-section"
+                    >
                       <Flex
                         direction={{ base: 'column', md: 'row' }}
                         align={{ base: 'stretch', md: 'center' }}
@@ -760,258 +643,464 @@ export function InsightsPage({
                         gap={4}
                         className="insight-heading"
                       >
-                        <Heading as="h3" size="lg" mb={4}>
-                          Week {trade.week} ·{' '}
-                          {trade.sides
-                            .map((side) => names.get(side.teamId) || side.teamId)
-                            .join(' ↔ ')}
-                        </Heading>
-                        <strong>
-                          {trade.verdict === 'leader'
-                            ? `${names.get(trade.winner!) || trade.winner} leads`
-                            : trade.verdict === 'close'
-                              ? 'Too close to call'
-                              : trade.verdict === 'picks'
-                                ? 'Draft picks not valued'
-                                : 'Insufficient comparable data'}
-                        </strong>
+                        <Box>
+                          <Text mb={4} className="eyebrow">
+                            Expectation vs. reality
+                          </Text>
+                          <Heading as="h2" size="xl" mb={4}>
+                            Weekly scoring trends
+                          </Heading>
+                        </Box>
                       </Flex>
-                      <Text mb={4}>
-                        {trade.weeks.length} of {trade.possibleWeeks} completed weeks compared
-                        {trade.weeks.length ? ` (weeks ${trade.weeks.join(', ')})` : ''}.{' '}
-                        {trade.possibleWeeks < 4
-                          ? 'Early read: the four-week window is not complete.'
-                          : 'Four-week assessment.'}
-                      </Text>
-                      <Box overflowX="auto" className="insight-table-wrap">
-                        <DataTable
-                          label="Trade comparison"
-                          data={trade.sides}
-                          getRowId={(side) => side.teamId}
-                          columns={[
-                            {
-                              id: '0',
-                              header: 'Team / received players',
-                              value: (side) => names.get(side.teamId) || side.teamId,
-                              rowHeader: true,
-                              cell: (side) => (
+                      {scoreRows.length ? (
+                        <>
+                          {selectedTeam ? (
+                            <Text mb={4}>
+                              <strong>{number(selectedTeam.average)}</strong> points per week ·{' '}
+                              <strong>{selectedTeam.aboveMedian}</strong> of {selectedTeam.weeks}{' '}
+                              weeks above the league median
+                              {selectedTeam.projectedWeeks ? (
                                 <>
-                                  {names.get(side.teamId) || side.teamId}
-                                  <small>{side.received.join(', ') || 'No players'}</small>
+                                  {' '}
+                                  · <strong>{signed(selectedTeam.projectionDelta)}</strong> average
+                                  vs. projection across {selectedTeam.projectedWeeks} weeks
                                 </>
-                              ),
-                            },
-                            {
-                              id: '1',
-                              header: 'Sent players',
-                              value: (side) => side.sent.join(', '),
-                              cell: (side) => <>{side.sent.join(', ') || 'No players'}</>,
-                            },
-                            {
-                              id: '2',
-                              header: 'Received value / wk',
-                              value: (side) => side.receivedValue,
-                              cell: (side) => <>{signed(side.receivedValue)}</>,
-                            },
-                            {
-                              id: '3',
-                              header: 'Sent value / wk',
-                              value: (side) => side.sentValue,
-                              cell: (side) => <>{signed(side.sentValue)}</>,
-                            },
-                            {
-                              id: '4',
-                              header: 'Net gain / wk',
-                              value: (side) => side.gain,
-                              cell: (side) => (
-                                <>
-                                  <strong>{signed(side.gain)}</strong>
-                                </>
-                              ),
-                            },
-                          ]}
-                        />
-                      </Box>
+                              ) : (
+                                ''
+                              )}
+                            </Text>
+                          ) : (
+                            <Text mb={4}>
+                              Completed weekly scores for all teams. Choose a team to focus on its
+                              results.
+                            </Text>
+                          )}
+                          <Text mb={4} className="insights-meta">
+                            Historical lineup coverage:{' '}
+                            {scoreRows.filter((score) => score.bestLineup).length} of{' '}
+                            {scoreRows.length} team-weeks. Best legal lineup and start accuracy stay
+                            unavailable when player scores, eligibility or slots are incomplete;
+                            zero and negative scores remain valid.
+                          </Text>
+                          <ScoreTrend scores={scoreRows} teams={data.teams} />
+                          <details open>
+                            <summary>View exact weekly scores</summary>
+                            <Box overflowX="auto" className="insight-table-wrap">
+                              <DataTable
+                                label="Weekly scores"
+                                data={scoreRows}
+                                getRowId={(s) => `${s.teamId}:${s.week}`}
+                                initialSorting={[{ id: '0', desc: false }]}
+                                columns={[
+                                  ...(!teamId
+                                    ? [
+                                        {
+                                          id: 'team',
+                                          header: 'Team',
+                                          value: (s: SeasonInsights['scores'][number]) =>
+                                            names.get(s.teamId),
+                                          cell: (s: SeasonInsights['scores'][number]) => (
+                                            <>{names.get(s.teamId)}</>
+                                          ),
+                                        },
+                                      ]
+                                    : []),
+                                  {
+                                    id: '0',
+                                    header: 'Week',
+                                    value: (s) => s.week,
+                                    cell: (s) => <>{s.week}</>,
+                                  },
+                                  {
+                                    id: '1',
+                                    header: 'Actual points',
+                                    value: (s) => s.actual,
+                                    cell: (s) => <>{number(s.actual)}</>,
+                                  },
+                                  {
+                                    id: '2',
+                                    header: 'Projected points',
+                                    value: (s) => s.projected,
+                                    cell: (s) => <>{number(s.projected)}</>,
+                                  },
+                                  {
+                                    id: '3',
+                                    header: 'Difference',
+                                    value: (s) =>
+                                      s.projected === null ? null : s.actual - s.projected,
+                                    cell: (s) => (
+                                      <>
+                                        {signed(
+                                          s.projected === null ? null : s.actual - s.projected,
+                                        )}
+                                      </>
+                                    ),
+                                  },
+                                  {
+                                    id: '4',
+                                    header: 'Best lineup',
+                                    value: (s) => s.bestLineup?.points ?? null,
+                                    cell: (s) => <>{number(s.bestLineup?.points ?? null)}</>,
+                                  },
+                                  {
+                                    id: '5',
+                                    header: 'Missed points',
+                                    value: (s) =>
+                                      s.bestLineup ? s.bestLineup.points - s.actual : null,
+                                    cell: (s) => (
+                                      <>
+                                        {signed(
+                                          s.bestLineup ? s.bestLineup.points - s.actual : null,
+                                        )}
+                                      </>
+                                    ),
+                                  },
+                                  {
+                                    id: '6',
+                                    header: 'Start accuracy',
+                                    value: (s) =>
+                                      s.bestLineup
+                                        ? accuracy(s.bestLineup.correctStarts, s.bestLineup.slots)
+                                        : null,
+                                    exportValue: (s) =>
+                                      s.bestLineup
+                                        ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                        : null,
+                                    cell: (s) => (
+                                      <>
+                                        {s.bestLineup
+                                          ? `${number(accuracy(s.bestLineup.correctStarts, s.bestLineup.slots))}% (${s.bestLineup.correctStarts} / ${s.bestLineup.slots})`
+                                          : '—'}
+                                      </>
+                                    ),
+                                  },
+                                  {
+                                    id: 'coverage',
+                                    header: 'Coverage',
+                                    value: (score) =>
+                                      `${score.projected == null ? 'Projection unavailable' : 'Projection available'}; ${score.bestLineup ? `Legal lineup: ${score.bestLineup.slots} slots` : 'Legal lineup unavailable'}`,
+                                    cell: (score) => (
+                                      <>
+                                        {score.projected == null
+                                          ? 'Projection unavailable'
+                                          : 'Projection available'}
+                                        ;{' '}
+                                        {score.bestLineup
+                                          ? `Legal lineup: ${score.bestLineup.slots} slots`
+                                          : 'Legal lineup unavailable'}
+                                      </>
+                                    ),
+                                  },
+                                ]}
+                              />
+                            </Box>
+                          </details>
+                        </>
+                      ) : (
+                        <Text mb={4}>No completed scores for this team and season.</Text>
+                      )}
                     </Box>
-                  ))
-                ) : (
-                  <Text mb={4}>No completed player trades returned for this season.</Text>
-                )}
-              </Box>
-              <Box
-                as="section"
-                bg="bg"
-                borderWidth="1px"
-                borderStyle="solid"
-                borderColor="border"
-                rounded="lg"
-                p={{ base: 4, md: 6 }}
-                className="panel insight-section"
-              >
-                <Text mb={4} className="eyebrow">
-                  Found on the wire
-                </Text>
-                <Heading as="h2" size="xl" mb={4}>
-                  Free-agent moves that paid off
-                </Heading>
-                <Text mb={4}>
-                  Pickups ranked by average improvement per start in their first four post-pickup
-                  weeks. We use the dropped player at the same position when there is one clear pair
-                  and complete scoring coverage; otherwise we use the league’s positional starter
-                  median.
-                </Text>
-                <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
-                  <Field.Label>Filter pickups by team</Field.Label>
-                  <NativeSelect.Root>
-                    <NativeSelect.Field
-                      value={pickupTeam}
-                      onChange={(e) => {
-                        setPickupTeam(e.target.value);
-                        setAllPickups(false);
-                      }}
+                  </div>
+                  <div hidden={view !== 'Trades'}>
+                    <Box
+                      as="section"
+                      bg="bg"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      borderColor="border"
+                      rounded="lg"
+                      p={{ base: 4, md: 6 }}
+                      className="panel insight-section"
                     >
-                      <option value="">All teams</option>
-                      {data.teams.map((t) => (
-                        <option key={t.teamId} value={t.teamId}>
-                          {t.teamName}
-                        </option>
-                      ))}
-                    </NativeSelect.Field>
-                    <NativeSelect.Indicator />
-                  </NativeSelect.Root>
-                </Field.Root>
-                {filteredPickups.length ? (
-                  <Box overflowX="auto" className="insight-table-wrap">
-                    <DataTable
-                      label="Free-agent pickups"
-                      data={filteredPickups}
-                      getRowId={(p) => p.id}
-                      initialSorting={[{ id: '5', desc: true }]}
-                      limit={allPickups ? undefined : 10}
-                      columns={[
-                        {
-                          id: '0',
-                          header: 'Player',
-                          value: (p) => p.player,
-                          rowHeader: true,
-                          cell: (p) => (
-                            <>
-                              {p.player}
-                              <small>{p.position || 'Position unavailable'}</small>
-                            </>
-                          ),
-                        },
-                        {
-                          id: '1',
-                          header: 'Team',
-                          value: (p) => names.get(p.teamId) || p.teamId,
-                          cell: (p) => <>{names.get(p.teamId) || p.teamId}</>,
-                        },
-                        {
-                          id: '2',
-                          header: 'Added week',
-                          value: (p) => p.week,
-                          cell: (p) => <>{p.week}</>,
-                        },
-                        {
-                          id: '3',
-                          header: 'Baseline',
-                          value: (p) => p.baseline,
-                          cell: (p) => <>{p.baseline}</>,
-                        },
-                        {
-                          id: '4',
-                          header: 'Avg. player points',
-                          value: (p) => p.averagePoints,
-                          cell: (p) => number(p.averagePoints),
-                        },
-                        {
-                          id: 'averageBaseline',
-                          header: 'Avg. baseline points',
-                          value: (p) => p.averageBaseline,
-                          cell: (p) => number(p.averageBaseline),
-                        },
-                        {
-                          id: '5',
-                          header: 'Lift / start',
-                          value: (p) => p.lift,
-                          cell: (p) => (
-                            <>{p.lift === null ? 'Insufficient data' : signed(p.lift)}</>
-                          ),
-                        },
-                        {
-                          id: '6',
-                          header: 'Compared starts',
-                          value: (p) => p.comparisonWeeks.length,
-                          cell: (p) => (
-                            <>
-                              {p.comparisonWeeks.length}
-                              <small>
-                                {p.comparisonWeeks.length
-                                  ? `Weeks ${p.comparisonWeeks.join(', ')}`
-                                  : ''}
-                              </small>
-                            </>
-                          ),
-                        },
-                      ]}
-                    />
+                      <Text mb={4} className="eyebrow">
+                        Head to head
+                      </Text>
+                      <Heading as="h2" size="xl" mb={4}>
+                        Who won each trade?
+                      </Heading>
+                      <Text mb={4}>
+                        Compare the value each side gained over the same first four post-trade
+                        weeks. Value means points above the league’s median starter at each player’s
+                        position, per week. Bench scoring is included to evaluate the players
+                        exchanged, independent of lineup choices.
+                      </Text>
+                      {data.tradeComparisons.length ? (
+                        data.tradeComparisons.map((trade) => (
+                          <Box as="article" className="trade-detail" key={trade.id}>
+                            <Flex
+                              direction={{ base: 'column', md: 'row' }}
+                              align={{ base: 'stretch', md: 'center' }}
+                              justify="space-between"
+                              gap={4}
+                              className="insight-heading"
+                            >
+                              <Heading as="h3" size="lg" mb={4}>
+                                Week {trade.week} ·{' '}
+                                {trade.sides
+                                  .map((side) => names.get(side.teamId) || side.teamId)
+                                  .join(' ↔ ')}
+                              </Heading>
+                              <strong>
+                                {trade.verdict === 'leader'
+                                  ? `${names.get(trade.winner!) || trade.winner} leads`
+                                  : trade.verdict === 'close'
+                                    ? 'Too close to call'
+                                    : trade.verdict === 'picks'
+                                      ? 'Draft picks not valued'
+                                      : 'Insufficient comparable data'}
+                              </strong>
+                            </Flex>
+                            <Text mb={4}>
+                              {trade.weeks.length} of {trade.possibleWeeks} completed weeks compared
+                              {trade.weeks.length ? ` (weeks ${trade.weeks.join(', ')})` : ''}.{' '}
+                              {trade.possibleWeeks < 4
+                                ? 'Early read: the four-week window is not complete.'
+                                : 'Four-week assessment.'}
+                            </Text>
+                            <Box overflowX="auto" className="insight-table-wrap">
+                              <DataTable
+                                label="Trade comparison"
+                                data={trade.sides}
+                                getRowId={(side) => side.teamId}
+                                columns={[
+                                  {
+                                    id: '0',
+                                    header: 'Team / received players',
+                                    value: (side) => names.get(side.teamId) || side.teamId,
+                                    rowHeader: true,
+                                    cell: (side) => (
+                                      <>
+                                        {names.get(side.teamId) || side.teamId}
+                                        <small>{side.received.join(', ') || 'No players'}</small>
+                                      </>
+                                    ),
+                                  },
+                                  {
+                                    id: '1',
+                                    header: 'Sent players',
+                                    value: (side) => side.sent.join(', '),
+                                    cell: (side) => <>{side.sent.join(', ') || 'No players'}</>,
+                                  },
+                                  {
+                                    id: '2',
+                                    header: 'Received value / wk',
+                                    value: (side) => side.receivedValue,
+                                    cell: (side) => <>{signed(side.receivedValue)}</>,
+                                  },
+                                  {
+                                    id: '3',
+                                    header: 'Sent value / wk',
+                                    value: (side) => side.sentValue,
+                                    cell: (side) => <>{signed(side.sentValue)}</>,
+                                  },
+                                  {
+                                    id: '4',
+                                    header: 'Net gain / wk',
+                                    value: (side) => side.gain,
+                                    cell: (side) => (
+                                      <>
+                                        <strong>{signed(side.gain)}</strong>
+                                      </>
+                                    ),
+                                  },
+                                ]}
+                              />
+                            </Box>
+                          </Box>
+                        ))
+                      ) : (
+                        <Text mb={4}>No completed player trades returned for this season.</Text>
+                      )}
+                    </Box>
+                  </div>
+                  <div hidden={view !== 'Pickups'}>
+                    <Box
+                      as="section"
+                      bg="bg"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      borderColor="border"
+                      rounded="lg"
+                      p={{ base: 4, md: 6 }}
+                      className="panel insight-section"
+                    >
+                      <Text mb={4} className="eyebrow">
+                        Found on the wire
+                      </Text>
+                      <Heading as="h2" size="xl" mb={4}>
+                        Free-agent moves that paid off
+                      </Heading>
+                      <Text mb={4}>
+                        Pickups ranked by average improvement per start in their first four
+                        post-pickup weeks. We use the dropped player at the same position when there
+                        is one clear pair and complete scoring coverage; otherwise we use the
+                        league’s positional starter median.
+                      </Text>
+                      <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
+                        <Field.Label>Filter pickups by team</Field.Label>
+                        <NativeSelect.Root>
+                          <NativeSelect.Field
+                            value={pickupTeam}
+                            onChange={(e) => {
+                              setPickupTeam(e.target.value);
+                              setAllPickups(false);
+                            }}
+                          >
+                            <option value="">All teams</option>
+                            {data.teams.map((t) => (
+                              <option key={t.teamId} value={t.teamId}>
+                                {t.teamName}
+                              </option>
+                            ))}
+                          </NativeSelect.Field>
+                          <NativeSelect.Indicator />
+                        </NativeSelect.Root>
+                      </Field.Root>
+                      {filteredPickups.length ? (
+                        <Box overflowX="auto" className="insight-table-wrap">
+                          <DataTable
+                            label="Free-agent pickups"
+                            data={filteredPickups}
+                            getRowId={(p) => p.id}
+                            initialSorting={[{ id: '5', desc: true }]}
+                            limit={allPickups ? undefined : 10}
+                            columns={[
+                              {
+                                id: '0',
+                                header: 'Player',
+                                value: (p) => p.player,
+                                rowHeader: true,
+                                cell: (p) => (
+                                  <>
+                                    {p.player}
+                                    <small>{p.position || 'Position unavailable'}</small>
+                                  </>
+                                ),
+                              },
+                              {
+                                id: '1',
+                                header: 'Team',
+                                value: (p) => names.get(p.teamId) || p.teamId,
+                                cell: (p) => <>{names.get(p.teamId) || p.teamId}</>,
+                              },
+                              {
+                                id: '2',
+                                header: 'Added week',
+                                value: (p) => p.week,
+                                cell: (p) => <>{p.week}</>,
+                              },
+                              {
+                                id: '3',
+                                header: 'Baseline',
+                                value: (p) => p.baseline,
+                                cell: (p) => <>{p.baseline}</>,
+                              },
+                              {
+                                id: '4',
+                                header: 'Avg. player points',
+                                value: (p) => p.averagePoints,
+                                cell: (p) => number(p.averagePoints),
+                              },
+                              {
+                                id: 'averageBaseline',
+                                header: 'Avg. baseline points',
+                                value: (p) => p.averageBaseline,
+                                cell: (p) => number(p.averageBaseline),
+                              },
+                              {
+                                id: '5',
+                                header: 'Lift / start',
+                                value: (p) => p.lift,
+                                cell: (p) => (
+                                  <>{p.lift === null ? 'Insufficient data' : signed(p.lift)}</>
+                                ),
+                              },
+                              {
+                                id: '6',
+                                header: 'Compared starts',
+                                value: (p) => p.comparisonWeeks.length,
+                                cell: (p) => (
+                                  <>
+                                    {p.comparisonWeeks.length}
+                                    <small>
+                                      {p.comparisonWeeks.length
+                                        ? `Weeks ${p.comparisonWeeks.join(', ')}`
+                                        : ''}
+                                    </small>
+                                  </>
+                                ),
+                              },
+                            ]}
+                          />
+                        </Box>
+                      ) : (
+                        <Text mb={4}>No completed pickups returned for this selection.</Text>
+                      )}
+                      {filteredPickups.length > 10 && (
+                        <Button
+                          variant="plain"
+                          type="button"
+                          onClick={() => setAllPickups((value) => !value)}
+                        >
+                          {allPickups
+                            ? 'Show top 10'
+                            : `Show all ${filteredPickups.length} pickups`}
+                        </Button>
+                      )}
+                    </Box>
+                  </div>
+                  <Box as="section" className="insights-method">
+                    <InfoTooltip label="How to read these numbers">
+                      <ul>
+                        <li>
+                          Only completed weeks are included. A dash means unavailable or not yet
+                          evaluable; it is not a zero.
+                        </li>
+                        <li>
+                          Assessments use at most the first four weeks after a move, excluding the
+                          transaction week. Trades use identical weeks for every asset, including
+                          bench scoring; later lineup decisions do not change who appears to have
+                          won. Pickups count starts only while retained, before the next move.
+                        </li>
+                        <li>
+                          Each positional baseline is the median of at least three other distinct
+                          starters in this league that week, excluding all traded assets.
+                          Multi-player package values are summed above these baselines, so a raw
+                          quarterback score does not automatically beat a receiver package.
+                        </li>
+                        <li>
+                          A scoring leader needs at least two common weeks, at least 75% coverage of
+                          the completed comparison window, and more than a 1-point/week gap between
+                          the leading net gains. Close results remain uncalled. This is an early
+                          scoring assessment, not a statistical confidence claim.
+                        </li>
+                        <li>
+                          We only observe players present in league roster snapshots. Missing scores
+                          and unknown positions are not treated as zero; byes/injuries with reported
+                          zero points count as zero. Trade grades exclude FAAB, draft picks and
+                          long-term dynasty value. Trades with picks receive no overall winner call.
+                        </li>
+                      </ul>
+                    </InfoTooltip>
+                    <Text className="insights-meta" mt={3}>
+                      Only completed weeks are included. A dash means unavailable, never zero. Trade
+                      grades exclude draft picks, FAAB and long-term dynasty value.
+                    </Text>
+                    {!!data.notes.length && (
+                      <ul className="insights-meta">
+                        {' '}
+                        {data.notes.map((note) => (
+                          <li key={note}>{note}</li>
+                        ))}
+                      </ul>
+                    )}
                   </Box>
-                ) : (
-                  <Text mb={4}>No completed pickups returned for this selection.</Text>
-                )}
-                {filteredPickups.length > 10 && (
-                  <Button
-                    variant="plain"
-                    type="button"
-                    onClick={() => setAllPickups((value) => !value)}
-                  >
-                    {allPickups ? 'Show top 10' : `Show all ${filteredPickups.length} pickups`}
-                  </Button>
-                )}
-              </Box>
-              <Box as="section" className="insights-method">
-                <Heading as="h2" size="xl" mb={4}>
-                  How to read these numbers
-                </Heading>
-                <ul>
-                  <li>
-                    Only completed weeks are included. A dash means unavailable or not yet
-                    evaluable; it is not a zero.
-                  </li>
-                  <li>
-                    Assessments use at most the first four weeks after a move, excluding the
-                    transaction week. Trades use identical weeks for every asset, including bench
-                    scoring; later lineup decisions do not change who appears to have won. Pickups
-                    count starts only while retained, before the next move.
-                  </li>
-                  <li>
-                    Each positional baseline is the median of at least three other distinct starters
-                    in this league that week, excluding all traded assets. Multi-player package
-                    values are summed above these baselines, so a raw quarterback score does not
-                    automatically beat a receiver package.
-                  </li>
-                  <li>
-                    A scoring leader needs at least two common weeks, at least 75% coverage of the
-                    completed comparison window, and more than a 1-point/week gap between the
-                    leading net gains. Close results remain uncalled. This is an early scoring
-                    assessment, not a statistical confidence claim.
-                  </li>
-                  <li>
-                    We only observe players present in league roster snapshots. Missing scores and
-                    unknown positions are not treated as zero; byes/injuries with reported zero
-                    points count as zero. Trade grades exclude FAAB, draft picks and long-term
-                    dynasty value. Trades with picks receive no overall winner call.
-                  </li>
-                  {data.notes.map((note) => (
-                    <li key={note}>{note}</li>
-                  ))}
-                </ul>
+                </Box>
               </Box>
             </>
           )}
         </ReportExportScope>
       )}
-    </>
+    </Box>
   );
 }

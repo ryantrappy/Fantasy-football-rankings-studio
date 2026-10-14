@@ -1,17 +1,26 @@
+import type { ReactElement } from 'react';
+import { Provider } from '../../ui/provider';
 import { useState } from 'react';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import {
+  render as testingRender,
+  screen,
+  fireEvent,
+  cleanup,
+  within,
+} from '@testing-library/react';
 import { afterEach, it, expect, vi } from 'vitest';
 import { CompetitionHistory } from './CompetitionHistory';
 import { season } from '../../../history/competition/fixtures.test-support';
 
 afterEach(cleanup);
 
-it('focuses opponent records and shows selected rivalry evidence with coverage tucked away', () => {
+const render = (ui: ReactElement) => testingRender(ui, { wrapper: Provider });
+
+it('focuses opponent records and shows selected rivalry evidence with visible coverage and definition help', () => {
   render(
     <CompetitionHistory records={[season()]} years={[2023, 2024]} leagueId="league 1" shared />,
   );
-  const coverage = screen.getByText('Rivalry definitions & coverage').closest('details');
-  expect(coverage?.open).toBe(false);
+  expect(screen.getByRole('button', { name: 'Rivalry definitions' })).toBeTruthy();
   expect(screen.getByText(/Missing seasons: 2023/)).toBeTruthy();
   expect(screen.queryByRole('table', { name: /matrix/ })).toBeNull();
   expect(

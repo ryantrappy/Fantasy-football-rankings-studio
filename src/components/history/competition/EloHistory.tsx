@@ -1,3 +1,4 @@
+import { InfoTooltip } from '../../InfoTooltip';
 import { useState } from 'react';
 import { historicalElo } from '../../../history/competition/elo';
 import { number, type CompetitionProps } from './CompetitionHistory';
@@ -13,17 +14,19 @@ export function EloHistory({ records, managerKey, onManagerChange, active }: Com
   return (
     <details open={active || undefined} className="history-explorer-analysis">
       <summary>Cross-season Elo manager ratings</summary>
-      <details className="history-explorer-methodology">
-        <summary>Elo definitions & coverage</summary>
-        <p>
+      <div className="history-explorer-definition">
+        <span>Elo rating method</span>
+        <InfoTooltip label="Elo rating method">
           New managers start at 1500. Each completed reciprocal game updates rating by 32 × (result
           − expected); expected = 1 / (1 + 10^((opponent rating − rating) / 400)). Ties are half a
           win. Games run by season, week and stable matchup ID; ratings carry across years without
-          reset. No margin bonus. Missing seasons are omitted, so this is a rating over loaded
-          history, not a complete career estimate. Renames follow provider identity; new owners and
-          unknown seasonal identities start fresh.
-        </p>
-      </details>
+          reset. No margin bonus.
+        </InfoTooltip>
+      </div>
+      <p className="history-explorer-footnote">
+        Missing seasons are omitted, so this rates loaded history rather than a complete career.
+        Renames follow provider identity; new owners and unknown seasonal identities start fresh.
+      </p>
       <DataTable
         label="Historical Elo ratings"
         data={rankings}

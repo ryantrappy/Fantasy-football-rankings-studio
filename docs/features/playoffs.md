@@ -186,3 +186,12 @@ Source: [TASK-81](../../backlog/tasks/task-81%20-%20Archive-one-as-of-playoff-fo
 - Repeatable browser measurements with representative 12-team and 32-team fixtures demonstrate that simulation no longer creates long blocking main-thread work; regression tests verify result parity, cancellation and loading behavior.
 
 Source: [TASK-116](../../backlog/tasks/task-116%20-%20Keep-uncached-playoff-simulations-from-blocking-interactive-rendering.md).
+
+### TASK-146 — Focused forecasts and Advanced evaluation
+
+- Forecast table and Week-by-week chart retain cutoff selection, projected records, all configured advancement/title probabilities, exact weekly values and playoff/championship metric selection. Six-team brackets expose unconditional first-round bye probability by counting the same top-two seeded events already used by each simulation; other fields have no byes. Counting adds no random draws and changes no scoring, seeding or advancement calculation.
+- Advanced contains full historical forecast reliability plus on-demand season calibration. Convergence, Weekly diagnostics, Season comparisons, Reliability and Final seeding each retain their complete evidence and benchmarks; full replay JSON and table CSV remain available.
+- Advanced controls/results persist when returning. Leaving Advanced cancels an active calibration, rejects late results, retains existing evidence, disables incomplete replay export and requires an explicit rerun. Cancellation is also directly available while running. No historical fetch or backtest starts just by visiting the normal forecast.
+- Early-season uncertainty, supported-rule limits, retrospective/projection/schedule/availability coverage, frozen-snapshot limits and simulation uncertainty remain available. Validation and exact affected IDs: [analytics preservation checklist](../manager-explorer-analytics-coverage.md).
+
+Source: [TASK-146](../../backlog/tasks/task-146%20-%20Apply-the-Manager-Explorer-design-approach-across-the-app.md).

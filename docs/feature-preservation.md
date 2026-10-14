@@ -30,3 +30,7 @@ TASK-72 is Done with unchecked criteria and no final summary; do not infer deplo
 When completing or intentionally changing a feature, update only its relevant area contract and index routing as needed. Keep stable IDs, source links, important user constraints and approval references. Keep old intent and approved-change history; do not silently erase requirements. Later completed fixes refine older internals while preserving capabilities.
 
 The [full original catalogue](feature-preservation-archive.md) retains original requests, criteria and delivery notes for targeted historical lookup. It is reference material, not required routine context; its old workflow/approval instructions are superseded by this index and the current approval log.
+
+## Manager Explorer implementation
+
+TASK-146 was implemented and validated on October 14, 2026. Its preservation audit is tracked in [the implementation coverage checklist](manager-explorer-coverage.md), with separate Analytics, Decision support and History evidence. The original/compact ranking-image contract remains unchanged and TASK-147 remains future work. No reduction is authorized by this redesign.

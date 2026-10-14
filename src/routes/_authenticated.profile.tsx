@@ -15,16 +15,19 @@ function ProfileSettings() {
   const navigate = Route.useNavigate();
   const { returnTo } = Route.useSearch();
   return (
-    <>
-      <ProfilePage api={api} />
-      <section className="profile-espn-settings" aria-label="ESPN settings">
-        <EspnSetup
-          api={api}
-          settings
-          onComplete={returnTo ? () => void navigate({ to: returnTo }) : undefined}
-        />
-      </section>
-      <PasswordReset />
-    </>
+    <ProfilePage
+      api={api}
+      initialView={returnTo ? 'espn' : 'details'}
+      recovery={<PasswordReset />}
+      settings={
+        <section className="profile-espn-settings" aria-label="ESPN settings">
+          <EspnSetup
+            api={api}
+            settings
+            onComplete={returnTo ? () => void navigate({ to: returnTo }) : undefined}
+          />
+        </section>
+      }
+    />
   );
 }

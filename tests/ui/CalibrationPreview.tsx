@@ -1,6 +1,6 @@
 import { PlayoffCalibration } from '../../src/components/PlayoffCalibration';
 import type { SeasonInsights } from '../../src/insights';
-const api = {
+export const calibrationApi = {
   getLeagueSeasons: async () => ({
     years: [2026, 2025, 2024],
     activeSeason: 2026,
@@ -46,5 +46,5 @@ const api = {
     }) as SeasonInsights,
 };
 export function CalibrationPreview() {
-  return <PlayoffCalibration api={api} leagueId="fixture" year={2026} />;
+  return <PlayoffCalibration api={calibrationApi} leagueId="fixture" year={2026} />;
 }

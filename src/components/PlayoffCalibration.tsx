@@ -1,6 +1,7 @@
+import './analytics-explorer.css';
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- SVG needs a named chart role. */
 import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PublicInsightsApi } from '../api/public-insights';
 import { errorMessage } from '../api/client';
 import {
@@ -24,13 +25,18 @@ export function PlayoffCalibration({
   leagueId,
   year,
   frozen = false,
+  active = true,
 }: {
   api: Pick<PublicInsightsApi, 'getLeagueSeasons' | 'getInsights'>;
   leagueId: string;
   year: number;
   frozen?: boolean;
+  active?: boolean;
 }) {
   const [run, setRun] = useState(0);
+  const [view, setView] = useState('Convergence');
+  const lastRun = useRef(0);
+  const cancel = useRef<(() => void) | null>(null);
   const [state, setState] = useState<{
     running: boolean;
     progress: string;
@@ -54,7 +60,8 @@ export function PlayoffCalibration({
     label: string;
   } | null>(null);
   useEffect(() => {
-    if (!run || frozen) return;
+    if (!run || frozen || !active || lastRun.current === run) return;
+    lastRun.current = run;
     let cancelled = false;
     const controller = new AbortController();
     const observations: CalibrationObservation[] = [],
@@ -108,11 +115,26 @@ export function PlayoffCalibration({
       }
       publish(false, 'Backtest complete.');
     })();
-    return () => {
+    const stop = () => {
       cancelled = true;
       controller.abort();
+      setState((previous) =>
+        previous.running
+          ? {
+              ...previous,
+              running: false,
+              progress: 'Calibration canceled. Rerun to evaluate all requested seasons.',
+              completedAt: undefined,
+            }
+          : previous,
+      );
     };
-  }, [api, leagueId, year, run, frozen]);
+    cancel.current = stop;
+    return () => {
+      stop();
+      cancel.current = null;
+    };
+  }, [api, leagueId, year, run, frozen, active]);
   const predictive = predictiveObservations(state.observations);
   const weeks = summarizeCalibration(predictive);
   const seasonMetrics = summarizeCalibrationSeasons(state.observations);
@@ -132,7 +154,7 @@ export function PlayoffCalibration({
     <Box
       as="section"
       aria-label="Season-level playoff calibration"
-      className="panel insight-section"
+      className="panel insight-section analytics-explorer analytics-explorer-calibration"
       bg="bg"
       borderWidth="1px"
       rounded="lg"
@@ -166,6 +188,11 @@ export function PlayoffCalibration({
             <Button onClick={() => setRun((n) => n + 1)} disabled={state.running}>
               {run ? 'Rerun historical calibration' : 'Run historical calibration'}
             </Button>
+            {state.running && (
+              <Button variant="outline" onClick={() => cancel.current?.()}>
+                Cancel calibration
+              </Button>
+            )}
             <Button
               variant="outline"
               disabled={state.running || !state.completedAt || !state.observations.length}
@@ -206,318 +233,356 @@ export function PlayoffCalibration({
           ))}
         </Box>
       )}
+      {!!state.observations.length && (
+        <nav
+          className="analytics-explorer-tabs analytics-explorer-local-tabs"
+          aria-label="Calibration views"
+        >
+          {[
+            'Convergence',
+            'Weekly diagnostics',
+            'Season comparisons',
+            'Reliability',
+            'Final seeding',
+          ].map((name) => (
+            <Button
+              key={name}
+              variant="outline"
+              aria-pressed={view === name}
+              onClick={() => setView(name)}
+            >
+              {name}
+            </Button>
+          ))}
+        </nav>
+      )}
       {first && last && (
         <>
-          <Text mb={3}>
-            {first.seasons} seasons, {first.teams} team outcomes at week {first.week}. Predictive
-            Brier score: {first.brier.toFixed(3)} at week {first.week} → {last.brier.toFixed(3)} at
-            week {last.week}. Lower is better.{' '}
-            {last.brier < first.brier
-              ? 'Error decreased across these endpoints.'
-              : 'Error did not decrease across these endpoints.'}{' '}
-            Counts by week are shown below; later weeks may cover fewer seasons.
-          </Text>
-          <Text mb={3}>
-            Solid green: model Brier score. Dashed blue: standings benchmark, retaining banked wins,
-            points and remaining opponents but giving all teams equal future scoring strength and
-            variability. Dotted orange: equal-chance baseline (playoff places ÷ teams). Lower error
-            than the standings benchmark shows that estimated team strength adds predictive value.
-          </Text>
-          <Box overflowX="auto">
-            <svg
-              viewBox="0 0 730 285"
-              width="100%"
-              style={{ minWidth: 480 }}
-              role="img"
-              aria-label="Playoff forecast Brier score by completed week; lower is better. Exact scores follow in the table."
-            >
-              {[0, 0.25, 0.5, 0.75, 1].map((v) => (
-                <g key={v}>
-                  <line x1="55" x2="695" y1={y(v)} y2={y(v)} stroke="var(--chakra-colors-border)" />
-                  <text x="45" y={y(v) + 4} textAnchor="end" fill="currentColor" fontSize="12">
-                    {v.toFixed(2)}
-                  </text>
-                </g>
-              ))}
-              {weeks.map((w) => (
-                <text
-                  key={w.week}
-                  x={x(w.week)}
-                  y="255"
-                  textAnchor="middle"
-                  fill="currentColor"
-                  fontSize="12"
-                >
-                  {w.week}
-                </text>
-              ))}
-              {(['brier', 'standingsBrier', 'baselineBrier'] as const).map((metric) => (
-                <g key={metric}>
-                  {weeks
-                    .slice(1)
-                    .map(
-                      (w, i) =>
-                        weeks[i].week === w.week - 1 &&
-                        weeks[i][metric] !== null &&
-                        w[metric] !== null && (
-                          <line
-                            key={w.week}
-                            x1={x(weeks[i].week)}
-                            y1={y(weeks[i][metric]!)}
-                            x2={x(w.week)}
-                            y2={y(w[metric]!)}
-                            stroke={
-                              metric === 'brier'
-                                ? '#246747'
-                                : metric === 'standingsBrier'
-                                  ? '#345eae'
-                                  : '#a34f2d'
-                            }
-                            strokeWidth="2.5"
-                            strokeDasharray={
-                              metric === 'brier'
-                                ? undefined
-                                : metric === 'standingsBrier'
-                                  ? '6 4'
-                                  : '2 4'
-                            }
-                          />
-                        ),
-                    )}
-                  {weeks.map((w) => {
-                    const value = w[metric];
-                    if (value === null) return null;
-                    const label =
-                      metric === 'brier'
-                        ? 'Model Brier score'
-                        : metric === 'standingsBrier'
-                          ? 'Standings Brier score'
-                          : 'Equal-chance Brier score';
-                    return (
-                      <circle
-                        key={w.week}
-                        cx={x(w.week)}
-                        cy={y(value)}
-                        r="4"
-                        tabIndex={0}
-                        aria-label={`${label}, week ${w.week}: ${value.toFixed(3)}`}
-                        onMouseEnter={() => setHovered({ week: w.week, value, label })}
-                        onMouseLeave={() => setHovered(null)}
-                        onFocus={() => setHovered({ week: w.week, value, label })}
-                        onBlur={() => setHovered(null)}
-                        fill={
-                          metric === 'brier'
-                            ? '#246747'
-                            : metric === 'standingsBrier'
-                              ? '#345eae'
-                              : '#a34f2d'
-                        }
-                      />
-                    );
-                  })}
-                </g>
-              ))}
-              <text x="375" y="280" textAnchor="middle" fill="currentColor" fontSize="12">
-                Completed regular-season week
-              </text>
-              {hovered && (
-                <ChartPointTooltip
-                  x={x(hovered.week)}
-                  y={y(hovered.value)}
-                  chartWidth={730}
-                  chartHeight={285}
-                  title={hovered.label}
-                  detail={`Week ${hovered.week} · ${hovered.value.toFixed(3)}`}
-                />
-              )}
-            </svg>
-          </Box>
-          <Box overflowX="auto">
-            <DataTable
-              label="Weekly playoff forecast accuracy"
-              data={weeks}
-              getRowId={(w) => String(w.week)}
-              columns={[
-                {
-                  id: 'week',
-                  header: 'Week',
-                  value: (w) => w.week,
-                  cell: (w) => w.week,
-                  rowHeader: true,
-                },
-                {
-                  id: 'seasons',
-                  header: 'Seasons',
-                  value: (w) => w.seasons,
-                  cell: (w) => w.seasons,
-                },
-                {
-                  id: 'teams',
-                  header: 'Team outcomes',
-                  value: (w) => w.teams,
-                  cell: (w) => w.teams,
-                },
-                ...(
-                  [
-                    'brier',
-                    'standingsBrier',
-                    'baselineBrier',
-                    'logLoss',
-                    'standingsLogLoss',
-                    'baselineLogLoss',
-                  ] as const
-                ).map((metric, i) => ({
-                  id: metric,
-                  header: [
-                    'Model Brier',
-                    'Standings Brier',
-                    'Equal-chance Brier',
-                    'Model log loss',
-                    'Standings log loss',
-                    'Equal-chance log loss',
-                  ][i],
-                  value: (w: typeof first) => w[metric],
-                  cell: (w: typeof first) => w[metric]?.toFixed(3) ?? '—',
-                })),
-                {
-                  id: 'accuracy',
-                  header: 'Accuracy at 50% threshold',
-                  value: (w) => w.accuracy,
-                  cell: (w) => percent(w.accuracy),
-                },
-              ]}
-            />
-          </Box>
-          <Text mt={3} mb={3}>
-            Brier score is mean squared probability error. Log loss penalizes confident mistakes;
-            probabilities are clipped to 0.000001–0.999999 for scoring. Both are lower-is-better.
-            Classification accuracy uses a 50% threshold and can be misleading when most teams
-            qualify or miss.
-          </Text>
-          <Heading as="h3" size="md" mt={5} mb={3}>
-            Predictive results by season
-          </Heading>
-          <Text mb={3}>
-            Each season averages its predictive cutoffs, excluding the final week. Positive Brier
-            skill means lower error than the standings benchmark; negative means worse. These
-            repeated forecasts are dependent, not separate independent team outcomes. Compare
-            changes on later seasons or additional leagues before tuning the model.
-          </Text>
-          <Box overflowX="auto">
-            <DataTable
-              label="Playoff accuracy by season"
-              data={seasonMetrics}
-              getRowId={(s) => String(s.year)}
-              columns={[
-                {
-                  id: 'year',
-                  header: 'Season',
-                  value: (s) => s.year,
-                  cell: (s) => s.year,
-                  rowHeader: true,
-                },
-                {
-                  id: 'teams',
-                  header: 'Unique teams',
-                  value: (s) => s.uniqueTeams,
-                  cell: (s) => s.uniqueTeams,
-                },
-                {
-                  id: 'cutoffs',
-                  header: 'Predictive cutoffs',
-                  value: (s) => s.cutoffs,
-                  cell: (s) => s.cutoffs,
-                },
-                {
-                  id: 'forecasts',
-                  header: 'Team-week forecasts',
-                  value: (s) => s.forecasts,
-                  cell: (s) => s.forecasts,
-                },
-                {
-                  id: 'brier',
-                  header: 'Model Brier',
-                  value: (s) => s.brier,
-                  cell: (s) => s.brier.toFixed(3),
-                },
-                {
-                  id: 'standings',
-                  header: 'Standings Brier',
-                  value: (s) => s.standingsBrier,
-                  cell: (s) => s.standingsBrier?.toFixed(3) ?? '—',
-                },
-                {
-                  id: 'skill',
-                  header: 'Brier skill vs standings',
-                  value: (s) => s.standingsSkill,
-                  cell: (s) => (s.standingsSkill === null ? '—' : percent(s.standingsSkill)),
-                },
-              ]}
-            />
-          </Box>
-          <Field.Root maxW="xs" mb={3}>
-            <Field.Label>Calibration through week</Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field
-                value={selected?.week || 1}
-                onChange={(e) => setSelectedWeek(Number(e.target.value))}
+          <div hidden={view !== 'Convergence'}>
+            <Text mb={3}>
+              {first.seasons} seasons, {first.teams} team outcomes at week {first.week}. Predictive
+              Brier score: {first.brier.toFixed(3)} at week {first.week} → {last.brier.toFixed(3)}{' '}
+              at week {last.week}. Lower is better.{' '}
+              {last.brier < first.brier
+                ? 'Error decreased across these endpoints.'
+                : 'Error did not decrease across these endpoints.'}{' '}
+              Counts by week are shown below; later weeks may cover fewer seasons.
+            </Text>
+            <Text mb={3}>
+              Solid green: model Brier score. Dashed blue: standings benchmark, retaining banked
+              wins, points and remaining opponents but giving all teams equal future scoring
+              strength and variability. Dotted orange: equal-chance baseline (playoff places ÷
+              teams). Lower error than the standings benchmark shows that estimated team strength
+              adds predictive value.
+            </Text>
+            <Box overflowX="auto">
+              <svg
+                viewBox="0 0 730 285"
+                width="100%"
+                style={{ minWidth: 480 }}
+                role="img"
+                aria-label="Playoff forecast Brier score by completed week; lower is better. Exact scores follow in the table."
               >
-                {weeks.map((w) => (
-                  <option key={w.week} value={w.week}>
-                    {w.week}
-                  </option>
+                {[0, 0.25, 0.5, 0.75, 1].map((v) => (
+                  <g key={v}>
+                    <line
+                      x1="55"
+                      x2="695"
+                      y1={y(v)}
+                      y2={y(v)}
+                      stroke="var(--chakra-colors-border)"
+                    />
+                    <text x="45" y={y(v) + 4} textAnchor="end" fill="currentColor" fontSize="12">
+                      {v.toFixed(2)}
+                    </text>
+                  </g>
                 ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          {selected && (
-            <>
-              <Text mb={3}>
-                Week {selected.week}: predicted probability versus actual qualification rate. Bins
-                use only this cutoff, so teams are not counted repeatedly across weeks. Each bin
-                includes its lower boundary; only the last includes 100%.
-              </Text>
-              <Box overflowX="auto">
-                <DataTable
-                  label="Season-level playoff reliability"
-                  data={selected.reliability.filter((b) => b.count)}
-                  getRowId={(b) => b.label}
-                  columns={[
-                    {
-                      id: 'bin',
-                      header: 'Forecast range',
-                      value: (b) => b.label,
-                      cell: (b) => b.label,
-                      rowHeader: true,
-                    },
-                    {
-                      id: 'count',
-                      header: 'Team outcomes',
-                      value: (b) => b.count,
-                      cell: (b) => b.count,
-                    },
-                    {
-                      id: 'predicted',
-                      header: 'Mean predicted',
-                      value: (b) => b.predicted,
-                      cell: (b) => percent(b.predicted),
-                    },
-                    {
-                      id: 'observed',
-                      header: 'Actually qualified',
-                      value: (b) => b.observed,
-                      cell: (b) => percent(b.observed),
-                    },
-                  ]}
-                />
-              </Box>
-            </>
-          )}
+                {weeks.map((w) => (
+                  <text
+                    key={w.week}
+                    x={x(w.week)}
+                    y="255"
+                    textAnchor="middle"
+                    fill="currentColor"
+                    fontSize="12"
+                  >
+                    {w.week}
+                  </text>
+                ))}
+                {(['brier', 'standingsBrier', 'baselineBrier'] as const).map((metric) => (
+                  <g key={metric}>
+                    {weeks
+                      .slice(1)
+                      .map(
+                        (w, i) =>
+                          weeks[i].week === w.week - 1 &&
+                          weeks[i][metric] !== null &&
+                          w[metric] !== null && (
+                            <line
+                              key={w.week}
+                              x1={x(weeks[i].week)}
+                              y1={y(weeks[i][metric]!)}
+                              x2={x(w.week)}
+                              y2={y(w[metric]!)}
+                              stroke={
+                                metric === 'brier'
+                                  ? '#246747'
+                                  : metric === 'standingsBrier'
+                                    ? '#345eae'
+                                    : '#a34f2d'
+                              }
+                              strokeWidth="2.5"
+                              strokeDasharray={
+                                metric === 'brier'
+                                  ? undefined
+                                  : metric === 'standingsBrier'
+                                    ? '6 4'
+                                    : '2 4'
+                              }
+                            />
+                          ),
+                      )}
+                    {weeks.map((w) => {
+                      const value = w[metric];
+                      if (value === null) return null;
+                      const label =
+                        metric === 'brier'
+                          ? 'Model Brier score'
+                          : metric === 'standingsBrier'
+                            ? 'Standings Brier score'
+                            : 'Equal-chance Brier score';
+                      return (
+                        <circle
+                          key={w.week}
+                          cx={x(w.week)}
+                          cy={y(value)}
+                          r="4"
+                          tabIndex={0}
+                          aria-label={`${label}, week ${w.week}: ${value.toFixed(3)}`}
+                          onMouseEnter={() => setHovered({ week: w.week, value, label })}
+                          onMouseLeave={() => setHovered(null)}
+                          onFocus={() => setHovered({ week: w.week, value, label })}
+                          onBlur={() => setHovered(null)}
+                          fill={
+                            metric === 'brier'
+                              ? '#246747'
+                              : metric === 'standingsBrier'
+                                ? '#345eae'
+                                : '#a34f2d'
+                          }
+                        />
+                      );
+                    })}
+                  </g>
+                ))}
+                <text x="375" y="280" textAnchor="middle" fill="currentColor" fontSize="12">
+                  Completed regular-season week
+                </text>
+                {hovered && (
+                  <ChartPointTooltip
+                    x={x(hovered.week)}
+                    y={y(hovered.value)}
+                    chartWidth={730}
+                    chartHeight={285}
+                    title={hovered.label}
+                    detail={`Week ${hovered.week} · ${hovered.value.toFixed(3)}`}
+                  />
+                )}
+              </svg>
+            </Box>
+          </div>
+          <div hidden={view !== 'Weekly diagnostics'}>
+            <Box overflowX="auto">
+              <DataTable
+                label="Weekly playoff forecast accuracy"
+                data={weeks}
+                getRowId={(w) => String(w.week)}
+                columns={[
+                  {
+                    id: 'week',
+                    header: 'Week',
+                    value: (w) => w.week,
+                    cell: (w) => w.week,
+                    rowHeader: true,
+                  },
+                  {
+                    id: 'seasons',
+                    header: 'Seasons',
+                    value: (w) => w.seasons,
+                    cell: (w) => w.seasons,
+                  },
+                  {
+                    id: 'teams',
+                    header: 'Team outcomes',
+                    value: (w) => w.teams,
+                    cell: (w) => w.teams,
+                  },
+                  ...(
+                    [
+                      'brier',
+                      'standingsBrier',
+                      'baselineBrier',
+                      'logLoss',
+                      'standingsLogLoss',
+                      'baselineLogLoss',
+                    ] as const
+                  ).map((metric, i) => ({
+                    id: metric,
+                    header: [
+                      'Model Brier',
+                      'Standings Brier',
+                      'Equal-chance Brier',
+                      'Model log loss',
+                      'Standings log loss',
+                      'Equal-chance log loss',
+                    ][i],
+                    value: (w: typeof first) => w[metric],
+                    cell: (w: typeof first) => w[metric]?.toFixed(3) ?? '—',
+                  })),
+                  {
+                    id: 'accuracy',
+                    header: 'Accuracy at 50% threshold',
+                    value: (w) => w.accuracy,
+                    cell: (w) => percent(w.accuracy),
+                  },
+                ]}
+              />
+            </Box>
+            <Text mt={3} mb={3}>
+              Brier score is mean squared probability error. Log loss penalizes confident mistakes;
+              probabilities are clipped to 0.000001–0.999999 for scoring. Both are lower-is-better.
+              Classification accuracy uses a 50% threshold and can be misleading when most teams
+              qualify or miss.
+            </Text>
+          </div>
+          <div hidden={view !== 'Season comparisons'}>
+            <Heading as="h3" size="md" mt={5} mb={3}>
+              Predictive results by season
+            </Heading>
+            <Text mb={3}>
+              Each season averages its predictive cutoffs, excluding the final week. Positive Brier
+              skill means lower error than the standings benchmark; negative means worse. These
+              repeated forecasts are dependent, not separate independent team outcomes. Compare
+              changes on later seasons or additional leagues before tuning the model.
+            </Text>
+            <Box overflowX="auto">
+              <DataTable
+                label="Playoff accuracy by season"
+                data={seasonMetrics}
+                getRowId={(s) => String(s.year)}
+                columns={[
+                  {
+                    id: 'year',
+                    header: 'Season',
+                    value: (s) => s.year,
+                    cell: (s) => s.year,
+                    rowHeader: true,
+                  },
+                  {
+                    id: 'teams',
+                    header: 'Unique teams',
+                    value: (s) => s.uniqueTeams,
+                    cell: (s) => s.uniqueTeams,
+                  },
+                  {
+                    id: 'cutoffs',
+                    header: 'Predictive cutoffs',
+                    value: (s) => s.cutoffs,
+                    cell: (s) => s.cutoffs,
+                  },
+                  {
+                    id: 'forecasts',
+                    header: 'Team-week forecasts',
+                    value: (s) => s.forecasts,
+                    cell: (s) => s.forecasts,
+                  },
+                  {
+                    id: 'brier',
+                    header: 'Model Brier',
+                    value: (s) => s.brier,
+                    cell: (s) => s.brier.toFixed(3),
+                  },
+                  {
+                    id: 'standings',
+                    header: 'Standings Brier',
+                    value: (s) => s.standingsBrier,
+                    cell: (s) => s.standingsBrier?.toFixed(3) ?? '—',
+                  },
+                  {
+                    id: 'skill',
+                    header: 'Brier skill vs standings',
+                    value: (s) => s.standingsSkill,
+                    cell: (s) => (s.standingsSkill === null ? '—' : percent(s.standingsSkill)),
+                  },
+                ]}
+              />
+            </Box>
+          </div>
+          <div hidden={view !== 'Reliability'}>
+            <Field.Root maxW="xs" mb={3}>
+              <Field.Label>Calibration through week</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={selected?.week || 1}
+                  onChange={(e) => setSelectedWeek(Number(e.target.value))}
+                >
+                  {weeks.map((w) => (
+                    <option key={w.week} value={w.week}>
+                      {w.week}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            {selected && (
+              <>
+                <Text mb={3}>
+                  Week {selected.week}: predicted probability versus actual qualification rate. Bins
+                  use only this cutoff, so teams are not counted repeatedly across weeks. Each bin
+                  includes its lower boundary; only the last includes 100%.
+                </Text>
+                <Box overflowX="auto">
+                  <DataTable
+                    label="Season-level playoff reliability"
+                    data={selected.reliability.filter((b) => b.count)}
+                    getRowId={(b) => b.label}
+                    columns={[
+                      {
+                        id: 'bin',
+                        header: 'Forecast range',
+                        value: (b) => b.label,
+                        cell: (b) => b.label,
+                        rowHeader: true,
+                      },
+                      {
+                        id: 'count',
+                        header: 'Team outcomes',
+                        value: (b) => b.count,
+                        cell: (b) => b.count,
+                      },
+                      {
+                        id: 'predicted',
+                        header: 'Mean predicted',
+                        value: (b) => b.predicted,
+                        cell: (b) => percent(b.predicted),
+                      },
+                      {
+                        id: 'observed',
+                        header: 'Actually qualified',
+                        value: (b) => b.observed,
+                        cell: (b) => percent(b.observed),
+                      },
+                    ]}
+                  />
+                </Box>
+              </>
+            )}
+          </div>
         </>
       )}
       {finalError !== null && (
-        <Box mt={5}>
+        <Box hidden={view !== 'Final seeding'} mt={5}>
           <Heading as="h3" size="md" mb={2}>
             Final-week seeding rules check
           </Heading>

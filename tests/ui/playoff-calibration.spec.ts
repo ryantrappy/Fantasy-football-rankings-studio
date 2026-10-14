@@ -21,15 +21,35 @@ for (const viewport of [
     await modelPoint.hover();
     await expect(page.locator('svg g[aria-hidden="true"]')).toContainText('Model Brier score');
     await expect(page.locator('svg g[aria-hidden="true"]')).toContainText(/Week 1 · 0\.\d{3}/);
+    await page.screenshot({
+      path: `test-results/analytics-convergence-${viewport.width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Weekly diagnostics' }).click();
     await expect(
       page.getByRole('table', { name: 'Weekly playoff forecast accuracy' }).locator('tbody tr'),
     ).toHaveCount(9);
+    await page.screenshot({
+      path: `test-results/analytics-weekly-diagnostics-${viewport.width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Season comparisons' }).click();
     await expect(
       page.getByRole('table', { name: 'Playoff accuracy by season' }).locator('tbody tr'),
     ).toHaveCount(2);
+    await page.screenshot({
+      path: `test-results/analytics-season-comparisons-${viewport.width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Final seeding' }).click();
     await expect(
       page.getByRole('heading', { name: 'Final-week seeding rules check' }),
     ).toBeVisible();
+    await page.screenshot({
+      path: `test-results/analytics-final-seeding-${viewport.width}.png`,
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Reliability' }).click();
     await page.getByLabel('Calibration through week').selectOption('2');
     await expect(page.getByText(/Week 2: predicted probability/)).toBeVisible();
     const downloaded = page.waitForEvent('download');

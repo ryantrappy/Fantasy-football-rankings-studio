@@ -13,6 +13,7 @@ import { Provider } from '../components/ui/provider';
 import type { RouterContext } from '../router-context';
 import styles from '../index.css?url';
 import studioStyles from '../studio.css?url';
+import explorerStyles from '../explorer.css?url';
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -30,6 +31,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     links: [
       { rel: 'stylesheet', href: styles },
       { rel: 'stylesheet', href: studioStyles },
+      { rel: 'stylesheet', href: explorerStyles },
       { rel: 'icon', href: '/studio-icon.svg', type: 'image/svg+xml' },
       { rel: 'alternate icon', href: '/favicon.ico', type: 'image/x-icon' },
       { rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },

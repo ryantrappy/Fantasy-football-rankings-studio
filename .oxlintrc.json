@@ -11,7 +11,9 @@
     "coverage",
     ".output",
     ".tanstack",
-    "src/routeTree.gen.ts"
+    "src/routeTree.gen.ts",
+    "docs/mockups",
+    "test-results-*"
   ],
   "env": {
     "node": true,

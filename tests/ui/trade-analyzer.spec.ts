@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 for (const width of [1280, 390]) {
-  test(`trade selection and roster layout at ${width}px`, async ({ page }) => {
+  test(`trade selection and roster layout at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/tests/ui/?mode=trade');
     const one = page.getByRole('region', { name: 'Trade team 1' });
@@ -31,7 +31,7 @@ for (const width of [1280, 390]) {
     const bounds = await Promise.all([one.boundingBox(), two.boundingBox()]);
     if (width > 768) expect(bounds[0]!.y).toBe(bounds[1]!.y);
     else expect(bounds[1]!.y).toBeGreaterThan(bounds[0]!.y + bounds[0]!.height);
-    await page.screenshot({ path: `test-results/trade-${width}.png`, fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath(`trade-${width}.png`), fullPage: true });
     const accessibility = await new AxeBuilder({ page }).include('#root').analyze();
     expect(accessibility.violations).toEqual([]);
     await page.getByRole('button', { name: 'Clear trade' }).click();
@@ -43,9 +43,12 @@ for (const width of [1280, 390]) {
 }
 
 for (const width of [1280, 390]) {
-  test(`trade discovery, inspection and scope clearing at ${width}px`, async ({ page }) => {
+  test(`trade discovery, inspection and scope clearing at ${width}px`, async ({
+    page,
+  }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/tests/ui/?mode=trade-suggestions');
+    await page.getByRole('button', { name: 'Find trade ideas' }).click();
     const first = page.getByRole('article', { name: 'Suggestion 1 with Sunday Stunners' });
     await expect(first).toBeVisible();
     await expect(first).toContainText('Send Home Depth RB · Receive Away Depth WR');
@@ -59,6 +62,15 @@ for (const width of [1280, 390]) {
     await expect(page.getByLabel('Fourth & Long lineup impact')).toContainText(
       'Before: 25.00 → After: 37.00',
     );
+    await page.getByLabel('Send Home Depth RB', { exact: true }).uncheck();
+    await expect(page.getByLabel('Fourth & Long lineup impact')).toContainText(
+      'Select at least one player',
+    );
+    await page.getByLabel('Send Home Depth RB', { exact: true }).check();
+    await expect(page.getByLabel('Fourth & Long lineup impact')).toContainText(
+      'Before: 25.00 → After: 37.00',
+    );
+    await page.getByRole('button', { name: 'Find trade ideas' }).click();
     const sources = page.getByText('Suggestion sources, coverage and eligibility limits', {
       exact: true,
     });
@@ -69,7 +81,10 @@ for (const width of [1280, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    await page.screenshot({ path: `test-results/trade-suggestions-${width}.png`, fullPage: true });
+    await page.screenshot({
+      path: testInfo.outputPath(`trade-suggestions-${width}.png`),
+      fullPage: true,
+    });
     const accessibility = await new AxeBuilder({ page }).include('#root').analyze();
     expect(accessibility.violations).toEqual([]);
     await page.getByRole('button', { name: 'Change my team' }).click();
@@ -78,11 +93,13 @@ for (const width of [1280, 390]) {
     await expect(
       page.getByRole('heading', { name: 'Suggested trades for Sunday Stunners' }),
     ).toBeVisible();
+    await page.getByRole('button', { name: 'Build a trade', exact: true }).click();
     await expect(page.getByLabel('Send Home Depth RB', { exact: true })).not.toBeChecked();
     await page.getByLabel('Trade season').selectOption('2025');
     await expect(page.getByRole('article')).toHaveCount(0);
     await expect(page.getByText(/unavailable for the selected season/)).toBeVisible();
     await page.getByLabel('Trade season').selectOption('2026');
+    await page.getByRole('button', { name: 'Find trade ideas' }).click();
     await expect(
       page.getByRole('article', { name: 'Suggestion 1 with Sunday Stunners' }),
     ).toBeVisible();

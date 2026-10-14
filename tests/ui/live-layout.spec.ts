@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 for (const width of [1440, 390]) {
   test(`managed teams open automatically for the first four leagues at ${width}px`, async ({
@@ -40,18 +41,26 @@ for (const width of [1440, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
-      844,
-    );
+    if (width > 767)
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+        844,
+      );
+    else {
+      await expect(
+        page.getByRole('region', { name: 'Home 14 roster', exact: true }).getByText('Player 18'),
+      ).toBeVisible();
+    }
   });
 }
 
-test('the header owns selectors and the live grid fills the viewport for two and four selections', async ({
+test('compact sidebar selectors and the live grid fill four fixed quarters', async ({
   page,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/tests/ui/?mode=live');
-  await expect(page.locator('header').getByLabel('League')).toBeVisible();
+  await expect(
+    page.getByRole('complementary', { name: 'All league matchups' }).getByLabel('League'),
+  ).toBeVisible();
   await expect(page.locator('header').getByRole('navigation')).toBeVisible();
   const sidebar = page.getByRole('complementary', { name: 'All league matchups' });
   await sidebar.getByRole('button', { name: 'Highlight Home 1 versus Away 1' }).click();
@@ -61,7 +70,8 @@ test('the header owns selectors and the live grid fills the viewport for two and
   const boardBox = (await board.boundingBox())!;
   for (const card of await page.locator('.live-matchup-card').all()) {
     const box = (await card.boundingBox())!;
-    expect(box.height).toBeGreaterThan(boardBox.height - 30);
+    expect(box.height).toBeGreaterThan(boardBox.height / 2 - 15);
+    expect(box.height).toBeLessThan(boardBox.height / 2 + 15);
   }
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('two-matchups.png') });
   await sidebar.getByRole('button', { name: 'Highlight Home 3 versus Away 3' }).click();
@@ -85,10 +95,17 @@ test('the header owns selectors and the live grid fills the viewport for two and
   }));
   expect(geometry.height).toBeLessThanOrEqual(900);
   expect(geometry.width).toBeLessThanOrEqual(1440);
-  expect(geometry.bottom).toBeCloseTo(900, 0);
+  expect(geometry.bottom).toBeGreaterThan(880);
+  expect(geometry.bottom).toBeLessThanOrEqual(900);
+  for (const roster of await page.locator('.decision-explorer-live-roster').all()) {
+    expect(
+      await roster.evaluate((node) => node.scrollHeight - node.clientHeight),
+    ).toBeLessThanOrEqual(1);
+  }
+  expect((await new AxeBuilder({ page }).include('#root').analyze()).violations).toEqual([]);
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('four-matchups.png') });
   await page.getByRole('combobox', { name: 'League' }).selectOption('2');
-  await expect(sidebar.getByText('Sunday League')).toHaveCount(0);
+  await expect(sidebar.getByRole('heading', { name: 'Sunday League', exact: true })).toHaveCount(0);
   await expect(page.locator('.live-matchup-card')).toHaveCount(4);
   await page.getByLabel('Profile menu').click();
   await expect(page.getByRole('link', { name: 'Edit profile' })).toBeVisible();
@@ -96,7 +113,7 @@ test('the header owns selectors and the live grid fills the viewport for two and
   await expect(page).toHaveTitle('Signed out');
 });
 
-test('the sidebar and selection board remain on screen on a phone', async ({ page }, testInfo) => {
+test('phone matchups show complete rosters in the page flow', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/tests/ui/?mode=live');
   await page.getByRole('button', { name: 'Highlight Home 1 versus Away 1' }).click();
@@ -106,6 +123,70 @@ test('the sidebar and selection board remain on screen on a phone', async ({ pag
     height: document.documentElement.scrollHeight,
   }));
   expect(size.width).toBeLessThanOrEqual(390);
-  expect(size.height).toBeLessThanOrEqual(844);
-  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('mobile.png') });
+  expect(size.height).toBeGreaterThan(844);
+  const roster = page.getByRole('region', { name: 'Away 2 roster', exact: true });
+  await expect(roster.getByText('Player 18')).toBeVisible();
+  expect(await roster.evaluate((node) => getComputedStyle(node).overflowY)).toBe('visible');
+  await page.screenshot({
+    fullPage: true,
+    animations: 'disabled',
+    path: testInfo.outputPath('mobile.png'),
+  });
 });
+
+for (const [width, height] of [
+  [1440, 900],
+  [2048, 942],
+  [1280, 720],
+]) {
+  test(`dense four-game board fits ${width}x${height} and each roster scrolls independently`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/tests/ui/?mode=live&managed=1&long=1');
+    await expect(page.locator('.live-matchup-card')).toHaveCount(4);
+    await expect(page.locator('.decision-explorer-live-roster')).toHaveCount(8);
+    const dimensions = await page.evaluate(() => ({
+      width: document.documentElement.scrollWidth,
+      height: document.documentElement.scrollHeight,
+    }));
+    expect(dimensions.width).toBeLessThanOrEqual(width);
+    expect(dimensions.height).toBeLessThanOrEqual(height);
+    const roster = page.locator('.decision-explorer-live-roster').first();
+    const next = page.locator('.decision-explorer-live-roster').nth(1);
+    await roster.evaluate((node) => {
+      node.scrollTop = node.scrollHeight;
+    });
+    expect(await roster.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+    expect(await next.evaluate((node) => node.scrollTop)).toBe(0);
+    await expect(roster.getByText('Player 30')).toBeVisible();
+    await page.screenshot({
+      animations: 'disabled',
+      path: testInfo.outputPath(`dense-${width}.png`),
+    });
+  });
+}
+
+for (const width of [1280, 390]) {
+  test(`long provider names and statuses wrap completely at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto('/tests/ui/?mode=live&managed=1&names=1');
+    const row = page.locator('.live-player-row').first();
+    await expect(
+      row.getByRole('link', { name: 'A player with a long complete provider name' }),
+    ).toBeVisible();
+    for (const selector of ['.live-player-name', '.decision-explorer-live-status']) {
+      const cell = row.locator(selector);
+      await expect(cell).toHaveCSS('white-space', 'normal');
+      const size = await cell.evaluate((node) => ({
+        scroll: node.scrollWidth,
+        width: node.clientWidth,
+      }));
+      expect(size.scroll).toBeLessThanOrEqual(size.width + 1);
+    }
+    await expect(row.getByText('QUESTIONABLE')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+  });
+}

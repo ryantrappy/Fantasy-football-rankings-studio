@@ -209,3 +209,11 @@ Source: [TASK-144](../../backlog/tasks/task-144%20-%20Use-single-week-playoff-sc
 - Desktop and phone layouts remain keyboard accessible without page-wide overflow; affected tests and type checks pass.
 
 Source: [TASK-145](../../backlog/tasks/task-145%20-%20Redesign-league-history-as-a-manager-explorer.md).
+
+## TASK-146 History presentation and verification
+
+The History slice retains all categories above and adds focused season results, detailed metrics, selected-manager achievements with independent placement/result coverage, and a shortcut to the existing manager comparison. Schedule replay, moments and Wrapped share the selected season while aggregate analytics retain all selected-season inputs. Changing included years preserves the selected manager when available. A manager-focused Wrapped can explicitly select personal or league scope; publication consent and pending snapshot results cannot carry into a different league/manager/season context.
+
+Pure definitions use accessible information tooltips; required caveats, data coverage, game evidence, configurable controls and validated archive import/export remain available. Public/snapshot navigation, publication privacy, immutable archives, provider calculations and revocation remain unchanged. See the [History coverage checklist](../manager-explorer-history-coverage.md) for the exact IDs and validation boundary. History verification includes 158 focused component/calculation/cache/sharing/snapshot tests, five browser tests at 320/390/1440px, axe/keyboard checks, visual screenshots, lint, formatting and typecheck. This records History-slice evidence and does not declare the app-wide TASK-146 complete.
+
+When no manager is selectable, the league archive exposes the existing Detailed season metrics table and CSV. This fallback uses the same supplied node and disappears when the focused manager path is available, preserving reachability without duplicate live tables.

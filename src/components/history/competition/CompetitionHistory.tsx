@@ -1,3 +1,4 @@
+import { InfoTooltip } from '../../InfoTooltip';
 import { useId, useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { competitionGames, pairRecord, rivalryLabels } from '../../../history/competition/games';
@@ -16,6 +17,8 @@ export interface CompetitionProps {
   managerKey?: string;
   onManagerChange?: (key: string) => void;
   active?: boolean;
+  seasonYear?: number;
+  onSeasonChange?: (year: number) => void;
 }
 
 const views = [
@@ -32,6 +35,8 @@ export function CompetitionHistory({
   shared,
   managerKey,
   onManagerChange,
+  seasonYear,
+  onSeasonChange,
 }: CompetitionProps) {
   const { games, managers, skipped } = competitionGames(records);
   const [selected, setSelected] = useState('');
@@ -78,6 +83,8 @@ export function CompetitionHistory({
     managerKey: key,
     onManagerChange: changeManager,
     active: true,
+    seasonYear,
+    onSeasonChange,
   };
   const gameEvidence = (limit?: number) => (
     <ol className="history-rivalry-games">
@@ -334,14 +341,16 @@ export function CompetitionHistory({
                   {!filteredRows.length && <p>No opponents match your search.</p>}
                 </>
               )}
-              <details className="history-explorer-methodology">
-                <summary>Rivalry definitions & coverage</summary>
-                <p>
+              <div className="history-explorer-definition">
+                <span>Rivalry definitions</span>
+                <InfoTooltip label="Rivalry definitions">
                   Closest rival = closest to 50% wins, then most meetings. Punching bag = highest
                   winning rate above 50%; kryptonite = lowest below 50%. Ties count as half a win;
                   tied labels use sample size then stable identity. Labels require {minimum}{' '}
                   meetings. Average margin uses the same verified games.
-                </p>
+                </InfoTooltip>
+              </div>
+              <div className="history-explorer-footnote">
                 <p>
                   Competition coverage: {records.length}/{years.length} selected seasons. Missing
                   seasons:{' '}
@@ -358,7 +367,7 @@ export function CompetitionHistory({
                   score rows without an opponent (byes or unavailable matchup links). Renames follow
                   provider manager identity; unidentified owners stay separate by season.
                 </p>
-              </details>
+              </div>
             </div>
             <aside className="history-rivalry-inspector" aria-label="Selected rivalry">
               {rivalry ? (

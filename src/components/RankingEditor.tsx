@@ -27,6 +27,7 @@ import { RankingPreview } from './RankingPreview';
 import { Icon } from './Icon';
 import { SortableRankingList } from './SortableRankingList';
 import { KeyboardShortcutReference } from './KeyboardShortcutReference';
+import { InfoTooltip } from './InfoTooltip';
 
 export interface EditorHandle {
   flush: () => Promise<void>;
@@ -34,10 +35,19 @@ export interface EditorHandle {
 
 export const RankingEditor = forwardRef<
   EditorHandle,
-  { api: LeagueApi; league: League; year: number; week: number }
->(function RankingEditor({ api, league, year, week }, ref) {
+  {
+    api: LeagueApi;
+    league: League;
+    year: number;
+    week: number;
+    initialEditingMode?: 'focused' | 'all';
+  }
+>(function RankingEditor({ api, league, year, week, initialEditingMode = 'focused' }, ref) {
   const editor = useRankingEditor(api, league, year, week);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [editingMode, setEditingMode] = useState(initialEditingMode);
+  const [teamSelection, setTeamSelection] = useState({ scope: '', teamId: '' });
+  const tools = useRef<HTMLDetailsElement>(null);
   const [exporting, setExporting] = useState<'original' | 'compact' | null>(null);
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
@@ -195,6 +205,76 @@ export const RankingEditor = forwardRef<
     );
   const comments = ranking.teams.filter((team) => team.description.trim()).length;
 
+  const selectedTeam =
+    ranking.teams.find(
+      (team) => teamSelection.scope === rankingScope && team.teamId === teamSelection.teamId,
+    ) || ranking.teams[0];
+  const renderTeamTake = (team: WeeklyRanking['teams'][number]) => (
+    <>
+      <Textarea
+        aria-label={`Commentary for ${team.teamName}`}
+        name={`comment-${team.teamId}`}
+        rows={2}
+        maxLength={10000}
+        placeholder="What’s the story with this team?"
+        value={team.description}
+        onChange={(event) =>
+          editor.update((current) => ({
+            ...current,
+            teams: current.teams.map((entry) =>
+              entry.teamId === team.teamId ? { ...entry, description: event.target.value } : entry,
+            ),
+          }))
+        }
+      />
+      <Button
+        mt={3}
+        size="sm"
+        type="button"
+        variant="outline"
+        disabled={!aiReady || Boolean(aiGeneratingTeam && aiGeneratingTeam !== team.teamId)}
+        onClick={() => void aiController.current?.generate(team.teamId)}
+      >
+        {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
+      </Button>
+      {aiSummaries.scope === rankingScope && Object.hasOwn(aiSummaries.values, team.teamId) && (
+        <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
+          <Text fontWeight="bold" mb={1}>
+            AI summary
+          </Text>
+          <Textarea
+            aria-label={`AI suggestion for ${team.teamName}`}
+            rows={5}
+            value={aiSummaries.values[team.teamId]}
+            onChange={(event) =>
+              setAiSummaries((current) => ({
+                ...current,
+                values: { ...current.values, [team.teamId]: event.target.value },
+              }))
+            }
+          />
+          <Button
+            type="button"
+            mt={2}
+            variant="outline"
+            onClick={() =>
+              editor.update((current) => ({
+                ...current,
+                teams: current.teams.map((entry) =>
+                  entry.teamId === team.teamId
+                    ? { ...entry, description: aiSummaries.values[team.teamId] }
+                    : entry,
+                ),
+              }))
+            }
+          >
+            Apply suggestion to take
+          </Button>
+        </Box>
+      )}
+    </>
+  );
+
   return (
     <>
       {pageHeading}
@@ -270,7 +350,7 @@ export const RankingEditor = forwardRef<
             />
           </Field.Root>
         </Box>
-        <details className="editor-tools">
+        <details className="editor-tools" ref={tools}>
           <summary>Edition tools, AI context sharing & keyboard shortcuts</summary>
           <Box className="editor-tools-content">
             {!ranking._id && (
@@ -313,6 +393,8 @@ export const RankingEditor = forwardRef<
                 leagueId={league.leagueId}
                 year={year}
                 week={week}
+                teams={ranking.teams}
+                selectedTeamId={selectedTeam.teamId}
                 onSummaryChange={(teamId, summary) =>
                   setAiSummaries((current) => ({
                     scope: rankingScope,
@@ -414,7 +496,7 @@ export const RankingEditor = forwardRef<
         templateColumns={{ base: '1fr', lg: 'minmax(0, 1fr) minmax(0, 1.1fr)' }}
         gap={4}
         alignItems="stretch"
-        className={`editor-layout showing-${tab}`}
+        className={`editor-layout showing-${tab}${editingMode === 'focused' ? ' ranking-focused' : ''}`}
       >
         <Box
           as="section"
@@ -439,7 +521,18 @@ export const RankingEditor = forwardRef<
               <Heading as="h2" size="lg" mb={1}>
                 Team entries
               </Heading>
-              <Text fontSize="sm">Drag a team or use the arrows. Add a take below.</Text>
+              <Text fontSize="sm">
+                Drag a team or use the arrows. Select a team to write its take.
+              </Text>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                mt={2}
+                onClick={() => setEditingMode((mode) => (mode === 'focused' ? 'all' : 'focused'))}
+              >
+                {editingMode === 'focused' ? 'Edit all takes' : 'Focus one team'}
+              </Button>
             </Box>
             <Button
               variant="plain"
@@ -471,7 +564,16 @@ export const RankingEditor = forwardRef<
                   <Flex gap={3} align="center" mb={3} className="team-editor-heading">
                     <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
                     <Box className="team-identity">
-                      <strong>{team.teamName}</strong>
+                      <button
+                        type="button"
+                        className="ranking-team-select"
+                        aria-pressed={selectedTeam.teamId === team.teamId}
+                        onClick={() => {
+                          setTeamSelection({ scope: rankingScope, teamId: team.teamId });
+                        }}
+                      >
+                        <strong>{team.teamName}</strong>
+                      </button>
                       <small>
                         {team.managerName || 'Unassigned manager'}{' '}
                         <span>
@@ -512,44 +614,7 @@ export const RankingEditor = forwardRef<
                       </IconButton>
                     </Flex>
                   </Flex>
-                  <Textarea
-                    aria-label={`Commentary for ${team.teamName}`}
-                    name={`comment-${team.teamId}`}
-                    rows={2}
-                    maxLength={10000}
-                    placeholder="What’s the story with this team?"
-                    value={team.description}
-                    onChange={(event) =>
-                      editor.update((current) => ({
-                        ...current,
-                        teams: current.teams.map((entry) =>
-                          entry.teamId === team.teamId
-                            ? { ...entry, description: event.target.value }
-                            : entry,
-                        ),
-                      }))
-                    }
-                  />
-                  <Button
-                    mt={3}
-                    size="sm"
-                    type="button"
-                    variant="outline"
-                    disabled={
-                      !aiReady || Boolean(aiGeneratingTeam && aiGeneratingTeam !== team.teamId)
-                    }
-                    onClick={() => void aiController.current?.generate(team.teamId)}
-                  >
-                    {aiGeneratingTeam === team.teamId ? 'Generating…' : 'Generate AI summary'}
-                  </Button>
-                  {aiSummaries.scope === rankingScope && aiSummaries.values[team.teamId] && (
-                    <Box mt={3} p={3} bg="bg.subtle" borderWidth="1px" rounded="md">
-                      <Text fontWeight="bold" mb={1}>
-                        AI summary
-                      </Text>
-                      <Text whiteSpace="pre-wrap">{aiSummaries.values[team.teamId]}</Text>
-                    </Box>
-                  )}
+                  {editingMode === 'all' && renderTeamTake(team)}
                 </>
               )}
             />
@@ -578,6 +643,38 @@ export const RankingEditor = forwardRef<
             </Button>
           </Flex>
         </Box>
+        {editingMode === 'focused' && (
+          <aside className="ranking-team-detail" aria-label="Selected team take">
+            <p className="ranking-detail-context">
+              Writing for rank {ranking.teams.indexOf(selectedTeam) + 1}
+            </p>
+            <h2>{selectedTeam.teamName}</h2>
+            <p>
+              {selectedTeam.managerName || 'Unassigned manager'} · {selectedTeam.wins}–
+              {selectedTeam.loss}
+              {selectedTeam.ties ? `–${selectedTeam.ties}` : ''}
+            </p>
+            {renderTeamTake(selectedTeam)}
+            <Button
+              type="button"
+              mt={4}
+              variant="outline"
+              onClick={() => {
+                if (tools.current) {
+                  tools.current.open = true;
+                  tools.current.scrollIntoView({ block: 'nearest' });
+                  tools.current.querySelector('summary')?.focus();
+                }
+              }}
+            >
+              Writing assistant & edition tools
+            </Button>
+            <InfoTooltip label="Writing suggestions and draft safety">
+              Suggestions stay separate until you apply them. Autosave and manual save use the same
+              protected draft; review recovery or conflicts before publication.
+            </InfoTooltip>
+          </aside>
+        )}
         <Box as="section" className="preview-panel" aria-label="Live ranking preview">
           <Flex
             align="center"

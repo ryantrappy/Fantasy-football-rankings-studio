@@ -189,7 +189,6 @@ export function HistoryPage({
     .sort((a, b) => b.year - a.year || a.managerName.localeCompare(b.managerName));
   function choose(next: number[]) {
     void navigate({ search: { leagueId, years: [...next].sort((a, b) => b - a) } });
-    setManager('');
   }
   return (
     <>
@@ -209,9 +208,7 @@ export function HistoryPage({
           <Heading as="h1" size="3xl" mb={4}>
             League history
           </Heading>
-          <Text mb={4}>
-            One good move is a moment. Find the managers who repeat it across seasons.
-          </Text>
+          <Text mb={4}>Follow a manager through rivalries, seasons and league stories.</Text>
         </Box>
         {!snapshot && (
           <Button asChild colorPalette="indigo">
@@ -328,7 +325,7 @@ export function HistoryPage({
                       {currentCatalog.years.map((year) => (
                         <label key={year}>
                           <chakra.input
-                            accentColor="green.700"
+                            accentColor="indigo.600"
                             width="auto"
                             type="checkbox"
                             checked={years.includes(year)}

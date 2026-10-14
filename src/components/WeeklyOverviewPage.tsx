@@ -1,3 +1,4 @@
+import './decision-explorer.css';
 import { PageHeading } from './PageHeading';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
@@ -46,10 +47,9 @@ export function WeeklyOverviewPage() {
     };
   }, [api, refresh]);
   return (
-    <Box>
+    <Box className="decision-explorer decision-explorer-overview">
       <PageHeading
-        title="My weekly overview"
-        eyebrow="Your week, at a glance"
+        title="Weekly overview"
         description="Your teams, this week’s matchups, and the next move to make."
       >
         <Button disabled={busy} onClick={() => setRefresh((value) => value + 1)}>
@@ -74,7 +74,7 @@ export function WeeklyOverviewPage() {
       )}
       <Box
         display="grid"
-        gridTemplateColumns={{ base: '1fr', md: 'repeat(auto-fit, minmax(280px, 1fr))' }}
+        gridTemplateColumns={{ base: 'minmax(0, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' }}
         gap={4}
       >
         {busy && rows.length === 0 && <LoadingSkeleton label="Loading overview…" />}
@@ -97,20 +97,22 @@ export function WeeklyOverviewPage() {
               </Text>
               {selected ? (
                 <>
-                  <div className="overview-matchup">
-                    <Heading as="h3" size="md">
-                      {selected.teamName}
-                    </Heading>
-                    <div className="overview-matchup-score">
-                      {row.matchup ? (myTeam?.score?.toFixed(2) ?? '—') : '—'}
+                  <div className="decision-explorer-matchup">
+                    <div>
+                      <Text fontSize="xs">Your team</Text>
+                      <Heading as="h3" size="md">
+                        {selected.teamName}
+                      </Heading>
+                      <strong>{row.matchup ? (myTeam?.score?.toFixed(2) ?? '—') : '—'}</strong>
                     </div>
-                    <Text fontSize="sm" color="fg.muted">
-                      {row.matchup
-                        ? opponent
-                          ? `vs ${opponent.name} · ${opponent.score?.toFixed(2) ?? '—'} pts`
-                          : 'Bye week'
-                        : 'Matchup unavailable'}
-                    </Text>
+                    <span>vs.</span>
+                    <div>
+                      <Text fontSize="xs">Opponent</Text>
+                      <Heading as="h3" size="md">
+                        {row.matchup ? (opponent?.name ?? 'Bye week') : 'Matchup unavailable'}
+                      </Heading>
+                      <strong>{opponent?.score?.toFixed(2) ?? '—'}</strong>
+                    </div>
                   </div>
                   <div className="overview-stats">
                     <div aria-label={`Record for ${selected.teamName}`}>
@@ -193,6 +195,12 @@ export function WeeklyOverviewPage() {
                       search={{ leagueId: row.league.leagueId, year: row.league.seasonId }}
                     >
                       Playoff simulation
+                    </Link>
+                    <Link
+                      to="/live"
+                      search={{ leagueId: row.league.leagueId, year: row.league.seasonId }}
+                    >
+                      Live matchups
                     </Link>
                   </Flex>
                 </>

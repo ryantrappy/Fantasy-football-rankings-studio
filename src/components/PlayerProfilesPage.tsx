@@ -1,4 +1,6 @@
+import './decision-explorer.css';
 import { PageHeading } from './PageHeading';
+import { InfoTooltip } from './InfoTooltip';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   Box,
@@ -189,10 +191,9 @@ export function PlayerProfilesPage({
   const validRange = range[0] <= range[1];
 
   return (
-    <Box maxW="1200px" mx="auto">
+    <Box className="decision-explorer decision-explorer-players" maxW="1400px" mx="auto">
       <PageHeading
         title="Player profiles & comparisons"
-        eyebrow="Know your roster"
         description="Find players and compare their projections and observed scoring in your league."
       >
         <Button
@@ -206,7 +207,16 @@ export function PlayerProfilesPage({
           {busy && leagueId ? 'Refreshing player data…' : 'Refresh player data'}
         </Button>
       </PageHeading>
-      <Flex wrap="wrap" align="end" gap={4} p={4} mb={5} bg="bg.subtle" rounded="lg">
+      <Flex
+        className="decision-explorer-context"
+        wrap="wrap"
+        align="end"
+        gap={4}
+        p={4}
+        mb={5}
+        bg="bg.subtle"
+        rounded="lg"
+      >
         <Field.Root flex="1" minW="200px">
           <Field.Label htmlFor="player-league">Player league</Field.Label>
           <NativeSelect.Root bg="bg" disabled={busy && !leagues.length}>
@@ -269,7 +279,15 @@ export function PlayerProfilesPage({
       ))}
       {!busy && (
         <>
-          <Box borderWidth="1px" borderStyle="solid" rounded="xl" p={4} mb={5} bg="bg">
+          <Box
+            className="decision-explorer-panel"
+            borderWidth="1px"
+            borderStyle="solid"
+            rounded="xl"
+            p={4}
+            mb={5}
+            bg="bg"
+          >
             <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
               <Box>
                 <Heading as="h2" size="md">
@@ -323,6 +341,7 @@ export function PlayerProfilesPage({
             <Box
               as="section"
               aria-label="Find players"
+              className="decision-explorer-panel"
               minW={0}
               bg="bg"
               p={4}
@@ -391,6 +410,7 @@ export function PlayerProfilesPage({
               >
                 {shown.map((player) => (
                   <Box
+                    className="decision-explorer-player-option"
                     as="label"
                     display="flex"
                     alignItems="center"
@@ -530,6 +550,7 @@ export function PlayerProfilesPage({
                       <Box
                         as="section"
                         aria-label={`${player.name} profile`}
+                        className="decision-explorer-panel"
                         key={player.key}
                         minW={0}
                         bg="bg"
@@ -679,22 +700,15 @@ export function PlayerProfilesPage({
               )}
             </Box>
           </Box>
-          <Box
-            as="details"
-            mt={5}
-            p={4}
-            borderWidth="1px"
-            borderStyle="solid"
-            rounded="lg"
-            color="fg.muted"
-            fontSize="sm"
-          >
-            <summary style={{ cursor: 'pointer' }}>Scoring coverage and data limits</summary>
-            <Text mt={3}>
-              Observed points use this league’s scoring and only the roster weeks present in its
-              reports. Missing weeks are unavailable, not zero. This is partial season coverage, not
-              career history or cross-provider name matching. Targets, snap share and other usage
-              metrics are unavailable.
+          <Box mt={5} fontSize="sm" color="fg.muted">
+            Scoring coverage{' '}
+            <InfoTooltip label="Scoring coverage and data limits">
+              Observed points use this league’s scoring and only roster weeks present in its
+              reports. This is partial season coverage, not career history or cross-provider name
+              matching. Targets, snap share and other usage metrics are unavailable.
+            </InfoTooltip>
+            <Text mt={2}>
+              Missing weeks are unavailable, not zero. Totals and averages use covered weeks only.
             </Text>
           </Box>
         </>

@@ -1,3 +1,4 @@
+import './decision-explorer.css';
 import { Box, Button, Heading, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { LiveTeam } from '../live-matchups';
@@ -29,7 +30,12 @@ export function RosterRiskAlerts({
   const conditions = rosterAlerts(team, leagueId, year, week, capturedAt, slots, now);
   const alerts = conditions.filter((alert) => !dismissed.includes(alert.id));
   return (
-    <Box as="section" aria-label={`${team.name} roster risks`} mt={3}>
+    <Box
+      as="section"
+      className="decision-explorer-risks"
+      aria-label={`${team.name} roster risks · League ${leagueId} · ${year}`}
+      mt={3}
+    >
       <Heading as="h4" size="md">
         Roster risks
       </Heading>
@@ -50,7 +56,12 @@ export function RosterRiskAlerts({
               Review affected player
             </PlayerProfileLink>
           )}{' '}
-          <a href={`#lineup-${leagueId}`}>Review lineup</a>{' '}
+          <a
+            href={`#lineup-${leagueId}`}
+            onClick={() => document.getElementById(`lineup-${leagueId}`)?.setAttribute('open', '')}
+          >
+            Review lineup
+          </a>{' '}
           <Button
             size="xs"
             variant="outline"

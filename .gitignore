@@ -34,3 +34,6 @@ yarn-error.log*
 # Playwright output
 /test-results
 /playwright-report
+
+# Isolated parallel browser validation artifacts
+/test-results-*/

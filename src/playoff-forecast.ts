@@ -25,6 +25,7 @@ export interface PlayoffForecast {
     teamName: string;
     projectedWins: number;
     playoff: number;
+    bye: number;
     advance: number[];
   }[];
   projection: {
@@ -237,6 +238,7 @@ function* simulatePlayoffs(
     teamName: t.teamName,
     projectedWins: 0,
     playoff: 0,
+    bye: 0,
     advance: rounds.map(() => 0),
   }));
   const shuffle = (list: number[]) => {
@@ -299,6 +301,10 @@ function* simulatePlayoffs(
     };
     let alive: number[];
     if (size === 6) {
+      // The existing six-team bracket gives its top two seeds first-round byes.
+      // Count those exact seeded events without drawing or changing any scores.
+      counts[seeds[0]].bye++;
+      counts[seeds[1]].bye++;
       alive = [seeds[0], game(seeds[3], seeds[4]), seeds[1], game(seeds[2], seeds[5])];
       alive.forEach((i) => counts[i].advance[0]++);
       playoffRound++;
@@ -346,6 +352,7 @@ function* simulatePlayoffs(
       ...r,
       projectedWins: r.projectedWins / simulations,
       playoff: r.playoff / simulations,
+      bye: r.bye / simulations,
       advance: r.advance.map((n) => n / simulations),
     })),
   };

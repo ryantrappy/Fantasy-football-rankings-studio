@@ -28,6 +28,7 @@ it('saves an API key without rendering its value after submission', async () => 
       <ProfilePage api={api} />
     </Provider>,
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Writing connections' }));
   const input = await screen.findByLabelText('OpenAI API key (Codex)');
   fireEvent.change(input, { target: { value: 'sk-test-secret' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save OpenAI API key (Codex)' }));
@@ -53,6 +54,7 @@ it('explains saved-key precedence and refreshes server readiness after removal',
       <ProfilePage api={api} />
     </Provider>,
   );
+  fireEvent.click(screen.getByRole('button', { name: 'Writing connections' }));
   await screen.findByText(/Your saved OpenAI key takes precedence/);
   await screen.findByText(/Server Codex login is ready/);
   const calls = api.writing.providers.mock.calls.length;
@@ -111,4 +113,46 @@ it('retries a failed load and hides old account data when the session changes', 
   );
   expect(screen.queryByDisplayValue('Owner')).not.toBeInTheDocument();
   expect(screen.getByRole('status')).toHaveTextContent('Loading');
+});
+
+it('retains an unsaved profile while switching focused connection and ESPN views', async () => {
+  const api = makeApi();
+  render(
+    <Provider>
+      <ProfilePage
+        api={api}
+        settings={<button>Existing ESPN setup</button>}
+        recovery={<button>Existing password recovery</button>}
+      />
+    </Provider>,
+  );
+  const name = await screen.findByLabelText(/^Name/);
+  fireEvent.change(name, { target: { value: 'Unsaved name' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Writing connections' }));
+  expect(name).not.toBeVisible();
+  expect(await screen.findByLabelText('OpenAI API key (Codex)')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'ESPN settings' }));
+  expect(screen.getByRole('button', { name: 'Existing ESPN setup' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Profile details' }));
+  expect(name).toHaveValue('Unsaved name');
+  expect(screen.getByRole('button', { name: 'Existing password recovery' })).toBeVisible();
+  expect(api.updateProfile).not.toHaveBeenCalled();
+});
+
+it('keeps password recovery and onboarding settings reachable when profile loading fails', async () => {
+  const api = makeApi();
+  vi.mocked(api.getProfile).mockRejectedValue(new Error('Profile unavailable'));
+  render(
+    <Provider>
+      <ProfilePage
+        api={api}
+        recovery={<button>Recover password</button>}
+        settings={<button>Return from ESPN setup</button>}
+      />
+    </Provider>,
+  );
+  await screen.findByRole('alert');
+  expect(screen.getByRole('button', { name: 'Recover password' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'ESPN settings' }));
+  expect(screen.getByRole('button', { name: 'Return from ESPN setup' })).toBeVisible();
 });

@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 const views = [
-  ['overview', 'My weekly overview'],
+  ['overview', 'Weekly overview'],
   ['studio', 'Rankings studio'],
-  ['insights', 'Did the moves pay off?'],
+  ['insights', 'Season insights'],
   ['history', 'League history'],
   ['playoffs', 'Playoff simulation'],
   ['profile', 'Your profile'],
@@ -21,7 +21,7 @@ for (const width of [1280, 390]) {
       await page.goto(`/tests/ui/?mode=workspace-${view}`);
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
       const heading = page.locator('.studio-heading, .page-heading').first();
-      await expect(heading).toHaveCSS('color', 'rgb(255, 255, 255)');
+      await expect(heading).toHaveCSS('color', 'rgb(23, 34, 59)');
       await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
       const activeTab = page.locator('.app-nav a[data-status="active"]');
       if (width === 390 && (await activeTab.count())) {
@@ -36,8 +36,10 @@ for (const width of [1280, 390]) {
         await expect(
           page.getByRole('heading', { name: 'Fourth & Long', exact: true }),
         ).toBeVisible();
-      if (view === 'insights')
+      if (view === 'insights') {
+        await page.getByRole('button', { name: 'Manager report card', exact: true }).click();
         await expect(page.getByRole('table', { name: 'Manager scorecard' })).toBeVisible();
+      }
       if (view === 'profile')
         await expect(page.getByLabel('Nickname', { exact: true })).toBeVisible();
       if (view === 'playoffs') {

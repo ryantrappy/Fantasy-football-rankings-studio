@@ -101,15 +101,22 @@ test('the complete history page keeps season controls compact and league reports
   await expect(page.getByRole('region', { name: 'Manager explorer' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Refresh selected seasons' })).toBeVisible();
   await expect(page.getByRole('checkbox', { name: '2024', exact: true })).not.toBeVisible();
+  await page
+    .getByRole('combobox', { name: 'Explore a manager', exact: true })
+    .selectOption('manager-1');
   await page.locator('.history-season-picker > summary').click();
   await page.getByRole('checkbox', { name: '2024', exact: true }).uncheck();
   await expect(page.locator('.history-explorer-profile')).toContainText('1 of 1 selected seasons');
+  await expect(page.getByRole('heading', { name: 'Blair', exact: true })).toBeVisible();
   await page.locator('.history-season-picker > summary').click();
   await page.getByRole('tab', { name: 'Season history', exact: true }).click();
   await expect(page.getByRole('table', { name: 'Manager season results' })).toBeVisible();
   await expect(page.getByRole('table', { name: 'Manager season history' })).not.toBeVisible();
   await page.getByText('Detailed season metrics', { exact: true }).click();
   await expect(page.getByRole('table', { name: 'Manager season history' })).toBeVisible();
+  await page.getByRole('button', { name: 'Compare managers', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Manager comparison', exact: true })).toBeFocused();
+  await page.locator('.history-explorer-library > summary').click();
   await page.locator('.history-explorer-library > summary').click();
   await page.getByRole('button', { name: /League overview/ }).click();
   await expect(
@@ -118,4 +125,54 @@ test('the complete history page keeps season controls compact and league reports
   await page.getByRole('button', { name: /Manager comparison/ }).click();
   await expect(page.getByRole('heading', { name: 'Compare two managers' })).toBeVisible();
   await noOverflow(page);
+});
+
+test('History shares focused year, retains all-season evidence and provides accessible definitions', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/tests/ui/?mode=history');
+  await page.getByRole('button', { name: 'Schedule & luck', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Schedule season', exact: true }).selectOption('2025');
+  await page.getByRole('button', { name: 'Expected wins method', exact: true }).focus();
+  await expect(page.getByRole('tooltip')).toContainText('all-play scoring percentiles');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).not.toBeVisible();
+  await page.getByRole('tab', { name: 'Matchup stories', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Moments season', exact: true })).toHaveValue(
+    '2025',
+  );
+  await page.getByRole('tab', { name: 'Manager profiles', exact: true }).click();
+  await page.getByRole('button', { name: 'Wrapped', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Wrapped season', exact: true })).toHaveValue(
+    '2025',
+  );
+  await page.getByRole('combobox', { name: 'Recap scope', exact: true }).selectOption('league');
+  await expect(page.getByRole('article', { name: 'Wrapped share preview' })).toContainText(
+    'league',
+  );
+  await page.getByRole('combobox', { name: 'Wrapped season', exact: true }).selectOption('2024');
+  await page.getByRole('tab', { name: 'Competition', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Schedule season', exact: true })).toHaveValue(
+    '2024',
+  );
+  await expect(page.locator('.history-explorer-stats')).toContainText('8–0–0');
+  await page.getByRole('button', { name: 'Rivalries', exact: true }).click();
+  await noOverflow(page);
+  await expect(page.locator('.history-explorer-stats dt').first()).toHaveCSS(
+    'text-transform',
+    'none',
+  );
+  await expect(page.locator('.history-explorer-subnav').first()).toHaveCSS('padding-top', '12px');
+  await page.screenshot({ path: testInfo.outputPath('history-1440.png'), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('tab', { name: 'Manager profiles', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Recap scope', exact: true }).selectOption('personal');
+  await expect(
+    page.getByRole('heading', { name: "Alex's 2024 Fantasy Wrapped", exact: true }),
+  ).toBeVisible();
+  await noOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath('history-wrapped-390.png'), fullPage: true });
+  const accessibility = await new AxeBuilder({ page }).include('.history-explorer').analyze();
+  expect(accessibility.violations).toEqual([]);
 });

@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useSessionStatus } from '../auth/session';
 import { AppNavigation } from './AppNavigation';
+import { ToolsBreadcrumb } from './OtherToolsPage';
 
 const HeaderTarget = createContext<HTMLElement | null | undefined>(undefined);
 
@@ -17,6 +18,24 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
   const [controls, setControls] = useState<HTMLDivElement | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const session = useSessionStatus();
+  const menu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (!menu.current?.contains(event.target as Node)) menu.current?.removeAttribute('open');
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && menu.current?.open) {
+        menu.current.removeAttribute('open');
+        menu.current.querySelector('summary')?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', dismiss);
+      document.removeEventListener('keydown', escape);
+    };
+  }, []);
   const live = pathname === '/live';
   return (
     <HeaderTarget.Provider value={controls}>
@@ -32,9 +51,8 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
                 Trapp<span className="workspace-brand-caption">Fantasy Studio</span>
               </span>
             </Link>
-            <div className="workspace-selectors" ref={setControls} />
             {!shared && (
-              <details className="profile-menu">
+              <details className="profile-menu" ref={menu}>
                 <summary aria-label="Profile menu">
                   Profile <span aria-hidden="true">☰</span>
                 </summary>
@@ -47,6 +65,14 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
                     }
                   >
                     Edit profile
+                  </Link>
+                  <Link
+                    to="/leagues/new"
+                    onClick={(event) =>
+                      event.currentTarget.closest('details')?.removeAttribute('open')
+                    }
+                  >
+                    Create league
                   </Link>
                   <Link
                     to="/leagues/manage"
@@ -64,6 +90,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
             )}
           </div>
           <AppNavigation shared={shared} />
+          <div className="workspace-selectors" ref={setControls} />
         </header>
         <main
           id="workspace-content"
@@ -74,6 +101,9 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
               : 'workspace-main studio-surface'
           }
         >
+          {(pathname === '/players' || pathname === '/trades') && (
+            <ToolsBreadcrumb pathname={pathname} />
+          )}
           {children}
         </main>
       </div>

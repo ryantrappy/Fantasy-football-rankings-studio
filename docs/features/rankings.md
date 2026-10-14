@@ -161,3 +161,10 @@ Source: [TASK-88](../../backlog/tasks/task-88%20-%20Use-a-finite-power-ranking-b
 - Provider and ranking-editor regression tests cover week 3 inside period 2, unknown calendars, single-week behavior and selected-week versus aggregate scores; user-facing score semantics are documented.
 
 Source: [TASK-114](../../backlog/tasks/task-114%20-%20Resolve-ESPN-ranking-studio-matchups-by-scoring-week-rather-than-period-ID.md).
+
+### TASK-146 — Focused ranking authoring, unchanged images
+
+- Default authoring pairs the selected team with its editable take; Edit all takes retains the full inline editor. Selection does not change rank order or another team's prose.
+- The same protected draft hook, reorder sensors, manual/autosave, undo, recovery, conflicts, copy, revision and publication flows remain. Original/compact PNG rendering, stylesheet, records, trends and full commentary are unchanged.
+- Writing preserves provider/model choice, actionable operator readiness, saved/revocable provider consent and cancellation. Inspect current-roster context through the existing owner-only API; suggestions are editable and applied only by an explicit action. Account changes cannot inherit readiness/consent/evidence.
+- Verification and boundaries: [TASK-146 coverage](../manager-explorer-coverage.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 remains separate.

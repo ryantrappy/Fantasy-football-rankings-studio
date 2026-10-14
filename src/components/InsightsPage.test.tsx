@@ -24,7 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 
-it('starts with league-wide trends and the scoring table, and can focus on one team', async () => {
+it('starts with focused team scoring and preserves exact weekly evidence and team selection across views', async () => {
   api.listLeagues.mockResolvedValue([
     { leagueId: 'one', leagueName: 'League', leagueType: 0, seasonId: 2026 },
   ]);
@@ -37,15 +37,33 @@ it('starts with league-wide trends and the scoring table, and can focus on one t
   );
   const scoring = await screen.findByRole('table', { name: 'Team scoring' });
   expect(screen.getAllByRole('table')[0]).toBe(scoring);
-  expect(screen.getAllByRole('table')[1]).toHaveAccessibleName('Schedule luck');
+  expect(screen.getAllByRole('table')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Team scoring' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Manager report card' }));
+  expect(screen.getByRole('table', { name: 'Schedule luck' })).toBeVisible();
+  expect(screen.getByLabelText('Include former managers in summary')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Weekly trends' }));
   const selector = screen.getByRole('combobox', { name: 'Team' });
   expect(selector).toHaveValue('');
   const legend = screen.getByLabelText('Team colors');
   strengthData.teams.forEach((team) =>
     expect(within(legend).getByText(team.teamName)).toBeInTheDocument(),
   );
-  fireEvent.click(screen.getByText('View exact weekly scores'));
   const weekly = screen.getByRole('table', { name: 'Weekly scores' });
+  for (const name of [
+    'Actual points',
+    'Projected points',
+    'Difference',
+    'Best lineup',
+    'Missed points',
+    'Start accuracy',
+    'Coverage',
+  ])
+    expect(within(weekly).getByRole('columnheader', { name })).toBeInTheDocument();
+  expect(screen.getByText(/Historical lineup coverage:/)).toBeVisible();
   expect(within(weekly).getByRole('columnheader', { name: 'Team' })).toBeInTheDocument();
   expect(within(weekly).getAllByRole('row')).toHaveLength(strengthData.scores.length + 1);
   fireEvent.change(selector, { target: { value: strengthData.teams[0].teamId } });
@@ -58,7 +76,30 @@ it('starts with league-wide trends and the scoring table, and can focus on one t
   expect(within(weekly).getAllByRole('row')).toHaveLength(
     strengthData.scores.filter((score) => score.teamId === strengthData.teams[0].teamId).length + 1,
   );
-});
+  fireEvent.click(screen.getByRole('button', { name: 'Roster strength' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
+  fireEvent.change(screen.getByLabelText('Sort roster charts by'), { target: { value: 'WR' } });
+  expect(screen.getByRole('table', { name: 'Position group rankings' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Remaining schedule' }));
+  expect(screen.getByRole('table', { name: 'Remaining schedule difficulty' })).toBeVisible();
+  expect(screen.queryByRole('table', { name: 'Position group rankings' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Roster strength' }));
+  expect(screen.getByLabelText('Sort roster charts by')).toHaveValue('WR');
+  expect(screen.getByRole('button', { name: 'Projected remaining weeks' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Weekly trends' }));
+  expect(selector).toHaveValue(strengthData.teams[0].teamId);
+  expect(
+    within(screen.getByRole('table', { name: 'Weekly scores' })).getAllByRole('row'),
+  ).toHaveLength(5);
+  fireEvent.click(screen.getByRole('button', { name: 'Trades' }));
+  expect(screen.getByText('No completed player trades returned for this season.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Pickups' }));
+  expect(screen.getByLabelText('Filter pickups by team')).toHaveValue(strengthData.teams[0].teamId);
+  expect(screen.getByText('No completed pickups returned for this selection.')).toBeVisible();
+}, 15_000);
 
 it('clears charts and managed-team identity while a new league report is pending', async () => {
   api.listLeagues.mockResolvedValue(
@@ -99,6 +140,8 @@ it('clears charts and managed-team identity while a new league report is pending
     </ChakraProvider>
   );
   const view = render(wrap('one'));
+  await screen.findByRole('table', { name: 'Team scoring' });
+  fireEvent.click(screen.getByRole('button', { name: 'Roster strength' }));
   await screen.findByRole('table', { name: 'Position group rankings' });
   await waitFor(() => expect(screen.getAllByText('Your team').length).toBeGreaterThan(0));
   view.rerender(wrap('two'));

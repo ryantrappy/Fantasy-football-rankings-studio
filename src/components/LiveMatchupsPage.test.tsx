@@ -66,7 +66,7 @@ it('defaults to the viewer’s home, away and bye matchups in the first four lea
   const board = screen.getByRole('region', { name: 'Highlighted matchups' });
   expect(
     within(board)
-      .getAllByRole('heading', { level: 3 })
+      .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent),
   ).toEqual([
     'Viewer 1 vs Opponent 1',
@@ -213,7 +213,7 @@ it('shows compact scores and limits highlighted rosters to four matchups', async
   await screen.findByRole('button', { name: 'Highlight Home 1 versus Away 1' });
   const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
   const details = screen.getByRole('region', { name: 'Highlighted matchups' });
-  expect(within(sidebar).getAllByRole('button')).toHaveLength(5);
+  expect(within(sidebar).getAllByRole('button')).toHaveLength(6);
   for (let index = 1; index <= 4; index++)
     fireEvent.click(
       screen.getByRole('button', { name: `Highlight Home ${index} versus Away ${index}` }),

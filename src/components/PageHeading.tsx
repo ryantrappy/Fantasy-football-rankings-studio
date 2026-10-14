@@ -9,16 +9,18 @@ export function PageHeading({
 }: {
   title: string;
   description: string;
-  eyebrow: string;
+  eyebrow?: string;
   children?: ReactNode;
 }) {
   return (
     <div className="studio-heading">
       <div className="studio-heading-copy">
-        <span className="studio-eyebrow">
-          <Icon name="ball" size={16} />
-          {eyebrow}
-        </span>
+        {eyebrow && (
+          <span className="studio-eyebrow">
+            <Icon name="ball" size={16} />
+            {eyebrow}
+          </span>
+        )}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>

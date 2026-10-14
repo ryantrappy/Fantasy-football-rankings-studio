@@ -118,7 +118,11 @@ it.each([2, 4, 6, 8])('conserves playoff slots and round winners for %i teams', 
   expect(r.reason).toBeUndefined();
   expect(r.rows.reduce((s, r) => s + r.playoff, 0)).toBeCloseTo(size, 8);
   expect(r.rows.reduce((s, r) => s + r.advance.at(-1)!, 0)).toBeCloseTo(1, 8);
+  expect(r.rows.reduce((sum, row) => sum + row.bye, 0)).toBeCloseTo(size === 6 ? 2 : 0, 8);
   for (const row of r.rows) {
+    expect(row.bye).toBeGreaterThanOrEqual(0);
+    expect(row.bye).toBeLessThanOrEqual(row.playoff);
+    expect(row.bye).toBeLessThanOrEqual(row.advance[0]);
     let prior = row.playoff;
     for (const p of row.advance) {
       expect(p).toBeLessThanOrEqual(prior);
@@ -348,4 +352,17 @@ it('uses the standings comparison without current projections while retaining ba
   expect(after.rows.filter((r) => Number(r.teamId) % 2 === 0).every((r) => r.playoff === 1)).toBe(
     true,
   );
+});
+
+it('counts exact top-two first-round bye events from completed six-team seeding', () => {
+  const data = fixture();
+  data.scores.forEach((score) => {
+    score.actual = Number(score.teamId) % 2 === 0 ? 200 - Number(score.teamId) * 10 : 20;
+  });
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4, 2000);
+  expect(result.reason).toBeUndefined();
+  expect(result.rows.filter((row) => row.bye === 1).map((row) => row.teamId)).toEqual(['0', '2']);
+  expect(
+    result.rows.filter((row) => !['0', '2'].includes(row.teamId)).every((row) => row.bye === 0),
+  ).toBe(true);
 });

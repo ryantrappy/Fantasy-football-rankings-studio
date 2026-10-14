@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { HistoryAnalytics } from './HistoryAnalytics';
+import { DataTable, ReportExportScope } from '../DataTable';
 import { Provider } from '../ui/provider';
 import { calculateInsights } from '../../server/insights/calculate';
 import type { SeasonRecord } from '../../league-summary';
@@ -142,4 +143,105 @@ it('shows an explicit empty state without inventing manager results', () => {
   expect(screen.getByText(/No managers are available/)).toBeVisible();
   expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   expect(screen.queryByText('0–0–0')).not.toBeInTheDocument();
+});
+
+it('shares the focused season across schedule, moments and both Wrapped scopes without narrowing aggregate history', () => {
+  renderExplorer();
+  fireEvent.click(screen.getByRole('button', { name: 'Schedule & luck' }));
+  fireEvent.change(screen.getByLabelText('Schedule season'), { target: { value: '2024' } });
+  fireEvent.click(screen.getByRole('tab', { name: 'Matchup stories' }));
+  expect(screen.getByLabelText('Moments season')).toHaveValue('2024');
+  fireEvent.click(screen.getByRole('tab', { name: 'Manager profiles' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Wrapped' }));
+  expect(screen.getByLabelText('Wrapped season')).toHaveValue('2024');
+  expect(screen.getByRole('heading', { name: "Alex's 2024 Fantasy Wrapped" })).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Recap scope'), { target: { value: 'league' } });
+  expect(screen.getByRole('article', { name: 'Wrapped share preview' })).toHaveTextContent(
+    'league',
+  );
+  fireEvent.change(screen.getByLabelText('Wrapped season'), { target: { value: '2025' } });
+  fireEvent.click(screen.getByRole('tab', { name: 'Competition' }));
+  expect(screen.getByLabelText('Schedule season')).toHaveValue('2025');
+  expect(document.querySelector('.history-explorer-stats')).toHaveTextContent('8–0–0');
+  fireEvent.click(screen.getByRole('button', { name: 'Whole league' }));
+  expect(
+    screen.getByRole('table', { name: 'Historical expected wins' }).querySelectorAll('tbody tr'),
+  ).toHaveLength(8);
+  fireEvent.click(screen.getByRole('tab', { name: 'Matchup stories' }));
+  expect(screen.getByLabelText('Moments season')).toHaveValue('2025');
+  fireEvent.change(screen.getByLabelText('Moments season'), { target: { value: '2023' } });
+  expect(screen.getByRole('status')).toHaveTextContent('Season history unavailable');
+});
+
+it('keeps regular and final placements distinct and exposes achievement coverage and the existing comparison', () => {
+  renderExplorer({ comparison: <h3>Existing manager comparison</h3> });
+  fireEvent.click(screen.getByRole('tab', { name: 'Season history' }));
+  const results = screen.getByRole('table', { name: 'Manager season results' });
+  for (const name of [
+    'Regular-season placement',
+    'Final placement',
+    'Playoffs',
+    'Champion',
+    'Last place',
+  ])
+    expect(within(results).getByRole('columnheader', { name: new RegExp(name) })).toBeVisible();
+  const managers = within(screen.getByRole('group', { name: 'Explore a manager' }));
+  fireEvent.click(managers.getByRole('button', { name: 'Blair' }));
+  const seasonCells = within(within(results).getAllByRole('row')[1]).getAllByRole('cell');
+  expect(seasonCells[4]).toHaveTextContent('3');
+  expect(seasonCells[5]).toHaveTextContent('2');
+  fireEvent.click(managers.getByRole('button', { name: 'Alex' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Achievements' }));
+  const achievements = screen.getByRole('region', { name: 'Selected manager achievements' });
+  expect(achievements).toHaveTextContent('Championships2');
+  expect(achievements).toHaveTextContent('2 of 3 selected seasons with verified results');
+  expect(results).not.toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Compare managers' }));
+  expect(screen.getByRole('heading', { name: 'Existing manager comparison' })).toBeVisible();
+});
+
+it('keeps the detailed season table and CSV reachable without a manager and mounts one copy when managers return', () => {
+  const seasonHistory = (
+    <DataTable<{ year: number }>
+      label="Manager season history"
+      data={[]}
+      getRowId={(row) => String(row.year)}
+      columns={[
+        { id: 'year', header: 'Season', value: (row) => row.year, cell: (row) => row.year },
+      ]}
+    />
+  );
+  const explorer = (available: boolean) => (
+    <ReportExportScope
+      value={{
+        context: { League: 'League', Coverage: 'Partial history' },
+        filenameContext: 'league-2025',
+      }}
+    >
+      <HistoryAnalytics
+        {...props}
+        activeManagerKeys={available ? ['alex'] : []}
+        seasonHistory={seasonHistory}
+      />
+    </ReportExportScope>
+  );
+  const { rerender, container } = render(explorer(false), { wrapper: Provider });
+  expect(screen.getByText(/No managers are available/)).toBeVisible();
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Browse the whole league archive', { exact: false }));
+  fireEvent.click(screen.getByRole('button', { name: /Detailed season metrics/ }));
+  expect(screen.getByRole('table', { name: 'Manager season history' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Download Manager season history CSV' })).toBeVisible();
+  expect(container.querySelectorAll('table[aria-label="Manager season history"]')).toHaveLength(1);
+  rerender(explorer(true));
+  fireEvent.click(screen.getByRole('tab', { name: 'Season history' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Detailed season metrics' }));
+  expect(screen.getByRole('table', { name: 'Manager season history' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Download Manager season history CSV' })).toBeVisible();
+  expect(container.querySelectorAll('table[aria-label="Manager season history"]')).toHaveLength(1);
+  expect(
+    within(screen.getByRole('group', { name: 'League archive views' })).queryByRole('button', {
+      name: /Detailed season metrics/,
+    }),
+  ).not.toBeInTheDocument();
 });

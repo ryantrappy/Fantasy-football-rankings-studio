@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { Provider } from './ui/provider';
 import { LineupAdvisor } from './LineupAdvisor';
 it('shows named swaps, stale/unknown-lock notices and read-only alternatives', () => {
@@ -25,6 +25,14 @@ it('shows named swaps, stale/unknown-lock notices and read-only alternatives', (
     </Provider>,
   );
   expect(screen.getByText(/Start: Bench/)).toBeInTheDocument();
+  const proposed = screen.getByRole('region', { name: /Complete proposed lineup/ });
+  expect(
+    within(proposed).getByRole('row', { name: 'RB Bench Lock unknown 20.00' }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByText('Submitted lineup and all roster inputs'));
+  const inputs = screen.getByRole('region', { name: /Submitted lineup and bench evidence/ });
+  expect(inputs).toHaveTextContent('StarterRB');
+  expect(inputs).toHaveTextContent('BenchBench');
   expect(screen.getByText(/Change: \+10.00/)).toBeInTheDocument();
   expect(screen.getByText(/Roster may be stale/)).toBeInTheDocument();
   expect(screen.getByText(/locks are unknown/)).toBeInTheDocument();

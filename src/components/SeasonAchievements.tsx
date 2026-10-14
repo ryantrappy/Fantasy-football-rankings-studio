@@ -1,3 +1,4 @@
+import './analytics-explorer.css';
 import { Box, Heading, Text } from '@chakra-ui/react';
 import { DataTable } from './DataTable';
 import { average, type ManagerSummary } from '../league-summary';
@@ -12,7 +13,13 @@ export function SeasonAchievements({ rows }: { rows: ManagerSummary[] }) {
     </>
   );
   return (
-    <Box bg="bg" borderWidth="1px" rounded="lg" p={{ base: 4, md: 6 }} className="panel">
+    <Box
+      bg="bg"
+      borderWidth="1px"
+      rounded="lg"
+      p={{ base: 4, md: 6 }}
+      className="panel analytics-explorer"
+    >
       <Heading as="h3" size="lg" mb={4}>
         Playoffs and final finishes
       </Heading>

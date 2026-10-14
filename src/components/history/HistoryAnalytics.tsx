@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SeasonRecord } from '../../league-summary';
 import { average, summarizeLeague } from '../../league-summary';
 import { competitionGames, managerKey as identity } from '../../history/competition/games';
@@ -11,9 +11,16 @@ import { HonorsHistory } from './competition/HonorsHistory';
 import { ErasHistory } from './competition/ErasHistory';
 import { RecordsHistory } from './competition/RecordsHistory';
 import { PainHistory } from './competition/PainHistory';
+import './history-explorer.css';
 
 const groups = ['Competition', 'Season history', 'Matchup stories', 'Manager profiles'] as const;
 const archiveViews = [
+  {
+    key: 'metrics',
+    name: 'Detailed season metrics',
+    description: 'Season table and CSV when manager history is unavailable',
+    icon: 'chart',
+  },
   {
     key: 'overview',
     name: 'League overview',
@@ -95,6 +102,13 @@ export function HistoryAnalytics({
   const key = choices.some(([value]) => value === requested) ? requested : (choices[0]?.[0] ?? '');
   const name = managers.get(key) ?? 'No manager selected';
   const [active, setActive] = useState(0);
+  const [selectedSeason, setSelectedSeason] = useState<number>();
+  const seasonYear =
+    selectedSeason !== undefined && years.includes(selectedSeason)
+      ? selectedSeason
+      : (records[0]?.year ?? years[0]);
+  const [seasonView, setSeasonView] = useState('results');
+  const libraryRef = useRef<HTMLDetailsElement>(null);
   const [visited, setVisited] = useState([0]);
   const [archive, setArchive] = useState<ArchiveView | null>(null);
   const [archiveVisited, setArchiveVisited] = useState<ArchiveView[]>([]);
@@ -118,12 +132,18 @@ export function HistoryAnalytics({
     setActive(index);
     setVisited((previous) => (previous.includes(index) ? previous : [...previous, index]));
   }
+  const libraryViews = archiveViews
+    .filter((view) => view.key !== 'metrics' || (!choices.length && seasonHistory))
+    .filter((view) => view.key !== 'overview' || leagueOverview)
+    .filter((view) => view.key !== 'comparison' || comparison);
   const archiveProps = {
     records,
     years,
     leagueId: snapshot ? undefined : leagueId,
     shared,
     active: true,
+    seasonYear,
+    onSeasonChange: setSelectedSeason,
   };
   return (
     <section className="history-analytics history-explorer" aria-label="Manager explorer">
@@ -278,18 +298,62 @@ export function HistoryAnalytics({
                 <section className="history-explorer-view">
                   <h3>Season history</h3>
                   <p>Year-by-year results for {name}. Missing results stay unavailable.</p>
-                  <ManagerSeasonHistory
-                    records={records}
-                    managerKey={key}
-                    leagueId={snapshot ? undefined : leagueId}
-                    shared={shared}
-                  />
+                  <nav className="history-explorer-subnav" aria-label="Season history views">
+                    {[
+                      ['results', 'Season results'],
+                      ...(seasonHistory ? [['metrics', 'Detailed season metrics']] : []),
+                      ['achievements', 'Achievements'],
+                    ].map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={seasonView === value}
+                        aria-controls={`${id}-season-${value}`}
+                        onClick={() => setSeasonView(value)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    {comparison && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setArchive('comparison');
+                          setArchiveVisited((previous) =>
+                            previous.includes('comparison')
+                              ? previous
+                              : [...previous, 'comparison'],
+                          );
+                          if (libraryRef.current) libraryRef.current.open = true;
+                          requestAnimationFrame(() =>
+                            document.getElementById(`${id}-archive-comparison`)?.focus(),
+                          );
+                        }}
+                      >
+                        Compare managers
+                      </button>
+                    )}
+                  </nav>
+                  <div id={`${id}-season-results`} hidden={seasonView !== 'results'}>
+                    <ManagerSeasonHistory
+                      records={records}
+                      managerKey={key}
+                      leagueId={snapshot ? undefined : leagueId}
+                      shared={shared}
+                    />
+                  </div>
                   {seasonHistory && (
-                    <details className="history-explorer-method">
-                      <summary>Detailed season metrics</summary>
+                    <div id={`${id}-season-metrics`} hidden={seasonView !== 'metrics'}>
                       {seasonHistory}
-                    </details>
+                    </div>
                   )}
+                  <div id={`${id}-season-achievements`} hidden={seasonView !== 'achievements'}>
+                    <ManagerAchievements
+                      records={records}
+                      managerKey={key}
+                      selectedSeasons={years.length}
+                    />
+                  </div>
                 </section>
               )}
               {visited.includes(index) && index === 2 && (
@@ -298,6 +362,8 @@ export function HistoryAnalytics({
                   years={years}
                   leagueId={snapshot ? undefined : leagueId}
                   managerKey={key}
+                  seasonYear={seasonYear}
+                  onSeasonChange={setSelectedSeason}
                 />
               )}
               {visited.includes(index) && index === 3 && (
@@ -307,13 +373,15 @@ export function HistoryAnalytics({
                   leagueId={snapshot ? undefined : leagueId}
                   shared={shared}
                   managerKey={key}
+                  seasonYear={seasonYear}
+                  onSeasonChange={setSelectedSeason}
                 />
               )}
             </div>
           ))}
         </div>
       )}
-      <details className="history-explorer-library">
+      <details className="history-explorer-library" ref={libraryRef}>
         <summary>
           <span>
             <Icon name="archive" size={18} /> Browse the whole league archive{' '}
@@ -322,41 +390,41 @@ export function HistoryAnalytics({
           <Icon name="down" size={16} />
         </summary>
         <fieldset className="history-explorer-library-grid" aria-label="League archive views">
-          {archiveViews
-            .filter((view) => view.key !== 'overview' || leagueOverview)
-            .filter((view) => view.key !== 'comparison' || comparison)
-            .map((view) => (
-              <button
-                type="button"
-                key={view.key}
-                aria-pressed={archive === view.key}
-                aria-controls={`${id}-archive-${view.key}`}
-                onClick={() => {
-                  setArchive(view.key);
-                  setArchiveVisited((previous) =>
-                    previous.includes(view.key) ? previous : [...previous, view.key],
-                  );
-                }}
-              >
-                <Icon name={view.icon} size={18} />
-                <span>
-                  {view.name}
-                  <small>{view.description}</small>
-                </span>
-                <Icon name="arrow" size={16} />
-              </button>
-            ))}
+          {libraryViews.map((view) => (
+            <button
+              type="button"
+              key={view.key}
+              aria-pressed={archive === view.key}
+              aria-controls={`${id}-archive-${view.key}`}
+              onClick={() => {
+                setArchive(view.key);
+                setArchiveVisited((previous) =>
+                  previous.includes(view.key) ? previous : [...previous, view.key],
+                );
+              }}
+            >
+              <Icon name={view.icon} size={18} />
+              <span>
+                {view.name}
+                <small>{view.description}</small>
+              </span>
+              <Icon name="arrow" size={16} />
+            </button>
+          ))}
         </fieldset>
-        {archiveViews.map((view) => (
+        {libraryViews.map((view) => (
           <section
             key={view.key}
             id={`${id}-archive-${view.key}`}
             hidden={archive !== view.key}
             className="history-explorer-archive-view"
             aria-label={view.name}
+            tabIndex={-1}
           >
             {archiveVisited.includes(view.key) &&
-              (view.key === 'overview' ? (
+              (view.key === 'metrics' ? (
+                seasonHistory
+              ) : view.key === 'overview' ? (
                 leagueOverview
               ) : view.key === 'comparison' ? (
                 comparison
@@ -457,13 +525,88 @@ function ManagerSeasonHistory({
             cell: (row) => number(average(row.totalPoints, row.weeks)),
           },
           {
+            id: 'regular-finish',
+            header: 'Regular-season placement',
+            value: (row) => average(row.regularSeasonFinishTotal, row.regularSeasonFinishSeasons),
+            cell: (row) =>
+              number(average(row.regularSeasonFinishTotal, row.regularSeasonFinishSeasons)),
+          },
+          {
             id: 'finish',
-            header: 'Final finish',
+            header: 'Final placement',
             value: (row) => average(row.finishTotal, row.finishSeasons),
             cell: (row) => number(average(row.finishTotal, row.finishSeasons)),
           },
+          ...(
+            [
+              ['playoff', 'Playoffs', 'playoffSeasons', 'playoffAppearances'],
+              ['champion', 'Champion', 'championshipSeasons', 'championships'],
+              ['last', 'Last place', 'lastPlaceSeasons', 'lastPlaces'],
+            ] as const
+          ).map(([id, header, coverage, count]) => ({
+            id,
+            header,
+            value: (row: (typeof rows)[number]) => (row[coverage] ? row[count] : null),
+            cell: (row: (typeof rows)[number]) =>
+              row[coverage] ? (row[count] ? 'Yes' : 'No') : 'Unavailable',
+          })),
         ]}
       />
+      <p className="history-explorer-footnote">
+        Placements and postseason results use their own verified coverage. Unavailable results are
+        never counted as failures.
+      </p>
     </div>
+  );
+}
+
+function ManagerAchievements({
+  records,
+  managerKey,
+  selectedSeasons,
+}: {
+  records: SeasonRecord[];
+  managerKey: string;
+  selectedSeasons: number;
+}) {
+  const manager = summarizeLeague(records).find((row) => row.key === managerKey);
+  if (!manager) return <p>No season achievements available for this manager.</p>;
+  return (
+    <section aria-label="Selected manager achievements">
+      <h3>{manager.managerName}'s achievements</h3>
+      <dl className="history-explorer-achievements">
+        {(
+          [
+            ['Playoff appearances', manager.playoffAppearances, manager.playoffSeasons],
+            ['Championships', manager.championships, manager.championshipSeasons],
+            ['Last-place finishes', manager.lastPlaces, manager.lastPlaceSeasons],
+            [
+              'Avg. regular-season placement',
+              average(manager.regularSeasonFinishTotal, manager.regularSeasonFinishSeasons),
+              manager.regularSeasonFinishSeasons,
+            ],
+            [
+              'Avg. final placement',
+              average(manager.finishTotal, manager.finishSeasons),
+              manager.finishSeasons,
+            ],
+          ] as const
+        ).map(([label, count, coverage]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              {coverage ? number(count) : 'Unavailable'}{' '}
+              <small>
+                {coverage} of {selectedSeasons} selected seasons with verified results
+              </small>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="history-explorer-footnote">
+        Unknown provider outcomes remain unavailable. These counts cover the selected seasons and
+        preserve distinct regular-season and final placements in Season results.
+      </p>
+    </section>
   );
 }

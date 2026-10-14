@@ -88,3 +88,68 @@ it('keeps shared focus across seasons and explains an absent manager without a l
   expect(screen.getByText(/This manager has no team in this season/)).toBeVisible();
   expect(screen.queryByRole('article', { name: 'Wrapped share preview' })).not.toBeInTheDocument();
 });
+
+it('can intentionally publish a league recap from a focused manager and clears consent when scope changes', async () => {
+  const createReportSnapshot = vi.fn().mockResolvedValue({ publicId: 'league-recap' });
+  render(
+    <ApiContext.Provider value={{ createReportSnapshot } as never}>
+      <Wrapped records={[fixture()]} leagueId="123" managerKey="a" open />
+    </ApiContext.Provider>,
+    { wrapper: Provider },
+  );
+  fireEvent.click(screen.getByLabelText('Publish this preview to anyone with its link'));
+  fireEvent.change(screen.getByLabelText('Recap scope'), { target: { value: 'league' } });
+  expect(screen.getByLabelText('Publish this preview to anyone with its link')).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Create public Wrapped snapshot' })).toBeDisabled();
+  fireEvent.click(screen.getByLabelText('Publish this preview to anyone with its link'));
+  fireEvent.click(screen.getByRole('button', { name: 'Create public Wrapped snapshot' }));
+  await waitFor(() =>
+    expect(createReportSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        view: 'wrapped',
+        records: [],
+        activeManagerKeys: [],
+        wrapped: expect.objectContaining({ scope: 'league' }),
+      }),
+    ),
+  );
+  expect(await screen.findByLabelText('Wrapped share link')).toHaveValue(
+    'http://localhost:3000/shared/snapshots/league-recap',
+  );
+  fireEvent.change(screen.getByLabelText('Recap scope'), { target: { value: 'personal' } });
+  expect(screen.queryByLabelText('Wrapped share link')).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: "Alex's 2025 Fantasy Wrapped" })).toBeVisible();
+});
+
+it('does not attach a late snapshot response to a newly focused season', async () => {
+  let resolve!: (value: { publicId: string }) => void;
+  const createReportSnapshot = vi.fn(
+    () =>
+      new Promise<{ publicId: string }>((done) => {
+        resolve = done;
+      }),
+  );
+  const previous = fixture();
+  previous.year = 2024;
+  const preview = (year: number) => (
+    <ApiContext.Provider value={{ createReportSnapshot } as never}>
+      <Wrapped
+        records={[fixture(), previous]}
+        leagueId="123"
+        managerKey="a"
+        seasonYear={year}
+        open
+      />
+    </ApiContext.Provider>
+  );
+  const { rerender } = render(preview(2025), { wrapper: Provider });
+  fireEvent.click(screen.getByLabelText('Publish this preview to anyone with its link'));
+  fireEvent.click(screen.getByRole('button', { name: 'Create public Wrapped snapshot' }));
+  rerender(preview(2024));
+  resolve({ publicId: 'old-season' });
+  await waitFor(() =>
+    expect(screen.getByRole('heading', { name: "Alex's 2024 Fantasy Wrapped" })).toBeVisible(),
+  );
+  expect(screen.queryByLabelText('Wrapped share link')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Publish this preview to anyone with its link')).not.toBeChecked();
+});

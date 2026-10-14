@@ -22,12 +22,16 @@ export function PersonalitiesHistory({
   leagueId,
   shared,
   managerKey,
+  seasonYear,
+  onSeasonChange,
 }: {
   records: SeasonRecord[];
   years: number[];
   leagueId?: string;
   shared?: boolean;
   managerKey?: string;
+  seasonYear?: number;
+  onSeasonChange?: (year: number) => void;
 }) {
   const [labels, setLabels] = useState(false);
   const [localManager, setManager] = useState('');
@@ -147,6 +151,8 @@ export function PersonalitiesHistory({
             leagueId={leagueId}
             shared={shared}
             managerKey={manager}
+            seasonYear={seasonYear}
+            onSeasonChange={onSeasonChange}
             open
           />
         )}

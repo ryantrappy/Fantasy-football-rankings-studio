@@ -1,3 +1,4 @@
+import './decision-explorer.css';
 import { Box, Button, Flex, Heading, SimpleGrid, Text } from '@chakra-ui/react';
 import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '../auth/session';
@@ -60,7 +61,15 @@ export function TradeSuggestions({
     ),
   ];
   return (
-    <Box as="section" aria-label="Trade suggestions" borderWidth="1px" rounded="xl" p={5} mb={6}>
+    <Box
+      as="section"
+      className="decision-explorer-ideas"
+      aria-label="Trade suggestions"
+      borderWidth="1px"
+      rounded="xl"
+      p={5}
+      mb={6}
+    >
       <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
         <Heading as="h2" size="lg">
           Suggested trades{managed ? ` for ${managed.name}` : ''}

@@ -1,0 +1,112 @@
+/* Local History conventions mirror the approved Manager Explorer mockup. */
+.history-explorer.history-analytics {
+  --studio-ink: #17223b;
+  --studio-muted: #526078;
+  --studio-line: #dce2ee;
+  color: var(--studio-ink);
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+}
+.history-explorer.history-analytics :is(button, select, input, textarea, summary):focus-visible {
+  outline: 3px solid #3949ab;
+  outline-offset: 3px;
+}
+.history-explorer.history-analytics :is(h2, h3, h4) {
+  letter-spacing: -0.025em;
+}
+.history-explorer.history-analytics .history-explorer-profile {
+  padding: 20px 22px;
+}
+.history-explorer.history-analytics .history-explorer-identity h2 {
+  font-size: 21px;
+}
+.history-explorer.history-analytics .history-explorer-stats dt {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+}
+.history-explorer.history-analytics .history-explorer-stats dd {
+  font-size: 22px;
+}
+.history-explorer.history-analytics .history-explorer-subnav {
+  background: #f6f8fd;
+  border-bottom: 1px solid var(--studio-line);
+  padding: 12px;
+  border-radius: 6px 6px 0 0;
+}
+.history-explorer.history-analytics
+  :is(.history-explorer-subnav, .history-explorer-view-switch)
+  > button {
+  min-height: 38px;
+}
+.history-explorer.history-analytics .history-explorer-subnav > button[aria-pressed='true'] {
+  border-color: #a4afe7;
+  background: #eef1ff;
+}
+.history-explorer.history-analytics .history-rivalry-inspector {
+  background: #f6f8fd;
+}
+.history-explorer.history-analytics .history-explorer-definition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0;
+  color: var(--studio-muted);
+  font-size: 12px;
+}
+.history-explorer.history-analytics .history-explorer-achievements {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.history-explorer.history-analytics .history-explorer-achievements > div {
+  border-left: 3px solid #dce2ee;
+  padding-left: 12px;
+}
+.history-explorer.history-analytics .history-explorer-achievements dt {
+  font-size: 12px;
+  color: var(--studio-muted);
+}
+.history-explorer.history-analytics .history-explorer-achievements dd {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.history-explorer.history-analytics .history-explorer-achievements small {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--studio-muted);
+}
+.history-explorer-wrapped-preview {
+  background: #eef1ff;
+  border: 1px solid #cbd4f1;
+  color: #17223b;
+  margin: 16px 0;
+}
+.history-explorer-wrapped-preview > p:first-child {
+  color: #3949ab;
+  font-size: 13px;
+}
+.history-explorer-wrapped-preview .history-explorer-wrapped-highlight {
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid #cbd4f1;
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .history-explorer.history-analytics .history-explorer-profile {
+    padding: 16px;
+  }
+  .history-explorer.history-analytics .history-explorer-achievements {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .history-explorer.history-analytics
+    :is(.history-explorer-subnav, .history-explorer-view-switch)
+    > button {
+    min-height: 44px;
+  }
+}

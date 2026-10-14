@@ -213,3 +213,28 @@ vi.mock('./PlayerProfileLink', () => ({
     children: React.ReactNode;
   }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
 }));
+
+it('retains the editable scenario when switching to ideas and exposes both legal lineup assignments', async () => {
+  await setup();
+  fireEvent.click(screen.getByLabelText('Send C'));
+  fireEvent.click(screen.getByLabelText('Send B'));
+  fireEvent.click(screen.getByRole('button', { name: 'Find trade ideas' }));
+  expect(screen.queryByRole('heading', { name: 'Build your trade' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Build a trade' }));
+  expect(screen.getByLabelText('Send C')).toBeChecked();
+  expect(screen.getByLabelText('Send B')).toBeChecked();
+  const impact = screen.getByLabelText('One lineup impact');
+  expect(impact).toHaveTextContent('Position coverage before: RB 3');
+  expect(impact).toHaveTextContent('Position coverage after: RB 3');
+  fireEvent.click(within(impact).getByText('Before and after starting lineups'));
+  expect(within(impact).getByRole('link', { name: 'A' })).toHaveAttribute(
+    'href',
+    '/players?leagueId=1&year=2026&playerId=A',
+  );
+  expect(within(impact).getByRole('link', { name: 'B' })).toHaveAttribute(
+    'href',
+    '/players?leagueId=1&year=2026&playerId=B',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Remove C from trade' }));
+  expect(screen.getByLabelText('Send C')).not.toBeChecked();
+});

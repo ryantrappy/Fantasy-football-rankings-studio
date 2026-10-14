@@ -45,7 +45,7 @@ export function CodexAccountSettings({
     <Box as="section" borderWidth="1px" rounded="md" p={4}>
       <Stack gap={3}>
         <Heading as="h3" size="md">
-          Codex with a ChatGPT account
+          Server-managed Codex
         </Heading>
         <Text>
           An API key is optional. The server operator can sign in to Codex with ChatGPT and enable

@@ -1,0 +1,496 @@
+/* Manager Explorer workspace. Export markup and export.css are intentionally isolated. */
+.app-shell {
+  --studio-ink: #17223b;
+  --studio-muted: #526078;
+  --studio-line: #dce2ee;
+  --studio-accent: #3949ab;
+  background: #f3f5fb;
+}
+.workspace-header {
+  background: #17223b;
+  border-color: #17223b;
+  box-shadow: none;
+}
+.workspace-toolbar {
+  min-height: 72px;
+  padding: 14px 28px;
+  justify-content: space-between;
+}
+.workspace-brand {
+  font-size: 20px;
+}
+.workspace-brand-caption {
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  margin-top: 5px;
+}
+.workspace-brand img {
+  border-radius: 6px;
+}
+.workspace-header .app-nav {
+  padding: 0 22px 12px;
+  gap: 4px;
+}
+.workspace-header .app-nav a {
+  padding: 8px 12px;
+  min-height: 38px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.workspace-header .app-nav a svg {
+  display: none;
+}
+.workspace-header .app-nav a[data-status='active'],
+.workspace-header .app-nav a[aria-current='page'] {
+  color: #3949ab;
+  background: #eef1ff;
+  box-shadow: none;
+}
+.workspace-selectors:not(:empty) {
+  justify-content: flex-start;
+  padding: 12px max(24px, calc((100% - 1336px) / 2));
+  color: #17223b;
+  background: #fff;
+  border-bottom: 1px solid #dce2ee;
+  flex-wrap: wrap;
+}
+.workspace-selectors:empty {
+  display: none;
+}
+.workspace-selectors .selection-bar {
+  width: 100%;
+  justify-content: flex-start;
+}
+.workspace-selectors [data-scope='field'] {
+  gap: 4px;
+}
+.workspace-selectors label {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  clip-path: none;
+  white-space: normal;
+  font-size: 12px;
+  color: #526078;
+}
+.workspace-selectors button {
+  background: #fff;
+  color: #17223b;
+  border-color: #71809a;
+}
+.profile-menu summary {
+  border-radius: 6px;
+  font-size: 13px;
+}
+.profile-menu-items {
+  z-index: 40;
+}
+.workspace-main:not(.workspace-main-live) {
+  max-width: 1384px;
+  padding: 28px 24px 48px;
+}
+.studio-heading,
+.studio-surface .page-heading {
+  padding: 0;
+  margin: 0 0 20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #17223b;
+  box-shadow: none;
+  gap: 16px;
+}
+.studio-heading h1,
+.studio-surface .page-heading h1 {
+  font-size: 28px;
+  line-height: 34px;
+  margin: 0 0 8px;
+  letter-spacing: -0.035em;
+}
+.studio-heading p,
+.studio-surface .page-heading p:not(.eyebrow) {
+  color: #526078;
+  line-height: 1.5;
+  max-width: 76ch;
+}
+.studio-eyebrow,
+.studio-surface .page-heading .eyebrow {
+  color: #526078;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 0 6px;
+}
+.studio-eyebrow svg {
+  display: none;
+}
+.studio-heading button,
+.studio-surface .page-heading button,
+.studio-surface .page-heading a {
+  color: #17223b;
+}
+.studio-card,
+.studio-surface .panel,
+.studio-surface .account-card {
+  border-color: #dce2ee;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.explorer-breadcrumb {
+  font-size: 12px;
+  color: #526078;
+  margin-bottom: 14px;
+}
+.explorer-breadcrumb a {
+  color: #3949ab;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.explorer-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.explorer-tool-link {
+  display: block;
+  padding: 24px;
+  background: white;
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  color: #17223b;
+  text-decoration: none;
+}
+.explorer-tool-link:hover {
+  border-color: #3949ab;
+  background: #eef1ff;
+}
+.explorer-tool-link svg {
+  color: #3949ab;
+}
+.explorer-tool-link h2 {
+  font-size: 20px;
+  margin: 12px 0 8px;
+}
+.explorer-tool-link p {
+  color: #526078;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 65ch;
+}
+.explorer-info-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: 32px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #526078;
+  cursor: pointer;
+  font-size: 16px;
+}
+.explorer-info-trigger:hover {
+  color: #3949ab;
+  background: #eef1ff;
+}
+.explorer-info-content {
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid #71809a;
+  border-radius: 8px;
+  background: #fff;
+  color: #17223b;
+  box-shadow: 0 6px 22px #17223b22;
+  font:
+    14px/1.5 system-ui,
+    sans-serif;
+  z-index: 100;
+}
+.explorer-view-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid #dce2ee;
+}
+.explorer-view-nav > button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #526078;
+  font-size: 13px;
+  cursor: pointer;
+}
+.explorer-view-nav > button[aria-pressed='true'] {
+  border-color: #3949ab;
+  color: #3949ab;
+}
+.explorer-profile {
+  max-width: 1050px;
+  margin: 0 auto;
+}
+.explorer-profile-workspace {
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  background: #fff;
+}
+.explorer-profile-pane {
+  padding: 24px;
+}
+.explorer-profile-pane[hidden] {
+  display: none;
+}
+.explorer-profile .account-card {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+.explorer-profile .profile-espn-settings {
+  max-width: none;
+  margin: 0;
+}
+.explorer-profile .explorer-profile-pane > section {
+  margin: 0;
+}
+.explorer-account-identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #dce2ee;
+}
+.explorer-account-identity h2 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+.explorer-account-identity p {
+  margin: 0;
+  color: #526078;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.app-shell-live .workspace-toolbar {
+  min-height: 48px;
+  height: 48px;
+  padding: 4px 16px;
+}
+.app-shell-live .workspace-brand {
+  font-size: 16px;
+  gap: 8px;
+}
+.app-shell-live .workspace-brand img {
+  width: 28px;
+  height: 28px;
+}
+.app-shell-live .workspace-brand-caption {
+  display: none;
+}
+.app-shell-live .workspace-header .app-nav {
+  padding: 0 8px 4px;
+  gap: 2px;
+}
+.app-shell-live .workspace-header .app-nav a {
+  min-height: 34px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.app-shell-live .profile-menu summary {
+  height: 34px;
+}
+@media (max-width: 767px) {
+  .workspace-toolbar {
+    min-height: 60px;
+    padding: 10px 14px;
+  }
+  .workspace-header .app-nav {
+    padding: 0 8px 8px;
+  }
+  .workspace-selectors:not(:empty) {
+    padding: 10px 14px;
+  }
+  .workspace-selectors {
+    order: initial;
+    flex-basis: auto;
+  }
+  .workspace-main:not(.workspace-main-live) {
+    padding: 20px 14px 32px;
+  }
+  .studio-heading h1,
+  .studio-surface .page-heading h1 {
+    font-size: 26px;
+    line-height: 32px;
+  }
+  .explorer-tools-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .explorer-profile-pane {
+    padding: 16px;
+  }
+  .explorer-account-identity {
+    padding: 16px;
+  }
+  .app-shell-live {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .app-shell-live .workspace-header {
+    position: static;
+  }
+  .workspace-main-live {
+    overflow: visible;
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explorer-info-content {
+    animation: none;
+  }
+}
+/* Focused ranking authoring reuses the same draft, ordering and export components. */
+.ranking-focused.editor-layout {
+  grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
+  gap: 0;
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+.ranking-focused .editor-panel {
+  border: 0;
+  border-radius: 0;
+}
+.ranking-focused.showing-edit .preview-panel {
+  display: none;
+}
+.ranking-focused.showing-preview {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 20px;
+}
+.ranking-focused.showing-preview .editor-panel,
+.ranking-focused.showing-preview .ranking-team-detail {
+  display: none;
+}
+.ranking-focused .team-editor {
+  border: 0;
+  border-bottom: 1px solid #dce2ee;
+  border-radius: 0;
+  padding: 16px 8px;
+  box-shadow: none;
+  background: #fff;
+}
+.ranking-focused .team-editor:has(.ranking-team-select[aria-pressed='true']) {
+  background: #eef1ff;
+}
+.ranking-focused .team-editor-heading {
+  margin-bottom: 0;
+}
+.ranking-team-select {
+  text-align: left;
+  color: #3949ab;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+.ranking-team-detail {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px;
+  background: #f3f5fb;
+  border-left: 1px solid #dce2ee;
+}
+.ranking-team-detail h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+.ranking-team-detail > p {
+  color: #526078;
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+.ranking-team-detail textarea {
+  min-height: 150px;
+}
+.ranking-team-detail .ranking-detail-context {
+  margin-bottom: 4px;
+}
+@media (max-width: 991px) {
+  .ranking-focused.editor-layout.showing-edit {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    overflow: visible;
+  }
+  .ranking-focused .team-entries-scroll {
+    max-height: 420px;
+    flex: auto;
+  }
+  .ranking-team-detail {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid #dce2ee;
+    padding: 20px;
+  }
+}
+.explorer-league-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0;
+}
+.explorer-league-list button {
+  display: grid;
+  gap: 5px;
+  min-height: 64px;
+  padding: 12px 16px;
+  text-align: left;
+  border: 1px solid #71809a;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.explorer-league-list button[aria-pressed='true'] {
+  color: #3949ab;
+  border-color: #3949ab;
+  background: #eef1ff;
+}
+.explorer-league-list span {
+  color: #526078;
+  font-size: 12px;
+}
+.explorer-league-detail[hidden] {
+  display: none;
+}
+@media (max-width: 767px) {
+  .explorer-league-list button {
+    width: 100%;
+  }
+}
+.studio-surface .view-switch button[aria-pressed='true'] {
+  background: #3949ab;
+  color: #fff;
+  border-color: #3949ab;
+}
+.studio-surface .view-switch button[aria-pressed='false'] {
+  background: #fff;
+  color: #3949ab;
+}
+.explorer-profile-pane > .studio-loading {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+}

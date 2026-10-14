@@ -26,13 +26,26 @@ function team(name: string) {
     teamId: name,
     name,
     score: 103.24,
-    players: Array.from({ length: 16 }, (_, index) => ({
-      id: String(index),
-      name: `Player ${index + 1}`,
-      position: index === 0 ? 'QB' : index < 5 ? 'RB' : 'WR',
-      points: 12.34,
-      starter: index < 9,
-    })),
+    players: Array.from(
+      { length: new URLSearchParams(location.search).has('long') ? 30 : 18 },
+      (_, index) => ({
+        id: String(index),
+        name:
+          new URLSearchParams(location.search).has('names') && index === 0
+            ? 'A player with a long complete provider name'
+            : `Player ${index + 1}`,
+        availability:
+          new URLSearchParams(location.search).has('names') && index === 0
+            ? 'QUESTIONABLE'
+            : undefined,
+        position: index === 0 ? 'QB' : index < 5 ? 'RB' : 'WR',
+        points: 12.34,
+        projectedPoints: 16.5,
+        remainingFraction: index % 3 === 0 ? 0 : index % 3 === 1 ? 0.4 : 1,
+        bye: index === 17,
+        starter: index < 9,
+      }),
+    ),
   };
 }
 const api = {

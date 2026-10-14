@@ -1,3 +1,4 @@
+import { InfoTooltip } from '../../InfoTooltip';
 import { useState } from 'react';
 import { historicalSchedules, alternateSchedule } from '../../../history/competition/schedule';
 import { managerKey as identity } from '../../../history/competition/games';
@@ -8,13 +9,15 @@ export function ScheduleHistory({
   managerKey,
   onManagerChange,
   active,
+  seasonYear,
+  onSeasonChange,
 }: CompetitionProps) {
   const [year, setYear] = useState(0),
     [teamSelection, setTeamSelection] = useState({ managerKey, team: '' }),
     [donor, setDonor] = useState(''),
     [showLeague, setShowLeague] = useState(false);
   const record =
-    records.find((r) => r.year === year) ??
+    records.find((r) => r.year === (seasonYear ?? year)) ??
     records.find((r) => r.data.teams.some((t) => identity(t, r.year) === managerKey)) ??
     records[0];
   const rows = records.flatMap(historicalSchedules);
@@ -29,15 +32,18 @@ export function ScheduleHistory({
   return (
     <details open={active || undefined} className="history-explorer-analysis">
       <summary>Expected wins and historical schedule difficulty</summary>
-      <details className="history-explorer-methodology">
-        <summary>Schedule definitions & coverage</summary>
-        <p>
+      <div className="history-explorer-definition">
+        <span>Expected wins method</span>
+        <InfoTooltip label="Expected wins method">
           Expected wins sum weekly all-play scoring percentiles for verified regular-season matchups
           with a unique finite score for every rostered team, ties worth half. Difficulty is
-          opponent points per completed game; scoring systems differ across years. Partial seasons
-          are provisional. Byes add no wins. Missing scores are excluded.
-        </p>
-      </details>
+          opponent points per completed game.
+        </InfoTooltip>
+      </div>
+      <p className="history-explorer-footnote">
+        Scoring systems differ across years. Partial seasons are provisional. Byes add no wins.
+        Missing scores are excluded.
+      </p>
       {managerKey && (
         <fieldset className="history-explorer-view-switch" aria-label="Schedule comparison">
           <button type="button" aria-pressed={!showLeague} onClick={() => setShowLeague(false)}>
@@ -77,7 +83,13 @@ export function ScheduleHistory({
       <div className="history-explorer-toolbar">
         <label>
           Schedule season{' '}
-          <select value={record?.year ?? ''} onChange={(e) => setYear(Number(e.target.value))}>
+          <select
+            value={record?.year ?? ''}
+            onChange={(e) => {
+              setYear(Number(e.target.value));
+              onSeasonChange?.(Number(e.target.value));
+            }}
+          >
             {records.map((r) => (
               <option key={r.year} value={r.year}>
                 {r.year}
@@ -119,14 +131,17 @@ export function ScheduleHistory({
           {teams.find((t) => t.teamId === target)?.managerName ?? 'an available team'}.
         </p>
       )}
-      <details className="history-explorer-methodology">
-        <summary>How schedule replay works</summary>
-        <p>
+      <div className="history-explorer-definition">
+        <span>Schedule replay method</span>
+        <InfoTooltip label="How schedule replay works">
           Replay preserves the target's same-season weekly scores against the schedule owner's
-          opponents. Self-matchups are excluded; no replacement is invented. This is a partial
-          counterfactual record, not a final placement.
-        </p>
-      </details>
+          opponents. Self-matchups are excluded; no replacement is invented.
+        </InfoTooltip>
+      </div>
+      <p className="history-explorer-footnote">
+        This is a partial counterfactual record, not a final placement. Unavailable and self-matchup
+        weeks are listed with the result.
+      </p>
       <p>
         {replay?.known
           ? `Alternate record: ${replay.wins}-${replay.losses}-${replay.ties}; ${replay.byes} byes; ${replay.skipped} unavailable or self-matchup weeks`

@@ -6,6 +6,7 @@ import type { League, LeagueApi } from '../types';
 import { ManagedTeamPicker } from './ManagedTeamPicker';
 import { logClientError } from '../logging';
 export function ManageLeagues({ api }: { api: LeagueApi }) {
+  const [selectedLeague, setSelectedLeague] = useState('');
   const [archived, setArchived] = useState(false),
     [leagues, setLeagues] = useState<League[]>([]),
     [loading, setLoading] = useState(true),
@@ -45,6 +46,9 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
       active = false;
     };
   }, [api, archived, retry]);
+  const selectedId = leagues.some((league) => league.leagueId === selectedLeague)
+    ? selectedLeague
+    : leagues[0]?.leagueId;
   return (
     <Box>
       <PageHeading
@@ -65,11 +69,37 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
       <Text as="output" my={3}>
         {notice}
       </Text>
+      {!loading && leagues.length > 0 && (
+        <nav className="explorer-league-list" aria-label="League connections">
+          {leagues.map((league) => (
+            <button
+              key={league.leagueId}
+              type="button"
+              disabled={busy}
+              aria-pressed={selectedId === league.leagueId}
+              onClick={() => setSelectedLeague(league.leagueId)}
+            >
+              <strong>{league.leagueName}</strong>
+              <span>
+                {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
+                {league.providerLeagueId ?? league.leagueId}
+                {league.deleting ? ' · Cleanup pending' : ''}
+              </span>
+            </button>
+          ))}
+        </nav>
+      )}
       {loading ? (
         <LoadingSkeleton label="Loading leagues…" />
       ) : leagues.length ? (
         leagues.map((league) => (
-          <Box className="studio-card" key={league.leagueId} p={{ base: 4, md: 6 }} my={4}>
+          <Box
+            className="studio-card explorer-league-detail"
+            hidden={selectedId !== league.leagueId}
+            key={league.leagueId}
+            p={{ base: 4, md: 6 }}
+            my={4}
+          >
             <Heading as="h2" size="md">
               {league.leagueName}
             </Heading>

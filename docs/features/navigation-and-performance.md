@@ -118,3 +118,10 @@ Source: [TASK-120](../../backlog/tasks/task-120%20-%20Preload-workspace-tabs-thr
 - Relevant regressions, typecheck, lint and production build pass and performance behavior is documented.
 
 Source: [TASK-143](../../backlog/tasks/task-143%20-%20Reduce-report-loading-latency-and-move-browser-forecasts-off-the-main-thread.md).
+
+### TASK-146 — Shared Manager Explorer presentation
+
+- Seven primary destinations: Rankings studio, Weekly overview, Live matchups, Season insights, Playoff simulator, League history and Other tools. Players/Trade analyzer retain direct URLs, context, the Other tools active state and return breadcrumbs.
+- Profile, Create league and Manage leagues are in the top-right dropdown. Navigation/outside click dismiss it; Escape closes and restores focus, including compact Live. The skip link, horizontal phone navigation, current selections, preloading and public/snapshot restrictions remain.
+- Compact headings, white evidence surfaces and accessible definition tooltips follow the approved palette. Data/source/caveat/configuration controls remain reachable. Tooltip clicks/touch/focus/Escape and reduced motion are covered; dense Live uses bounded desktop layout and full phone flow.
+- [Coverage and final validation](../manager-explorer-coverage.md) records responsive, keyboard, loading/partial/error, cache/disposal, performance and screenshot evidence. Rankings export markup is excluded from workspace restyling.

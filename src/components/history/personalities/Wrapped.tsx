@@ -1,5 +1,6 @@
 import { Button } from '@chakra-ui/react';
-import { useContext, useState } from 'react';
+import '../history-explorer.css';
+import { useContext, useEffect, useRef, useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { ApiContext } from '../../../auth/session';
 import { ReportSharing } from '../../ReportSharing';
@@ -9,14 +10,14 @@ export function WrappedPreview({ recap }: { recap: WrappedRecap }) {
   return (
     <article
       aria-label="Wrapped share preview"
+      className="history-explorer-wrapped-preview"
       style={{
         maxWidth: 720,
         width: '100%',
         boxSizing: 'border-box',
         overflowWrap: 'anywhere',
         padding: 'clamp(12px,4vw,28px)',
-        border: '1px solid currentColor',
-        borderRadius: 16,
+        borderRadius: 10,
       }}
     >
       <p>
@@ -31,10 +32,7 @@ export function WrappedPreview({ recap }: { recap: WrappedRecap }) {
         }}
       >
         {recap.highlights.map((text, i) => (
-          <p
-            key={i}
-            style={{ margin: 0, padding: 12, border: '1px solid currentColor', borderRadius: 8 }}
-          >
+          <p key={i} className="history-explorer-wrapped-highlight">
             {text}
           </p>
         ))}
@@ -51,18 +49,41 @@ export function WrappedPreview({ recap }: { recap: WrappedRecap }) {
     </article>
   );
 }
-export function Wrapped({
-  records,
-  leagueId,
-  shared = false,
-  managerKey,
-  open,
-}: {
+interface WrappedProps {
   records: SeasonRecord[];
   leagueId?: string;
   shared?: boolean;
   managerKey?: string;
   open?: boolean;
+  seasonYear?: number;
+  onSeasonChange?: (year: number) => void;
+}
+
+export function Wrapped(props: WrappedProps) {
+  const [scope, setScope] = useState<'personal' | 'league'>('personal');
+  return (
+    <WrappedContent
+      key={`${props.leagueId ?? ''}:${props.managerKey ?? 'local'}:${props.seasonYear ?? 'local'}`}
+      {...props}
+      scope={scope}
+      onScopeChange={setScope}
+    />
+  );
+}
+
+function WrappedContent({
+  records,
+  leagueId,
+  shared = false,
+  managerKey,
+  open,
+  seasonYear,
+  onSeasonChange,
+  scope,
+  onScopeChange,
+}: WrappedProps & {
+  scope: 'personal' | 'league';
+  onScopeChange: (scope: 'personal' | 'league') => void;
 }) {
   const api = useContext(ApiContext),
     [selectedYear, setYear] = useState(records[0]?.year),
@@ -71,9 +92,15 @@ export function Wrapped({
     [href, setHref] = useState(''),
     [error, setError] = useState(''),
     [saving, setSaving] = useState(false);
-  const record = records.find((r) => r.year === selectedYear) || records[0];
+  const requestGeneration = useRef(0);
+  const record = records.find((r) => r.year === (seasonYear ?? selectedYear)) || records[0];
+  useEffect(() => {
+    return () => {
+      requestGeneration.current += 1;
+    };
+  }, []);
   if (!record) return <p>Fantasy Wrapped unavailable. Load a season to build a recap.</p>;
-  const key = managerKey ?? localKey;
+  const key = scope === 'league' ? '' : (managerKey ?? localKey);
   const missingManager =
     !!key && !record.data.teams.some((team) => identityKey(record.year, team) === key);
   const recap = buildWrapped(record, key);
@@ -85,44 +112,63 @@ export function Wrapped({
   return (
     <details open={open}>
       <summary>Personal and league Fantasy Wrapped</summary>
-      <label>
-        Wrapped season{' '}
-        <select
-          disabled={saving}
-          value={record.year}
-          onChange={(e) => {
-            setYear(Number(e.target.value));
-            setKey('');
-            reset();
-          }}
-        >
-          {records.map((r) => (
-            <option key={r.year} value={r.year}>
-              {r.year}
-            </option>
-          ))}
-        </select>
-      </label>
-      {managerKey === undefined && (
+      <div className="history-explorer-toolbar">
+        {managerKey !== undefined && (
+          <label>
+            Recap scope
+            <select
+              disabled={saving}
+              value={scope}
+              onChange={(event) => {
+                onScopeChange(event.target.value as 'personal' | 'league');
+                reset();
+              }}
+            >
+              <option value="personal">Personal recap</option>
+              <option value="league">League recap</option>
+            </select>
+          </label>
+        )}
         <label>
-          Wrapped manager{' '}
+          Wrapped season{' '}
           <select
             disabled={saving}
-            value={key}
+            value={record.year}
             onChange={(e) => {
-              setKey(e.target.value);
+              setYear(Number(e.target.value));
+              onSeasonChange?.(Number(e.target.value));
+              setKey('');
               reset();
             }}
           >
-            <option value="">League recap</option>
-            {record.data.teams.map((t) => (
-              <option key={t.teamId} value={identityKey(record.year, t)}>
-                {t.managerName}
+            {records.map((r) => (
+              <option key={r.year} value={r.year}>
+                {r.year}
               </option>
             ))}
           </select>
         </label>
-      )}
+        {managerKey === undefined && (
+          <label>
+            Wrapped manager{' '}
+            <select
+              disabled={saving}
+              value={key}
+              onChange={(e) => {
+                setKey(e.target.value);
+                reset();
+              }}
+            >
+              <option value="">League recap</option>
+              {record.data.teams.map((t) => (
+                <option key={t.teamId} value={identityKey(record.year, t)}>
+                  {t.managerName}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       {missingManager ? (
         <p>This manager has no team in this season. Choose another season for their Wrapped.</p>
       ) : (
@@ -149,6 +195,7 @@ export function Wrapped({
             type="button"
             disabled={!consent || saving}
             onClick={async () => {
+              const generation = requestGeneration.current;
               setSaving(true);
               setError('');
               try {
@@ -160,11 +207,13 @@ export function Wrapped({
                   activeManagerKeys: [],
                   wrapped: recap,
                 });
-                setHref(`/shared/snapshots/${result.publicId}`);
+                if (generation === requestGeneration.current)
+                  setHref(`/shared/snapshots/${result.publicId}`);
               } catch (e) {
-                setError(e instanceof Error ? e.message : 'Could not save snapshot.');
+                if (generation === requestGeneration.current)
+                  setError(e instanceof Error ? e.message : 'Could not save snapshot.');
               } finally {
-                setSaving(false);
+                if (generation === requestGeneration.current) setSaving(false);
               }
             }}
           >

@@ -1,3 +1,4 @@
+import './decision-explorer.css';
 import { Box, Button, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import type { LeagueApi } from '../types';
@@ -21,7 +22,7 @@ export function WaiverAdvisor({
   const candidate = pool?.candidates.find((player) => player.id === candidateId);
   const impact = pool && candidate ? waiverImpact(pool, candidate, dropId) : undefined;
   return (
-    <Box mt={3}>
+    <Box className="decision-explorer decision-explorer-advisor" mt={3}>
       <Button
         disabled={busy}
         onClick={async () => {

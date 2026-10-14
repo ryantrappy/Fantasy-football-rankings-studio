@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { individualScoreRecords, matchupRecords } from '../../../history/competition/records';
 import { CompetitionTable as DataTable } from './CompetitionTable';
 import { number, type CompetitionProps } from './CompetitionHistory';
-export function RecordsHistory({ records, years, leagueId, shared }: CompetitionProps) {
+export function RecordsHistory({ records, years, leagueId, shared, active }: CompetitionProps) {
   const [category, setCategory] = useState('closest'),
     [query, setQuery] = useState('');
   const all = matchupRecords(records, { weekly: category === 'combined' });
@@ -27,7 +27,7 @@ export function RecordsHistory({ records, years, leagueId, shared }: Competition
           ? 'loserPoints'
           : 'combined';
   return (
-    <details>
+    <details open={active || undefined}>
       <summary>All-time matchup and scoring records</summary>
       <p>
         {all.length} verified games across {records.length}/{years.length} selected seasons. Missing

@@ -4,10 +4,12 @@ export function DraftSkill({
   record,
   records,
   manager,
+  open,
 }: {
   record: SeasonRecord;
   records: SeasonRecord[];
   manager: string;
+  open?: boolean;
 }) {
   const { data } = record;
   const rows = draftValues(data)
@@ -17,7 +19,7 @@ export function DraftSkill({
     manager &&
     (data.teams.find((t) => t.teamId === manager)?.managerKey || `${record.year}:${manager}`);
   return (
-    <details>
+    <details open={open}>
       <summary>Draft value and drafting skill</summary>
       <p>
         {data.draftCoverage || 'Historical draft data unavailable.'} Format:{' '}

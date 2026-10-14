@@ -1,31 +1,42 @@
 import { useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { playerLoyalty } from '../../../history/personalities/loyalty';
-export function PlayerLoyalty({ records }: { records: SeasonRecord[] }) {
+export function PlayerLoyalty({
+  records,
+  managerKey,
+  open,
+}: {
+  records: SeasonRecord[];
+  managerKey?: string;
+  open?: boolean;
+}) {
   const rows = playerLoyalty(records),
-    [manager, setManager] = useState('');
+    [localManager, setManager] = useState('');
+  const manager = managerKey ?? localManager;
   const selected = rows.filter((r) => !manager || r.key === manager),
     favorites = new Map<string, string>();
   for (const row of selected) if (!favorites.has(row.key)) favorites.set(row.key, row.playerId);
   return (
-    <details>
+    <details open={open}>
       <summary>Player loyalty and ownership</summary>
       <p>
         Observed league ownership only, not complete NFL career history. Favorites rank by observed
         roster weeks, then seasons, then drafts. Acquisition counts are known events, never proof of
         complete history. Player IDs stay separate across provider changes.
       </p>
-      <label>
-        Ownership manager{' '}
-        <select value={manager} onChange={(e) => setManager(e.target.value)}>
-          <option value="">All managers</option>
-          {[...new Map(rows.map((r) => [r.key, r.manager])).entries()].map(([key, name]) => (
-            <option key={key} value={key}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </label>
+      {managerKey === undefined && (
+        <label>
+          Ownership manager{' '}
+          <select value={manager} onChange={(e) => setManager(e.target.value)}>
+            <option value="">All managers</option>
+            {[...new Map(rows.map((r) => [r.key, r.manager])).entries()].map(([key, name]) => (
+              <option key={key} value={key}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div style={{ overflowX: 'auto' }}>
         <table>
           <caption>Manager-player ownership</caption>
@@ -61,7 +72,7 @@ export function PlayerLoyalty({ records }: { records: SeasonRecord[] }) {
           </tbody>
         </table>
       </div>
-      {!rows.length && <p>No observed ownership or acquisition records.</p>}
+      {!selected.length && <p>No observed ownership or acquisition records.</p>}
     </details>
   );
 }

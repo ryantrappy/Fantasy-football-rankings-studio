@@ -2,13 +2,19 @@ import { useState } from 'react';
 import { historicalPlayoffs } from '../../../history/competition/playoffs';
 import { CompetitionTable as DataTable } from './CompetitionTable';
 import { number, type CompetitionProps } from './CompetitionHistory';
-export function PlayoffsHistory({ records }: CompetitionProps) {
+export function PlayoffsHistory({
+  records,
+  managerKey,
+  onManagerChange,
+  active,
+}: CompetitionProps) {
   const [minimum, setMinimum] = useState(3),
     [selected, setSelected] = useState('');
   const rows = historicalPlayoffs(records, minimum);
-  const own = rows.find((r) => r.key === selected) ?? rows[0];
+  const own =
+    rows.find((r) => r.key === managerKey) ?? rows.find((r) => r.key === selected) ?? rows[0];
   return (
-    <details>
+    <details open={active || undefined} className="history-explorer-analysis">
       <summary>Playoff performance and clutch results</summary>
       <label>
         Minimum elimination games{' '}
@@ -19,20 +25,23 @@ export function PlayoffsHistory({ records }: CompetitionProps) {
           onChange={(e) => setMinimum(Math.max(1, Math.floor(Number(e.target.value) || 3)))}
         />
       </label>
-      <p>
-        Regular games require a known regular-season boundary. Postseason games require verified
-        winners-bracket series with every scoring week complete; consolation and byes do not count.
-        Must-win means a confirmed championship-path elimination series (currently Sleeper); ESPN
-        winners-bracket games have unknown elimination status and contribute only to postseason
-        performance. Regular-season qualification must-wins cannot be verified from final standings
-        and remain unavailable.
-      </p>
-      <p>
-        Clutch record requires at least {minimum} elimination games and 65% wins. Underperformance
-        requires the same sample, elimination losses in two separate seasons with at least 65%
-        regular wins and {minimum} regular games each, plus a 20-point regular-to-playoff win-rate
-        decline. These descriptive labels summarize observed history and predict nothing.
-      </p>
+      <details className="history-explorer-methodology">
+        <summary>Playoff definitions & coverage</summary>
+        <p>
+          Regular games require a known regular-season boundary. Postseason games require verified
+          winners-bracket series with every scoring week complete; consolation and byes do not
+          count. Must-win means a confirmed championship-path elimination series (currently
+          Sleeper); ESPN winners-bracket games have unknown elimination status and contribute only
+          to postseason performance. Regular-season qualification must-wins cannot be verified from
+          final standings and remain unavailable.
+        </p>
+        <p>
+          Clutch record requires at least {minimum} elimination games and 65% wins. Underperformance
+          requires the same sample, elimination losses in two separate seasons with at least 65%
+          regular wins and {minimum} regular games each, plus a 20-point regular-to-playoff win-rate
+          decline. These descriptive labels summarize observed history and predict nothing.
+        </p>
+      </details>
       <DataTable
         label="Regular and playoff performance"
         data={rows}
@@ -72,7 +81,13 @@ export function PlayoffsHistory({ records }: CompetitionProps) {
       />
       <label>
         Playoff game evidence{' '}
-        <select value={own?.key ?? ''} onChange={(e) => setSelected(e.target.value)}>
+        <select
+          value={own?.key ?? ''}
+          onChange={(e) => {
+            setSelected(e.target.value);
+            onManagerChange?.(e.target.value);
+          }}
+        >
           {rows.map((r) => (
             <option key={r.key} value={r.key}>
               {r.name}
@@ -80,15 +95,18 @@ export function PlayoffsHistory({ records }: CompetitionProps) {
           ))}
         </select>
       </label>
-      <ul>
-        {own?.evidence.map((e) => (
-          <li key={e.id}>
-            {e.year} weeks {e.weeks.join(', ')} vs {e.opponent}: {e.points}–{e.against},{' '}
-            {e.win === 1 ? 'W' : e.win === 0 ? 'L' : 'T'} ·{' '}
-            {e.elimination ? 'must-win championship path' : 'elimination status unknown'}
-          </li>
-        ))}
-      </ul>
+      <details open={active || undefined} className="history-explorer-methodology">
+        <summary>Postseason games for {own?.name ?? 'selected manager'}</summary>
+        <ul>
+          {own?.evidence.map((e) => (
+            <li key={e.id}>
+              {e.year} weeks {e.weeks.join(', ')} vs {e.opponent}: {e.points}–{e.against},{' '}
+              {e.win === 1 ? 'W' : e.win === 0 ? 'L' : 'T'} ·{' '}
+              {e.elimination ? 'must-win championship path' : 'elimination status unknown'}
+            </li>
+          ))}
+        </ul>
+      </details>
       {!own?.evidence.length && (
         <p>
           Playoff games unavailable; missing brackets, incomplete series and byes remain unknown.

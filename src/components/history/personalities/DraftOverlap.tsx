@@ -1,9 +1,9 @@
 import type { SeasonRecord } from '../../../league-summary';
 import { draftOverlap } from '../../../history/personalities/draft-overlap';
-export function DraftOverlap({ records }: { records: SeasonRecord[] }) {
+export function DraftOverlap({ records, open }: { records: SeasonRecord[]; open?: boolean }) {
   const result = draftOverlap(records);
   return (
-    <details>
+    <details open={open}>
       <summary>Fantasy soulmate draft overlap</summary>
       <p>
         Overlap compares unique provider player IDs drafted across selected seasons within the same

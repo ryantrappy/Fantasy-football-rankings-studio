@@ -1,9 +1,17 @@
 import type { SeasonInsights } from '../../../insights';
 import { tradeContributions } from '../../../history/moments/contributions';
-export function TradeContributions({ data, manager }: { data: SeasonInsights; manager: string }) {
+export function TradeContributions({
+  data,
+  manager,
+  open,
+}: {
+  data: SeasonInsights;
+  manager: string;
+  open?: boolean;
+}) {
   const rows = tradeContributions(data).filter((r) => !manager || r.move.to === manager);
   return (
-    <details>
+    <details open={open}>
       <summary>Extended trade contribution</summary>
       <p>
         Observed league-scored roster points and actual starting points are separate. Evaluation

@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { SeasonInsights } from '../../../insights';
-export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; manager: string }) {
+export function ProbabilityReplay({
+  data,
+  manager,
+  open,
+}: {
+  data: SeasonInsights;
+  manager: string;
+  open?: boolean;
+}) {
   const [selected, setSelected] = useState('');
   const archives = (data.matchupArchive || []).filter((a) => !manager || a.teamId === manager);
   const key = (a: (typeof archives)[number]) => `${a.week}:${a.teamId}:${a.opponentTeamId}`;
@@ -20,7 +28,7 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
   ) : null;
   if (!archive || archive.snapshots.length < 2)
     return (
-      <details open>
+      <details open={open ?? true}>
         <summary>Matchup probability replay</summary>
         {chooser}
         <p>
@@ -34,7 +42,7 @@ export function ProbabilityReplay({ data, manager }: { data: SeasonInsights; man
   const x = (time: string) => 40 + ((Date.parse(time) - start) / duration) * 520;
   const y = (p: number) => 220 - p * 200;
   return (
-    <details open>
+    <details open={open ?? true}>
       <summary>Matchup probability replay</summary>
       {chooser}
       <p>

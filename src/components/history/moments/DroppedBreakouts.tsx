@@ -1,13 +1,21 @@
 import { useState } from 'react';
 import type { SeasonInsights } from '../../../insights';
 import { droppedBreakouts } from '../../../history/moments/drops';
-export function DroppedBreakouts({ data, manager }: { data: SeasonInsights; manager: string }) {
+export function DroppedBreakouts({
+  data,
+  manager,
+  open,
+}: {
+  data: SeasonInsights;
+  manager: string;
+  open?: boolean;
+}) {
   const [window, setWindow] = useState(3);
   const rows = droppedBreakouts(data, window)
     .filter((r) => !manager || r.drop.from === manager)
     .sort((a, b) => (b.lift ?? -Infinity) - (a.lift ?? -Infinity));
   return (
-    <details>
+    <details open={open}>
       <summary>Dropped-player breakouts</summary>
       <label>
         Post-drop window{' '}

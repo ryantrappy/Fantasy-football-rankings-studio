@@ -5,10 +5,12 @@ export function TradeNetwork({
   record,
   records,
   manager,
+  open,
 }: {
   record: SeasonRecord;
   records: SeasonRecord[];
   manager: string;
+  open?: boolean;
 }) {
   const { data, year } = record;
   const identity =
@@ -19,7 +21,7 @@ export function TradeNetwork({
     (t) => !manager || t.move.from === manager || t.move.to === manager,
   );
   return (
-    <details>
+    <details open={open}>
       <summary>Trade network and asset trees</summary>
       <p>
         Counts are distinct observed transactions between manager pairs. Stable provider identity
@@ -79,7 +81,7 @@ export function TradeNetwork({
           </li>
         ))}
       </ul>
-      <h4>Underlying transactions (all selected seasons)</h4>
+      <h4>Underlying league-wide transactions (all selected seasons)</h4>
       {records.map((r) => (
         <ul key={r.year}>
           {[

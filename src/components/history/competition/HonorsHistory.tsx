@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { historicalHonors, fameWeights } from '../../../history/competition/honors';
 import { number, type CompetitionProps } from './CompetitionHistory';
 import { CompetitionTable as DataTable } from './CompetitionTable';
-export function HonorsHistory({ records }: CompetitionProps) {
+export function HonorsHistory({ records, active }: CompetitionProps) {
   const { rankings, shame } = historicalHonors(records);
   const [kind, setKind] = useState('Worst season');
   const rows = shame.filter((s) => s.kind === kind);
   return (
-    <details>
+    <details open={active || undefined}>
       <summary>Hall of Fame and Hall of Shame</summary>
       <p>
         Fame weights:{' '}

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { historicalEras } from '../../../history/competition/eras';
 import type { CompetitionProps } from './CompetitionHistory';
-export function ErasHistory({ records }: CompetitionProps) {
+export function ErasHistory({ records, active }: CompetitionProps) {
   const [span, setSpan] = useState(3),
     [titles, setTitles] = useState(2),
     [rate, setRate] = useState(70);
   const { eras, excluded } = historicalEras(records, { span, titles, winRate: rate / 100 });
   return (
-    <details>
+    <details open={active || undefined}>
       <summary>Dynasties and competitive eras</summary>
       <label>
         Era span (calendar seasons){' '}

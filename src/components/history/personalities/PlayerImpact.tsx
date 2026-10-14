@@ -1,9 +1,18 @@
 import type { SeasonRecord } from '../../../league-summary';
 import { playerImpact } from '../../../history/personalities/player-impact';
-export function PlayerImpact({ records }: { records: SeasonRecord[] }) {
+export function PlayerImpact({
+  records,
+  managerKey,
+  open,
+}: {
+  records: SeasonRecord[];
+  managerKey?: string;
+  open?: boolean;
+}) {
   const impact = playerImpact(records);
+  const rows = impact.rows.filter((row) => !managerKey || row.managerKey === managerKey);
   return (
-    <details>
+    <details open={open}>
       <summary>Nemesis and guardian-angel players</summary>
       <p>
         Verified rostered starters in reciprocal completed matchups only. Guardian angels scored in
@@ -29,7 +38,7 @@ export function PlayerImpact({ records }: { records: SeasonRecord[] }) {
             </tr>
           </thead>
           <tbody>
-            {impact.rows.map((row) => (
+            {rows.map((row) => (
               <tr key={`${row.managerKey}:${row.role}:${row.playerId}`}>
                 <th>{row.manager}</th>
                 <td>
@@ -47,7 +56,7 @@ export function PlayerImpact({ records }: { records: SeasonRecord[] }) {
           </tbody>
         </table>
       </div>
-      {!impact.rows.length && <p>No verified player appearances available.</p>}
+      {!rows.length && <p>No verified player appearances available.</p>}
     </details>
   );
 }

@@ -4,7 +4,7 @@ import type { SeasonRecord } from '../../../league-summary';
 import { ApiContext } from '../../../auth/session';
 import { ReportSharing } from '../../ReportSharing';
 import { buildWrapped, type WrappedRecap } from '../../../history/personalities/wrapped';
-import { managerKey } from '../../../history/personalities/common';
+import { managerKey as identityKey } from '../../../history/personalities/common';
 export function WrappedPreview({ recap }: { recap: WrappedRecap }) {
   return (
     <article
@@ -55,20 +55,27 @@ export function Wrapped({
   records,
   leagueId,
   shared = false,
+  managerKey,
+  open,
 }: {
   records: SeasonRecord[];
   leagueId?: string;
   shared?: boolean;
+  managerKey?: string;
+  open?: boolean;
 }) {
   const api = useContext(ApiContext),
     [selectedYear, setYear] = useState(records[0]?.year),
-    [key, setKey] = useState(''),
+    [localKey, setKey] = useState(''),
     [consent, setConsent] = useState(false),
     [href, setHref] = useState(''),
     [error, setError] = useState(''),
     [saving, setSaving] = useState(false);
   const record = records.find((r) => r.year === selectedYear) || records[0];
-  if (!record) return null;
+  if (!record) return <p>Fantasy Wrapped unavailable. Load a season to build a recap.</p>;
+  const key = managerKey ?? localKey;
+  const missingManager =
+    !!key && !record.data.teams.some((team) => identityKey(record.year, team) === key);
   const recap = buildWrapped(record, key);
   function reset() {
     setConsent(false);
@@ -76,7 +83,7 @@ export function Wrapped({
     setError('');
   }
   return (
-    <details>
+    <details open={open}>
       <summary>Personal and league Fantasy Wrapped</summary>
       <label>
         Wrapped season{' '}
@@ -96,26 +103,32 @@ export function Wrapped({
           ))}
         </select>
       </label>
-      <label>
-        Wrapped manager{' '}
-        <select
-          disabled={saving}
-          value={key}
-          onChange={(e) => {
-            setKey(e.target.value);
-            reset();
-          }}
-        >
-          <option value="">League recap</option>
-          {record.data.teams.map((t) => (
-            <option key={t.teamId} value={managerKey(record.year, t)}>
-              {t.managerName}
-            </option>
-          ))}
-        </select>
-      </label>
-      <WrappedPreview recap={recap} />
-      {!shared && leagueId && api?.createReportSnapshot && (
+      {managerKey === undefined && (
+        <label>
+          Wrapped manager{' '}
+          <select
+            disabled={saving}
+            value={key}
+            onChange={(e) => {
+              setKey(e.target.value);
+              reset();
+            }}
+          >
+            <option value="">League recap</option>
+            {record.data.teams.map((t) => (
+              <option key={t.teamId} value={identityKey(record.year, t)}>
+                {t.managerName}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {missingManager ? (
+        <p>This manager has no team in this season. Choose another season for their Wrapped.</p>
+      ) : (
+        <WrappedPreview recap={recap} />
+      )}
+      {!missingManager && !shared && leagueId && api?.createReportSnapshot && (
         <div>
           <p>
             Only the preview's cards are published. Raw history, other managers' profiles and

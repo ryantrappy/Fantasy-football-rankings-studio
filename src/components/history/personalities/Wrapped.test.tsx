@@ -77,3 +77,14 @@ it('locks the preview selection and consent while its snapshot request is pendin
   expect(screen.queryByLabelText('Wrapped share link')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Publish this preview to anyone with its link')).not.toBeChecked();
 });
+
+it('keeps shared focus across seasons and explains an absent manager without a league recap', () => {
+  const absent = fixture();
+  absent.year = 2024;
+  absent.data.teams = absent.data.teams.filter((team) => team.managerKey !== 'a');
+  render(<Wrapped records={[fixture(), absent]} managerKey="a" open />);
+  expect(screen.getByRole('heading', { name: "Alex's 2025 Fantasy Wrapped" })).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Wrapped season'), { target: { value: '2024' } });
+  expect(screen.getByText(/This manager has no team in this season/)).toBeVisible();
+  expect(screen.queryByRole('article', { name: 'Wrapped share preview' })).not.toBeInTheDocument();
+});

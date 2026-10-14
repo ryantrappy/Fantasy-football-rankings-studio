@@ -1,11 +1,19 @@
 import type { SeasonInsights } from '../../../insights';
 import { lineupRegrets } from '../../../history/moments/lineups';
-export function LineupRegrets({ data, manager }: { data: SeasonInsights; manager: string }) {
+export function LineupRegrets({
+  data,
+  manager,
+  open,
+}: {
+  data: SeasonInsights;
+  manager: string;
+  open?: boolean;
+}) {
   const { rows, largest } = lineupRegrets(data);
   const visible = rows.filter((r) => !manager || r.score.teamId === manager);
   const name = (id: string) => data.playerIdentities?.[id]?.name || id;
   return (
-    <details>
+    <details open={open}>
       <summary>Perfect-lineup records and weekly regret</summary>
       <p>
         Retrospective legal optimization uses that week's roster, eligible positions, lineup slots

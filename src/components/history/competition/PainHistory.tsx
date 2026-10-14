@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { weeklyPain } from '../../../history/competition/pain';
 import { CompetitionTable as DataTable } from './CompetitionTable';
 import { number, type CompetitionProps } from './CompetitionHistory';
-export function PainHistory({ records, years }: CompetitionProps) {
+export function PainHistory({ records, years, active }: CompetitionProps) {
   const all = weeklyPain(records);
   const [manager, setManager] = useState(''),
     [selected, setSelected] = useState('');
@@ -13,7 +13,7 @@ export function PainHistory({ records, years }: CompetitionProps) {
   const cohort = cohorts.includes(selected) ? selected : cohorts[0];
   const rows = personal.filter((r) => r.cohort === cohort);
   return (
-    <details>
+    <details open={active || undefined}>
       <summary>Weekly loss Pain Index</summary>
       <p>
         A playful league-context score, not a claim about anyone's feelings or future results. Only

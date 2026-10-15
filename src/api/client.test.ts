@@ -61,9 +61,11 @@ beforeEach(() => {
 
 it('reads and saves writing instructions with each session token and never reuses another account preference', async () => {
   const saved = new Map<string, string>();
-  vi.mocked(profileFunctions.getWritingInstructions).mockImplementation(async ({ headers }) => ({
+  vi.mocked(profileFunctions.getWritingInstructions).mockImplementation(async (options) => ({
     ok: true,
-    data: { instructions: saved.get((headers as Record<string, string>).Authorization) || '' },
+    data: {
+      instructions: saved.get(new Headers(options?.headers).get('Authorization') || '') || '',
+    },
   }));
   vi.mocked(profileFunctions.saveWritingInstructions).mockImplementation(
     async ({ data, headers }) => {

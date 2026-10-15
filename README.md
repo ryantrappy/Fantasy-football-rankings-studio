@@ -289,8 +289,13 @@ without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
 for diagnosis. The browser suite uses one worker in CI because its PNG exports share
-one Vite server and can delay page startup; local `npm run test:ui` runs with
-Playwright's normal parallelism. Run the same checks above before proposing a change.
+one Vite server and can delay page startup. The cold forecast timing checks run
+first with one worker; local functional UI checks then use Playwright's normal
+parallelism. Run the same checks above before proposing a change.
+
+See [UI regression testing](docs/ui-testing.md) for retained workflow coverage, fixture
+boundaries, export baselines and generated artifact handling. Completed redesign
+mockups and one-off validation reports are available through Git history.
 
 `check:local` is a separate live integration check, not a deterministic CI gate. It
 builds and runs a separate disposable instance of the production app, verifies signed

@@ -14,6 +14,7 @@ Useful references/checks (starting points, not a substitute for inspecting affec
 
 - [backup-recovery.md](../backup-recovery.md)
 - [nfl-data-providers.md](../nfl-data-providers.md)
+- [ui-testing.md](../ui-testing.md)
 
 ## Feature contracts
 
@@ -114,6 +115,7 @@ Source: [TASK-62](../../backlog/tasks/task-62%20-%20Add-example-values-commented
 
 - CI browser checks use a bounded worker count that avoids startup timeouts.
 - Local browser runs retain normal parallel execution.
+- Cold forecast timing checks run alone before the functional browser project so suite CPU contention does not distort their wall-clock measurements; functional checks retain local parallelism. Seeded parity, trial count, long-task checks and the 50 ms input-gap limit remain enforced, including the completion task.
 - Relevant Playwright configuration test behavior is verified and documented.
 
 Source: [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md).
@@ -158,3 +160,12 @@ Source: [TASK-68](../../backlog/tasks/task-68%20-%20Target-the-ESPN-radio-contro
 - Propose focused follow-up briefs with dependencies, estimates and risks while preserving NFL records and share links.
 
 Source: [TASK-96](../../backlog/tasks/task-96%20-%20Evaluate-the-next-sport-and-provider-for-the-analytics-workspace.md).
+
+### TASK-151 — Retire obsolete UI validation artifacts
+
+- Completed redesign prototypes/PDF, one-off validation reports and obsolete generated result directories are removed under the user's scoped cleanup approval. Historical committed references remain recoverable through Git/task history.
+- Maintained component/browser regressions, production-component fixtures, canonical ranking PNG baselines, domain documentation and feature contracts remain. Useful current failure diagnostics are separate from retired design artifacts.
+- Active documentation links point to durable UI regression guidance. Asynchronous writing tests wait for actionable readiness and verify actual abort, no applied output/error and generation-slot release.
+- Cleanup does not authorize runtime feature reductions, baseline changes or weaker assertions. Full unit/UI and required static/build gates must pass before completion.
+
+Source: [TASK-151](../../backlog/tasks/task-151%20-%20The-UI-validation-tests-folders-should-be-cleaned-up-when-they-are-not-longer-needed.md).

@@ -217,11 +217,11 @@ Source: [TASK-101](../../backlog/tasks/task-101%20-%20Make-managed-team-saving-r
 - Profile details, Writing connections and ESPN settings are focused retained views. Account identity/email verification and unsaved edits remain; password recovery and onboarding settings stay reachable even if the profile API fails.
 - Server-managed Codex explicitly describes operator login/readiness, shared account/quota, setup and personal-key precedence. Existing encrypted key save/replace/remove and cookie flows remain; no personal Connect Codex action is added.
 - League management focuses one selected workspace while preserving independent provider/workspace identities, rename/provider-ID updates, managed-team selection/clearing, active/archive restore and exact-name permanent-deletion safeguards.
-- See [integration coverage](../manager-explorer-coverage.md) for component/browser and owner/privacy verification. The existing TASK-72 deployed-tenant caveat is unchanged.
+- See [UI regression guidance](../ui-testing.md) for component/browser and owner/privacy verification. The existing TASK-72 deployed-tenant caveat is unchanged.
 
 ## TASK-146 usability iteration — October 14, 2026
 
-The usability iteration retains every account/league safeguard above and keeps all profile/connection/create/manage destinations reachable from the unified topbar, including Live. Identity/verification/recovery, operator-managed Codex readiness/quota/key precedence, encrypted cookies/keys, onboarding returns, managed-team selection and archive/permanent-deletion protections remain unchanged. See [fresh usability coverage](../usability-implementation-coverage.md).
+The usability iteration retains every account/league safeguard above and keeps all profile/connection/create/manage destinations reachable from the unified topbar, including Live. Identity/verification/recovery, operator-managed Codex readiness/quota/key precedence, encrypted cookies/keys, onboarding returns, managed-team selection and archive/permanent-deletion protections remain unchanged. See [UI regression guidance](../ui-testing.md).
 
 ### TASK-150 — Save private writing instructions on each user profile
 

@@ -41,7 +41,12 @@ for (const count of [12, 32]) {
       const start = performance.now();
       const result = await forecastPlayoffsAsync(data, settings, 6);
       const elapsed = performance.now() - start;
+      // Finish the completion task before draining the observer so a blocking
+      // tail cannot disappear when the forecast promise resolves.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      longestGap = Math.max(longestGap, performance.now() - previous);
       clearInterval(timer);
+      longTasks.push(...observer.takeRecords().map((entry) => entry.duration));
       observer.disconnect();
       const parity = JSON.stringify(result) === JSON.stringify(forecastPlayoffs(data, settings, 6));
       return { elapsed, longestGap, probes, longTasks, parity, simulations: result.simulations };

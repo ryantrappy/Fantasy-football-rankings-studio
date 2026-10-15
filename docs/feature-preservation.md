@@ -31,8 +31,8 @@ When completing or intentionally changing a feature, update only its relevant ar
 
 The [full original catalogue](feature-preservation-archive.md) retains original requests, criteria and delivery notes for targeted historical lookup. It is reference material, not required routine context; its old workflow/approval instructions are superseded by this index and the current approval log.
 
-## Manager Explorer implementation
+## Maintained implementation and verification
 
-TASK-146 was implemented and validated on October 14, 2026. Its preservation audit is tracked in [the implementation coverage checklist](manager-explorer-coverage.md), with separate Analytics, Decision support and History evidence. The original/compact ranking-image contract remains unchanged and TASK-147 remains future work. No reduction is authorized by this redesign.
+TASK-145, TASK-146 and TASK-149 are complete. Their delivered behavior and stable feature IDs remain in the area contracts above. The original/compact ranking-image contract is unchanged; TASK-147 remains future work, as does TASK-148 NFL kickoff enrichment.
 
-The subsequent usability iteration follows `trapp-ui-usability-implementation-spec.pdf` and `mockups/usability-improvements/`, preserving the user’s `gemini_app_redesign` edits. Its fresh checklist and validation boundaries are in [usability implementation coverage](usability-implementation-coverage.md); earlier counts above describe the earlier iteration. No reduction is approved and TASK-147 remains separate.
+Completed redesign prototypes, the design PDF and one-off validation reports were retired under TASK-151 at the user's request. Committed versions and historical delivery evidence remain in Git/task history. No product feature or regression coverage was removed. See [UI regression guidance](ui-testing.md) for maintained tests, fixture boundaries, export baselines and artifact handling; historical test counts do not establish current validation.

@@ -1,10 +1,28 @@
 import { defineConfig } from '@playwright/test';
+
+const coldForecast = /\d+-team cold forecast yields to input with identical seeded results/;
+
 export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   // PNG exports share one Vite server and can delay page startup on CI runners.
   // Keep local runs parallel, but make the CI suite deterministic.
   workers: process.env.CI ? 1 : undefined,
+  projects: [
+    {
+      name: 'forecast-performance',
+      testMatch: '**/forecast-responsiveness.spec.ts',
+      grep: coldForecast,
+      workers: 1,
+    },
+    {
+      name: 'ui',
+      grepInvert: coldForecast,
+      // Timer latency is a wall-clock performance measurement: run it before
+      // CPU-heavy PNG exports/calibration, then retain normal UI parallelism.
+      dependencies: ['forecast-performance'],
+    },
+  ],
   reporter: process.env.CI ? [['line'], ['html', { open: 'never' }]] : 'list',
   snapshotPathTemplate: '{testDir}/baselines/{arg}{ext}',
   testDir: './tests/ui',

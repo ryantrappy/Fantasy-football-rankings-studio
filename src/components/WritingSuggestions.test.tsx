@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from './ui/provider';
 import { WritingSuggestions } from './WritingSuggestions';
 import type { WritingApi } from '../writing';
@@ -102,8 +102,10 @@ it('requires approval again when the provider changes', async () => {
 
 it('cancels generation without exposing the partial result as an error', async () => {
   const client = api();
+  const onSummaryChange = vi.fn();
+  const onGenerationStateChange = vi.fn();
   let reject!: (reason?: unknown) => void;
-  let controller!: { generate: (teamId: string) => Promise<void> };
+  let controller!: { generate: (teamId: string) => Promise<void>; ready: boolean };
   vi.mocked(client.generate).mockReturnValueOnce(
     new Promise((_resolve, rejectPromise) => {
       reject = rejectPromise;
@@ -116,24 +118,41 @@ it('cancels generation without exposing the partial result as an error', async (
         leagueId="123"
         year={2025}
         week={2}
-        onSummaryChange={vi.fn()}
+        onSummaryChange={onSummaryChange}
         onControllerChange={(value) => {
           controller = value;
         }}
-        onGenerationStateChange={vi.fn()}
+        onGenerationStateChange={onGenerationStateChange}
       />
     </Provider>,
   );
-  await waitFor(() => expect(client.providers).toHaveBeenCalled());
+  await waitFor(() => expect(screen.getByRole('checkbox')).toBeEnabled());
   fireEvent.click(screen.getByRole('checkbox'));
   await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
-  void controller.generate('1');
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Cancel generation' })).toBeInTheDocument(),
+  await waitFor(() => expect(controller.ready).toBe(true));
+  let pending!: Promise<void>;
+  act(() => {
+    pending = controller.generate('1');
+  });
+  expect(client.generate).toHaveBeenCalledTimes(1);
+  expect(client.generate).toHaveBeenCalledWith(
+    expect.objectContaining({ teamId: '1', approved: true }),
+    expect.any(AbortSignal),
   );
-  fireEvent.click(screen.getByRole('button', { name: 'Cancel generation' }));
-  reject(new DOMException('Cancelled', 'AbortError'));
-  await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  const signal = vi.mocked(client.generate).mock.calls[0]![1];
+  expect(signal?.aborted).toBe(false);
+  expect(onGenerationStateChange).toHaveBeenLastCalledWith('1');
+  fireEvent.click(await screen.findByRole('button', { name: 'Cancel generation' }));
+  expect(signal?.aborted).toBe(true);
+  expect(screen.getByText(/Generation cancelled/)).toBeInTheDocument();
+  await act(async () => {
+    reject(new DOMException('Partial provider output', 'AbortError'));
+    await pending;
+  });
+  expect(screen.queryByRole('button', { name: 'Cancel generation' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  expect(onSummaryChange).not.toHaveBeenCalled();
+  expect(onGenerationStateChange).toHaveBeenLastCalledWith(undefined);
 });
 
 it('restores saved account approval and persists revocation', async () => {

@@ -4,12 +4,13 @@ title: Show scheduled NFL start times in Live matchups
 status: To Do
 assignee: []
 created_date: '2026-10-15 04:12'
+updated_date: '2026-10-15 20:05'
 labels: []
 dependencies:
   - TASK-146
 references:
-  - docs/trapp-ui-usability-implementation-spec.pdf
-  - docs/usability-implementation-coverage.md
+  - docs/features/decision-support.md
+  - docs/ui-testing.md
 ordinal: 155000
 ---
 
@@ -32,3 +33,9 @@ During the October 14, 2026 usability redesign review, the user chose to keep cu
 - [ ] #1 - Tests pass
 - [ ] #2 Docs updated
 <!-- DOD:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+TASK-151 retired completed design artifacts at user request. References now point to maintained Live preservation and regression guidance; the kickoff-time requirements and To Do status are unchanged.
+<!-- SECTION:NOTES:END -->

@@ -13,7 +13,6 @@
     ".output",
     ".tanstack",
     "src/routeTree.gen.ts",
-    "docs/mockups",
     "test-results-*"
   ]
 }

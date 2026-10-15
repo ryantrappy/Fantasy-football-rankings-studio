@@ -89,4 +89,4 @@ Source: [TASK-121](../../backlog/tasks/task-121%20-%20Repair-ESPN-snapshot-links
 
 ## TASK-146 usability iteration — October 14, 2026
 
-The usability iteration groups sharing controls in an accessible command-bar disclosure. Privacy, private ESPN snapshot/expiry caveats, enabled/disabled state, fallback links, errors and real owner revocation remain alongside the actions before use. Escape returns focus to the disclosure; outside clicks dismiss it. Existing public/private snapshot services and identity boundaries are unchanged. See [fresh usability coverage](../usability-implementation-coverage.md).
+The usability iteration groups sharing controls in an accessible command-bar disclosure. Privacy, private ESPN snapshot/expiry caveats, enabled/disabled state, fallback links, errors and real owner revocation remain alongside the actions before use. Escape returns focus to the disclosure; outside clicks dismiss it. Existing public/private snapshot services and identity boundaries are unchanged. See [UI regression guidance](../ui-testing.md).

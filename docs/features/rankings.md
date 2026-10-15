@@ -167,11 +167,11 @@ Source: [TASK-114](../../backlog/tasks/task-114%20-%20Resolve-ESPN-ranking-studi
 - Default authoring pairs the selected team with its editable take; Edit all takes retains the full inline editor. Selection does not change rank order or another team's prose.
 - The same protected draft hook, reorder sensors, manual/autosave, undo, recovery, conflicts, copy, revision and publication flows remain. Original/compact PNG rendering, stylesheet, records, trends and full commentary are unchanged.
 - Writing preserves provider/model choice, actionable operator readiness, saved/revocable provider consent and cancellation. Inspect current-roster context through the existing owner-only API; suggestions are editable and applied only by an explicit action. Account changes cannot inherit readiness/consent/evidence.
-- Verification and boundaries: [TASK-146 coverage](../manager-explorer-coverage.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 remains separate.
+- Verification and boundaries: [UI regression guidance](../ui-testing.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 remains separate.
 
 ## TASK-146 usability iteration — October 14, 2026
 
-The usability iteration moves real edition actions above the list, adds completion/movement/take previews and a sticky team editor with steppers, and offers isolated Original/Compact preview selection. Reordering pins the selected team; Undo move restores order while preserving prose written afterward. Readiness refresh cannot reload stale context-sharing consent over a revocation. Export styles/markup stay unchanged; same-environment before/after PNGs have zero changed pixels. See [fresh usability coverage](../usability-implementation-coverage.md) for saved-baseline rasterization limits and validation.
+The usability iteration moves real edition actions above the list, adds completion/movement/take previews and a sticky team editor with steppers, and offers isolated Original/Compact preview selection. Reordering pins the selected team; Undo move restores order while preserving prose written afterward. Readiness refresh cannot reload stale context-sharing consent over a revocation. Export styles/markup stay unchanged; same-environment before/after PNGs have zero changed pixels. See [UI regression guidance](../ui-testing.md) for saved-baseline rasterization limits and validation.
 
 ### TASK-150 — Apply only the writer's saved profile instructions
 

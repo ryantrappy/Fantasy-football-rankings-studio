@@ -190,3 +190,52 @@ for (const width of [1280, 390]) {
     );
   });
 }
+
+for (const width of [1280, 390]) {
+  test(`scheduled kickoffs retain timezone evidence and complete dense rosters at ${width}px`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      timezoneId: 'America/Chicago',
+      viewport: { width, height: 720 },
+    });
+    const page = await context.newPage();
+    await page.goto('/tests/ui/?mode=live&managed=1&long=1&schedule=1');
+    await expect(page.getByText('NFL kickoffs: America/Chicago')).toBeVisible();
+    await expect(page.locator('.live-matchup-card')).toHaveCount(4);
+    const roster = page.locator('.decision-explorer-live-roster').first();
+    await expect(roster.getByText('Rescheduled · Sun, 11/1, 7:20 PM')).toBeVisible();
+    await expect(roster.getByText('Postponed · kickoff unavailable')).toBeVisible();
+    await expect(roster.getByText('Kickoff unavailable', { exact: true })).toBeVisible();
+    await expect(roster.getByRole('link', { name: 'Player 3', exact: true })).toBeVisible();
+    for (const cell of await roster.locator('.live-player-kickoff').all())
+      expect(
+        await cell.evaluate((node) => node.scrollWidth - node.clientWidth),
+      ).toBeLessThanOrEqual(1);
+    await page.getByText('NFL schedule sources').click();
+    await expect(page.getByRole('link', { name: 'ESPN NFL scoreboard' })).toBeVisible();
+    await expect(page.getByText(/Sunday League: checked 10\/15\/2026, 3:00:00 PM/)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    if (width > 767) {
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+        720,
+      );
+      await roster.evaluate((node) => {
+        node.scrollTop = node.scrollHeight;
+      });
+      await expect(roster.getByRole('link', { name: 'Player 30', exact: true })).toBeVisible();
+      expect(
+        await page
+          .locator('.decision-explorer-live-roster')
+          .nth(1)
+          .evaluate((node) => node.scrollTop),
+      ).toBe(0);
+    } else {
+      await expect(roster.getByRole('link', { name: 'Player 30', exact: true })).toBeVisible();
+      expect(await roster.evaluate((node) => getComputedStyle(node).overflowY)).toBe('visible');
+    }
+    await context.close();
+  });
+}

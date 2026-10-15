@@ -276,3 +276,44 @@ it('discloses a historical Live link instead of silently claiming the wrong seas
   ).toBeInTheDocument();
   expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('');
 });
+
+it('keeps kickoff, injury and source freshness evidence together when schedules change', async () => {
+  const leagues = managedLeagues(1);
+  const schedule = {
+    status: 'scheduled' as const,
+    kickoffAt: '2026-11-02T01:20:00.000Z',
+    source: 'ESPN NFL scoreboard' as const,
+    capturedAt: '2026-10-15T20:00:00.000Z',
+  };
+  leagues[0].matchups[1].home.players = [
+    {
+      id: 'kickoff',
+      name: 'Scheduled player',
+      position: 'QB',
+      points: 0,
+      starter: true,
+      availability: 'QUESTIONABLE',
+      remainingFraction: 1,
+      nflSchedule: schedule,
+    },
+  ];
+  const api = viewerApi(leagues);
+  render(livePage(api));
+  await screen.findByText('1 of 4 selected');
+  const row = screen.getByRole('link', { name: 'Scheduled player' }).closest('.live-player-row')!;
+  expect(row.textContent).toContain('QUESTIONABLE');
+  expect(row.querySelector('.live-player-kickoff')?.textContent).toMatch(/11\/1|11\/2/);
+  expect(screen.getByText(/^NFL kickoffs:/)).toBeInTheDocument();
+  fireEvent.click(screen.getByText('NFL schedule sources'));
+  expect(screen.getByRole('link', { name: 'ESPN NFL scoreboard' })).toBeInTheDocument();
+  expect(screen.getByText(/League 1: checked/)).toBeInTheDocument();
+  leagues[0].matchups[1].home.players[0].nflSchedule = {
+    ...schedule,
+    status: 'postponed',
+    kickoffAt: undefined,
+  };
+  api.getLiveMatchups.mockResolvedValue([...leagues]);
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh scores' }));
+  await screen.findByText('Postponed · kickoff unavailable');
+  expect(screen.getByText('QUESTIONABLE')).toBeInTheDocument();
+});

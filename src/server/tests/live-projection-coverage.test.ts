@@ -25,6 +25,7 @@ vi.mock('../providers/sleeper.provider', () => ({
 vi.mock('../insights/load.server', () => ({ sleeperNames: mocks.catalog }));
 vi.mock('../live-projections.server', () => ({
   sleeperLiveProjections: mocks.projections,
+  nflSchedule: async () => new Map(),
   nflRemaining: async () => new Map([['BUF', 1]]),
 }));
 import { adviseLineup } from '../../lineup-advisor';

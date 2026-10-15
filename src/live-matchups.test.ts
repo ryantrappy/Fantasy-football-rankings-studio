@@ -98,3 +98,22 @@ it('preserves empty Sleeper slot indices and maps provider flex variants', () =>
   expect(espnLineupSlot(7)).toBe('SUPER FLEX');
   expect(espnLineupSlot(20)).toBeUndefined();
 });
+
+it('renders scheduled kickoffs in explicit user zones across date and DST boundaries', async () => {
+  const { kickoffLabel } = await import('./live-matchups');
+  const schedule = {
+    status: 'scheduled' as const,
+    kickoffAt: '2026-11-02T01:20:00Z',
+    source: 'ESPN NFL scoreboard' as const,
+    capturedAt: '2026-10-15T20:00:00Z',
+  };
+  expect(kickoffLabel(schedule, 'America/Chicago')).toBe('Sun, 11/1, 7:20 PM');
+  expect(kickoffLabel(schedule, 'Asia/Tokyo')).toBe('Mon, 11/2, 10:20 AM');
+  expect(kickoffLabel({ ...schedule, status: 'rescheduled' }, 'America/Chicago')).toBe(
+    'Rescheduled · Sun, 11/1, 7:20 PM',
+  );
+  expect(kickoffLabel({ ...schedule, status: 'postponed' }, 'America/Chicago')).toBe(
+    'Postponed · kickoff unavailable',
+  );
+  expect(kickoffLabel({ ...schedule, kickoffAt: undefined }, 'UTC')).toBe('Kickoff unavailable');
+});

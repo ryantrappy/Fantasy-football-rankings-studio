@@ -169,3 +169,13 @@ Coverage and genuine data boundaries are recorded in [UI regression guidance](..
 ## TASK-146 usability iteration — October 14, 2026
 
 The usability iteration adds real uncalibrated win bars, exclusion-aware lineup gains and bounded proactive waiver previews gated by account/league/season/team/week, freshness and coverage. Full advisors and counted actionable risk evidence remain. Player matrices retain individual provenance/ranges; mutual trade banners retain both full impacts, flags/capacity and editable ideas. Cross-tool controls synchronize route context; Live retains managed markers, four complete games and provider-backed statuses with honest unknowns. See [UI regression guidance](../ui-testing.md).
+
+## TASK-148 — Scheduled NFL kickoffs in Live
+
+Live enriches ESPN and Sleeper roster players from the public ESPN NFL scoreboard for the selected regular-season year/week. Scheduled kickoff dates and times require an explicit offset and provider-confirmed `timeValid`; browser-local conversion uses an explicitly displayed IANA timezone. Player links and injury/bye/remaining-time statuses remain alongside the kickoff evidence. Expandable schedule sources expose the provider and each league's last schedule check; roster kickoff titles retain the same source/freshness evidence.
+
+Explicit provider byes, postponements, cancellations, rescheduled games and unavailable times remain distinct. Absent teams are never inferred to be on bye. Placeholder dates and missing or invalid times never produce kickoff labels. Provider-reported rescheduling and changed confirmed times observed across refreshes are labeled rescheduled. Failed reads retain usable rosters with explicit unavailable schedule evidence.
+
+The existing public scoreboard request supplies both remaining-time and schedule metadata through one shared 45-second cache with coalesced requests, cached failures, expired-entry cleanup and a 36-period bound. No account credentials enter this public cache; existing provider and account checks remain in the league readers. Four complete desktop games, eight independently scrollable rosters, full phone page flow, projections, observed points and managed-team selection remain intact.
+
+Verification: focused cache/provider/component tests cover confirmed versus placeholder dates, explicit byes and unknown teams, provider outages, changed kickoff refreshes, and DST/date conversion. Live browser regressions retain the compact board check and exercise kickoff evidence, source freshness, complete dense desktop/phone rosters, independent scrolling and bounded horizontal layout. See [UI regression guidance](../ui-testing.md).

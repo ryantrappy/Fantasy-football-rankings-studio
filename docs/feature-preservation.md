@@ -33,6 +33,6 @@ The [full original catalogue](feature-preservation-archive.md) retains original 
 
 ## Maintained implementation and verification
 
-TASK-145, TASK-146 and TASK-149 are complete. Their delivered behavior and stable feature IDs remain in the area contracts above. The Classic original/compact ranking-image contract is unchanged; TASK-147 adds an opt-in New theme with account-scoped browser persistence and publication previews. TASK-148 NFL kickoff enrichment remains future work.
+TASK-145, TASK-146 and TASK-149 are complete. Their delivered behavior and stable feature IDs remain in the area contracts above. The Classic original/compact ranking-image contract is unchanged; TASK-147 adds an opt-in New theme with account-scoped browser persistence and publication previews. TASK-148 adds confirmed NFL kickoff dates/times, explicit unknown/postponed/rescheduled states, and timezone/source/freshness evidence while preserving the four-game board.
 
 Completed redesign prototypes, the design PDF and one-off validation reports were retired under TASK-151 at the user's request. Committed versions and historical delivery evidence remain in Git/task history. No product feature or regression coverage was removed. See [UI regression guidance](ui-testing.md) for maintained tests, fixture boundaries, export baselines and artifact handling; historical test counts do not establish current validation.

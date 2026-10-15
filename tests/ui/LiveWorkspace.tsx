@@ -1,9 +1,10 @@
 import { AppShell } from '../../src/components/AppShell';
 import { LiveMatchupsPage } from '../../src/components/LiveMatchupsPage';
 import { ApiContext, SessionContext } from '../../src/auth/session';
-import type { LiveLeague } from '../../src/live-matchups';
+import type { LiveLeague, NflSchedule } from '../../src/live-matchups';
 import type { createApi } from '../../src/api/client';
 
+const scheduled = new URLSearchParams(location.search).has('schedule');
 const managed = new URLSearchParams(location.search).has('managed');
 const leagues: LiveLeague[] = (
   managed
@@ -43,6 +44,25 @@ function team(name: string) {
         projectedPoints: 16.5,
         remainingFraction: index % 3 === 0 ? 0 : index % 3 === 1 ? 0.4 : 1,
         bye: index === 17,
+        nflSchedule: scheduled
+          ? ({
+              status:
+                index === 17
+                  ? 'bye'
+                  : index === 1
+                    ? 'postponed'
+                    : index === 2
+                      ? 'rescheduled'
+                      : index % 3 === 0
+                        ? 'final'
+                        : index % 3 === 1
+                          ? 'in-progress'
+                          : 'scheduled',
+              kickoffAt: index === 1 || index === 5 ? undefined : '2026-11-02T01:20:00.000Z',
+              source: 'ESPN NFL scoreboard',
+              capturedAt: '2026-10-15T20:00:00.000Z',
+            } as NflSchedule)
+          : undefined,
         starter: index < 9,
       }),
     ),

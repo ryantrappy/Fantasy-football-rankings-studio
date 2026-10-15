@@ -1,0 +1,132 @@
+[
+  {
+    "page": "Desktop · current app",
+    "frames": [
+      {
+        "name": "Rankings studio · 1440px",
+        "id": "0:5",
+        "layers": 179
+      },
+      {
+        "name": "Weekly overview · 1440px",
+        "id": "0:199",
+        "layers": 95
+      },
+      {
+        "name": "Season insights · 1440px",
+        "id": "0:299",
+        "layers": 252
+      },
+      {
+        "name": "Playoff forecasts · 1440px",
+        "id": "0:560",
+        "layers": 178
+      },
+      {
+        "name": "League history · 1440px",
+        "id": "0:748",
+        "layers": 262
+      },
+      {
+        "name": "Live matchups · 1440px",
+        "id": "0:1019",
+        "layers": 101
+      },
+      {
+        "name": "Profile and writing instructions · 1440px",
+        "id": "0:1127",
+        "layers": 53
+      },
+      {
+        "name": "Manage leagues · 1440px",
+        "id": "0:1185",
+        "layers": 58
+      },
+      {
+        "name": "Connect league · 1440px",
+        "id": "0:1248",
+        "layers": 75
+      },
+      {
+        "name": "Players (component fixture) · 1440px",
+        "id": "0:1330",
+        "layers": 103
+      },
+      {
+        "name": "Trade analyzer (component fixture) · 1440px",
+        "id": "0:1436",
+        "layers": 316
+      },
+      {
+        "name": "Sign in · 1440px",
+        "id": "0:1757",
+        "layers": 101
+      }
+    ]
+  },
+  {
+    "page": "Mobile · current app",
+    "frames": [
+      {
+        "name": "Rankings studio · 390px",
+        "id": "0:1863",
+        "layers": 184
+      },
+      {
+        "name": "Weekly overview · 390px",
+        "id": "0:2062",
+        "layers": 100
+      },
+      {
+        "name": "Season insights · 390px",
+        "id": "0:2167",
+        "layers": 256
+      },
+      {
+        "name": "Playoff forecasts · 390px",
+        "id": "0:2432",
+        "layers": 193
+      },
+      {
+        "name": "League history · 390px",
+        "id": "0:2635",
+        "layers": 242
+      },
+      {
+        "name": "Live matchups · 390px",
+        "id": "0:2886",
+        "layers": 82
+      },
+      {
+        "name": "Profile and writing instructions · 390px",
+        "id": "0:2975",
+        "layers": 54
+      },
+      {
+        "name": "Manage leagues · 390px",
+        "id": "0:3034",
+        "layers": 59
+      },
+      {
+        "name": "Connect league · 390px",
+        "id": "0:3098",
+        "layers": 79
+      },
+      {
+        "name": "Players (component fixture) · 390px",
+        "id": "0:3184",
+        "layers": 107
+      },
+      {
+        "name": "Trade analyzer (component fixture) · 390px",
+        "id": "0:3294",
+        "layers": 325
+      },
+      {
+        "name": "Sign in · 390px",
+        "id": "0:3624",
+        "layers": 105
+      }
+    ]
+  }
+]

@@ -78,7 +78,10 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
         <Link
           to={shared ? '/shared/history' : '/history'}
           activeOptions={{ includeSearch: false }}
-          search={{ leagueId, years: search.years || (search.year ? [search.year] : undefined) }}
+          search={{
+            leagueId,
+            years: search.years ?? (shared && search.year ? [search.year] : undefined),
+          }}
         >
           <Icon name="archive" size={16} /> League history
         </Link>

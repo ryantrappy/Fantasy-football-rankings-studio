@@ -1,11 +1,12 @@
 import { InfoTooltip } from '../../InfoTooltip';
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { SeasonRecord } from '../../../league-summary';
 import { competitionGames, pairRecord, rivalryLabels } from '../../../history/competition/games';
 import { CompetitionTable as DataTable } from './CompetitionTable';
 import { PlayoffsHistory } from './PlayoffsHistory';
 import { EloHistory } from './EloHistory';
 import { ScheduleHistory } from './ScheduleHistory';
+import { MatchupHeatmap } from './MatchupHeatmap';
 
 export const number = (n: number | null | undefined) =>
   n == null ? 'Unavailable' : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -38,7 +39,7 @@ export function CompetitionHistory({
   seasonYear,
   onSeasonChange,
 }: CompetitionProps) {
-  const { games, managers, skipped } = competitionGames(records);
+  const { games, managers, skipped } = useMemo(() => competitionGames(records), [records]);
   const [selected, setSelected] = useState('');
   const key =
     managerKey && managers.has(managerKey)
@@ -50,10 +51,15 @@ export function CompetitionHistory({
   const [visited, setVisited] = useState<Partial<Record<(typeof views)[number][0], boolean>>>({
     rivalries: true,
   });
-  const [matrix, setMatrix] = useState(false);
+  const [display, setDisplay] = useState<'records' | 'matrix' | 'heatmap'>('records');
+  const matrix = display === 'matrix';
+  const [heatmapVisited, setHeatmapVisited] = useState(false);
   const [minimum, setMinimum] = useState(3);
   const [query, setQuery] = useState('');
-  const [opponent, setOpponent] = useState('');
+  const [opponent, setOpponent] = useState({ scope: '', key: '' });
+  const opponentScope = `${key}:${years.join(',')}`;
+  const inspectOpponent = (next: string, owner = key) =>
+    setOpponent({ scope: `${owner}:${years.join(',')}`, key: next });
   const regionId = useId();
   const rows = [...managers.keys()].filter((k) => k !== key).map((k) => pairRecord(games, key, k));
   const labels = rivalryLabels(rows, minimum);
@@ -61,7 +67,8 @@ export function CompetitionHistory({
     managers.get(r.opponent)?.toLowerCase().includes(query.toLowerCase()),
   );
   const rivalry =
-    rows.find((r) => r.opponent === opponent) ?? [...rows].sort((a, b) => b.games - a.games)[0];
+    (opponent.scope === opponentScope && rows.find((r) => r.opponent === opponent.key)) ||
+    [...rows].sort((a, b) => b.games - a.games)[0];
   const meetings = games
     .filter(
       (g) =>
@@ -111,6 +118,90 @@ export function CompetitionHistory({
       })}
     </ol>
   );
+  const rivalryHighlights = (
+    <div className="history-rivalry-highlights">
+      {Object.entries(labels).map(([label, r]) => (
+        <button
+          key={label}
+          type="button"
+          className="history-rivalry-highlight"
+          disabled={!r}
+          onClick={() => r && inspectOpponent(r.opponent)}
+        >
+          <span>
+            {label === 'punchingBag'
+              ? 'Punching bag'
+              : label === 'rival'
+                ? 'Closest rival'
+                : 'Kryptonite'}
+          </span>
+          <strong>{r ? managers.get(r.opponent) : 'Insufficient samples'}</strong>
+          <small>
+            {r
+              ? `${r.wins}-${r.losses}-${r.ties} · ${r.games} games`
+              : `At least ${minimum} meetings required`}
+          </small>
+        </button>
+      ))}
+    </div>
+  );
+  const rivalryToolbar = (
+    <div className="history-rivalry-toolbar">
+      <div className="history-explorer-sectionhead">
+        <div>
+          <h3>Head-to-head</h3>
+        </div>
+        <fieldset
+          className="history-explorer-view-switch"
+
+          aria-label="Rivalry display"
+        >
+          <button
+            type="button"
+            aria-pressed={display === 'records'}
+            onClick={() => setDisplay('records')}
+          >
+            Opponent records
+          </button>
+          <button type="button" aria-pressed={matrix} onClick={() => setDisplay('matrix')}>
+            League matrix
+          </button>
+          <button
+            type="button"
+            aria-pressed={display === 'heatmap'}
+            onClick={() => {
+              setDisplay('heatmap');
+              setHeatmapVisited(true);
+            }}
+          >
+            Matchup heatmap
+          </button>
+        </fieldset>
+      </div>
+      <div className="history-explorer-toolbar">
+        {display === 'records' && (
+          <label>
+            Search opponents{' '}
+            <input
+              type="search"
+              placeholder="Name"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+        )}
+        <label>
+          Minimum rivalry games{' '}
+          <input
+            type="number"
+            min={1}
+            value={minimum}
+            onChange={(e) => setMinimum(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+          />
+        </label>
+      </div>
+    </div>
+  );
   return (
     <section className="history-explorer-competition" aria-label="Competition history">
       {!managerKey && (
@@ -158,80 +249,27 @@ export function CompetitionHistory({
           </div>
         )}
         <div hidden={view !== 'rivalries'}>
-          <div className="history-explorer-sectionhead">
-            <div>
-              <h3>Head-to-head</h3>
-              <p>
-                {managers.get(key) ?? 'Select a manager'} against the league. Select an opponent to
-                inspect the games.
-              </p>
-            </div>
-            <fieldset
-              className="history-explorer-view-switch"
-
-              aria-label="Rivalry display"
-            >
-              <button type="button" aria-pressed={!matrix} onClick={() => setMatrix(false)}>
-                Opponent records
-              </button>
-              <button type="button" aria-pressed={matrix} onClick={() => setMatrix(true)}>
-                League matrix
-              </button>
-            </fieldset>
-          </div>
           <div className="history-rivalry-layout">
             <div className="history-rivalry-main">
-              <div className="history-rivalry-highlights">
-                {Object.entries(labels).map(([label, r]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="history-rivalry-highlight"
-                    disabled={!r}
-                    onClick={() => r && setOpponent(r.opponent)}
-                  >
-                    <span>
-                      {label === 'punchingBag'
-                        ? 'Punching bag'
-                        : label === 'rival'
-                          ? 'Closest rival'
-                          : 'Kryptonite'}
-                    </span>
-                    <strong>{r ? managers.get(r.opponent) : 'Insufficient samples'}</strong>
-                    <small>
-                      {r
-                        ? `${r.wins}-${r.losses}-${r.ties} · ${r.games} games`
-                        : `At least ${minimum} meetings required`}
-                    </small>
-                  </button>
-                ))}
-              </div>
-              <div className="history-explorer-toolbar">
-                {!matrix && (
-                  <label>
-                    Search opponents{' '}
-                    <input
-                      type="search"
-                      placeholder="Find an opponent"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                  </label>
-                )}
-                <label>
-                  Minimum rivalry games{' '}
-                  <input
-                    type="number"
-                    min={1}
-                    value={minimum}
-                    onChange={(e) =>
-                      setMinimum(Math.max(1, Math.floor(Number(e.target.value) || 1)))
-                    }
+              {heatmapVisited && (
+                <div className="history-heatmap-workspace" hidden={display !== 'heatmap'}>
+                  {display === 'heatmap' && rivalryToolbar}
+                  <MatchupHeatmap
+                    games={games}
+                    managers={managers}
+                    managerKey={key}
+                    opponentKey={rivalry?.opponent}
+                    minimum={minimum}
+                    onInspect={(manager, opponent) => {
+                      changeManager(manager);
+                      inspectOpponent(opponent, manager);
+                    }}
                   />
-                </label>
-              </div>
-              {matrix ? (
+                </div>
+              )}
+              {display === 'heatmap' ? null : matrix ? (
                 <div className="history-rivalry-matrix insight-table-wrap">
+                  {rivalryToolbar}
                   <p>
                     Row manager’s W-L-T record against each opponent. Select a record to inspect
                     that pair.
@@ -265,7 +303,7 @@ export function CompetitionHistory({
                                     aria-pressed={k === key && o === rivalry?.opponent}
                                     onClick={() => {
                                       changeManager(k);
-                                      setOpponent(o);
+                                      inspectOpponent(o, k);
                                     }}
                                   >
                                     {r.games ? `${r.wins}-${r.losses}-${r.ties}` : 'Unavailable'}
@@ -285,6 +323,7 @@ export function CompetitionHistory({
               ) : (
                 <>
                   <DataTable
+                    toolbar={rivalryToolbar}
                     label="All-time head-to-head"
                     className="insight-table history-rivalry-table"
                     data={filteredRows}
@@ -301,7 +340,7 @@ export function CompetitionHistory({
                             className="history-rivalry-opponent"
                             aria-pressed={r.opponent === rivalry?.opponent}
                             aria-label={`Inspect rivalry with ${managers.get(r.opponent)}`}
-                            onClick={() => setOpponent(r.opponent)}
+                            onClick={() => inspectOpponent(r.opponent)}
                           >
                             {managers.get(r.opponent)}
                           </button>
@@ -341,6 +380,12 @@ export function CompetitionHistory({
                   {!filteredRows.length && <p>No opponents match your search.</p>}
                 </>
               )}
+              <div className="history-explorer-footnote">
+                <p>
+                  {managers.get(key) ?? 'Select a manager'} against the league. Select an opponent
+                  to inspect the games.
+                </p>
+              </div>
               <div className="history-explorer-definition">
                 <span>Rivalry definitions</span>
                 <InfoTooltip label="Rivalry definitions">
@@ -372,7 +417,7 @@ export function CompetitionHistory({
             <aside className="history-rivalry-inspector" aria-label="Selected rivalry">
               {rivalry ? (
                 <>
-                  <span className="history-explorer-eyebrow">Selected rivalry</span>
+                  <span className="history-explorer-eyebrow">Record evidence</span>
                   <h3>
                     {managers.get(key)} vs. {managers.get(rivalry.opponent)}
                   </h3>
@@ -403,6 +448,7 @@ export function CompetitionHistory({
                       <dd>{number(rivalry.margin)}</dd>
                     </div>
                   </dl>
+                  {rivalryHighlights}
                   <h4>Latest meetings</h4>
                   {meetings.length ? (
                     gameEvidence(3)
@@ -417,7 +463,10 @@ export function CompetitionHistory({
                   )}
                 </>
               ) : (
-                <p>No opponents available in the selected history.</p>
+                <>
+                  {rivalryHighlights}
+                  <p>No opponents available in the selected history.</p>
+                </>
               )}
             </aside>
           </div>

@@ -64,8 +64,12 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
         };
       });
     });
-    const max = Math.max(1, ...segments.map((s) => s.end));
+    const max = Math.max(0, ...segments.map((s) => s.end));
     const min = Math.min(0, ...segments.map((s) => s.end));
+    // Round each tail independently so a small negative score does not create a large empty range.
+    const lower = min < 0 ? scaleLinear().domain([min, 0]).nice(5).domain()[0] : 0;
+    const upper = max > 0 ? scaleLinear().domain([0, max]).nice(5).domain()[1] : 0;
+    const xScale = scaleLinear().domain(lower === upper ? [0, 1] : [lower, upper]);
     const totals = rows
       .filter((row) => row.total !== null)
       .map((row) => ({
@@ -75,6 +79,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
       }));
     const names = new Map(rows.map((row) => [row.teamId, row.teamName]));
     return defineChart({
+      margin: { right: Math.max(62, ...totals.map((row) => row.label.length * 8 + 16)) },
       marks: [
         barX(segments, {
           x1: 'start',
@@ -115,8 +120,9 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
       },
       scales: {
         x: {
-          scale: scaleLinear().domain([min, max * 1.12]),
+          scale: xScale,
           axis: {
+            ticks: { values: xScale.ticks(5) },
             label:
               model.mode === 'completed'
                 ? 'Completed-week starter fantasy points'
@@ -170,7 +176,18 @@ export function SeasonStrength({
   const opponentTeamId = teamId ?? localTeamId;
   const teamLabel = (row: { teamId: string; teamName: string }) => (
     <>
-      {row.teamName}
+      {onTeamChange ? (
+        <button
+          type="button"
+          className="forecast-team-link"
+          aria-pressed={row.teamId === teamId}
+          onClick={() => onTeamChange(row.teamId)}
+        >
+          {row.teamName}
+        </button>
+      ) : (
+        row.teamName
+      )}
       {row.teamId === managedTeamId && <small> Your team</small>}
     </>
   );
@@ -319,7 +336,7 @@ export function SeasonStrength({
               1 is strongest. Equal totals to two decimal places share a rank; the next rank skips
               tied teams. Ranks compare teams with complete{' '}
               {completed ? 'actual starter data' : 'projections'}. Gray cells are unavailable, never
-              zero.
+              zero. Blue ranks 1–2; green 3–4; amber 5; coral 6 and below.
             </Text>
             <Box overflowX="auto">
               <DataTable
@@ -342,19 +359,18 @@ export function SeasonStrength({
                     value: (row: PositionStrength['rows'][number]) => row.points[position],
                     cell: (row: PositionStrength['rows'][number]) => {
                       const rank = row.ranks[position];
-                      const count = positions.rows.filter((r) => r.ranks[position] !== null).length;
-                      const fill =
+                      const tier =
                         rank === null
-                          ? '#edf0f5'
-                          : rank <= Math.ceil(count / 4)
-                            ? '#a5adde'
-                            : rank <= Math.ceil(count / 2)
-                              ? '#bdc4e8'
-                              : rank <= Math.ceil((count * 3) / 4)
-                                ? '#d4d8f0'
-                                : '#e7eaf7';
+                          ? 'tier-unavailable'
+                          : rank <= 2
+                            ? 'tier-1'
+                            : rank <= 4
+                              ? 'tier-2'
+                              : rank === 5
+                                ? 'tier-3'
+                                : 'tier-4';
                       return (
-                        <span className="position-rank-cell" style={{ background: fill }}>
+                        <span className={`position-rank-cell ${tier}`}>
                           <strong>{rank === null ? '—' : `#${rank}`}</strong>
                           <small>
                             {number(row.points[position])}

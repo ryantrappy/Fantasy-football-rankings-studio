@@ -34,3 +34,5 @@ The [full original catalogue](feature-preservation-archive.md) retains original 
 ## Manager Explorer implementation
 
 TASK-146 was implemented and validated on October 14, 2026. Its preservation audit is tracked in [the implementation coverage checklist](manager-explorer-coverage.md), with separate Analytics, Decision support and History evidence. The original/compact ranking-image contract remains unchanged and TASK-147 remains future work. No reduction is authorized by this redesign.
+
+The subsequent usability iteration follows `trapp-ui-usability-implementation-spec.pdf` and `mockups/usability-improvements/`, preserving the user’s `gemini_app_redesign` edits. Its fresh checklist and validation boundaries are in [usability implementation coverage](usability-implementation-coverage.md); earlier counts above describe the earlier iteration. No reduction is approved and TASK-147 remains separate.

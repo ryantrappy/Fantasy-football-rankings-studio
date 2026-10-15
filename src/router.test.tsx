@@ -279,7 +279,7 @@ test('authenticated visitors can navigate to league creation and return', async 
   expect(screen.getByText(/numeric value after leagueId=/)).toBeInTheDocument();
   expect(router.state.location.pathname).toBe('/leagues/new');
   await userEvent.click(screen.getByRole('button', { name: /Back to rankings/ }));
-  expect(await screen.findByRole('heading', { name: 'Power rankings studio' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Rankings studio' })).toBeInTheDocument();
 });
 
 test('ESPN settings restores an in-progress league and completion clears it', async () => {
@@ -307,7 +307,7 @@ test('ESPN settings restores an in-progress league and completion clears it', as
   expect(screen.getByLabelText(/Display name/)).toHaveValue('Private league');
   expect(screen.getByLabelText('Season')).toHaveValue(2025);
   await user.click(screen.getByRole('button', { name: 'Create league' }));
-  await screen.findByRole('heading', { name: 'Power rankings studio' });
+  await screen.findByRole('heading', { name: 'Rankings studio' });
   expect(readLeagueSetupDraft('owner-a')).toBeNull();
 });
 
@@ -733,7 +733,7 @@ test('a successfully loaded partial report names every affected section', async 
 });
 test('shared history loads the selected seasons without sharing or league selection controls', async () => {
   await openPage('/shared/history?leagueId=123&years=%5B2024%5D');
-  expect(await screen.findByRole('heading', { name: 'Manager explorer' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'League history' })).toBeInTheDocument();
   expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
     expect.objectContaining({ data: { leagueId: '123', year: 2024 } }),
   );
@@ -758,7 +758,7 @@ test('shared history loads the selected seasons without sharing or league select
 test('shared history accepts a quoted league ID without sharing or league selection controls', async () => {
   await openPage('/shared/history?leagueId="123"&years=%5B2024%5D');
 
-  await screen.findByRole('heading', { name: 'Manager explorer' });
+  await screen.findByRole('heading', { name: 'League history' });
   expect(publicFunctions.getPublicInsights).toHaveBeenCalledWith(
     expect.objectContaining({ data: { leagueId: '123', year: 2024 } }),
   );
@@ -903,7 +903,7 @@ test('shared links preserve long numeric provider IDs exactly', async () => {
 
 test.each([
   ['/insights?leagueId=123&year=2025', 'Who delivers every week?'],
-  ['/history?leagueId=123&years=%5B2025%5D', 'Manager explorer'],
+  ['/history?leagueId=123&years=%5B2025%5D', 'League history'],
 ])('signed-in ESPN owners use authenticated report requests on %s', async (path, heading) => {
   auth.isAuthenticated = true;
   vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
@@ -954,7 +954,7 @@ test('a signed-in ESPN owner stays public while navigating shared reports', asyn
   expect(publicFunctions.getPublicLeague).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('link', { name: 'Rankings studio' })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('link', { name: 'League history' }));
-  await screen.findByRole('heading', { name: 'Manager explorer' });
+  await screen.findByRole('heading', { name: 'League history' });
   expect(router.state.location.pathname).toBe('/shared/history');
   expect(router.state.location.href).toBe('/shared/history?leagueId=123&years=%5B2025%5D');
   expect(router.state.location.search.leagueId).toBe('123');
@@ -1078,3 +1078,79 @@ test('the first ready workspace warms tab queries once and navigation reuses the
   expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
   expect(router.options.context.sessionApi?.subject).toBe('preload-owner');
 });
+
+test('private History navigation renders progress while all-season intent preloads are still pending', async () => {
+  auth.isAuthenticated = true;
+  auth.user = { sub: 'history-progress-owner' };
+  vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+    ok: true,
+    data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+  });
+  const years = [2026, 2025, 2024, 2023, 2022];
+  vi.mocked(privateFunctions.getLeagueSeasons).mockResolvedValueOnce({
+    ok: true,
+    data: { years, activeSeason: 2026, activeManagerKeys: [] },
+  });
+  const pending = deferred<Awaited<ReturnType<typeof privateFunctions.getInsights>>>();
+  for (const _year of years)
+    vi.mocked(privateFunctions.getInsights).mockImplementationOnce(() => pending.promise);
+  const router = await openPage('/overview?leagueId=123&year=2026');
+  await waitFor(() => expect(privateFunctions.getInsights).toHaveBeenCalledTimes(3));
+  const historyLink = screen.getByRole('link', { name: 'League history' });
+  expect(historyLink).toHaveAttribute('href', '/history?leagueId=123');
+  await userEvent.click(historyLink);
+  expect(await screen.findByRole('heading', { name: 'League history' })).toBeInTheDocument();
+  expect(router.state.location.search.years).toBeUndefined();
+  expect(screen.getByRole('progressbar')).toHaveAttribute('max', '5');
+  expect(screen.getByRole('progressbar')).toHaveAttribute('value', '0');
+  expect(privateFunctions.getInsights).toHaveBeenCalledTimes(3);
+  await act(async () =>
+    pending.resolve({
+      ok: true,
+      data: {
+        ...calculateInsights({
+          completedWeek: 0,
+          teams: [],
+          scores: [],
+          moves: [],
+          playerNames: {},
+          notes: [],
+          draftPickTrades: 0,
+        }),
+        playoffSettings: undefined,
+      },
+    }),
+  );
+  await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+  expect(
+    vi
+      .mocked(privateFunctions.getInsights)
+      .mock.calls.map(([request]) => request!.data.year)
+      .sort(),
+  ).toEqual([...years].sort());
+  expect(publicFunctions.getPublicInsights).not.toHaveBeenCalled();
+});
+
+test.each([{ years: [] }, { years: [2025] }])(
+  'private History resolves its first league without dropping explicit years $years',
+  async ({ years }) => {
+    auth.isAuthenticated = true;
+    auth.user = { sub: `history-first-league-${years.join('-')}` };
+    vi.mocked(privateFunctions.listLeagues).mockResolvedValue({
+      ok: true,
+      data: [{ leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2026 }],
+    });
+    const router = await openPage(`/history?years=${encodeURIComponent(JSON.stringify(years))}`);
+    await waitFor(() => expect(router.state.location.search).toEqual({ leagueId: '123', years }));
+    await userEvent.click(await screen.findByText('Seasons to compare'));
+    const checkbox = within(screen.getByRole('group', { name: 'Include seasons' })).getByRole(
+      'checkbox',
+      { name: '2025' },
+    );
+    if (years.length) expect(checkbox).toBeChecked();
+    else {
+      expect(checkbox).not.toBeChecked();
+      expect(screen.getByText('Select at least one season to compare.')).toBeInTheDocument();
+    }
+  },
+);

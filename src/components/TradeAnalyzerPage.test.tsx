@@ -238,3 +238,16 @@ it('retains the editable scenario when switching to ideas and exposes both legal
   fireEvent.click(screen.getByRole('button', { name: 'Remove C from trade' }));
   expect(screen.getByLabelText('Send C')).not.toBeChecked();
 });
+
+it('summarizes both real lineup changes and positional depth in one exchange banner', async () => {
+  await setup();
+  fireEvent.click(screen.getByLabelText('Send C'));
+  fireEvent.click(screen.getByLabelText('Send B'));
+  const banner = screen.getByLabelText('Trade exchange summary');
+  expect(banner).toHaveTextContent('One sends (1)C10.00 → 20.00 · +10.00 pts');
+  expect(banner).toHaveTextContent('Two sends (1)B20.00 → 5.00 · -15.00 pts');
+  expect(banner).toHaveTextContent('Positional depth: RB 3 → RB 3');
+  fireEvent.click(screen.getByLabelText('Send A'));
+  expect(banner).toHaveTextContent('Lineup impact awaiting selection / roster capacity');
+  expect(screen.getByLabelText('Available open roster slots for Two')).toBeInTheDocument();
+});

@@ -278,3 +278,49 @@ it('finishes loading and explains an empty connected-league list', async () => {
   expect(screen.queryByText('Loading player data…')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Refresh player data' })).toBeEnabled();
 });
+
+it('renders a real common-window matrix with provider splits, partial samples and no zero substitution', async () => {
+  setup();
+  fireEvent.click(await screen.findByLabelText('Compare Alpha'));
+  fireEvent.click(screen.getByLabelText('Compare Beta'));
+  fireEvent.change(screen.getByLabelText('Last week'), { target: { value: '2' } });
+  const matrix = screen.getByRole('table', { name: /Side-by-side weekly comparison/ });
+  expect(
+    within(matrix).getByRole('row', { name: 'Window average 10.00 20.00' }),
+  ).toBeInTheDocument();
+  expect(
+    within(matrix).getByRole('row', { name: 'Observed coverage 1/2 weeks 1/2 weeks' }),
+  ).toBeInTheDocument();
+  expect(
+    within(matrix).getByRole('row', { name: 'Sleeper projection 10.00 Unavailable' }),
+  ).toBeInTheDocument();
+  expect(
+    within(matrix).getByRole('row', { name: 'ESPN projection 14.00 Unavailable' }),
+  ).toBeInTheDocument();
+  expect(
+    within(matrix).getByRole('row', { name: 'Week 2 observed Unavailable Unavailable' }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear selection' }));
+  expect(
+    screen.queryByRole('table', { name: /Side-by-side weekly comparison/ }),
+  ).not.toBeInTheDocument();
+});
+it('reports selected context for cross-tool navigation and restores incoming route context', async () => {
+  const api = makeApi();
+  const change = vi.fn();
+  const tree = (search: { leagueId: string; year: number }) => (
+    <Provider>
+      <ApiContext value={api as never}>
+        <PlayerProfilesPage search={search} onContextChange={change} />
+      </ApiContext>
+    </Provider>
+  );
+  const { rerender } = render(tree({ leagueId: '10', year: 2026 }));
+  fireEvent.click(await screen.findByLabelText('Compare Alpha'));
+  fireEvent.change(screen.getByLabelText('Player season'), { target: { value: '2024' } });
+  expect(change).toHaveBeenLastCalledWith({ leagueId: '10', year: 2024 });
+  rerender(tree({ leagueId: '20', year: 2025 }));
+  await waitFor(() => expect(screen.getByLabelText('Player league')).toHaveValue('20'));
+  expect(screen.getByLabelText('Player season')).toHaveValue(2025);
+  expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();
+});

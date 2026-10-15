@@ -1,3 +1,5 @@
+import { InfoTooltip } from '../InfoTooltip';
+import { RecordEvidence, RecordEvidenceLayout } from './RecordEvidence';
 import { useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { SeasonRecord } from '../../league-summary';
 import { average, summarizeLeague } from '../../league-summary';
@@ -145,25 +147,19 @@ export function HistoryAnalytics({
     seasonYear,
     onSeasonChange: setSelectedSeason,
   };
+  const formerControl = onIncludeFormerChange && (
+    <label className="history-explorer-former">
+      <input
+        type="checkbox"
+        checked={includeFormer}
+        onChange={(event) => onIncludeFormerChange(event.target.checked)}
+      />{' '}
+      Include former managers
+    </label>
+  );
   return (
     <section className="history-analytics history-explorer" aria-label="Manager explorer">
-      <div className="history-explorer-intro">
-        <div>
-          <p className="eyebrow">Explore a manager</p>
-          <h2>Manager explorer</h2>
-          <p>Choose a manager, then explore one part of their history at a time.</p>
-        </div>
-        {onIncludeFormerChange && (
-          <label className="history-explorer-former">
-            <input
-              type="checkbox"
-              checked={includeFormer}
-              onChange={(event) => onIncludeFormerChange(event.target.checked)}
-            />{' '}
-            Include former managers
-          </label>
-        )}
-      </div>
+      {!choices.length && <div className="history-explorer-intro">{formerControl}</div>}
       <label
         className={`history-explorer-manager-select${choices.length <= 8 ? ' history-explorer-manager-select-mobile' : ''}`}
       >
@@ -221,12 +217,18 @@ export function HistoryAnalytics({
                   .toUpperCase()}
               </span>
               <div>
-                <h2>{name}</h2>
+                <div className="history-explorer-identity-title">
+                  <h2>{name}</h2>
+                  <InfoTooltip label="About manager explorer">
+                    Choose a manager, then explore one part of their history at a time.
+                  </InfoTooltip>
+                </div>
                 <p>
                   {seasons} of {years.length} selected seasons · verified matchups
                 </p>
               </div>
             </div>
+            {formerControl}
             <dl className="history-explorer-stats">
               <div>
                 <dt>Record (W–L–T)</dt>
@@ -334,26 +336,72 @@ export function HistoryAnalytics({
                       </button>
                     )}
                   </nav>
-                  <div id={`${id}-season-results`} hidden={seasonView !== 'results'}>
-                    <ManagerSeasonHistory
-                      records={records}
-                      managerKey={key}
-                      leagueId={snapshot ? undefined : leagueId}
-                      shared={shared}
-                    />
-                  </div>
-                  {seasonHistory && (
-                    <div id={`${id}-season-metrics`} hidden={seasonView !== 'metrics'}>
-                      {seasonHistory}
+                  <RecordEvidenceLayout
+                    evidence={
+                      <RecordEvidence
+                        records={records}
+                        scope={`${key}:${seasonView}`}
+                        entries={records.flatMap((record) => {
+                          const row = summarizeLeague([record]).find(
+                            (manager) => manager.key === key,
+                          );
+                          return row
+                            ? [
+                                {
+                                  id: String(record.year),
+                                  year: record.year,
+                                  title: `${row.managerName} · ${record.year}`,
+                                  detail: (
+                                    <>
+                                      <p>
+                                        {number(average(row.totalPoints, row.weeks))} average points
+                                        in {row.weeks} observed weeks.
+                                      </p>
+                                      <p>
+                                        Regular-season placement{' '}
+                                        {number(
+                                          average(
+                                            row.regularSeasonFinishTotal,
+                                            row.regularSeasonFinishSeasons,
+                                          ),
+                                        )}
+                                        ; final placement{' '}
+                                        {number(average(row.finishTotal, row.finishSeasons))}.{' '}
+                                        {row.championships} championships from{' '}
+                                        {row.championshipSeasons} seasons with known championship
+                                        outcome.
+                                      </p>
+                                    </>
+                                  ),
+                                },
+                              ]
+                            : [];
+                        })}
+                        empty="No loaded season results for this manager. Unknown placements and outcomes remain unavailable."
+                      />
+                    }
+                  >
+                    <div id={`${id}-season-results`} hidden={seasonView !== 'results'}>
+                      <ManagerSeasonHistory
+                        records={records}
+                        managerKey={key}
+                        leagueId={snapshot ? undefined : leagueId}
+                        shared={shared}
+                      />
                     </div>
-                  )}
-                  <div id={`${id}-season-achievements`} hidden={seasonView !== 'achievements'}>
-                    <ManagerAchievements
-                      records={records}
-                      managerKey={key}
-                      selectedSeasons={years.length}
-                    />
-                  </div>
+                    {seasonHistory && (
+                      <div id={`${id}-season-metrics`} hidden={seasonView !== 'metrics'}>
+                        {seasonHistory}
+                      </div>
+                    )}
+                    <div id={`${id}-season-achievements`} hidden={seasonView !== 'achievements'}>
+                      <ManagerAchievements
+                        records={records}
+                        managerKey={key}
+                        selectedSeasons={years.length}
+                      />
+                    </div>
+                  </RecordEvidenceLayout>
                 </section>
               )}
               {visited.includes(index) && index === 2 && (

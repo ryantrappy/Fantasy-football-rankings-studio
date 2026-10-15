@@ -168,3 +168,15 @@ Source: [TASK-114](../../backlog/tasks/task-114%20-%20Resolve-ESPN-ranking-studi
 - The same protected draft hook, reorder sensors, manual/autosave, undo, recovery, conflicts, copy, revision and publication flows remain. Original/compact PNG rendering, stylesheet, records, trends and full commentary are unchanged.
 - Writing preserves provider/model choice, actionable operator readiness, saved/revocable provider consent and cancellation. Inspect current-roster context through the existing owner-only API; suggestions are editable and applied only by an explicit action. Account changes cannot inherit readiness/consent/evidence.
 - Verification and boundaries: [TASK-146 coverage](../manager-explorer-coverage.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 remains separate.
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration moves real edition actions above the list, adds completion/movement/take previews and a sticky team editor with steppers, and offers isolated Original/Compact preview selection. Reordering pins the selected team; Undo move restores order while preserving prose written afterward. Readiness refresh cannot reload stale context-sharing consent over a revocation. Export styles/markup stay unchanged; same-environment before/after PNGs have zero changed pixels. See [fresh usability coverage](../usability-implementation-coverage.md) for saved-baseline rasterization limits and validation.
+
+### TASK-150 — Apply only the writer's saved profile instructions
+
+- Writing generation loads the verified requesting account's optional writing instructions for each request. No preference becomes a global default, leaks into another account's prompt, or changes the owned factual context.
+- Saved text guides voice, phrasing, humor, and emphasis; the existing facts-only talking points, output limit, restricted tool/file access, provider/model selection, saved consent, cancellation, and explicit suggestion application remain intact. Empty instructions use the default prompt.
+- Preference-read failure releases the active request slot and supports retry. Account changes cannot inherit another writer's saved style; profile save/clear behavior is documented in the accounts contract.
+
+Source: [TASK-150](../../backlog/tasks/task-150%20-%20Save-private-writing-instructions-on-each-user-profile.md).

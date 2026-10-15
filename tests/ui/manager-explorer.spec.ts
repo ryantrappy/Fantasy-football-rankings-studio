@@ -102,3 +102,28 @@ test('profile views retain unsaved fields and expose real readiness and cookie c
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
   expect(accessibility.violations).toEqual([]);
 });
+
+test('private History navigation drops a single season context and keeps both bulk season actions', async ({
+  page,
+}) => {
+  await page.goto('/tests/ui/?mode=workspace-overview');
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  await nav.getByRole('link', { name: 'Season insights' }).click();
+  await expect(page.getByRole('heading', { name: 'Who delivers every week?' })).toBeVisible();
+  const history = nav.getByRole('link', { name: 'League history' });
+  const href = await history.getAttribute('href');
+  expect(new URL(href!, 'http://localhost').searchParams.has('years')).toBe(false);
+  await history.click();
+  await expect(page.getByRole('heading', { name: 'League history' })).toBeVisible();
+  await page.getByText('Seasons to compare', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Select all seasons', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Select all prior seasons', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Select all seasons', exact: true }).click();
+  for (const checkbox of await page
+    .getByRole('group', { name: 'Include seasons' })
+    .getByRole('checkbox')
+    .all())
+    await expect(checkbox).toBeChecked();
+});

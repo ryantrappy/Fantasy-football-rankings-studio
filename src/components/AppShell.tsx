@@ -51,6 +51,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
                 Trapp<span className="workspace-brand-caption">Fantasy Studio</span>
               </span>
             </Link>
+            <AppNavigation shared={shared} />
             {!shared && (
               <details className="profile-menu" ref={menu}>
                 <summary aria-label="Profile menu">
@@ -89,7 +90,6 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
               </details>
             )}
           </div>
-          <AppNavigation shared={shared} />
           <div className="workspace-selectors" ref={setControls} />
         </header>
         <main
@@ -101,7 +101,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
               : 'workspace-main studio-surface'
           }
         >
-          {(pathname === '/players' || pathname === '/trades') && (
+          {['/tools', '/players', '/trades'].includes(pathname) && (
             <ToolsBreadcrumb pathname={pathname} />
           )}
           {children}

@@ -8,6 +8,16 @@ export const Route = createFileRoute('/_authenticated/trades')({
   loader: ({ context, deps }) => warmTab('trades', context, deps),
   component: () => {
     const search = Route.useSearch();
-    return <TradeAnalyzerPage key={`${search.leagueId}:${search.year}`} search={search} />;
+    const navigate = Route.useNavigate();
+    return (
+      <TradeAnalyzerPage
+        search={search}
+        onContextChange={(context) => {
+          if (context.leagueId !== search.leagueId || context.year !== search.year) {
+            void navigate({ search: context, replace: true });
+          }
+        }}
+      />
+    );
   },
 });

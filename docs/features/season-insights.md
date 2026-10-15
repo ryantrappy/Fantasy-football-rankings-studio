@@ -130,3 +130,7 @@ Source: [TASK-113](../../backlog/tasks/task-113%20-%20Preserve-the-configured-se
 - Validation and exact affected IDs: [analytics preservation checklist](../manager-explorer-analytics-coverage.md).
 
 Source: [TASK-146](../../backlog/tasks/task-146%20-%20Apply-the-Manager-Explorer-design-approach-across-the-app.md).
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration keeps a real selected-team inspector across all seven focused views without changing the active view on selection. Semantic four-tier positional ranks/points return. Following TASK-149 feedback, the stacked chart rounds its bounds from the real positive and negative stack extents in the selected mode, rather than imposing a 2200-point minimum; a 718-point maximum ends at 800. Zero-only data uses a 0–1 fallback, unavailable values remain unavailable, and totals have room outside the bars. Every exact weekly column, coverage denominator, chart/mode, schedule opponent, manager/former-manager control, move/source evidence and CSV remains. Selected-team CSV context is explicit. See [fresh Analytics evidence](../usability-analytics-coverage.md) and [follow-up coverage](../insights-history-followup-coverage.md).

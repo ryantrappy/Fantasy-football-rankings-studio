@@ -245,3 +245,54 @@ it('keeps the detailed season table and CSV reachable without a manager and moun
     }),
   ).not.toBeInTheDocument();
 });
+
+it('populates evidence for every focused group and clears a rivalry from a previous manager', () => {
+  renderExplorer();
+  const rivalry = screen.getByRole('complementary', { name: 'Selected rivalry' });
+  expect(rivalry).toHaveTextContent('Alex vs. Blair');
+  fireEvent.click(screen.getByRole('button', { name: 'Inspect rivalry with Devon' }));
+  expect(rivalry).toHaveTextContent('Alex vs. Devon');
+  fireEvent.click(
+    within(screen.getByRole('group', { name: 'Explore a manager' })).getByRole('button', {
+      name: 'Casey',
+    }),
+  );
+  expect(rivalry).toHaveTextContent('Casey vs. Devon');
+  expect(rivalry).toHaveTextContent('8 verified meetings');
+  for (const view of ['Schedule & luck', 'Elo ratings', 'Playoffs']) {
+    fireEvent.click(screen.getByRole('button', { name: view }));
+    expect(screen.getByRole('complementary', { name: 'Record evidence' })).toHaveTextContent(
+      'Loaded source reports',
+    );
+  }
+  fireEvent.click(screen.getByRole('tab', { name: 'Season history' }));
+  expect(screen.getByRole('complementary', { name: 'Record evidence' })).toHaveTextContent(
+    'Casey · 2025',
+  );
+  fireEvent.click(screen.getByRole('tab', { name: 'Matchup stories' }));
+  expect(screen.getByRole('complementary', { name: 'Record evidence' })).toHaveTextContent(
+    'Missing probabilities are never inferred',
+  );
+  fireEvent.click(screen.getByRole('tab', { name: 'Manager profiles' }));
+  expect(screen.getByRole('complementary', { name: 'Record evidence' })).toHaveTextContent(
+    'Casey · 2025 activity',
+  );
+});
+
+it('keeps every former ownership group in the heatmap and adopts its inspected manager context', () => {
+  const include = vi.fn(),
+    choose = vi.fn();
+  renderExplorer({
+    activeManagerKeys: ['alex', 'blair'],
+    onIncludeFormerChange: include,
+    onManagerChange: choose,
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Matchup heatmap' }));
+  const heatmap = within(screen.getByRole('table', { name: 'All-manager matchup heatmap' }));
+  expect(heatmap.getAllByRole('rowheader')).toHaveLength(4);
+  fireEvent.click(
+    heatmap.getByRole('button', { name: /Inspect Casey versus Devon: 8-0-0, 8 games/ }),
+  );
+  expect(include).toHaveBeenCalledWith(true);
+  expect(choose).toHaveBeenCalledWith('casey');
+});

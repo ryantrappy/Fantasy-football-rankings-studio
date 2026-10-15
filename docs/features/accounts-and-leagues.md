@@ -188,7 +188,7 @@ Source: [TASK-89](../../backlog/tasks/task-89%20-%20Save-the-users-managed-team-
 ### TASK-97 — Explain the server-managed Codex OAuth path in writing-assistant settings
 
 - Writing-assistant settings explain both optional per-user API keys and the existing server-managed Codex account path without implying an API key is required.
-- An allowlisted user can see server-provider readiness and a useful distinction between disabled, missing CLI, and login-check failure, with a link to the Docker OAuth setup instructions.
+- An allowlisted user can see server-provider readiness and a useful distinction between disabled, missing CLI, and login-check failure, with expandable local operator setup instructions in both writing connections and the rankings assistant. The guide explains server configuration, Docker device login/status and persistent login storage, shared account/quota, and personal-key precedence without depending on a GitHub branch URL.
 - The UI explains that server-managed use shares the administrator's account/quota and that a saved per-user key takes precedence; it offers the existing remove-key action when appropriate.
 - No OAuth tokens, credential files, or other users' identifiers are exposed to browser/shared reports, and tests cover OAuth-ready, disabled, and saved-key states.
 
@@ -218,3 +218,16 @@ Source: [TASK-101](../../backlog/tasks/task-101%20-%20Make-managed-team-saving-r
 - Server-managed Codex explicitly describes operator login/readiness, shared account/quota, setup and personal-key precedence. Existing encrypted key save/replace/remove and cookie flows remain; no personal Connect Codex action is added.
 - League management focuses one selected workspace while preserving independent provider/workspace identities, rename/provider-ID updates, managed-team selection/clearing, active/archive restore and exact-name permanent-deletion safeguards.
 - See [integration coverage](../manager-explorer-coverage.md) for component/browser and owner/privacy verification. The existing TASK-72 deployed-tenant caveat is unchanged.
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration retains every account/league safeguard above and keeps all profile/connection/create/manage destinations reachable from the unified topbar, including Live. Identity/verification/recovery, operator-managed Codex readiness/quota/key precedence, encrypted cookies/keys, onboarding returns, managed-team selection and archive/permanent-deletion protections remain unchanged. See [fresh usability coverage](../usability-implementation-coverage.md).
+
+### TASK-150 — Save private writing instructions on each user profile
+
+- Your profile → Writing connections includes an optional multiline writing-instructions editor with load/retry, save/replace/clear, a 20,000-character limit, unsaved state, and accessible success/failure feedback. View switches and failed writes preserve the draft; old account loads/saves cannot populate a new account's editor.
+- Instructions persist as `user_metadata.writing_instructions` on the verified Auth0 subject through authenticated, no-store server functions. Caller-supplied identities, extra fields, non-string input, and oversized text are rejected. Patching this key preserves identity, unrelated metadata, and existing provider consent; blank text clears the preference.
+- Defaults are blank for every account. Only the requesting account's saved text is used for its writing suggestions, independently of server-managed CLI login or personal-key choice. Instructions do not enter league/ranking documents or public report payloads.
+- Verification covers profile editor behavior, failed clearing and save retry, late account responses, authenticated functions, two-account persistence and API sessions, and Codex/Claude prompt selection. Deployed Auth0 verification remains separate from mocked regression coverage.
+
+Source: [TASK-150](../../backlog/tasks/task-150%20-%20Save-private-writing-instructions-on-each-user-profile.md).

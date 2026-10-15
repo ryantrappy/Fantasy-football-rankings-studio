@@ -7,9 +7,13 @@ import type { ProfileApi, UserProfile } from '../profile';
 import type { AiCredentialStatus, AiCredentialsApi } from '../ai-credentials';
 import type { WritingApi, WritingProvider } from '../writing';
 import { CodexAccountSettings } from './CodexAccountSettings';
+import { WritingInstructionsSettings } from './WritingInstructionsSettings';
 import { errorMessage } from '../api/client';
 
-type AccountApi = ProfileApi & AiCredentialsApi & { writing?: Pick<WritingApi, 'providers'> };
+type AccountApi = ProfileApi &
+  AiCredentialsApi & {
+    writing?: Pick<WritingApi, 'providers' | 'instructions' | 'saveInstructions'>;
+  };
 
 export function ProfilePage({
   api,
@@ -100,8 +104,11 @@ export function ProfilePage({
           </div>
         )}
         {(current?.profile || recovery) && (
-          <div className="explorer-profile-pane" hidden={view !== 'details'}>
-            <Stack gap={4}>
+          <div
+            className="explorer-profile-pane explorer-profile-details"
+            hidden={view !== 'details'}
+          >
+            <Stack gap={4} className="explorer-profile-form">
               {current?.profile && (
                 <ProfileForm
                   key={current.profile.userId}
@@ -110,8 +117,16 @@ export function ProfilePage({
                   onSaved={(profile) => setResult({ api, profile })}
                 />
               )}
-              {recovery}
             </Stack>
+            <aside className="explorer-profile-access" aria-label="Account access">
+              <h2>Account access</h2>
+              <p>
+                Edit your name and nickname here. Your email and sign-in details are managed through
+                your identity provider. Social accounts may restore the provider’s name on your next
+                sign-in.
+              </p>
+              {recovery}
+            </aside>
           </div>
         )}
         {current?.profile && (
@@ -145,16 +160,15 @@ function ProfileForm({
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <Text>
-        Email: {profile.email || 'Not provided'}
-        {profile.email ? (profile.emailVerified ? ' (verified)' : ' (not verified)') : ''}
-      </Text>
-      <Text overflowWrap="anywhere">Account ID: {profile.userId}</Text>
-      <Text>
-        Edit your name and nickname below. Your email and sign-in details are managed through your
-        identity provider. Social accounts may restore the provider’s name on your next sign-in.
-      </Text>
+      <div className="explorer-profile-identity-fields">
+        <Text>
+          Email: {profile.email || 'Not provided'}
+          {profile.email ? (profile.emailVerified ? ' (verified)' : ' (not verified)') : ''}
+        </Text>
+        <Text overflowWrap="anywhere">Account ID: {profile.userId}</Text>
+      </div>
       <form
+        className="explorer-profile-edit-form"
         onSubmit={async (event) => {
           event.preventDefault();
           if (busy) return;
@@ -245,6 +259,7 @@ function AiCredentialSettings({ api }: { api: AccountApi }) {
         Optionally save your own OpenAI key for Codex or Anthropic key for Claude. Keys are
         encrypted and used only for your writing requests; saved values are never shown again.
       </Text>
+      {api.writing && <WritingInstructionsSettings api={api.writing} />}
       <CodexAccountSettings api={api.writing} revision={status?.codexConfigured} />
       {!status && !error && <Text as="output">Loading AI key settings…</Text>}
       {error && (

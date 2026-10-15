@@ -81,8 +81,11 @@
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 12px;
-  padding: 20px 0;
-  border-bottom: 1px solid #dce2ee;
+  padding: 14px;
+  margin-top: 12px;
+  border: 1px solid #dce2ee;
+  border-radius: 8px;
+  background: #f3f5fb;
 }
 .decision-explorer-matchup > div:last-child {
   text-align: right;
@@ -93,6 +96,29 @@
 .decision-explorer-matchup strong {
   font-size: 28px;
   font-variant-numeric: tabular-nums;
+}
+.overview-tug-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: #dce2ee;
+  overflow: hidden;
+  margin: 10px 0 12px;
+}
+.overview-tug-fill {
+  display: block;
+  height: 100%;
+  background: #3949ab;
+  border-radius: 999px;
+}
+.trade-exchange-summary-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: #eef1ff;
+  border: 1px solid #c5d0f5;
+  border-radius: 8px;
 }
 .decision-explorer-overview .overview-stats {
   background: #f3f5fb;
@@ -109,12 +135,25 @@
   padding: 7px 10px;
 }
 .decision-explorer-overview .overview-card > details {
-  margin: 14px 0;
+  display: inline-block;
+  vertical-align: top;
+  width: fit-content;
+  max-width: calc(100% - 8px);
+  margin: 10px 8px 10px 0;
+}
+.decision-explorer-overview .overview-card > details[open] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 10px 0;
 }
 .decision-explorer-overview .overview-card > details > summary {
   cursor: pointer;
   font-weight: 600;
-  padding: 9px 12px;
+  font-size: 12px;
+  line-height: 22px;
+  min-height: 44px;
+  padding: 10px;
   border: 1px solid #dce2ee;
   border-radius: 5px;
 }
@@ -273,7 +312,8 @@
   border-top: 1px solid #edf0f7;
 }
 .decision-explorer-live .live-player-name a {
-  color: #17223b;
+  color: #3949ab;
+  font-weight: 600;
   text-decoration: underline;
 }
 .decision-explorer-live-status {
@@ -465,5 +505,305 @@
   .decision-explorer-live .live-board[data-count] .live-player-row {
     min-height: 22px;
     line-height: 22px;
+  }
+}
+
+/* The command bar owns context; selectors stay compact without covering its title. */
+.decision-command-context {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+}
+.decision-command-context :where(input, select) {
+  height: 34px;
+  min-height: 34px;
+  font-size: 12px;
+}
+.decision-command-context label {
+  font-size: 12px;
+}
+.overview-win-labels {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 12px;
+  padding-top: 12px;
+}
+.overview-win-labels > span:nth-child(2) {
+  color: #526078;
+}
+.decision-impact-badge {
+  display: inline-block;
+  background: #eef1ff;
+  color: #3949ab;
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: 6px;
+}
+.inline-advisor-box {
+  padding: 12px;
+  background: #f3f5fb;
+  border: 1px solid #dce2ee;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+.player-comparison-matrix {
+  margin-top: 16px;
+}
+.player-comparison-matrix table {
+  min-width: 570px;
+}
+.player-comparison-matrix :where(th, td) {
+  min-width: 150px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.player-comparison-matrix :where(th, td):first-child {
+  min-width: 180px;
+  text-align: left;
+}
+.comparison-player-context {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 4px;
+  color: #526078;
+}
+.trade-exchange-summary-banner {
+  grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr);
+  align-items: center;
+}
+.trade-exchange-side {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.trade-exchange-side:nth-child(2) {
+  grid-column: 3;
+}
+.trade-exchange-direction {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: center;
+  color: #3949ab;
+  font-size: 24px;
+}
+.trade-exchange-score {
+  color: #3949ab;
+  font-weight: 600;
+}
+.decision-explorer-live .compact-matchup .compact-home-name,
+.decision-explorer-live .compact-matchup .compact-away-name {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .decision-command-context {
+    width: 100%;
+  }
+  .decision-command-context > div {
+    flex: 1;
+    min-width: 100px;
+  }
+  .trade-exchange-summary-banner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .trade-exchange-side:nth-child(2) {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .trade-exchange-direction {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+.decision-explorer-risks .roster-risk {
+  padding: 8px 10px;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.decision-explorer-risks .roster-risk > p {
+  margin: 3px 0;
+  font-size: 12px;
+}
+.roster-risk-count {
+  color: #526078;
+  margin: 4px 0;
+}
+.roster-risk-details > summary {
+  cursor: pointer;
+  color: #3949ab;
+  font-weight: 600;
+  padding: 8px 0;
+}
+@media (min-width: 768px) {
+  .decision-explorer .decision-command-context {
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+  .decision-explorer .decision-command-context > [data-scope='field'] {
+    flex: 0 1 200px;
+    width: 200px;
+    max-width: 200px;
+  }
+  .decision-explorer .decision-command-context > [data-scope='field']:nth-child(2) {
+    flex-basis: 105px;
+    width: 105px;
+    max-width: 105px;
+  }
+  .decision-command-context > p {
+    max-width: 170px;
+    font-size: 12px;
+  }
+}
+.player-comparison-matrix .decision-explorer-table :where(th, td) {
+  text-align: right;
+}
+.player-comparison-matrix .decision-explorer-table :where(th, td):first-child {
+  text-align: left;
+}
+@media (min-width: 768px) {
+  /* Reserve selector height before trade metadata arrives so the centered title stays put. */
+  .decision-explorer-trades .page-command-bar {
+    min-height: 84px;
+  }
+}
+
+.decision-explorer-overview .overview-card > details > summary .decision-impact-badge {
+  line-height: 18px;
+  vertical-align: top;
+}
+@media (min-width: 768px) {
+  .decision-explorer-live .live-board[data-count] .live-player-row {
+    grid-template-columns: 26px minmax(50px, 1fr) 60px 30px 32px;
+  }
+}
+
+/* Browse first, then compare: the DOM follows this same full-width reading order. */
+.decision-player-browser {
+  margin-bottom: 20px;
+}
+.decision-player-browser-filters {
+  margin-bottom: 10px;
+}
+.decision-player-browser-filters > [data-scope='field'] {
+  flex: 1 1 280px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.decision-player-browser-filters > [data-scope='field']:nth-child(2) {
+  flex: 0 1 150px;
+}
+.decision-player-range > [data-scope='field'] {
+  flex: 0 1 105px;
+  width: 105px;
+}
+.decision-player-browser fieldset {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
+  max-height: 280px;
+  scrollbar-width: thin;
+}
+.decision-player-browser .decision-explorer-player-option {
+  min-height: 82px;
+  border: 1px solid #dce2ee;
+  border-radius: 6px;
+  margin: 0;
+  padding: 10px;
+}
+.decision-player-browser fieldset > p {
+  grid-column: 1 / -1;
+}
+.decision-player-pool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.decision-player-pool > button {
+  width: auto;
+}
+.decision-player-pool > :where(p, output) {
+  margin: 0;
+}
+.decision-player-pool > output {
+  flex-basis: 100%;
+}
+.trade-exchange-side {
+  align-self: stretch;
+  background: white;
+  border: 1px solid #dce2ee;
+  border-radius: 8px;
+  padding: 12px;
+}
+.decision-explorer-trades
+  :where(.trade-roster-heading, .trade-roster-picker, .trade-lineup-detail) {
+  padding: 14px;
+}
+.decision-explorer-trades .trade-roster-heading {
+  background: white;
+}
+.trade-roster-controls > [data-scope='field'] {
+  flex: 1 1 190px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.decision-explorer-trades .trade-team-exchange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 10px;
+}
+.decision-explorer-trades .trade-team-exchange > :where(p, div) {
+  margin: 0;
+}
+.trade-team-exchange p {
+  font-size: 12px;
+  line-height: 20px;
+}
+.trade-roster-picker fieldset {
+  max-height: 300px;
+}
+@media (max-width: 1099px) {
+  .decision-player-browser fieldset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 479px) {
+  .decision-player-browser fieldset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.decision-player-browser .decision-explorer-player-option p {
+  margin: 2px 0;
+  line-height: 18px;
+}
+.trade-roster-picker > div:first-child p,
+.trade-roster-picker fieldset p {
+  margin: 2px 0;
+  line-height: 18px;
+}
+.trade-roster-picker label {
+  min-height: 44px;
+}
+@media (min-width: 768px) {
+  .trade-roster-controls label {
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .trade-roster-controls :where(input, select) {
+    height: 36px;
+    min-height: 36px;
   }
 }

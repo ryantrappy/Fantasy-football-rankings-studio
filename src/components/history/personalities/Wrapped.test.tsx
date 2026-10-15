@@ -153,3 +153,52 @@ it('does not attach a late snapshot response to a newly focused season', async (
   expect(screen.queryByLabelText('Wrapped share link')).not.toBeInTheDocument();
   expect(screen.getByLabelText('Publish this preview to anyone with its link')).not.toBeChecked();
 });
+
+it('resets publishing consent after a refreshed source while retaining standalone selection', async () => {
+  const createReportSnapshot = vi.fn();
+  const previous = fixture();
+  previous.year = 2024;
+  const preview = (records: ReturnType<typeof fixture>[]) => (
+    <ApiContext.Provider value={{ createReportSnapshot } as never}>
+      <Wrapped records={records} leagueId="123" open />
+    </ApiContext.Provider>
+  );
+  const { rerender } = render(preview([fixture(), previous]), { wrapper: Provider });
+  fireEvent.change(screen.getByLabelText('Wrapped season'), { target: { value: '2024' } });
+  fireEvent.change(screen.getByLabelText('Wrapped manager'), { target: { value: 'a' } });
+  fireEvent.click(screen.getByLabelText('Publish this preview to anyone with its link'));
+  rerender(
+    preview([
+      fixture(),
+      { ...previous, data: { ...previous.data, generatedAt: '2026-10-14T20:00:00Z' } },
+    ]),
+  );
+  expect(screen.getByLabelText('Wrapped season')).toHaveValue('2024');
+  expect(screen.getByLabelText('Wrapped manager')).toHaveValue('a');
+  expect(screen.getByLabelText('Publish this preview to anyone with its link')).not.toBeChecked();
+  expect(screen.getByRole('button', { name: 'Create public Wrapped snapshot' })).toBeDisabled();
+  expect(createReportSnapshot).not.toHaveBeenCalled();
+});
+
+it('keeps all supported highlights in the four-story preview and supplemental stories', () => {
+  const recap = buildWrapped(
+    fixture({
+      playoffSettings: { regularSeasonEnd: 2, playoffTeams: 2 },
+      scores: [1, 2].flatMap((week) => [
+        { teamId: '1', opponentTeamId: '2', week, actual: 120, starters: [] },
+        { teamId: '2', opponentTeamId: '1', week, actual: 100, starters: [] },
+      ]),
+    }),
+    'a',
+  );
+  const { container } = render(<WrappedPreview recap={recap} />);
+  expect(container.querySelectorAll('.history-wrapped-story')).toHaveLength(4);
+  expect(recap.highlights.length).toBeGreaterThan(4);
+  for (const text of recap.highlights) {
+    const separator = text.indexOf(':');
+    expect(
+      screen.queryByText(text, { exact: true }) ||
+        screen.getByText(text.slice(separator + 1).trim(), { exact: true }),
+    ).toBeInTheDocument();
+  }
+});

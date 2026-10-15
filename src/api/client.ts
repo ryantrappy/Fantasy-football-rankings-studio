@@ -287,6 +287,10 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
         ),
     },
     writing: {
+      instructions: async () =>
+        unwrap(await profile.getWritingInstructions({ headers: await headers() })),
+      saveInstructions: async (data) =>
+        unwrap(await profile.saveWritingInstructions({ data, headers: await headers() })),
       consent: async () => unwrap(await writingFunctions.getConsent({ headers: await headers() })),
       saveConsent: async (data) =>
         unwrap(await writingFunctions.saveConsent({ data, headers: await headers() })),

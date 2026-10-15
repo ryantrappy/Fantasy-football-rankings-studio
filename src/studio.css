@@ -260,7 +260,7 @@
   :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not(.export-canvas *) {
   border-style: solid;
   border-width: 1px;
-  border-color: #71809a;
+  border-color: #8995a7;
   border-radius: 8px;
   background-color: #fff;
   min-height: 42px;

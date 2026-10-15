@@ -5,26 +5,33 @@ import { SessionContext } from '../auth/session';
 import { AppShell, HeaderControls } from './AppShell';
 
 let pathname = '/insights';
+let routeSearch: { leagueId?: string; year?: number; years?: number[] } = {
+  leagueId: '123',
+  year: 2026,
+};
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: () => pathname,
-  useSearch: () => ({ leagueId: '123', year: 2026 }),
+  useSearch: () => routeSearch,
   Link: ({
     to,
     children,
     onClick,
     className,
+    search,
     'aria-current': ariaCurrent,
   }: {
     to: string;
     children: ReactNode;
     onClick?: () => void;
     className?: string;
+    search?: object;
     'aria-current'?: string;
   }) => (
     <a
       href={to}
       onClick={onClick}
       className={className}
+      data-search={JSON.stringify(search)}
       aria-current={ariaCurrent as 'page' | undefined}
     >
       {children}
@@ -146,3 +153,49 @@ it('marks Other tools active for a player deep link and preserves a return bread
   ).toHaveAttribute('href', '/tools');
   pathname = '/insights';
 });
+
+it.each([undefined, [2025, 2023], []])(
+  'private History navigation keeps explicit years %j without adopting the current single season',
+  (years) => {
+    routeSearch = { leagueId: '123', year: 2026, ...(years !== undefined ? { years } : {}) };
+    render(
+      <Provider>
+        <AppShell>
+          <Page />
+        </AppShell>
+      </Provider>,
+    );
+    const history = within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole(
+      'link',
+      { name: 'League history' },
+    );
+    expect(JSON.parse(history.getAttribute('data-search')!)).toEqual({
+      leagueId: '123',
+      ...(years !== undefined ? { years } : {}),
+    });
+    routeSearch = { leagueId: '123', year: 2026 };
+  },
+);
+it.each([undefined, [2025, 2023], []])(
+  'shared History navigation preserves existing season input %j',
+  (years) => {
+    routeSearch = { leagueId: '123', year: 2026, ...(years !== undefined ? { years } : {}) };
+    render(
+      <Provider>
+        <AppShell shared>
+          <Page />
+        </AppShell>
+      </Provider>,
+    );
+    const history = within(screen.getByRole('navigation', { name: 'Main navigation' })).getByRole(
+      'link',
+      { name: 'League history' },
+    );
+    expect(history).toHaveAttribute('href', '/shared/history');
+    expect(JSON.parse(history.getAttribute('data-search')!)).toEqual({
+      leagueId: '123',
+      years: years ?? [2026],
+    });
+    routeSearch = { leagueId: '123', year: 2026 };
+  },
+);

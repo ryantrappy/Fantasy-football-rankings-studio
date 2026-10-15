@@ -86,3 +86,7 @@ Source: [TASK-71](../../backlog/tasks/task-71%20-%20remove-quotes-from-params.md
 - The reported local snapshot URL displays its saved report.
 
 Source: [TASK-121](../../backlog/tasks/task-121%20-%20Repair-ESPN-snapshot-links-after-empty-maps-are-removed-during-persistence.md).
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration groups sharing controls in an accessible command-bar disclosure. Privacy, private ESPN snapshot/expiry caveats, enabled/disabled state, fallback links, errors and real owner revocation remain alongside the actions before use. Escape returns focus to the disclosure; outside clicks dismiss it. Existing public/private snapshot services and identity boundaries are unchanged. See [fresh usability coverage](../usability-implementation-coverage.md).

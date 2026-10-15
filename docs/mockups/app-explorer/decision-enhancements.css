@@ -1,0 +1,144 @@
+.decision-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  margin: 12px 0 20px;
+}
+.decision-controls > label {
+  flex: 1;
+  min-width: 160px;
+}
+.decision-controls input,
+.decision-controls select {
+  width: 100%;
+}
+.decision-player-browser {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  max-height: 320px;
+  overflow: auto;
+  margin-bottom: 24px;
+}
+.decision-profile-grid,
+.decision-trade-grid,
+.decision-ideas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+.decision-profile,
+.decision-trade-side {
+  min-width: 0;
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  padding: 18px;
+  background: #fff;
+}
+.decision-profile .summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+}
+.decision-profile .summary-strip > div {
+  min-width: 95px;
+  flex: 1;
+}
+.decision-profile h3 {
+  margin: 0;
+}
+.decision-source-line {
+  font-size: 12px;
+  color: #465673;
+  margin: 12px 0;
+}
+.decision-trade-side > label {
+  display: block;
+}
+.decision-trade-side select,
+.decision-trade-side input:not([type='checkbox']) {
+  width: 100%;
+}
+.decision-impact {
+  background: #eef1ff;
+  padding: 14px;
+  margin: 16px -4px;
+  border-radius: 6px;
+}
+.decision-impact h3 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+.decision-impact p {
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+.decision-roster {
+  max-height: 360px;
+  overflow: auto;
+  margin-top: 12px;
+}
+.decision-advice-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.decision-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 12px 0;
+}
+.decision-check input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #3949ab;
+}
+.decision-exclusions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+.decision-check small {
+  color: #465673;
+}
+#dialog:has([data-decision-field]) {
+  max-width: 880px;
+  width: calc(100% - 32px);
+}
+.decision-profile .table-wrap {
+  max-height: 240px;
+  overflow: auto;
+}
+.decision-profile p,
+.decision-trade-side p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 720px) {
+  .decision-profile-grid,
+  .decision-trade-grid,
+  .decision-ideas,
+  .decision-player-browser,
+  .decision-exclusions {
+    grid-template-columns: 1fr;
+  }
+  .decision-controls > label {
+    min-width: 130px;
+  }
+  .decision-profile,
+  .decision-trade-side {
+    padding: 14px;
+  }
+  .decision-controls {
+    gap: 12px;
+  }
+  .decision-check {
+    align-items: flex-start;
+  }
+  .decision-player-browser {
+    max-height: 280px;
+  }
+}

@@ -6,6 +6,8 @@ import type { WritingApi } from '../writing';
 function api(): WritingApi {
   return {
     context: vi.fn(),
+    instructions: vi.fn().mockResolvedValue({ instructions: '' }),
+    saveInstructions: vi.fn().mockImplementation((data) => Promise.resolve(data)),
     consent: vi.fn().mockResolvedValue({ codex: false, claude: false }),
     saveConsent: vi
       .fn()
@@ -36,10 +38,26 @@ function renderSuggestions(client: WritingApi, onSummaryChange = vi.fn()) {
   return onSummaryChange;
 }
 
+it('opens local operator setup in the rankings assistant without changing approval or generating', async () => {
+  const client = api();
+  renderSuggestions(client);
+  await waitFor(() => expect(client.providers).toHaveBeenCalled());
+  const setup = screen.getByText('Operator Codex setup instructions');
+  expect(setup.tagName).toBe('SUMMARY');
+  fireEvent.click(setup);
+  expect(setup.closest('details')).toHaveAttribute('open');
+  expect(screen.getByText(/login --device-auth/)).toBeVisible();
+  expect(screen.getByText(/Authorized users share the operator/)).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Operator Codex setup instructions' })).toBeNull();
+  expect(screen.getByRole('checkbox')).not.toBeChecked();
+  expect(client.saveConsent).not.toHaveBeenCalled();
+  expect(client.generate).not.toHaveBeenCalled();
+});
+
 it('asks for one approval, hides it, and exposes per-team generation', async () => {
   const client = api();
   const onSummaryChange = vi.fn();
-  let controller!: { generate: (teamId: string) => Promise<void> };
+  let controller!: { generate: (teamId: string) => Promise<void>; ready: boolean };
   render(
     <Provider>
       <WritingSuggestions
@@ -59,6 +77,7 @@ it('asks for one approval, hides it, and exposes per-team generation', async () 
   const approval = screen.getByRole('checkbox');
   fireEvent.click(approval);
   await waitFor(() => expect(screen.queryByRole('checkbox')).not.toBeInTheDocument());
+  await waitFor(() => expect(controller.ready).toBe(true));
   await controller.generate('1');
   expect(client.generate).toHaveBeenCalledWith(
     expect.objectContaining({ teamId: '1', approved: true }),
@@ -264,4 +283,27 @@ it('requires the current account readiness and consent before exposing generatio
   expect(
     screen.queryByText('Context sharing is approved for this assistant and saved to your account.'),
   ).not.toBeInTheDocument();
+});
+
+it('refreshes readiness without allowing a delayed consent read to undo revocation', async () => {
+  const client = api();
+  vi.mocked(client.consent).mockResolvedValueOnce({ codex: true, claude: false });
+  let finishRefresh!: (value: Awaited<ReturnType<WritingApi['providers']>>) => void;
+  vi.mocked(client.providers)
+    .mockResolvedValueOnce([{ id: 'codex', installed: true, enabled: true, status: 'ready' }])
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishRefresh = resolve;
+        }),
+    );
+  renderSuggestions(client);
+  const revoke = await screen.findByRole('button', { name: 'Revoke context-sharing approval' });
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh writing readiness' }));
+  await waitFor(() => expect(client.providers).toHaveBeenCalledTimes(2));
+  fireEvent.click(revoke);
+  await waitFor(() => expect(screen.getByRole('checkbox')).not.toBeChecked());
+  finishRefresh([{ id: 'codex', installed: true, enabled: true, status: 'ready' }]);
+  await waitFor(() => expect(screen.getByRole('checkbox')).not.toBeChecked());
+  expect(client.consent).toHaveBeenCalledTimes(1);
 });

@@ -125,3 +125,9 @@ Source: [TASK-143](../../backlog/tasks/task-143%20-%20Reduce-report-loading-late
 - Profile, Create league and Manage leagues are in the top-right dropdown. Navigation/outside click dismiss it; Escape closes and restores focus, including compact Live. The skip link, horizontal phone navigation, current selections, preloading and public/snapshot restrictions remain.
 - Compact headings, white evidence surfaces and accessible definition tooltips follow the approved palette. Data/source/caveat/configuration controls remain reachable. Tooltip clicks/touch/focus/Escape and reduced motion are covered; dense Live uses bounded desktop layout and full phone flow.
 - [Coverage and final validation](../manager-explorer-coverage.md) records responsive, keyboard, loading/partial/error, cache/disposal, performance and screenshot evidence. Rankings export markup is excluded from workspace restyling.
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration keeps one sticky navy brand/navigation/profile bar, with compact Live height, inline page-owned title/context/actions, accessible sharing disclosures and a contextual Other tools switcher. Original loading, focus, cache, account and navigation contracts remain. See [fresh usability coverage](../usability-implementation-coverage.md).
+
+The screenshot follow-up aligns workspace control typography, flat borders, attached ranking tabs, compact toolbars and 340px desktop inspectors with the usability designs. Phone panels return to normal flow; control state, keyboard focus and export isolation remain required. See [matched screenshots and preservation validation](../usability-style-comparison.md).

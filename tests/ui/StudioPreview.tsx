@@ -51,10 +51,16 @@ const profile = {
   email: 'manager@example.test',
   emailVerified: true,
 };
+let writingInstructions = { instructions: '' };
 const accountApi = {
   getProfile: async () => afterPreviewData(profile),
   updateProfile: async (value: { name: string; nickname: string }) => ({ ...profile, ...value }),
   writing: {
+    instructions: async () => writingInstructions,
+    saveInstructions: async (value: { instructions: string }) => {
+      writingInstructions = value;
+      return writingInstructions;
+    },
     providers: async () => [
       {
         id: 'codex' as const,
@@ -72,6 +78,7 @@ const accountApi = {
 };
 let writingConsent = { codex: false, claude: false };
 const appApi = {
+  subject: 'studio-preview-owner',
   writing: {
     ...accountApi.writing,
     consent: async () => writingConsent,

@@ -1,0 +1,184 @@
+.help-tip {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 2px 4px;
+  color: var(--muted);
+}
+button.help-trigger {
+  border: 0;
+  padding: 3px;
+  min-height: 28px;
+  min-width: 28px;
+  background: transparent;
+  font-size: 16px;
+  color: var(--muted);
+}
+.help-content {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 5px);
+  z-index: 80;
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  width: min(320px, 72vw);
+  white-space: normal;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 6px 24px #17223b24;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+  text-align: left;
+}
+.help-content strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+.help-tip:hover > .help-content,
+.help-tip:focus-within > .help-content,
+.help-open > .help-content {
+  visibility: visible;
+  opacity: 1;
+}
+.aside .help-content {
+  left: auto;
+  right: 0;
+}
+.modal-wide {
+  width: min(920px, 94vw);
+  max-width: min(920px, 94vw);
+}
+.workflow-panel {
+  display: grid;
+  gap: 16px;
+}
+.workflow-panel h3 {
+  margin-top: 8px;
+}
+.workflow-panel label {
+  max-width: 100%;
+}
+.workflow-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.workflow-row label {
+  flex: 1;
+  min-width: 130px;
+}
+.workflow-status {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 13px;
+}
+.workflow-status strong {
+  display: block;
+}
+.workflow-check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--ink);
+  font-size: 13px;
+}
+.workflow-check input {
+  width: auto;
+}
+.workflow-evidence {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.account-identity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+.account-identity span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.account-identity strong {
+  font-size: 14px;
+}
+.identity-help {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0;
+}
+.saved-consent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.ranking-secondary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.rankrow[draggable='true'] {
+  cursor: grab;
+}
+.rankrow.dragging {
+  opacity: 0.5;
+}
+.rankrow.drop-target {
+  outline: 2px solid var(--accent);
+}
+@media (max-width: 720px) {
+  .account-identity {
+    grid-template-columns: 1fr;
+  }
+  .modal-wide {
+    padding: 18px;
+  }
+  .help-content {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    top: auto;
+    bottom: 18px;
+    width: auto;
+    max-height: 45vh;
+    overflow: auto;
+  }
+  .aside .help-content {
+    left: 14px;
+    right: 14px;
+  }
+}
+
+@media (min-width: 721px) {
+  .help-content,
+  .aside .help-content {
+    position: fixed;
+    right: auto;
+  }
+}
+.analytics-table td button[data-analytics^='team:'] {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 28px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
+}

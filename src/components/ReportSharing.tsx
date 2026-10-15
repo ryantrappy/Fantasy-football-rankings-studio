@@ -32,19 +32,12 @@ export function ReportSharing({
     };
   }, [api, leagueId, retry]);
   return (
-    <Box mt={3}>
-      <Text>
-        {enabled === undefined
-          ? 'Loading sharing state…'
-          : enabled
-            ? 'Public season and history reports are enabled.'
-            : 'Public season and history reports are disabled.'}
-      </Text>
+    <Box className="report-sharing-inline">
       {enabled !== undefined && (
         <Button
+          size="sm"
           variant="outline"
           disabled={busy}
-          mt={2}
           onClick={async () => {
             setBusy(true);
             setError('');
@@ -61,10 +54,20 @@ export function ReportSharing({
           {enabled ? 'Disable public reports' : 'Enable public reports'}
         </Button>
       )}
+      <Text fontSize="xs" color="fg.muted" as="span">
+        {enabled === undefined
+          ? 'Loading sharing state…'
+          : enabled
+            ? 'Public season and history reports are enabled.'
+            : 'Public season and history reports are disabled.'}
+      </Text>
       {error && (
         <>
-          <Text role="alert">{error}</Text>
+          <Text fontSize="xs" role="alert">
+            {error}
+          </Text>
           <Button
+            size="xs"
             variant="plain"
             onClick={() => {
               setError('');

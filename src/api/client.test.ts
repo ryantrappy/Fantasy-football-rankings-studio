@@ -2,8 +2,15 @@ import { withOwnerInsights } from './owner-insights';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApi } from './client';
 import * as functions from '../functions/rankings.functions';
+import * as profileFunctions from '../functions/profile.functions';
 import type { League, WeeklyRanking } from '../types';
 
+vi.mock('../functions/profile.functions', () => ({
+  getProfile: vi.fn(),
+  updateProfile: vi.fn(),
+  getWritingInstructions: vi.fn(),
+  saveWritingInstructions: vi.fn(),
+}));
 vi.mock('../functions/rankings.functions', () => ({
   getEspnCredentialStatus: vi.fn(),
   saveEspnCredentials: vi.fn(),
@@ -50,6 +57,39 @@ function session(subject: string) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it('reads and saves writing instructions with each session token and never reuses another account preference', async () => {
+  const saved = new Map<string, string>();
+  vi.mocked(profileFunctions.getWritingInstructions).mockImplementation(async ({ headers }) => ({
+    ok: true,
+    data: { instructions: saved.get((headers as Record<string, string>).Authorization) || '' },
+  }));
+  vi.mocked(profileFunctions.saveWritingInstructions).mockImplementation(
+    async ({ data, headers }) => {
+      saved.set((headers as Record<string, string>).Authorization, data.instructions);
+      return { ok: true, data };
+    },
+  );
+  const owner = session('instructions-owner');
+  const other = session('instructions-other');
+  expect(await owner.writing!.saveInstructions({ instructions: 'My private style.' })).toEqual({
+    instructions: 'My private style.',
+  });
+  expect(profileFunctions.saveWritingInstructions).toHaveBeenCalledWith({
+    data: { instructions: 'My private style.' },
+    headers: { Authorization: 'Bearer instructions-owner-token' },
+  });
+  expect(await owner.writing!.instructions()).toEqual({ instructions: 'My private style.' });
+  expect(await other.writing!.instructions()).toEqual({ instructions: '' });
+  await owner.writing!.saveInstructions({ instructions: 'Changed style.' });
+  expect(await owner.writing!.instructions()).toEqual({ instructions: 'Changed style.' });
+  expect(await other.writing!.instructions()).toEqual({ instructions: '' });
+  await owner.dispose();
+  await expect(owner.writing!.instructions()).rejects.toThrow('This account session has ended.');
+  await expect(owner.writing!.saveInstructions({ instructions: 'Late write' })).rejects.toThrow(
+    'This account session has ended.',
+  );
 });
 
 it('sends provider-ID updates and permanent deletes through authenticated management calls', async () => {

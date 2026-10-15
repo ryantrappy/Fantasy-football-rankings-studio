@@ -146,3 +146,43 @@ it('preserves replay selections and analytics controls when switching views', ()
   fireEvent.click(screen.getByRole('button', { name: 'Playoffs' }));
   expect((screen.getByLabelText('Minimum elimination games') as HTMLInputElement).value).toBe('5');
 });
+
+it('selects heatmap pairs without losing manager, season, search or original matrix controls', () => {
+  function Explorer() {
+    const [manager, setManager] = useState('a');
+    const [year, setYear] = useState(2023);
+    return (
+      <CompetitionHistory
+        records={[season(2023), season(2024)]}
+        years={[2023, 2024]}
+        managerKey={manager}
+        onManagerChange={setManager}
+        seasonYear={year}
+        onSeasonChange={setYear}
+      />
+    );
+  }
+  render(<Explorer />);
+  fireEvent.change(screen.getByLabelText('Search opponents'), { target: { value: 'b' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Schedule & luck' }));
+  fireEvent.change(screen.getByLabelText('Schedule season'), { target: { value: '2024' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Rivalries' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Matchup heatmap' }));
+  const heatmap = within(screen.getByRole('table', { name: 'All-manager matchup heatmap' }));
+  fireEvent.click(heatmap.getByRole('button', { name: /Inspect b versus a: 0-2-2, 4 games, 25%/ }));
+  expect(screen.getByRole('heading', { name: 'b vs. a' })).toBeTruthy();
+  expect(screen.getByRole('complementary', { name: 'Selected rivalry' }).textContent).toContain(
+    '4 verified meetings',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'League matrix' }));
+  expect(screen.getByRole('table', { name: 'League rivalry matrix' })).toBeTruthy();
+  expect(
+    screen
+      .getByRole('button', { name: /Inspect b versus a: 0-2-2, 4 games/ })
+      .getAttribute('aria-pressed'),
+  ).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: 'Opponent records' }));
+  expect((screen.getByLabelText('Search opponents') as HTMLInputElement).value).toBe('b');
+  fireEvent.click(screen.getByRole('button', { name: 'Schedule & luck' }));
+  expect((screen.getByLabelText('Schedule season') as HTMLSelectElement).value).toBe('2024');
+});

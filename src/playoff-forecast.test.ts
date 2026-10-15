@@ -366,3 +366,58 @@ it('counts exact top-two first-round bye events from completed six-team seeding'
     result.rows.filter((row) => !['0', '2'].includes(row.teamId)).every((row) => row.bye === 0),
   ).toBe(true);
 });
+
+it('counts exact win and playoff-seed frequencies without changing existing seeded probabilities', async () => {
+  const { analyticsData } = await import('../tests/ui/AnalyticsPreview');
+  const result = forecastPlayoffs(analyticsData, analyticsData.playoffSettings!, 4, 400);
+  expect(
+    result.rows.map(({ projectedWins, playoff, bye, advance }) => ({
+      projectedWins,
+      playoff,
+      bye,
+      advance,
+    })),
+  ).toEqual([
+    { projectedWins: 2.525, playoff: 0.0175, bye: 0, advance: [0.015] },
+    { projectedWins: 6.715, playoff: 0.9125, bye: 0, advance: [0.3525] },
+    { projectedWins: 3.185, playoff: 0.095, bye: 0, advance: [0.05] },
+    { projectedWins: 7.575, playoff: 0.975, bye: 0, advance: [0.5825] },
+  ]);
+  for (const row of result.rows) {
+    expect(row.winDistribution!.reduce((sum, bin) => sum + bin.count, 0)).toBe(400);
+    expect(row.winDistribution!.reduce((sum, bin) => sum + bin.wins * bin.count, 0) / 400).toBe(
+      row.projectedWins,
+    );
+    expect(row.seedDistribution!.reduce((sum, bin) => sum + bin.count, 0)).toBe(400);
+    expect(
+      row.seedDistribution!.filter((bin) => bin.seed > 0).reduce((sum, bin) => sum + bin.count, 0) /
+        400,
+    ).toBe(row.playoff);
+  }
+});
+
+it('retains fractional win totals and exact configured seed counts including six-team byes', () => {
+  const data = fixture(8);
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 6 }, 4, 200);
+  for (let seed = 1; seed <= 6; seed++)
+    expect(
+      result.rows.reduce(
+        (sum, row) => sum + row.seedDistribution!.find((bin) => bin.seed === seed)!.count,
+        0,
+      ),
+    ).toBe(200);
+  expect(result.rows.reduce((sum, row) => sum + row.seedDistribution![0].count, 0)).toBe(400);
+  for (const row of result.rows)
+    expect(
+      row
+        .seedDistribution!.filter((bin) => bin.seed === 1 || bin.seed === 2)
+        .reduce((sum, bin) => sum + bin.count, 0) / 200,
+    ).toBe(row.bye);
+  data.scores
+    .filter((score) => score.teamId === '0' && score.week > 1)
+    .forEach((score) => {
+      score.actual = 110;
+    });
+  const tied = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4, 200);
+  expect(tied.rows[0].winDistribution).toEqual([{ wins: 3.5, count: 200 }]);
+});

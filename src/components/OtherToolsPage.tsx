@@ -5,17 +5,49 @@ import { defaultSeason } from '../util/rankings';
 
 export function ToolsBreadcrumb({ pathname }: { pathname: string }) {
   const search = useSearch({ strict: false });
+  const context = { leagueId: search.leagueId || '', year: search.year || defaultSeason() };
   return (
-    <nav className="explorer-breadcrumb" aria-label="Breadcrumb">
-      <Link
-        to="/tools"
-        search={{ leagueId: search.leagueId || '', year: search.year || defaultSeason() }}
-      >
-        Other tools
-      </Link>
-      <span aria-hidden="true"> / </span>
-      <span aria-current="page">{pathname === '/players' ? 'Players' : 'Trade analyzer'}</span>
-    </nav>
+    <div className="explorer-subtool-bar">
+      <nav className="explorer-breadcrumb" aria-label="Breadcrumb">
+        <Link to="/tools" search={context}>
+          Other tools
+        </Link>
+        <span aria-hidden="true"> / </span>
+        <span aria-current="page">
+          {pathname === '/tools'
+            ? 'All tools'
+            : pathname === '/players'
+              ? 'Players'
+              : 'Trade analyzer'}
+        </span>
+      </nav>
+      <nav className="explorer-subtool-pills" aria-label="Other tools quick switcher">
+        <Link
+          to="/tools"
+          search={context}
+          className="explorer-subtool-pill"
+          aria-current={pathname === '/tools' ? 'page' : undefined}
+        >
+          All tools
+        </Link>
+        <Link
+          to="/players"
+          search={context}
+          className="explorer-subtool-pill"
+          aria-current={pathname === '/players' ? 'page' : undefined}
+        >
+          Players
+        </Link>
+        <Link
+          to="/trades"
+          search={context}
+          className="explorer-subtool-pill"
+          aria-current={pathname === '/trades' ? 'page' : undefined}
+        >
+          Trade analyzer
+        </Link>
+      </nav>
+    </div>
   );
 }
 

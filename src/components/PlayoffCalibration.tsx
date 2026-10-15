@@ -3,6 +3,7 @@ import './analytics-explorer.css';
 import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
 import type { PublicInsightsApi } from '../api/public-insights';
+import type { SeasonInsights } from '../insights';
 import { errorMessage } from '../api/client';
 import {
   backtestPlayoffSeason,
@@ -27,7 +28,9 @@ export function PlayoffCalibration({
   frozen = false,
   active = true,
 }: {
-  api: Pick<PublicInsightsApi, 'getLeagueSeasons' | 'getInsights'>;
+  api: Pick<PublicInsightsApi, 'getLeagueSeasons'> & {
+    getInsights: (leagueId: string, year: number) => Promise<SeasonInsights>;
+  };
   leagueId: string;
   year: number;
   frozen?: boolean;

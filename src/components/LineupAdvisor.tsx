@@ -12,14 +12,19 @@ export function LineupAdvisor({
   capturedAt,
   leagueId,
   year,
+  excludedIds,
+  onExcludedChange,
 }: {
   team: LiveTeam;
   slots?: string[];
   capturedAt?: string;
   leagueId?: string;
   year?: number;
+  excludedIds?: string[];
+  onExcludedChange?: (ids: string[]) => void;
 }) {
-  const [excluded, setExcluded] = useState<string[]>([]);
+  const [localExcluded, setExcluded] = useState<string[]>([]);
+  const excluded = excludedIds ?? localExcluded;
   const advice = adviseLineup(team.players, slots, excluded);
   const [now] = useState(() => Date.now());
   const stale = !capturedAt || now - new Date(capturedAt).getTime() > 5 * 60_000;
@@ -175,13 +180,13 @@ export function LineupAdvisor({
                   type="checkbox"
                   checked={excluded.includes(player.id)}
                   disabled={player.locked}
-                  onChange={(event) =>
-                    setExcluded((previous) =>
-                      event.target.checked
-                        ? [...previous, player.id]
-                        : previous.filter((id) => id !== player.id),
-                    )
-                  }
+                  onChange={(event) => {
+                    const next = event.target.checked
+                      ? [...excluded, player.id]
+                      : excluded.filter((id) => id !== player.id);
+                    setExcluded(next);
+                    onExcludedChange?.(next);
+                  }}
                 />{' '}
                 Exclude {player.name}
               </label>

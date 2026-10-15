@@ -195,3 +195,7 @@ Source: [TASK-116](../../backlog/tasks/task-116%20-%20Keep-uncached-playoff-simu
 - Early-season uncertainty, supported-rule limits, retrospective/projection/schedule/availability coverage, frozen-snapshot limits and simulation uncertainty remain available. Validation and exact affected IDs: [analytics preservation checklist](../manager-explorer-analytics-coverage.md).
 
 Source: [TASK-146](../../backlog/tasks/task-146%20-%20Apply-the-Manager-Explorer-design-approach-across-the-app.md).
+
+## TASK-146 usability iteration — October 14, 2026
+
+The usability iteration adds truthful win/seed frequency histograms by counting outcomes from the same trials, without extra random draws or changes to seeded forecast probabilities. Optional distribution fields preserve saved-forecast compatibility; unavailable legacy frequencies stay unavailable. The selected path persists through every forecast and Advanced view; all rounds/rules/coverage/metrics/exact weekly values, diagnostics, cancellation and CSV/replay JSON remain. See [fresh Analytics evidence](../usability-analytics-coverage.md).

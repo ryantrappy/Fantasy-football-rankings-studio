@@ -21,7 +21,7 @@ import {
 import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
 import type { League, LeagueApi, WeeklyRanking } from '../types';
 import { useRankingEditor } from '../hooks/useRankingEditor';
-import { moveTeam } from '../util/rankings';
+import { moveTeam, previousPosition } from '../util/rankings';
 import { errorMessage } from '../api/client';
 import { RankingPreview } from './RankingPreview';
 import { Icon } from './Icon';
@@ -41,13 +41,18 @@ export const RankingEditor = forwardRef<
     year: number;
     week: number;
     initialEditingMode?: 'focused' | 'all';
+    showHeading?: boolean;
   }
->(function RankingEditor({ api, league, year, week, initialEditingMode = 'focused' }, ref) {
+>(function RankingEditor(
+  { api, league, year, week, initialEditingMode = 'focused', showHeading = true },
+  ref,
+) {
   const editor = useRankingEditor(api, league, year, week);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [editingMode, setEditingMode] = useState(initialEditingMode);
   const [teamSelection, setTeamSelection] = useState({ scope: '', teamId: '' });
   const tools = useRef<HTMLDetailsElement>(null);
+  const teamDetail = useRef<HTMLElement>(null);
   const [exporting, setExporting] = useState<'original' | 'compact' | null>(null);
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
@@ -66,15 +71,17 @@ export const RankingEditor = forwardRef<
   const preview = useRef<HTMLDivElement>(null);
   const previewViewport = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [previewFormat, setPreviewFormat] = useState<'original' | 'compact'>('original');
+  const previewWidth = previewFormat === 'compact' ? 720 : 1304;
   useEffect(() => {
     const viewport = previewViewport.current;
     if (!viewport) return;
     const observer = new ResizeObserver(([entry]) => {
-      setPreviewScale(Math.min(1, entry.contentRect.width / 1304));
+      setPreviewScale(Math.min(1, entry.contentRect.width / previewWidth));
     });
     observer.observe(viewport);
     return () => observer.disconnect();
-  }, [editor.loading, editor.loadError, tab]);
+  }, [editor.loading, editor.loadError, tab, previewWidth]);
   useEffect(() => {
     const workspace = layout.current;
     const header = document.querySelector('.workspace-header');
@@ -114,7 +121,7 @@ export const RankingEditor = forwardRef<
       // Resetting zoom only in toPng is too late: scaled table geometry is rounded.
       const canvas = preview.current.cloneNode(true) as HTMLDivElement;
       canvas.style.zoom = '1';
-      if (format === 'compact') canvas.classList.add('compact-export');
+      canvas.classList.toggle('compact-export', format === 'compact');
       // Export header labels without the interactive preview's sorting controls.
       canvas.querySelectorAll('.table-sort-indicator').forEach((indicator) => indicator.remove());
       canvas.querySelectorAll('.table-sort-button').forEach((button) => {
@@ -142,7 +149,7 @@ export const RankingEditor = forwardRef<
     }
   }
 
-  const pageHeading = (
+  const pageHeading = showHeading && (
     <PageHeading
       title="Rankings studio"
       eyebrow={`${league.leagueName} · ${year} · Week ${week}`}
@@ -209,6 +216,22 @@ export const RankingEditor = forwardRef<
     ranking.teams.find(
       (team) => teamSelection.scope === rankingScope && team.teamId === teamSelection.teamId,
     ) || ranking.teams[0];
+  if (teamSelection.scope !== rankingScope || teamSelection.teamId !== selectedTeam.teamId) {
+    setTeamSelection({ scope: rankingScope, teamId: selectedTeam.teamId });
+  }
+  function openEditionTools(selector?: string) {
+    const panel = tools.current;
+    if (!panel) return;
+    panel.open = true;
+    const target = selector ? panel.querySelector<HTMLElement>(selector) : panel;
+    const disclosure = target?.closest('details');
+    if (disclosure) disclosure.open = true;
+    target?.scrollIntoView({ block: 'nearest' });
+    const control = target?.matches('summary, button')
+      ? target
+      : target?.querySelector<HTMLElement>('summary, button');
+    control?.focus();
+  }
   const renderTeamTake = (team: WeeklyRanking['teams'][number]) => (
     <>
       <Textarea
@@ -284,7 +307,7 @@ export const RankingEditor = forwardRef<
         gap={4}
         flexWrap="wrap"
         mb={6}
-        className="editor-topline"
+        className="editor-topline ranking-view-tabs"
       >
         <Box className="view-switch" aria-label="Ranking view">
           <Button
@@ -319,101 +342,6 @@ export const RankingEditor = forwardRef<
           {!editor.dirty && ranking._id && <Icon name="check" size={15} />}
         </chakra.output>
       </Flex>
-      <Box as="section" className="editor-setup" aria-label="Edition settings" mb={4}>
-        <Box className="editor-fields">
-          <Field.Root mb={5} gap={2} className="field">
-            <Field.Label htmlFor="ranking-title">Edition title</Field.Label>
-            <Input
-              id="ranking-title"
-              name="rankingsTitle"
-              maxLength={200}
-              value={ranking.rankingsTitle}
-              onChange={(event) =>
-                editor.update((current) => ({ ...current, rankingsTitle: event.target.value }))
-              }
-            />
-          </Field.Root>
-          <Field.Root mb={5} gap={2} className="field">
-            <Field.Label htmlFor="ranking-intro">
-              Opening take <span>Optional</span>
-            </Field.Label>
-            <Textarea
-              id="ranking-intro"
-              name="introduction"
-              rows={3}
-              maxLength={10000}
-              placeholder="Set the scene for this week…"
-              value={ranking.introduction}
-              onChange={(event) =>
-                editor.update((current) => ({ ...current, introduction: event.target.value }))
-              }
-            />
-          </Field.Root>
-        </Box>
-        <details className="editor-tools" ref={tools}>
-          <summary>Edition tools, AI context sharing & keyboard shortcuts</summary>
-          <Box className="editor-tools-content">
-            {!ranking._id && (
-              <Text mb={4} role="note">
-                Suggested starting order uses completed scoring and point margin before this week,
-                with early results pulled toward the league average. It is a power signal, not a
-                player or season projection; adjust it with your own judgment before saving.
-                {league.leagueType === 1 &&
-                  ' ESPN matchups follow each scoring week’s published period. Multiweek aggregate scores and unavailable weekly scores are excluded from this suggestion.'}
-              </Text>
-            )}
-            <CopyEdition
-              ranking={ranking}
-              history={editor.history}
-              disabled={editor.saving || !!editor.recovery || editor.hasConflict}
-              onCopy={(next) => editor.update(() => next)}
-            />
-            {api.revisions && ranking._id && (
-              <RevisionHistory
-                key={`revisions:${ranking._id}`}
-                api={api.revisions}
-                ranking={ranking}
-                disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
-                onRestored={editor.reload}
-              />
-            )}
-            {api.publishing && ranking._id && (
-              <PublishEdition
-                key={`publishing:${ranking._id}`}
-                api={api.publishing}
-                id={ranking._id}
-                revision={ranking.revision ?? 0}
-                disabled={editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict}
-              />
-            )}
-            <KeyboardShortcutReference />
-            {api.writing && (
-              <WritingSuggestions
-                api={api.writing}
-                leagueId={league.leagueId}
-                year={year}
-                week={week}
-                teams={ranking.teams}
-                selectedTeamId={selectedTeam.teamId}
-                onSummaryChange={(teamId, summary) =>
-                  setAiSummaries((current) => ({
-                    scope: rankingScope,
-                    values: {
-                      ...(current.scope === rankingScope ? current.values : {}),
-                      [teamId]: summary,
-                    },
-                  }))
-                }
-                onControllerChange={(controller) => {
-                  aiController.current = controller;
-                  setAiReady(controller.ready);
-                }}
-                onGenerationStateChange={setAiGeneratingTeam}
-              />
-            )}
-          </Box>
-        </details>
-      </Box>
       {editor.storageError && (
         <Text role="alert" mb={4}>
           {editor.storageError}
@@ -509,6 +437,169 @@ export const RankingEditor = forwardRef<
           className="editor-panel panel"
           aria-label="Ranking editor"
         >
+          <div className="ranking-studio-toolbar" aria-label="Edition actions">
+            <Button
+              colorPalette="indigo"
+              variant="solid"
+              type="button"
+              disabled={editor.saving || (!editor.dirty && !!ranking._id)}
+              onClick={() => void editor.flush(true).catch(() => {})}
+            >
+              {editor.saving ? 'Saving…' : 'Save rankings'}
+              <Icon name="check" size={17} />
+            </Button>{' '}
+            <Button
+              variant="plain"
+              type="button"
+              disabled={!undo}
+              onClick={() => {
+                if (undo) {
+                  editor.update((current) => ({
+                    ...current,
+                    teams: [...current.teams].sort(
+                      (a, b) =>
+                        undo.teams.findIndex((team) => team.teamId === a.teamId) -
+                        undo.teams.findIndex((team) => team.teamId === b.teamId),
+                    ),
+                  }));
+                  setUndo(undefined);
+                  setAnnouncement('Previous order restored.');
+                }
+              }}
+            >
+              Undo move
+            </Button>
+            <Button variant="outline" type="button" onClick={() => openEditionTools()}>
+              Draft &amp; save status
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={
+                !editor.history.some(
+                  (entry) => entry.year < year || (entry.year === year && entry.week < week),
+                )
+              }
+              onClick={() => openEditionTools('.editor-tools-content > details > summary')}
+            >
+              Copy edition
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              disabled={!api.revisions || !ranking._id}
+              onClick={() => openEditionTools('[aria-label="Revision history"]')}
+            >
+              Revision history
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => openEditionTools('.shortcut-reference > summary')}
+            >
+              Shortcuts
+            </Button>
+          </div>
+          <Box as="section" className="editor-setup" aria-label="Edition settings" mb={4}>
+            <Box className="editor-fields">
+              <Field.Root mb={5} gap={2} className="field">
+                <Field.Label htmlFor="ranking-title">Edition title</Field.Label>
+                <Input
+                  id="ranking-title"
+                  name="rankingsTitle"
+                  maxLength={200}
+                  value={ranking.rankingsTitle}
+                  onChange={(event) =>
+                    editor.update((current) => ({ ...current, rankingsTitle: event.target.value }))
+                  }
+                />
+              </Field.Root>
+              <Field.Root mb={5} gap={2} className="field">
+                <Field.Label htmlFor="ranking-intro">
+                  Opening take <span>Optional</span>
+                </Field.Label>
+                <Textarea
+                  id="ranking-intro"
+                  name="introduction"
+                  rows={3}
+                  maxLength={10000}
+                  placeholder="Set the scene for this week…"
+                  value={ranking.introduction}
+                  onChange={(event) =>
+                    editor.update((current) => ({ ...current, introduction: event.target.value }))
+                  }
+                />
+              </Field.Root>
+            </Box>
+            <details className="editor-tools" ref={tools}>
+              <summary>Edition tools, AI context sharing & keyboard shortcuts</summary>
+              <Box className="editor-tools-content">
+                {!ranking._id && (
+                  <Text mb={4} role="note">
+                    Suggested starting order uses completed scoring and point margin before this
+                    week, with early results pulled toward the league average. It is a power signal,
+                    not a player or season projection; adjust it with your own judgment before
+                    saving.
+                    {league.leagueType === 1 &&
+                      ' ESPN matchups follow each scoring week’s published period. Multiweek aggregate scores and unavailable weekly scores are excluded from this suggestion.'}
+                  </Text>
+                )}
+                <CopyEdition
+                  ranking={ranking}
+                  history={editor.history}
+                  disabled={editor.saving || !!editor.recovery || editor.hasConflict}
+                  onCopy={(next) => editor.update(() => next)}
+                />
+                {api.revisions && ranking._id && (
+                  <RevisionHistory
+                    key={`revisions:${ranking._id}`}
+                    api={api.revisions}
+                    ranking={ranking}
+                    disabled={
+                      editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict
+                    }
+                    onRestored={editor.reload}
+                  />
+                )}
+                {api.publishing && ranking._id && (
+                  <PublishEdition
+                    key={`publishing:${ranking._id}`}
+                    api={api.publishing}
+                    id={ranking._id}
+                    revision={ranking.revision ?? 0}
+                    disabled={
+                      editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict
+                    }
+                  />
+                )}
+                <KeyboardShortcutReference />
+                {api.writing && (
+                  <WritingSuggestions
+                    api={api.writing}
+                    leagueId={league.leagueId}
+                    year={year}
+                    week={week}
+                    teams={ranking.teams}
+                    selectedTeamId={selectedTeam.teamId}
+                    onSummaryChange={(teamId, summary) =>
+                      setAiSummaries((current) => ({
+                        scope: rankingScope,
+                        values: {
+                          ...(current.scope === rankingScope ? current.values : {}),
+                          [teamId]: summary,
+                        },
+                      }))
+                    }
+                    onControllerChange={(controller) => {
+                      aiController.current = controller;
+                      setAiReady(controller.ready);
+                    }}
+                    onGenerationStateChange={setAiGeneratingTeam}
+                  />
+                )}
+              </Box>
+            </details>
+          </Box>
           <Flex
             align="center"
             justify="space-between"
@@ -524,31 +615,29 @@ export const RankingEditor = forwardRef<
               <Text fontSize="sm">
                 Drag a team or use the arrows. Select a team to write its take.
               </Text>
+            </Box>
+            <Flex align="center" gap={3} flexWrap="wrap">
+              <span className="ranking-progress-pill" aria-label="Take completion progress">
+                <span>
+                  {comments} of {ranking.teams.length} ready
+                </span>
+                <span className="ranking-mini-progress" aria-hidden="true">
+                  <span
+                    style={{
+                      width: `${Math.round((comments / Math.max(1, ranking.teams.length)) * 100)}%`,
+                    }}
+                  />
+                </span>
+              </span>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                mt={2}
                 onClick={() => setEditingMode((mode) => (mode === 'focused' ? 'all' : 'focused'))}
               >
                 {editingMode === 'focused' ? 'Edit all takes' : 'Focus one team'}
               </Button>
-            </Box>
-            <Button
-              variant="plain"
-              type="button"
-
-              disabled={!undo}
-              onClick={() => {
-                if (undo) {
-                  editor.update(() => undo);
-                  setUndo(undefined);
-                  setAnnouncement('Previous order restored.');
-                }
-              }}
-            >
-              Undo move
-            </Button>
+            </Flex>
           </Flex>
           <Box
             as="section"
@@ -570,6 +659,10 @@ export const RankingEditor = forwardRef<
                         aria-pressed={selectedTeam.teamId === team.teamId}
                         onClick={() => {
                           setTeamSelection({ scope: rankingScope, teamId: team.teamId });
+                          if (window.matchMedia('(max-width: 991px)').matches) {
+                            teamDetail.current?.scrollIntoView({ block: 'start' });
+                            teamDetail.current?.focus({ preventScroll: true });
+                          }
                         }}
                       >
                         <strong>{team.teamName}</strong>
@@ -581,13 +674,36 @@ export const RankingEditor = forwardRef<
                           {team.ties ? `–${team.ties}` : ''}
                         </span>
                       </small>
+                      <span className="ranking-movement">
+                        {(() => {
+                          const previous = previousPosition(editor.history, ranking, team.teamId);
+                          const delta = previous === undefined ? undefined : previous - index - 1;
+                          return delta === undefined
+                            ? 'New'
+                            : delta === 0
+                              ? 'No change'
+                              : `${delta > 0 ? '▲' : '▼'} ${Math.abs(delta)}`;
+                        })()}
+                      </span>
+                      {editingMode === 'focused' && (
+                        <span className="ranking-take-meta">
+                          <span
+                            className={`ranking-take-badge ${team.description.trim() ? 'ready' : 'draft'}`}
+                          >
+                            {team.description.trim() ? '✓ Take ready' : 'Draft needed'}
+                          </span>
+                          <span className="ranking-take-snippet">
+                            {team.description.trim() ||
+                              'No commentary yet — select row to write or generate a suggestion.'}
+                          </span>
+                        </span>
+                      )}
                     </Box>
                     <Flex gap={1} className="reorder-controls">
                       <IconButton
                         variant="outline"
                         type="button"
                         title="Drag to reorder"
-
                         {...handle}
                         className="ranking-drag-handle"
                         aria-label={`Drag ${team.teamName} to reorder`}
@@ -619,41 +735,80 @@ export const RankingEditor = forwardRef<
               )}
             />
           </Box>
-          <Flex
-            align="center"
-            justify="space-between"
-            gap={4}
-            flexWrap="wrap"
-            mt={3}
-            className="editor-footer"
-          >
-            <span>
-              {comments} of {ranking.teams.length} takes written
-            </span>
-            <Button
-              colorPalette="indigo"
-              variant="solid"
-              type="button"
-
-              disabled={editor.saving || (!editor.dirty && !!ranking._id)}
-              onClick={() => void editor.flush(true).catch(() => {})}
-            >
-              {editor.saving ? 'Saving…' : 'Save rankings'}
-              <Icon name="check" size={17} />
-            </Button>
-          </Flex>
         </Box>
         {editingMode === 'focused' && (
-          <aside className="ranking-team-detail" aria-label="Selected team take">
-            <p className="ranking-detail-context">
-              Writing for rank {ranking.teams.indexOf(selectedTeam) + 1}
-            </p>
+          <aside
+            ref={teamDetail}
+            tabIndex={-1}
+            className="ranking-team-detail"
+            aria-label="Selected team take"
+          >
+            <div className="ranking-detail-stepper">
+              <p className="ranking-detail-context">
+                Writing for rank {ranking.teams.indexOf(selectedTeam) + 1}
+              </p>
+              <Flex gap={1}>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={ranking.teams.indexOf(selectedTeam) <= 0}
+                  onClick={() => {
+                    const idx = ranking.teams.indexOf(selectedTeam);
+                    if (idx > 0) {
+                      setTeamSelection({
+                        scope: rankingScope,
+                        teamId: ranking.teams[idx - 1].teamId,
+                      });
+                    }
+                  }}
+                >
+                  ← Prev
+                </Button>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={ranking.teams.indexOf(selectedTeam) >= ranking.teams.length - 1}
+                  onClick={() => {
+                    const idx = ranking.teams.indexOf(selectedTeam);
+                    if (idx < ranking.teams.length - 1) {
+                      setTeamSelection({
+                        scope: rankingScope,
+                        teamId: ranking.teams[idx + 1].teamId,
+                      });
+                    }
+                  }}
+                >
+                  Next →
+                </Button>
+              </Flex>
+            </div>
             <h2>{selectedTeam.teamName}</h2>
             <p>
               {selectedTeam.managerName || 'Unassigned manager'} · {selectedTeam.wins}–
               {selectedTeam.loss}
               {selectedTeam.ties ? `–${selectedTeam.ties}` : ''}
             </p>
+            <div className="ranking-evidence-chips">
+              <div className="ranking-evidence-chip">
+                <span>Current rank</span>
+                <strong>
+                  #{ranking.teams.indexOf(selectedTeam) + 1} of {ranking.teams.length}
+                </strong>
+              </div>
+              <div className="ranking-evidence-chip">
+                <span>Record</span>
+                <strong>
+                  {selectedTeam.wins}–{selectedTeam.loss}
+                  {selectedTeam.ties ? `–${selectedTeam.ties}` : ''}
+                </strong>
+              </div>
+              <div className="ranking-evidence-chip">
+                <span>Take status</span>
+                <strong>{selectedTeam.description.trim() ? 'Ready' : 'Needs take'}</strong>
+              </div>
+            </div>
             {renderTeamTake(selectedTeam)}
             <Button
               type="button"
@@ -708,13 +863,35 @@ export const RankingEditor = forwardRef<
               </Button>
             </Flex>
           </Flex>
+          <div className="view-switch export-preview-format" aria-label="Export preview format">
+            <Button
+              type="button"
+              variant="outline"
+              aria-pressed={previewFormat === 'original'}
+              onClick={() => setPreviewFormat('original')}
+            >
+              Original preview (1304px)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              aria-pressed={previewFormat === 'compact'}
+              onClick={() => setPreviewFormat('compact')}
+            >
+              Compact preview (720px)
+            </Button>
+          </div>
           {exportError && (
             <Box className="notice error" role="alert">
               {exportError}
             </Box>
           )}
           <Box className="preview-scroll" ref={previewViewport}>
-            <div ref={preview} className="export-canvas" style={{ zoom: previewScale }}>
+            <div
+              ref={preview}
+              className={`export-canvas${previewFormat === 'compact' ? ' compact-export' : ''}`}
+              style={{ zoom: previewScale }}
+            >
               <RankingPreview ranking={ranking} history={editor.history} league={league} />
             </div>
           </Box>

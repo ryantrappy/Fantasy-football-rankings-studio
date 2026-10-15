@@ -78,7 +78,12 @@ export function LiveWorkspace() {
     >
       <ApiContext.Provider value={api}>
         <AppShell>
-          <LiveMatchupsPage />
+          <LiveMatchupsPage
+            search={{
+              leagueId: new URLSearchParams(location.search).get('leagueId') ?? undefined,
+              year: Number(new URLSearchParams(location.search).get('year')) || undefined,
+            }}
+          />
         </AppShell>
       </ApiContext.Provider>
     </SessionContext.Provider>

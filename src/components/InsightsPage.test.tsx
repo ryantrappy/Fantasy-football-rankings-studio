@@ -157,3 +157,47 @@ it('clears charts and managed-team identity while a new league report is pending
     ['two', 2026],
   ]);
 });
+
+it('inspects scoring rows without changing views and keeps the inspector across every season view', async () => {
+  api.listLeagues.mockResolvedValue([
+    { leagueId: 'one', leagueName: 'League', leagueType: 0, seasonId: 2026 },
+  ]);
+  api.getLeagueSeasons.mockResolvedValue({ activeManagerKeys: [], activeSeason: 2026 });
+  api.getInsights.mockResolvedValue(strengthData);
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <InsightsPage search={{ leagueId: 'one', year: 2026 }} navigate={vi.fn()} />
+    </ChakraProvider>,
+  );
+  const table = await screen.findByRole('table', { name: 'Team scoring' });
+  const team = strengthData.teams[2];
+  fireEvent.click(within(table).getByRole('button', { name: team.teamName }));
+  expect(screen.getByRole('button', { name: 'Team scoring' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  const inspector = screen.getByRole('complementary', { name: 'Selected team inspector' });
+  expect(inspector).toHaveTextContent(team.teamName);
+  expect(inspector).toHaveTextContent(team.managerName);
+  for (const view of [
+    'Weekly trends',
+    'Roster strength',
+    'Remaining schedule',
+    'Manager report card',
+    'Trades',
+    'Pickups',
+    'Team scoring',
+  ]) {
+    fireEvent.click(screen.getByRole('button', { name: view }));
+    expect(inspector).toBeVisible();
+    expect(inspector).toHaveTextContent(team.teamName);
+  }
+  fireEvent.click(within(inspector).getByRole('button', { name: 'Open in Weekly trends' }));
+  expect(screen.getByRole('button', { name: 'Weekly trends' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  expect(
+    within(screen.getByRole('table', { name: 'Weekly scores' })).getAllByRole('row'),
+  ).toHaveLength(5);
+});

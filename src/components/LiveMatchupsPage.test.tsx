@@ -240,3 +240,39 @@ vi.mock('./PlayerProfileLink', () => ({
     children: React.ReactNode;
   }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
 }));
+
+it('marks the exact saved managed side and prioritizes an explicitly linked current league', async () => {
+  const api = viewerApi(managedLeagues(6));
+  render(
+    <Provider>
+      <ApiContext value={api as never}>
+        <LiveMatchupsPage search={{ leagueId: 'league-5', year: 2026 }} />
+      </ApiContext>
+    </Provider>,
+  );
+  await screen.findByText('4 of 4 selected');
+  expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('league-5');
+  const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
+  const mine = within(sidebar).getByRole('button', { name: 'Remove Opponent 6 versus Viewer 6' });
+  expect(within(mine).getByLabelText('Managed team')).toBeInTheDocument();
+  expect(mine).toHaveTextContent('★ Viewer 6');
+  const board = screen.getByRole('region', { name: 'Highlighted matchups' });
+  expect(within(board).getAllByRole('heading', { level: 2 })[0]).toHaveTextContent(
+    'Opponent 6 vs Viewer 6',
+  );
+  expect(within(board).getAllByRole('heading', { level: 2 })).toHaveLength(4);
+});
+it('discloses a historical Live link instead of silently claiming the wrong season', async () => {
+  const api = viewerApi(managedLeagues(1));
+  render(
+    <Provider>
+      <ApiContext value={api as never}>
+        <LiveMatchupsPage search={{ leagueId: 'league-0', year: 2020 }} />
+      </ApiContext>
+    </Provider>,
+  );
+  expect(
+    await screen.findByText(/requested league\/season has no current Live snapshot/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('');
+});

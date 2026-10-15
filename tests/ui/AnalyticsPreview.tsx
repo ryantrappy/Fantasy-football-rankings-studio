@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Button, Flex } from '@chakra-ui/react';
 import { ReportExportScope } from '../../src/components/DataTable';
 import { PlayoffForecast } from '../../src/components/PlayoffForecast';
@@ -52,7 +52,19 @@ const sixTeamForecastData = {
       actual: score.actual - 9,
     })),
   ],
-  playoffSettings: { regularSeasonEnd: 10, playoffTeams: 6 },
+  playoffSettings: {
+    regularSeasonEnd: 10,
+    playoffTeams: 6,
+    rules: {
+      provider: 'Sleeper' as const,
+      season: 2026,
+      tiebreakers: ['head-to-head', 'points-for'] as ('head-to-head' | 'points-for')[],
+      divisionWinnersFirst: false,
+      divisionByTeam: {},
+      roundWeeks: [[11], [12, 13], [14]],
+      reseed: true,
+    },
+  },
 };
 const league = {
   leagueId: 'fixture',
@@ -76,11 +88,26 @@ const api = {
 
 export function AnalyticsPreview() {
   const [playoff, setPlayoff] = useState(false);
+  const [delayHistory, setDelayHistory] = useState(false);
+  const waitingHistory = useRef<(() => void)[]>([]);
+  const previewCalibrationApi = useMemo(
+    () => ({
+      ...calibrationApi,
+      getInsights: async (id: string, year: number) => {
+        if (delayHistory)
+          await new Promise<void>((resolve) => {
+            waitingHistory.current.push(resolve);
+          });
+        return calibrationApi.getInsights(id, year);
+      },
+    }),
+    [delayHistory],
+  );
   const [search, setSearch] = useState({ leagueId: 'fixture', year: 2026 });
   return (
     <ApiContext value={api as never}>
       <InsightsAccess publicApi={api as unknown as PublicInsightsApi}>
-        <Flex gap={2} mb={4}>
+        <Flex gap={2} mb={4} flexWrap="wrap">
           <Button onClick={() => setPlayoff(false)} aria-pressed={!playoff}>
             Open season preview
           </Button>
@@ -88,6 +115,26 @@ export function AnalyticsPreview() {
             Open playoff preview
           </Button>
         </Flex>
+        {playoff && (
+          <Flex gap={3} mb={3} flexWrap="wrap">
+            <label>
+              <input
+                type="checkbox"
+                checked={delayHistory}
+                onChange={(event) => setDelayHistory(event.target.checked)}
+              />{' '}
+              Delay calibration history for cancellation check
+            </label>
+            <Button
+              size="sm"
+              onClick={() => {
+                waitingHistory.current.splice(0).forEach((release) => release());
+              }}
+            >
+              Release delayed history
+            </Button>
+          </Flex>
+        )}
         {playoff ? (
           <ReportExportScope
             value={{
@@ -99,7 +146,7 @@ export function AnalyticsPreview() {
               data={sixTeamForecastData}
               advanced={(active) => (
                 <PlayoffCalibration
-                  api={calibrationApi}
+                  api={previewCalibrationApi}
                   leagueId="fixture"
                   year={2026}
                   active={active}

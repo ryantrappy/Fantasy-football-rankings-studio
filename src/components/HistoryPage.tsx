@@ -1,4 +1,4 @@
-import { HeaderControls } from './AppShell';
+import { PageHeading } from './PageHeading';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { normalizeLeagueId, type ReportPageProps } from './report-search';
@@ -49,6 +49,7 @@ export function HistoryPage({
   const api = useInsightsApi(),
     { years: requestedYears } = search,
     leagueId = normalizeLeagueId(search.leagueId);
+  const unresolvedYears = leagueId ? undefined : requestedYears;
   const [catalog, setCatalog] = useState<{
     api: typeof api;
     leagueId: string;
@@ -79,10 +80,12 @@ export function HistoryPage({
     catalog?.api === api && catalog.leagueId === leagueId ? catalog : undefined;
   const years = useMemo(() => {
     if (!currentCatalog) return [];
-    if (requestedYears) return requestedYears.filter((year) => currentCatalog.years.includes(year));
+    if (requestedYears !== undefined)
+      return requestedYears.filter((year) => currentCatalog.years.includes(year));
+    if (!shared && !snapshot) return currentCatalog.years;
     const prior = currentCatalog.years.filter((year) => year < defaultSeason());
     return (prior.length ? prior : currentCatalog.years).slice(0, 3);
-  }, [currentCatalog, requestedYears]);
+  }, [currentCatalog, requestedYears, shared, snapshot]);
   const key = `${leagueId}:${years.join(',')}:${refresh}`;
   const reportScope = `${leagueId}:${years.join(',')}`;
   const current = loaded?.api === api && loaded.key === key ? loaded : undefined;
@@ -108,7 +111,13 @@ export function HistoryPage({
         }
         if (cancelled) return;
         if (!leagueId && leagues[0]) {
-          void navigate({ search: { leagueId: leagues[0].leagueId }, replace: true });
+          void navigate({
+            search: {
+              leagueId: leagues[0].leagueId,
+              ...(unresolvedYears !== undefined ? { years: unresolvedYears } : {}),
+            },
+            replace: true,
+          });
           return;
         }
         if (!leagueId) {
@@ -128,7 +137,7 @@ export function HistoryPage({
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, navigate, shared, initialLeague]);
+  }, [api, leagueId, navigate, shared, initialLeague, unresolvedYears]);
   useEffect(() => {
     if (!years.length) return;
     let cancelled = false;
@@ -192,24 +201,35 @@ export function HistoryPage({
   }
   return (
     <>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={4}
-        flexWrap="wrap"
-        mt={4}
-        mb={6}
-        className="page-heading"
+      <PageHeading
+        className="history-command-bar"
+        title="League history"
+        description="Follow a manager through rivalries, seasons and league stories."
+        controls={
+          !shared && (
+            <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
+              <Field.Label>League</Field.Label>
+              <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
+                <NativeSelect.Field
+                  value={leagueId}
+                  onChange={(e) => {
+                    setManager('');
+                    void navigate({ search: { leagueId: e.target.value } });
+                  }}
+                >
+                  {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
+                  {currentCatalog?.leagues.map((l) => (
+                    <option key={l.leagueId} value={l.leagueId}>
+                      {l.leagueName}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+          )
+        }
       >
-        <Box>
-          <Text mb={4} className="eyebrow">
-            The league archive
-          </Text>
-          <Heading as="h1" size="3xl" mb={4}>
-            League history
-          </Heading>
-          <Text mb={4}>Follow a manager through rivalries, seasons and league stories.</Text>
-        </Box>
         {!snapshot && (
           <Button asChild colorPalette="indigo">
             <Link
@@ -222,6 +242,7 @@ export function HistoryPage({
         )}
         {!shared && (
           <ShareReport
+            compact
             key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
             path="/history"
             search={{ leagueId, years }}
@@ -241,31 +262,7 @@ export function HistoryPage({
             }
           />
         )}
-      </Flex>
-      {!shared && (
-        <HeaderControls>
-          <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
-            <Field.Label>League</Field.Label>
-            <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
-              <NativeSelect.Field
-                value={leagueId}
-                onChange={(e) => {
-                  setManager('');
-                  void navigate({ search: { leagueId: e.target.value } });
-                }}
-              >
-                {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
-                {currentCatalog?.leagues.map((l) => (
-                  <option key={l.leagueId} value={l.leagueId}>
-                    {l.leagueName}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-        </HeaderControls>
-      )}
+      </PageHeading>
       {!currentCatalog ? (
         <LoadingSkeleton label="Finding linked seasons…" />
       ) : currentCatalog.error ? (
@@ -316,9 +313,10 @@ export function HistoryPage({
                   </summary>
                   <div className="history-season-options">
                     <Text mb={4}>
-                      The most recent three prior seasons are selected initially. Add older years
-                      for a longer view. Unavailable seasons are shown separately and never counted
-                      as zeros.
+                      {shared || snapshot
+                        ? 'The most recent three prior seasons are selected initially. Add older years for a longer view.'
+                        : 'All available seasons are included unless you choose specific years.'}{' '}
+                      Unavailable seasons are shown separately and never counted as zeros.
                     </Text>
                     <fieldset className="history-years">
                       <legend>Include seasons</legend>
@@ -343,6 +341,13 @@ export function HistoryPage({
                       ))}
                     </fieldset>
                     <Flex flexWrap="wrap" gap={4} className="history-actions">
+                      <Button
+                        variant="plain"
+                        type="button"
+                        onClick={() => choose(currentCatalog.years)}
+                      >
+                        Select all seasons
+                      </Button>
                       <Button
                         variant="plain"
                         type="button"

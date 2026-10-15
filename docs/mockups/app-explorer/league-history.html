@@ -1,0 +1,317 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>League history</title><style>:root{color-scheme:light}body{margin:0;background:#f3f5fb}#history-designs .fr-topbar{display:none}#history-designs .fr-app{border:0;min-height:0;border-radius:0}#history-designs .fr-pagehead{padding-top:0}</style></head><body><div id="history-designs" class="viz-carousel" aria-label="League history redesigns">
+  <section data-variant="Topic workspace" aria-label="Topic workspace design" hidden>
+    <div class="fr-app fr-topic" id="topic-workspace" aria-label="Topic workspace appearance"></div>
+  </section>
+  <section data-variant="Manager explorer" aria-label="Manager explorer design">
+    <div class="fr-app fr-explorer" id="manager-explorer" aria-label="Manager explorer appearance"></div>
+  </section>
+</div>
+<style>
+#history-designs .fr-app{--fr-bg:light-dark(#f3f5fb,#141a29);--fr-panel:light-dark(#fff,#1b2334);--fr-ink:light-dark(#17223b,#edf0fa);--fr-muted:light-dark(#58657d,#a9b5cd);--fr-line:light-dark(#dce2ee,#35415a);--fr-accent:light-dark(#3949ab,#b0baff);--fr-tint:light-dark(#eef1ff,#2a3455);--fr-good:light-dark(#176b50,#8bd9b9);--fr-bad:light-dark(#9e3d40,#f2a6a9);--fr-header:light-dark(#17223b,#101624);--fr-header-ink:#f3f5ff;--fr-pad:12px;color:var(--fr-ink);background:var(--fr-bg);font:14px/1.5 system-ui,sans-serif;min-height:970px;border:1px solid var(--fr-line);border-radius:14px;overflow:clip;text-align:left}
+#history-designs .fr-app *{box-sizing:border-box}
+#history-designs .fr-app [hidden]{display:none!important}
+#history-designs .fr-app h1,#history-designs .fr-app h2,#history-designs .fr-app h3,#history-designs .fr-app p{margin:0}
+#history-designs .fr-app h1{font-size:27px;font-weight:650;line-height:1.2;letter-spacing:-.7px}
+#history-designs .fr-app h2{font-size:20px;font-weight:650;line-height:1.3;letter-spacing:-.3px}
+#history-designs .fr-app h3{font-size:15px;font-weight:600}
+#history-designs .fr-app button,#history-designs .fr-app select,#history-designs .fr-app input{font:inherit;color:inherit}
+#history-designs .fr-app button{background:transparent;border:0;text-align:left}
+#history-designs .fr-app button:focus-visible,#history-designs .fr-app input:focus-visible,#history-designs .fr-app select:focus-visible,#history-designs .fr-app summary:focus-visible{outline:3px solid var(--fr-accent);outline-offset:3px}
+#history-designs .fr-app button:hover{background:var(--fr-tint)}
+#history-designs .fr-app .fr-muted{color:var(--fr-muted)}
+#history-designs .fr-app .fr-small{font-size:12px}
+#history-designs .fr-app .fr-kicker{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--fr-muted);font-weight:650}
+#history-designs .fr-app .fr-topbar{background:var(--fr-header);color:var(--fr-header-ink);padding:15px 110px 15px 24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+#history-designs .fr-app .fr-brand{font-size:16px;letter-spacing:-.3px;font-weight:650;display:flex;gap:10px;align-items:center}
+#history-designs .fr-app .fr-brand-mark{display:grid;place-items:center;width:29px;height:29px;border:1px solid #7786b0;border-radius:8px;font-size:18px;color:#d9dfff}
+#history-designs .fr-app .fr-brand small{display:block;font-size:10px;font-weight:400;letter-spacing:1.2px;text-transform:uppercase;color:#c4cce2}
+#history-designs .fr-app .fr-appnav{display:flex;gap:20px;font-size:12px;color:#c4cce2}
+#history-designs .fr-app .fr-appnav strong{color:#fff;border-bottom:2px solid #b9c2ff;padding-bottom:4px;font-weight:500}
+#history-designs .fr-app .fr-pagehead{padding:24px 26px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:15px;flex-wrap:wrap}
+#history-designs .fr-app .fr-pagehead p{margin-top:6px;color:var(--fr-muted);font-size:13px}
+#history-designs .fr-app .fr-sample{font-size:11px;color:var(--fr-muted);border:1px solid var(--fr-line);border-radius:5px;padding:4px 8px;background:var(--fr-panel)}
+#history-designs .fr-app .fr-context{margin:0 26px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--fr-line);border-radius:10px;background:var(--fr-panel)}
+#history-designs .fr-app .fr-field{display:flex;gap:5px;flex-direction:column;min-width:110px;font-size:11px;color:var(--fr-muted)}
+#history-designs .fr-app select{background:var(--fr-panel);border:1px solid var(--fr-line);border-radius:6px;padding:7px 10px;font-size:13px;min-width:130px;max-width:100%;color:var(--fr-ink)}
+#history-designs .fr-app .fr-context .fr-coverage{margin-left:auto;display:flex;gap:8px;align-items:center;color:var(--fr-good);font-size:12px}
+#history-designs .fr-app .fr-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 10px;border:1px solid var(--fr-line);border-radius:6px;background:var(--fr-panel);font-size:12px;font-weight:500;min-height:34px}
+#history-designs .fr-app .fr-action[aria-pressed=true]{background:var(--fr-accent);color:var(--fr-panel);border-color:var(--fr-accent)}
+#history-designs .fr-app .fr-season-picker{position:relative}
+#history-designs .fr-app summary{list-style:none}
+#history-designs .fr-app summary::-webkit-details-marker{display:none}
+#history-designs .fr-app .fr-season-menu{position:absolute;top:40px;left:0;z-index:10;min-width:190px;background:var(--fr-panel);border:1px solid var(--fr-line);border-radius:8px;padding:12px;box-shadow:0 12px 28px #0002;display:grid;gap:10px}
+#history-designs .fr-app .fr-season-menu label{display:flex;gap:8px;align-items:center}
+#history-designs .fr-app input[type=checkbox]{accent-color:var(--fr-accent)}
+#history-designs .fr-app .fr-layout{display:grid;grid-template-columns:186px minmax(0,1fr);border-top:1px solid var(--fr-line);min-height:680px}
+#history-designs .fr-app .fr-sidebar{padding:20px 13px;background:var(--fr-panel);border-right:1px solid var(--fr-line)}
+#history-designs .fr-app .fr-mobiletopic{display:none}
+#history-designs .fr-app .fr-navgroup{margin-bottom:22px}
+#history-designs .fr-app .fr-navgroup .fr-kicker{padding:0 10px;margin-bottom:6px;font-size:10px;letter-spacing:1px}
+#history-designs .fr-app .fr-navitem{width:100%;padding:8px 10px;border-radius:6px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--fr-muted);min-height:35px}
+#history-designs .fr-app .fr-navitem[aria-current=page]{background:var(--fr-tint);color:var(--fr-accent);font-weight:600}
+#history-designs .fr-app .fr-content{min-width:0;padding:22px 24px;background:var(--fr-panel)}
+#history-designs .fr-app .fr-sectionhead{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:16px}
+#history-designs .fr-app .fr-sectionhead p{color:var(--fr-muted);font-size:12px;margin-top:5px}
+#history-designs .fr-app .fr-viewtabs{display:flex;gap:20px;border-bottom:1px solid var(--fr-line);margin:0 0 18px;flex-wrap:wrap}
+#history-designs .fr-app .fr-viewtabs button{padding:9px 0;font-size:12px;color:var(--fr-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+#history-designs .fr-app .fr-viewtabs button[aria-pressed=true]{color:var(--fr-accent);border-bottom-color:var(--fr-accent);font-weight:600}
+#history-designs .fr-app .fr-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0 20px}
+#history-designs .fr-app .fr-highlight{padding:12px 13px;border:1px solid var(--fr-line);border-radius:8px;background:var(--fr-bg);min-width:0}
+#history-designs .fr-app .fr-highlight span{display:block;font-size:11px;color:var(--fr-muted)}
+#history-designs .fr-app .fr-highlight strong{display:block;font-size:16px;font-weight:600;margin:3px 0}
+#history-designs .fr-app .fr-highlight small{font-size:11px;color:var(--fr-muted)}
+#history-designs .fr-app .fr-toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:15px 0 12px;flex-wrap:wrap}
+#history-designs .fr-app .fr-search{display:flex;align-items:center;gap:7px;border:1px solid var(--fr-line);border-radius:6px;padding:7px 10px;color:var(--fr-muted);max-width:100%}
+#history-designs .fr-app input[type=search]{border:0;background:transparent;min-width:0;width:145px;font-size:12px;outline-offset:4px}
+#history-designs .fr-app .fr-tablewrap{overflow-x:auto;max-width:100%}
+#history-designs .fr-app table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+#history-designs .fr-app th{font-weight:500;color:var(--fr-muted);text-align:left;background:var(--fr-bg);font-size:11px}
+#history-designs .fr-app th,#history-designs .fr-app td{padding:var(--fr-pad) 10px;border-bottom:1px solid var(--fr-line);font-variant-numeric:tabular-nums}
+#history-designs .fr-app th:not(:first-child),#history-designs .fr-app td:not(:first-child){text-align:right}
+#history-designs .fr-app td:first-child{font-weight:500}
+#history-designs .fr-app .fr-rowlink{color:var(--fr-accent);text-decoration:underline;text-underline-offset:3px;padding:0;max-width:100%}
+#history-designs .fr-app tr.fr-selected td{background:var(--fr-tint)}
+#history-designs .fr-app .fr-positive{color:var(--fr-good)}
+#history-designs .fr-app .fr-negative{color:var(--fr-bad)}
+#history-designs .fr-app .fr-tag{display:inline-block;padding:2px 6px;border-radius:4px;background:var(--fr-tint);color:var(--fr-accent);font-size:10px;margin-left:6px;font-weight:500}
+#history-designs .fr-app .fr-footnote{display:flex;justify-content:space-between;gap:10px;margin:12px 0;color:var(--fr-muted);font-size:11px;flex-wrap:wrap}
+#history-designs .fr-app .fr-explain{margin-top:20px;border-top:1px solid var(--fr-line);padding-top:12px;color:var(--fr-muted);font-size:12px}
+#history-designs .fr-app .fr-explain summary{display:flex;gap:8px;align-items:center;color:var(--fr-ink);font-weight:500;min-height:30px}
+#history-designs .fr-app .fr-explain p{margin-top:10px;max-width:70ch}
+#history-designs .fr-app .fr-evidence{margin-top:18px;padding:16px;border:1px solid var(--fr-line);border-radius:8px;background:var(--fr-bg)}
+#history-designs .fr-app .fr-evidence .fr-evidence-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#history-designs .fr-app .fr-evidence p{font-size:12px;color:var(--fr-muted);margin:6px 0 10px}
+#history-designs .fr-app .fr-evidence ol{padding-left:18px;font-size:12px;margin:8px 0}
+#history-designs .fr-app .fr-evidence li{padding:6px 0}
+#history-designs .fr-app .fr-evidence dl{display:flex;flex-wrap:wrap;gap:12px 24px;font-size:12px;margin:14px 0}
+#history-designs .fr-app .fr-evidence dt{color:var(--fr-muted)}
+#history-designs .fr-app .fr-evidence dd{margin:3px 0 0;font-weight:600}
+#history-designs>[data-variant]{min-height:1390px}
+#history-designs .fr-app .fr-notice{padding:11px 13px;border-left:3px solid var(--fr-accent);background:var(--fr-tint);font-size:12px;margin:16px 0;color:var(--fr-muted)}
+#history-designs .fr-app .fr-library{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+#history-designs .fr-app .fr-library button{padding:14px;border:1px solid var(--fr-line);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px}
+#history-designs .fr-app .fr-library small{display:block;font-size:11px;color:var(--fr-muted);margin-top:4px}
+#history-designs .fr-app .fr-manager-band{padding:0 26px 20px}
+#history-designs .fr-app .fr-managers{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+#history-designs .fr-app .fr-manager{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--fr-line);border-radius:8px;background:var(--fr-panel);font-size:12px}
+#history-designs .fr-app .fr-manager[aria-pressed=true]{border-color:var(--fr-accent);background:var(--fr-tint);color:var(--fr-accent)}
+#history-designs .fr-app .fr-avatar{width:27px;height:27px;border-radius:50%;background:var(--fr-bg);border:1px solid var(--fr-line);display:grid;place-items:center;font-size:11px;font-weight:600;flex-shrink:0}
+#history-designs .fr-app .fr-dossier{margin:0 26px;border:1px solid var(--fr-line);border-radius:10px;background:var(--fr-panel);overflow:clip}
+#history-designs .fr-app .fr-profilehead{padding:20px 22px;display:flex;gap:18px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+#history-designs .fr-app .fr-profileidentity{display:flex;align-items:center;gap:13px}
+#history-designs .fr-app .fr-profileidentity .fr-avatar{width:45px;height:45px;font-size:17px;color:var(--fr-accent);background:var(--fr-tint)}
+#history-designs .fr-app .fr-profileidentity p{font-size:12px;color:var(--fr-muted);margin-top:4px}
+#history-designs .fr-app .fr-profilestats{display:flex;gap:22px;font-variant-numeric:tabular-nums}
+#history-designs .fr-app .fr-profilestats span{display:block;color:var(--fr-muted);font-size:10px;letter-spacing:.5px;text-transform:uppercase}
+#history-designs .fr-app .fr-profilestats strong{font-size:21px;font-weight:600}
+#history-designs .fr-app .fr-dossiertabs{padding:0 22px;margin:0;gap:22px}
+#history-designs .fr-app .fr-split{display:grid;grid-template-columns:minmax(0,1fr) 236px;min-height:470px}
+#history-designs .fr-app .fr-mainpane{padding:20px 22px;min-width:0}
+#history-designs .fr-app .fr-inspector{border-left:1px solid var(--fr-line);background:var(--fr-bg);padding:20px 17px;min-width:0}
+#history-designs .fr-app .fr-inspector h3{font-size:17px;line-height:1.35;margin:10px 0}
+#history-designs .fr-app .fr-inspector p{font-size:12px;color:var(--fr-muted);margin:8px 0}
+#history-designs .fr-app .fr-inspector dl{margin:14px 0;font-size:12px}
+#history-designs .fr-app .fr-inspector dl div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--fr-line);gap:8px}
+#history-designs .fr-app .fr-inspector dd{margin:0;font-weight:500}
+#history-designs .fr-app .fr-inspector dt{color:var(--fr-muted)}
+#history-designs .fr-app .fr-inspector ol{padding-left:17px;font-size:11px;color:var(--fr-muted)}
+#history-designs .fr-app .fr-inspector li{margin:9px 0}
+#history-designs .fr-app .fr-localpicker{display:flex;gap:7px;align-items:center;margin:0 0 15px;flex-wrap:wrap}
+#history-designs .fr-app .fr-localpicker button{padding:5px 8px;border:1px solid var(--fr-line);border-radius:5px;font-size:11px}
+#history-designs .fr-app .fr-localpicker button[aria-pressed=true]{background:var(--fr-tint);color:var(--fr-accent);border-color:var(--fr-accent)}
+#history-designs .fr-app .fr-bottom{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:15px 26px;font-size:11px;color:var(--fr-muted)}
+#history-designs .fr-app .fr-browse{margin:16px 26px;padding:14px 18px;border:1px solid var(--fr-line);border-radius:10px;background:var(--fr-panel)}
+#history-designs .fr-app .fr-browse summary{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:500}
+#history-designs .fr-app i{display:inline-block;width:15px;height:15px;flex-shrink:0}
+@media(max-width:800px){#history-designs .fr-app .fr-layout{grid-template-columns:154px minmax(0,1fr)}#history-designs .fr-app .fr-content{padding:20px 16px}#history-designs .fr-app .fr-split{grid-template-columns:minmax(0,1fr) 200px}#history-designs .fr-app .fr-mainpane{padding:18px 14px}#history-designs .fr-app .fr-profilestats{gap:14px}#history-designs .fr-app .fr-highlight{padding:10px}#history-designs .fr-app .fr-highlight strong{font-size:14px}}
+@media(max-width:620px){#history-designs .fr-app{min-height:1500px}#history-designs .fr-app .fr-topbar{padding:14px 16px}#history-designs .fr-app .fr-appnav{gap:12px}#history-designs .fr-app .fr-pagehead{padding:20px 16px 16px}#history-designs .fr-app .fr-context{margin:0 16px 16px;padding:12px;gap:12px}#history-designs .fr-app .fr-context .fr-coverage{margin-left:0}#history-designs .fr-app .fr-layout{display:block}#history-designs .fr-app .fr-sidebar{padding:12px 16px;border-right:0;border-bottom:1px solid var(--fr-line)}#history-designs .fr-app .fr-navgroup{display:contents}#history-designs .fr-app .fr-navgroup .fr-kicker{margin:12px 0 4px;padding:0}#history-designs .fr-app .fr-navitems{display:flex;flex-wrap:wrap;gap:3px}#history-designs .fr-app .fr-navitem{width:auto;min-height:32px;padding:6px 8px}#history-designs .fr-app .fr-navitem i{display:none}#history-designs .fr-app .fr-highlights{grid-template-columns:1fr;gap:6px}#history-designs .fr-app .fr-highlight{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;flex-wrap:wrap}#history-designs .fr-app .fr-highlight strong{font-size:14px;margin:0}#history-designs .fr-app .fr-split{display:block}#history-designs .fr-app .fr-inspector{border-left:0;border-top:1px solid var(--fr-line)}#history-designs .fr-app .fr-dossier{margin:0 16px}#history-designs .fr-app .fr-manager-band{padding:0 16px 16px}#history-designs .fr-app .fr-profilehead{padding:16px}#history-designs .fr-app .fr-dossiertabs{padding:0 16px;gap:16px}#history-designs .fr-app .fr-browse{margin:14px 16px}#history-designs .fr-app .fr-library{grid-template-columns:1fr}#history-designs .fr-app .fr-sectionhead{flex-wrap:wrap}#history-designs .fr-app input[type=search],#history-designs .fr-app select{font-size:16px}#history-designs .fr-app .fr-field{min-width:100px}#history-designs .fr-app .fr-manager{padding:7px 10px}#history-designs .fr-app h1{font-size:25px}}
+@media(pointer:coarse){#history-designs .fr-app button,#history-designs .fr-app select,#history-designs .fr-app summary{min-height:44px}#history-designs .fr-app .fr-rowlink{padding:6px 0}}
+@media(max-width:620px){#history-designs .fr-app .fr-mobiletopic{display:flex}#history-designs .fr-app .fr-mobiletopic select{width:100%}#history-designs .fr-app .fr-navgroup{display:none!important}#history-designs .fr-app .fr-opponent-table th:last-child,#history-designs .fr-app .fr-opponent-table td:last-child{display:none}#history-designs>[data-variant]{min-height:2300px}}
+@media(max-width:360px){#history-designs .fr-app .fr-opponent-table th,#history-designs .fr-app .fr-opponent-table td{padding-left:6px;padding-right:6px}#history-designs .fr-app .fr-opponent-table th:nth-child(3),#history-designs .fr-app .fr-opponent-table td:nth-child(3){display:none}}
+</style>
+<script>
+(() => {
+  const root = document.getElementById('history-designs');
+  const names = ['Alex Morgan','Blair Davis','Casey Brooks','Devon Lee','Jordan Ellis','Taylor Reed'];
+  const years = [2025,2024,2023];
+  const topics = [
+    ['League overview','overview','chart-no-axes-combined','League'],['Manager comparison','comparison','users','League'],['Season history','seasons','calendar-days','League'],
+    ['Head-to-head','h2h','swords','Competition'],['Schedule & luck','schedule','calendar-range','Competition'],['Elo ratings','elo','trending-up','Competition'],['Playoffs & clutch','playoffs','trophy','Competition'],
+    ['Hall of Fame & Shame','honors','medal','Record book'],['Competitive eras','eras','flag','Record book'],['Matchup records','records','notebook-tabs','Record book'],['Weekly Pain Index','pain','heart-crack','Record book'],
+    ['Matchup stories','stories','sparkles','Beyond the scores'],['Manager profiles','profiles','contact-round','Beyond the scores']
+  ];
+  const icon = name => '<i data-lucide="'+name+'" aria-hidden="true"></i>';
+  const short = i => names[i].split(' ')[0];
+  const initials = i => names[i].split(' ').map(n=>n[0]).join('');
+  const games = [];
+  years.forEach((year,yi) => {
+    let rotation=[0,1,2,3,4,5];
+    for(let w=1;w<=14;w++) {
+      for(let n=0;n<3;n++) {
+        const a=rotation[n],b=rotation[5-n];
+        const score=i=>Math.round((107+24*Math.sin((i+2)*13+w*1.7+yi*4)+10*Math.cos(w*.8+i)+i*1.3)*100)/100;
+        games.push({year,week:w,a,b,sa:score(a),sb:score(b)});
+      }
+      rotation=[rotation[0],rotation[5],...rotation.slice(1,5)];
+    }
+  });
+  const states = [
+    {el:document.getElementById('topic-workspace'),mode:'topic',manager:0,topic:'h2h',years:[...years],matrix:false,minimum:3,query:'',descending:true,selection:1},
+    {el:document.getElementById('manager-explorer'),mode:'explorer',manager:0,topic:'h2h',years:[...years],matrix:false,minimum:3,query:'',descending:true,selection:1}
+  ];
+  const num = n => Number(n).toLocaleString('en-US',{maximumFractionDigits:1});
+  function pair(s,a,b) {
+    const gs=games.filter(g=>s.years.includes(g.year)&&((g.a===a&&g.b===b)||(g.a===b&&g.b===a)));
+    let w=0,l=0,t=0,pf=0,pa=0;
+    gs.forEach(g=>{const x=g.a===a?g.sa:g.sb,y=g.a===a?g.sb:g.sa;pf+=x;pa+=y;if(x>y)w++;else if(x<y)l++;else t++;});
+    return {id:b,w,l,t,n:gs.length,pf,pa,rate:gs.length?(w+t*.5)/gs.length:0,margin:gs.length?(pf-pa)/gs.length:0,gs};
+  }
+  function standings(s) {
+    return names.map((name,id)=>{
+      const rs=names.map((_,i)=>i).filter(i=>i!==id).map(i=>pair(s,id,i));
+      const w=rs.reduce((a,r)=>a+r.w,0),l=rs.reduce((a,r)=>a+r.l,0),n=w+l;
+      return {name,id,w,l,n,rate:n?w/n:0,pf:rs.reduce((a,r)=>a+r.pf,0)};
+    }).sort((a,b)=>b.rate-a.rate);
+  }
+  function context(s) {
+    return '<div class="fr-context"><div><span class="fr-kicker">League</span><p>Sample league <span class="fr-muted fr-small">· 6 managers</span></p></div><div><span class="fr-kicker">Seasons</span><details class="fr-season-picker"><summary class="fr-action cursor-interaction">'+(s.years.length?s.years.slice().sort().join(' · '):'Choose seasons')+' '+icon('chevron-down')+'</summary><div class="fr-season-menu">'+years.map(y=>'<label><input type="checkbox" data-year="'+y+'" '+(s.years.includes(y)?'checked':'')+'> '+y+'</label>').join('')+'</div></details></div>'+(s.mode==='topic'?'<label class="fr-field">Manager context<select data-manager>'+names.map((n,i)=>'<option value="'+i+'" '+(s.manager===i?'selected':'')+'>'+n+'</option>').join('')+'</select></label>':'')+'<div class="fr-coverage">'+icon('circle-check')+' '+s.years.length+' seasons · '+games.filter(g=>s.years.includes(g.year)).length+' sample games</div></div>';
+  }
+  function head(s) {
+    return '<div class="fr-topbar"><div class="fr-brand"><span class="fr-brand-mark">T</span><span>Trapp<small>Fantasy Studio</small></span></div><div class="fr-appnav"><span>Rankings</span><span>Insights</span><strong>History</strong></div></div><div class="fr-pagehead"><div><div class="fr-kicker">The league archive</div><h1>League history</h1><p>'+(s.mode==='topic'?'A focused workspace for every part of your league’s past.':'Pick a manager. Follow the rivalries, seasons, and stories.')+'</p></div><span class="fr-sample">Illustrative data</span></div>'+context(s);
+  }
+  function sidebar(s) {
+    return '<nav class="fr-sidebar" aria-label="History topics"><label class="fr-field fr-mobiletopic">Explore the archive<select data-topic-picker>'+['League','Competition','Record book','Beyond the scores'].map(group=>'<optgroup label="'+group+'">'+topics.filter(t=>t[3]===group).map(t=>'<option value="'+t[1]+'" '+(s.topic===t[1]?'selected':'')+'>'+t[0]+'</option>').join('')+'</optgroup>').join('')+'</select></label>'+['League','Competition','Record book','Beyond the scores'].map(group=>'<div class="fr-navgroup"><p class="fr-kicker">'+group+'</p><div class="fr-navitems">'+topics.filter(t=>t[3]===group).map(t=>'<button class="fr-navitem cursor-interaction" data-topic="'+t[1]+'" '+(s.topic===t[1]?'aria-current="page"':'')+'>'+icon(t[2])+t[0]+'</button>').join('')+'</div></div>').join('')+'</nav>';
+  }
+  function table(headers,rows,s,selectable=false) {
+    return '<div class="fr-tablewrap"><table><thead><tr>'+headers.map((h,i)=>'<th scope="col">'+(h==='Win %'?'<button data-sort class="cursor-interaction" aria-label="Sort by win percentage">Win % '+(s.descending?'↓':'↑')+'</button>':h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map((r,i)=>'<tr '+(selectable&&r.id===s.selection?'class="fr-selected"':'')+'>'+r.cells.map((c,j)=>'<td>'+(j===0&&selectable?'<button class="fr-rowlink cursor-interaction" data-row="'+r.id+'">'+c+'</button>':c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  }
+  function evidence(s,compact=false) {
+    const r=pair(s,s.manager,s.selection);
+    if(s.topic!=='h2h') return '<div class="fr-kicker">Record details</div><h3>'+topics.find(t=>t[1]===s.topic)[0]+'</h3><p>'+names[s.manager]+' · '+s.years.length+' selected seasons</p><p>Metric definitions and source coverage stay alongside the selected view.</p><details class="fr-explain"><summary class="cursor-interaction">'+icon('info')+' Data & methodology</summary><p>Mockup values are illustrative. In the finished screen, this panel will show the selected record’s contributing games, sample size, and source limitations.</p></details>';
+    return '<div class="fr-evidence-title"><div class="fr-kicker">'+(compact?'Selected rivalry':'Game evidence')+'</div>'+(compact?'':'<button class="fr-action cursor-interaction" data-close>Close</button>')+'</div><h3>'+short(s.manager)+' vs. '+short(s.selection)+'</h3><p>'+r.n+' verified sample meetings · '+s.years.slice().sort().join(' · ')+'</p><dl><div><dt>Record (W–L–T)</dt><dd>'+r.w+'–'+r.l+'–'+r.t+'</dd></div><div><dt>Win rate</dt><dd>'+num(r.rate*100)+'%</dd></div><div><dt>Points for / against</dt><dd>'+num(r.pf)+' / '+num(r.pa)+'</dd></div><div><dt>Average margin</dt><dd>'+num(r.margin)+' pts</dd></div></dl><p class="fr-kicker">Latest meetings</p><ol>'+[...r.gs].sort((a,b)=>b.year-a.year||b.week-a.week).slice(0,3).map(g=>{const own=g.a===s.manager?g.sa:g.sb,opp=g.a===s.manager?g.sb:g.sa;return '<li>'+g.year+' · Week '+g.week+'<br><strong class="'+(own>opp?'fr-positive':'fr-negative')+'">'+(own>opp?'Win':'Loss')+'</strong> '+num(own)+' – '+num(opp)+'</li>';}).join('')+'</ol><details class="fr-explain"><summary class="cursor-interaction">'+icon('info')+' How this is calculated</summary><p>Ties count as half a win. Average margin uses the same completed matchups. Missing games are excluded, never counted as losses.</p></details>';
+  }
+  function rivalry(s) {
+    const rs=names.map((_,i)=>i).filter(i=>i!==s.manager).map(i=>pair(s,s.manager,i));
+    const eligible=rs.filter(r=>r.n>=s.minimum),sorted=[...eligible].sort((a,b)=>Math.abs(a.rate-.5)-Math.abs(b.rate-.5)||b.n-a.n);
+    const best=[...eligible].filter(r=>r.rate>.5).sort((a,b)=>b.rate-a.rate)[0],worst=[...eligible].filter(r=>r.rate<.5).sort((a,b)=>a.rate-b.rate)[0];
+    let html='<div class="fr-sectionhead"><div><h2>Head-to-head</h2><p>'+names[s.manager]+' against the league · wins, losses, and the games behind them.</p></div></div><div class="fr-viewtabs"><button data-matrix="false" aria-pressed="'+!s.matrix+'" class="cursor-interaction">Opponent records</button><button data-matrix="true" aria-pressed="'+s.matrix+'" class="cursor-interaction">League matrix</button></div>';
+    if(s.matrix) {
+      html+='<p class="fr-muted fr-small">Row manager’s record against each opponent. Select a record to inspect the rivalry.</p>';
+      html+=table(['Manager',...names.map((_,i)=>short(i))],names.map((n,a)=>({cells:[short(a),...names.map((_,b)=>{const r=pair(s,a,b);return a===b?'—':'<button data-pair="'+a+','+b+'" class="fr-rowlink cursor-interaction" aria-label="'+n+' versus '+names[b]+', '+r.w+' wins and '+r.l+' losses">'+r.w+'–'+r.l+'</button>';})]})),s);
+    } else {
+      html+='<div class="fr-highlights">'+[['Closest rival',sorted[0]],['Punching bag',best],['Kryptonite',worst]].map(([label,r])=>'<div class="fr-highlight"><span>'+label+'</span><strong>'+(r?short(r.id):'Not enough evidence')+'</strong><small>'+(r?r.w+'–'+r.l+'–'+r.t+' · '+r.n+' games':'Try a lower minimum')+'</small></div>').join('')+'</div><div class="fr-toolbar"><label class="fr-search">'+icon('search')+'<input type="search" data-search aria-label="Search opponents" placeholder="Find an opponent" value="'+s.query.replaceAll('"','&quot;')+'"></label><label class="fr-small fr-muted">Rivalry minimum <select data-minimum aria-label="Minimum rivalry games" style="min-width:78px;padding:5px"><option value="3" '+(s.minimum===3?'selected':'')+'>3 games</option><option value="5" '+(s.minimum===5?'selected':'')+'>5 games</option><option value="10" '+(s.minimum===10?'selected':'')+'>10 games</option></select></label></div>';
+      const filtered=rs.filter(r=>names[r.id].toLowerCase().includes(s.query.toLowerCase())).sort((a,b)=>s.descending?b.rate-a.rate:a.rate-b.rate);
+      html+=table(['Opponent','W–L–T','Games','Win %','Avg. margin'],filtered.map(r=>({id:r.id,cells:[names[r.id],r.w+'–'+r.l+'–'+r.t,r.n,num(r.rate*100)+'%','<span class="'+(r.margin>=0?'fr-positive':'fr-negative')+'">'+(r.margin>0?'+':'')+num(r.margin)+'</span>']})),s,true).replace('<table>','<table class="fr-opponent-table">');
+      if(!filtered.length)html+='<div class="fr-notice">No opponents match your search.</div>';
+      html+='<div class="fr-footnote"><span>'+filtered.length+' opponents · select a name for game evidence</span><span>W–L–T = wins, losses, ties</span></div>';
+    }
+    return html+'<details class="fr-explain"><summary class="cursor-interaction">'+icon('info')+' Rivalry definitions & coverage</summary><p>Closest rival is nearest to a 50% win rate. Punching bag requires a winning record; kryptonite requires a losing record. Labels require '+s.minimum+' meetings. Every opponent remains visible regardless of the label threshold.</p><p>Renamed teams follow their manager identity. Incomplete or unpaired scores are excluded. View all contributing scores by selecting an opponent.</p></details>';
+  }
+  function panel(s) {
+    if(!s.years.length)return '<div class="fr-notice">Choose at least one season to explore the archive.</div>';
+    if(s.topic==='h2h')return rivalry(s);
+    const title=topics.find(t=>t[1]===s.topic)[0],rows=standings(s),m=rows.find(r=>r.id===s.manager);
+    let body='',description='',method='Values use only available records in the selected seasons. Unknown outcomes stay unavailable. Select Head-to-head to explore individual game evidence.';
+    if(s.topic==='overview'||s.topic==='comparison') {
+      description=s.topic==='overview'?'The league at a glance. Open a topic when you want the details.':'Compare managers using the same seasons and scoring context.';
+      body=table(['Manager','Record','Win %','Points scored'],rows.map(r=>({cells:[r.name,r.w+'–'+r.l,num(r.rate*100)+'%',num(r.pf)]})),s);
+      body+='<div class="fr-library">'+[['Explore rivalries','h2h','Head-to-head records & league matrix'],['Follow rating history','elo','Results over time'],['Browse record book','records','Close games, blowouts & scoring'],['Revisit matchup stories','stories','Trades, comebacks & lineup regrets']].map(t=>'<button data-topic="'+t[1]+'" class="cursor-interaction"><span>'+t[0]+'<small>'+t[2]+'</small></span>'+icon('arrow-up-right')+'</button>').join('')+'</div>';
+    } else if(s.topic==='seasons') {
+      description=names[s.manager]+' across the selected seasons. Team names can change; manager identity stays connected.';
+      body=table(['Season','Record','Win %','Points for'],s.years.map(year=>{const sub={...s,years:[year]},r=standings(sub).find(r=>r.id===s.manager);return {cells:[year,r.w+'–'+r.l,num(r.rate*100)+'%',num(r.pf)]};}),s);
+    } else if(s.topic==='elo') {
+      description='One league-wide ranking, with the game-by-game explanation one step away.';
+      body=table(['Manager','Elo','Since start','Games'],rows.map((r,i)=>({cells:[r.name,1584-i*34,(i<3?'+':'')+(84-i*34),r.n]})),s);
+      method='Ratings begin at 1500, use K=32, and carry across seasons. Results affect Elo; scoring margins do not. All values here are illustrative.';
+    } else if(s.topic==='schedule') {
+      description='Separate scoring strength from the opponents a manager happened to face.';
+      body=table(['Manager','Actual wins','Expected wins','Difference'],rows.map((r,i)=>({cells:[r.name,r.w,num(r.w+(i%2?-2.1:1.8)),'<span class="'+(i%2?'fr-positive':'fr-negative')+'">'+(i%2?'+2.1':'−1.8')+'</span>']})),s)+'<details class="fr-explain"><summary class="cursor-interaction">'+icon('repeat-2')+' Replay another manager’s schedule</summary><p>Compare '+names[s.manager]+'’s weekly scoring with another manager’s opponents. The full implementation will expose a donor picker and every included game here.</p></details>';
+      method='Expected wins compare each weekly score with all other finite team scores. Actual and expected totals use the same eligible sample. Schedule replays cannot establish final standings or tie-breakers.';
+    } else if(s.topic==='playoffs') {
+      description='Regular-season success and championship-path results, kept in context.';
+      body=table(['Manager','Regular win %','Playoff W–L','Coverage'],rows.map((r,i)=>({cells:[r.name,num(r.rate*100)+'%',i<4?(4-i)+'–2':'Unavailable',i<4?'3 seasons':'No bracket history']})),s)+'<div class="fr-notice">Clutch labels appear only when there are enough verified elimination games. Missing bracket data stays visible.</div>';
+      method='Only explicit championship-path series count. Multiweek series count once. Missing bracket metadata cannot be inferred from final standings.';
+    } else if(s.topic==='honors') {
+      description='Achievements and rough stretches, with sample sizes beside each claim.';
+      body='<div class="fr-localpicker"><button data-honor="fame" aria-pressed="true" class="cursor-interaction">Hall of Fame</button><button data-honor="shame" aria-pressed="false" class="cursor-interaction">Hall of Shame</button></div><div data-honortable>'+table(['Manager','Honor score','Seasons','Coverage'],rows.map((r,i)=>({cells:[r.name,78-i*8,s.years.length,'5 of 5 metrics']})),s)+'</div>';
+      method='The honor score combines available championship, playoff finish, regular win rate, scoring, and longevity metrics. It is a descriptive league honor. Coverage matters more than small differences.';
+    } else if(s.topic==='eras') {
+      description='Recognize sustained success without bridging missing years.';
+      body=table(['Manager','Window','Achievement','Evidence'],[{cells:[names[0],'2023–2025','2 championships','3 / 3 seasons']},{cells:[names[3],'2023–2025','71% regular wins','Complete window']}],s)+'<details class="fr-explain"><summary class="cursor-interaction">'+icon('sliders-horizontal')+' Era thresholds</summary><p>Default window: 3 seasons. Title threshold: 2. Sustained regular win rate: 70%. Adjustable thresholds would live here, beside this view.</p></details>';
+      method='Full calendar windows require complete supporting evidence. Missing seasons never bridge an era. Examples here are illustrative.';
+    } else if(s.topic==='records') {
+      description='A single record book with categories, instead of several stacked tables.';
+      body='<div class="fr-localpicker">'+['Closest games','Blowouts','Combined scoring','Individual scores','Worst beats'].map((n,i)=>'<button data-record="'+i+'" aria-pressed="'+(i===0)+'" class="cursor-interaction">'+n+'</button>').join('')+'</div><div data-recordtable>'+recordTable(s,0)+'</div>';
+      method='Scores stay in their original scoring system. Worst beats are losses with a top-quarter weekly score and complete roster scoring coverage. Aggregate playoff series are labeled separately.';
+    } else if(s.topic==='pain') {
+      description='Painful losses ranked together only when their evidence is comparable.';
+      body='<div class="fr-notice">Coverage cohort: scoring + margin. No archived pre-Monday forecast in this sample.</div>'+table(['Manager','Week','Score','Margin','Pain index'],[{cells:[names[1],'2025 · W8','141.2','−0.4','94.2']},{cells:[names[4],'2024 · W11','138.6','−1.1','91.7']},{cells:[names[0],'2023 · W6','129.4','−0.8','88.5']}],s);
+      method='A playful descriptive index combines closeness, own scoring percentile, opponent percentile, and archived expectation when available. Missing components are excluded and remaining weights are renormalized.';
+    } else if(s.topic==='stories') {
+      description='Explore one kind of story at a time. Evidence stays close to each claim.';
+      body='<div class="fr-localpicker">'+['Monday miracles','Trade impact','Trade network','Lineup regrets','Dropped breakouts','Draft skill','Probability replay'].map((n,i)=>'<button data-story="'+n+'" aria-pressed="'+(i===0)+'" class="cursor-interaction">'+n+'</button>').join('')+'</div><div data-storycontent><div class="fr-notice">Monday miracles unavailable for these seasons: no archived pre-Monday probability snapshots.</div><p class="fr-muted fr-small">Choose another story category to explore the sample.</p></div>';
+      method='Final scores cannot reconstruct live win probability. Story availability follows source coverage; unsupported claims stay unavailable.';
+    } else if(s.topic==='profiles') {
+      description=names[s.manager]+' beyond the win–loss record.';
+      body='<div class="fr-localpicker">'+['Activity','Player impact','Player loyalty','Draft overlap','Archetypes','Season Wrapped'].map((n,i)=>'<button data-profile="'+n+'" aria-pressed="'+(i===0)+'" class="cursor-interaction">'+n+'</button>').join('')+'</div><div data-profilecontent>'+table(['Season','Pickups','Drops','Trades','Coverage'],s.years.map((y,i)=>({cells:[y,28+i*6,24+i*5,2+i,'Complete']})),s)+'</div>';
+      method='Activity labels require complete coverage. Managers follow provider identity across renames. Profiles are descriptive, with source coverage shown for each component.';
+    }
+    return '<div class="fr-sectionhead"><div><h2>'+title+'</h2><p>'+description+'</p></div></div>'+body+'<details class="fr-explain"><summary class="cursor-interaction">'+icon('info')+' Definitions & data coverage</summary><p>'+method+'</p></details>';
+  }
+  function recordTable(s,index) {
+    const sample=games.filter(g=>s.years.includes(g.year));
+    sample.sort((a,b)=>index===0?Math.abs(a.sa-a.sb)-Math.abs(b.sa-b.sb):index===1?Math.abs(b.sa-b.sb)-Math.abs(a.sa-a.sb):index===2?b.sa+b.sb-a.sa-a.sb:Math.max(b.sa,b.sb)-Math.max(a.sa,a.sb));
+    return table(['Matchup','Season / week','Scores',index===2?'Combined':'Margin'],sample.slice(0,5).map(g=>({cells:[short(g.a)+' vs. '+short(g.b),g.year+' / W'+g.week,num(g.sa)+' – '+num(g.sb),num(index===2?g.sa+g.sb:Math.abs(g.sa-g.sb))]})),s);
+  }
+  function library() {
+    return '<details class="fr-browse"><summary class="cursor-interaction"><span>Browse the whole league archive <span class="fr-muted fr-small">· ratings, records, eras, and more</span></span>'+icon('chevron-down')+'</summary><div class="fr-library">'+topics.map(t=>'<button data-topic="'+t[1]+'" class="cursor-interaction"><span>'+t[0]+'<small>'+t[3]+'</small></span>'+icon('arrow-up-right')+'</button>').join('')+'</div></details>';
+  }
+  function refreshIcons(){if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:15,height:15}});}
+  function render(s) {
+    if(s.selection===s.manager)s.selection=(s.manager+1)%names.length;
+    if(s.mode==='topic') {
+      s.el.innerHTML=head(s)+'<div class="fr-layout">'+sidebar(s)+'<main class="fr-content"><div data-panel>'+panel(s)+'</div><div class="fr-evidence" data-evidence hidden></div></main></div><div class="fr-bottom"><span>One topic at a time · manager and seasons carry across views</span><span>Design concept · sample data</span></div>';
+    } else {
+      const row=standings(s).find(r=>r.id===s.manager);
+      const group=['h2h','schedule','elo','playoffs'].includes(s.topic)?'competition':s.topic==='seasons'?'seasons':s.topic==='stories'?'stories':s.topic==='profiles'?'profiles':'league';
+      s.el.innerHTML=head(s)+'<div class="fr-manager-band"><div class="fr-kicker">Explore a manager</div><div class="fr-managers">'+names.map((n,i)=>'<button class="fr-manager cursor-interaction" data-pickmanager="'+i+'" aria-pressed="'+(i===s.manager)+'"><span class="fr-avatar">'+initials(i)+'</span>'+short(i)+'</button>').join('')+'</div></div><div class="fr-dossier"><div class="fr-profilehead"><div class="fr-profileidentity"><span class="fr-avatar">'+initials(s.manager)+'</span><div><h2>'+names[s.manager]+'</h2><p>'+s.years.length+' seasons selected · manager history</p></div></div><div class="fr-profilestats"><div><span>Record</span><strong>'+row.w+'–'+row.l+'</strong></div><div><span>Win rate</span><strong>'+num(row.rate*100)+'%</strong></div><div><span>Games</span><strong>'+row.n+'</strong></div></div></div><div class="fr-viewtabs fr-dossiertabs">'+[['Competition','h2h','competition'],['Season history','seasons','seasons'],['Matchup stories','stories','stories'],['Manager profile','profiles','profiles']].map(t=>'<button data-topic="'+t[1]+'" class="cursor-interaction" aria-pressed="'+(group===t[2])+'">'+t[0]+'</button>').join('')+'</div><div class="fr-split"><main class="fr-mainpane">'+(group==='competition'?'<div class="fr-localpicker">'+[['Rivalries','h2h'],['Schedule & luck','schedule'],['Elo','elo'],['Playoffs','playoffs']].map(t=>'<button data-topic="'+t[1]+'" class="cursor-interaction" aria-pressed="'+(t[1]===s.topic)+'">'+t[0]+'</button>').join('')+'</div>':'')+'<div data-panel>'+panel(s)+'</div></main><aside class="fr-inspector" data-inspector aria-label="Selected record details">'+evidence(s,true)+'</aside></div></div>'+library()+'<div class="fr-bottom"><span>Manager context carries across every view</span><span>Design concept · sample data</span></div>';
+    }
+    refreshIcons();
+  }
+  function save(s){if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{design:s.mode==='topic'?'Topic workspace':'Manager explorer',topic:topics.find(t=>t[1]===s.topic)[0]},privateContent:states.map(x=>({topic:x.topic,manager:x.manager,years:x.years}))}).catch(()=>{});}
+  const saved=window.openai?.widgetState?.privateContent;
+  if(Array.isArray(saved))states.forEach((s,i)=>{const x=saved[i];if(x&&topics.some(t=>t[1]===x.topic)&&Number.isInteger(x.manager)&&x.manager>=0&&x.manager<6&&Array.isArray(x.years)){s.topic=x.topic;s.manager=x.manager;s.years=x.years.filter(y=>years.includes(y));}});
+  states.forEach(s=>{
+    render(s);
+    s.el.addEventListener('click',e=>{
+      const b=e.target.closest('button');if(!b)return;
+      if(b.dataset.topic){s.topic=b.dataset.topic;s.query='';s.matrix=false;render(s);save(s);}
+      else if(b.dataset.pickmanager){s.manager=Number(b.dataset.pickmanager);render(s);save(s);}
+      else if(b.hasAttribute('data-row')){s.selection=Number(b.dataset.row);showEvidence(s);}
+      else if(b.dataset.pair){[s.manager,s.selection]=b.dataset.pair.split(',').map(Number);render(s);showEvidence(s);}
+      else if(b.hasAttribute('data-close'))s.el.querySelector('[data-evidence]').hidden=true;
+      else if(b.hasAttribute('data-sort')){s.descending=!s.descending;updatePanel(s);}
+      else if(b.hasAttribute('data-matrix')){s.matrix=b.dataset.matrix==='true';updatePanel(s);}
+      else if(b.hasAttribute('data-record')){s.el.querySelectorAll('[data-record]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));s.el.querySelector('[data-recordtable]').innerHTML=recordTable(s,Number(b.dataset.record));}
+      else if(b.dataset.honor){s.el.querySelectorAll('[data-honor]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));s.el.querySelector('[data-honortable]').innerHTML=b.dataset.honor==='fame'?table(['Manager','Honor score','Seasons'],standings(s).map((r,i)=>({cells:[r.name,78-i*8,s.years.length]})),s):table(['Record','Manager','Evidence'],[{cells:['Lowest weekly score',names[4],'2024 · W9 · 65.2 pts']},{cells:['Longest losing streak',names[2],'2023 · W4–W9 · 6 losses']},{cells:['Largest season collapse',names[1],'2025 · 71% → 29% wins']}],s);}
+      else if(b.dataset.story){s.el.querySelectorAll('[data-story]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));const label=b.dataset.story;s.el.querySelector('[data-storycontent]').innerHTML=label==='Monday miracles'||label==='Probability replay'?'<div class="fr-notice">'+label+' unavailable: no archived probability snapshots.</div>':table([label,'Manager','Season','Evidence'],[{cells:[label==='Lineup regrets'?'Bench outscored starters':label==='Draft skill'?'Value after the draft':label==='Dropped breakouts'?'Breakout after a drop':'Trade contribution',names[s.manager],'2025','Sample event · inspect in final design']},{cells:['Season comparison',names[s.manager],'2024','Source coverage: complete']}],s);}
+      else if(b.dataset.profile){s.el.querySelectorAll('[data-profile]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));s.el.querySelector('[data-profilecontent]').innerHTML=b.dataset.profile==='Activity'?table(['Season','Pickups','Drops','Trades'],s.years.map((y,i)=>({cells:[y,28+i*6,24+i*5,2+i]})),s):'<div class="fr-notice">'+b.dataset.profile+' · '+names[s.manager]+'</div><p class="fr-muted">A focused '+b.dataset.profile.toLowerCase()+' view would show its own supporting records and coverage here.</p>';}
+      refreshIcons();
+    });
+    s.el.addEventListener('change',e=>{
+      const t=e.target;
+      if(t.hasAttribute('data-year')){const y=Number(t.dataset.year);s.years=t.checked?[...s.years,y]:s.years.filter(x=>x!==y);render(s);save(s);}
+      else if(t.hasAttribute('data-topic-picker')){s.topic=t.value;s.query='';s.matrix=false;render(s);save(s);}
+      else if(t.hasAttribute('data-manager')){s.manager=Number(t.value);render(s);save(s);}
+      else if(t.hasAttribute('data-minimum')){s.minimum=Number(t.value);updatePanel(s);}
+    });
+    s.el.addEventListener('input',e=>{if(e.target.hasAttribute('data-search')){s.query=e.target.value;const start=e.target.selectionStart;updatePanel(s);const input=s.el.querySelector('[data-search]');input.focus();input.setSelectionRange(start,start);}});
+    const appearance={spacing:12};
+    if(globalThis.Tweak){const tweak=new Tweak({container:s.el,onChange:()=>s.el.style.setProperty('--fr-pad',appearance.spacing+'px')});tweak.addSlider(appearance,'spacing',{label:'Table row padding',min:8,max:18,unit:'px'});}
+  });
+  function updatePanel(s){s.el.querySelector('[data-panel]').innerHTML=panel(s);refreshIcons();}
+  function showEvidence(s){s.el.querySelectorAll('tbody tr').forEach(tr=>tr.classList.toggle('fr-selected',Number(tr.querySelector('[data-row]')?.dataset.row)===s.selection));const target=s.mode==='topic'?s.el.querySelector('[data-evidence]'):s.el.querySelector('[data-inspector]');target.hidden=false;target.innerHTML=evidence(s,s.mode==='explorer');target.setAttribute('aria-live','polite');refreshIcons();save(s);}
+  window.addEventListener('openai:set_globals',e=>{const data=e.detail?.globals?.widgetState?.privateContent;if(!Array.isArray(data))return;states.forEach((s,i)=>{const x=data[i];if(x&&topics.some(t=>t[1]===x.topic)&&Number.isInteger(x.manager)&&x.manager>=0&&x.manager<6&&Array.isArray(x.years)){const nextYears=x.years.filter(y=>years.includes(y));if(s.topic===x.topic&&s.manager===x.manager&&JSON.stringify(s.years)===JSON.stringify(nextYears))return;s.topic=x.topic;s.manager=x.manager;s.years=nextYears;render(s);}});});
+})();
+</script>
+</body></html><style>#history-designs .fr-app .fr-topbar{display:none}#history-designs .fr-app{border:0;min-height:0;border-radius:0}#history-designs .fr-app .fr-pagehead{padding-top:0}</style>

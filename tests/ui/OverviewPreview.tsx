@@ -2,6 +2,7 @@ import { WeeklyOverviewPage } from '../../src/components/WeeklyOverviewPage';
 import { ApiContext } from '../../src/auth/session';
 import type { LiveLeague, LivePlayer } from '../../src/live-matchups';
 import { playoffData } from './fixture';
+const capturedAt = new Date().toISOString();
 const players: LivePlayer[] = [
   {
     id: 'starter',
@@ -15,6 +16,7 @@ const players: LivePlayer[] = [
     availability: null,
     bye: false,
     owned: true,
+    remainingFraction: 1,
   },
   {
     id: 'bench',
@@ -27,6 +29,7 @@ const players: LivePlayer[] = [
     availability: null,
     bye: false,
     owned: true,
+    remainingFraction: 1,
   },
 ];
 const live: LiveLeague[] = ['1', '2'].map((leagueId) => ({
@@ -35,13 +38,18 @@ const live: LiveLeague[] = ['1', '2'].map((leagueId) => ({
   provider: leagueId === '1' ? 'Sleeper' : 'ESPN',
   season: 2026,
   week: 7,
-  capturedAt: '2026-10-14T12:00:00Z',
+  capturedAt,
   lineupSlots: ['RB'],
   matchups: [
     {
       id: 'game',
       home: { teamId: '1', name: 'My team', score: 8.5, players },
-      away: { teamId: '2', name: `Opponent ${leagueId}`, score: 12.5, players: [] },
+      away: {
+        teamId: '2',
+        name: `Opponent ${leagueId}`,
+        score: 12.5,
+        players: [{ ...players[0], id: 'opponent', name: 'Opponent Runner', projectedPoints: 20 }],
+      },
     },
   ],
 }));
@@ -59,7 +67,7 @@ const api = {
   ],
   waivers: {
     get: async () => ({
-      capturedAt: '2026-10-14T12:00:00Z',
+      capturedAt,
       week: 7,
       ownership: { covered: 2, expected: 2 },
       candidates: [

@@ -115,6 +115,35 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
             Clear trade
           </Button>
         </Flex>
+        <div className="trade-exchange-summary-banner" aria-label="Trade exchange summary">
+          {[0, 1].map((side) => {
+            const team = selected[side];
+            const assets = team?.players.filter((player) => send[side].includes(player.id)) ?? [];
+            const impact = result?.sides[side];
+            return (
+              <div key={side} className="trade-exchange-side">
+                <strong>
+                  {team?.name ?? `Team ${side + 1}`} sends ({assets.length})
+                </strong>
+                <p>{assets.map((player) => player.name).join(', ') || 'Select players below'}</p>
+                <p className="trade-exchange-score">
+                  {impact
+                    ? `${points(impact.before)} → ${points(impact.after)} · ${impact.difference == null ? 'Change unavailable' : `${impact.difference >= 0 ? '+' : ''}${impact.difference.toFixed(2)} pts`}`
+                    : 'Lineup impact awaiting selection / roster capacity'}
+                </p>
+                <p>
+                  Positional depth:{' '}
+                  {impact
+                    ? `${impact.beforeCoverage.map((entry) => `${entry.position} ${entry.count}`).join(', ')} → ${impact.coverage.map((entry) => `${entry.position} ${entry.count}`).join(', ')}`
+                    : 'Before / after unavailable until the exchange is valid'}
+                </p>
+              </div>
+            );
+          })}
+          <span className="trade-exchange-direction" aria-hidden="true">
+            ⇄
+          </span>
+        </div>
         {imbalance && (
           <Box borderWidth="1px" borderStyle="solid" rounded="xl" p={5} mb={5} bg="bg.subtle">
             <Heading as="h3" size="md">
@@ -207,38 +236,62 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
                 bg="bg"
                 overflow="hidden"
               >
-                <Box p={5} bg="bg.subtle">
-                  <Field.Root>
-                    <Field.Label htmlFor={`trade-team-${side}`}>Trade team {side + 1}</Field.Label>
-                    <NativeSelect.Root bg="bg">
-                      <NativeSelect.Field
-                        id={`trade-team-${side}`}
-                        value={ids[side]}
-                        onChange={(event) => {
-                          setIds((previous) =>
+                <Box className="trade-roster-heading" p={5} bg="bg.subtle">
+                  <Flex className="trade-roster-controls" align="end" wrap="wrap" gap={3}>
+                    <Field.Root>
+                      <Field.Label htmlFor={`trade-team-${side}`}>
+                        Trade team {side + 1}
+                      </Field.Label>
+                      <NativeSelect.Root bg="bg">
+                        <NativeSelect.Field
+                          id={`trade-team-${side}`}
+                          value={ids[side]}
+                          onChange={(event) => {
+                            setIds((previous) =>
+                              previous.map((value, index) =>
+                                index === side ? event.target.value : value,
+                              ),
+                            );
+                            reset();
+                            setSearch(['', '']);
+                          }}
+                        >
+                          <option value="">Choose team</option>
+                          {teams.map((option) => (
+                            <option
+                              key={option.teamId}
+                              value={option.teamId}
+                              disabled={option.teamId === ids[1 - side]}
+                            >
+                              {option.name}
+                            </option>
+                          ))}
+                        </NativeSelect.Field>
+                        <NativeSelect.Indicator />
+                      </NativeSelect.Root>
+                    </Field.Root>
+                    <Field.Root mb={3}>
+                      <Field.Label htmlFor={`trade-search-${side}`}>Find a player</Field.Label>
+                      <Input
+                        id={`trade-search-${side}`}
+                        type="search"
+                        placeholder="Search name or position"
+                        value={search[side]}
+                        onChange={(event) =>
+                          setSearch((previous) =>
                             previous.map((value, index) =>
                               index === side ? event.target.value : value,
                             ),
-                          );
-                          reset();
-                          setSearch(['', '']);
-                        }}
-                      >
-                        <option value="">Choose team</option>
-                        {teams.map((option) => (
-                          <option
-                            key={option.teamId}
-                            value={option.teamId}
-                            disabled={option.teamId === ids[1 - side]}
-                          >
-                            {option.name}
-                          </option>
-                        ))}
-                      </NativeSelect.Field>
-                      <NativeSelect.Indicator />
-                    </NativeSelect.Root>
-                  </Field.Root>
-                  <Box mt={4} aria-label={`${team?.name ?? `Team ${side + 1}`} exchange`}>
+                          )
+                        }
+                      />
+                    </Field.Root>
+                  </Flex>
+                  <Box
+                    className="trade-team-exchange"
+                    mt={4}
+                    aria-label={`${team?.name ?? `Team ${side + 1}`} exchange`}
+                  >
                     <Text fontWeight="semibold" fontSize="sm">
                       Sending · {send[side].length} selected
                     </Text>
@@ -277,110 +330,18 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
                         : 'Choose players on the other team.'}
                     </Text>
                   </Box>
+                  {impact?.notices.map((notice) => (
+                    <Text fontSize="sm" mt={2} key={notice}>
+                      {notice}
+                    </Text>
+                  ))}
                 </Box>
                 <Box
+                  className="trade-roster-picker"
                   p={5}
                   borderTopWidth="1px"
                   borderTopStyle="solid"
-                  bg={impact ? 'indigo.subtle' : 'bg'}
-                  aria-label={`${team?.name ?? `Team ${side + 1}`} lineup impact`}
                 >
-                  <Text fontWeight="semibold" fontSize="sm">
-                    Week {league.week} lineup impact{' '}
-                    <InfoTooltip label="Trade lineup calculation">
-                      Both teams use the best legal current-week lineup with the same projection
-                      snapshot. This hypothetical comparison ignores game locks; check provider
-                      trade eligibility before acting.
-                    </InfoTooltip>
-                  </Text>
-                  {impact ? (
-                    <>
-                      <Flex align="baseline" gap={2} mt={1}>
-                        <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
-                          {impact.difference === null
-                            ? 'Unavailable'
-                            : `${impact.difference >= 0 ? '+' : ''}${impact.difference.toFixed(2)}`}
-                        </Text>
-                        <Text fontSize="sm" color="fg.muted">
-                          projected points
-                        </Text>
-                      </Flex>
-                      <Text fontSize="sm">
-                        Before: {points(impact.before)} → After: {points(impact.after)}
-                      </Text>
-                      <Text fontSize="sm" color="fg.muted" mt={2}>
-                        Active roster: {impact.rosterSize} (before {roster.length})
-                      </Text>
-                      <Text fontSize="sm" color="fg.muted" mt={2}>
-                        Position coverage before:{' '}
-                        {impact.beforeCoverage
-                          .map((entry) => `${entry.position} ${entry.count}`)
-                          .join(' · ')}
-                      </Text>
-                      <Text fontSize="sm" color="fg.muted">
-                        Position coverage after:{' '}
-                        {impact.coverage
-                          .map((entry) => `${entry.position} ${entry.count}`)
-                          .join(' · ')}
-                      </Text>
-                      <details className="decision-explorer-lineup-evidence">
-                        <summary>Before and after starting lineups</summary>
-                        {[
-                          { label: 'Before', evidence: beforeLineup },
-                          { label: 'After', evidence: afterLineup },
-                        ].map(({ label, evidence }) => {
-                          return (
-                            <div key={label}>
-                              <strong>{label}</strong>
-                              {evidence?.reason && <Text>{evidence.reason}</Text>}
-                              {evidence?.assignment.map(({ slot, player }, index) => (
-                                <Text fontSize="sm" key={`${slot}:${index}`}>
-                                  {slot}:{' '}
-                                  <PlayerProfileLink
-                                    leagueId={league.leagueId}
-                                    year={league.season}
-                                    playerId={player.id}
-                                  >
-                                    {player.name}
-                                  </PlayerProfileLink>{' '}
-                                  · {points(player.projectedPoints)}
-                                </Text>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </details>
-                      {impact.notices.map((notice) => (
-                        <Text fontSize="sm" mt={2} key={notice}>
-                          {notice}
-                        </Text>
-                      ))}
-                    </>
-                  ) : (
-                    <Text fontSize="sm" color="fg.muted" mt={2}>
-                      {ready
-                        ? 'Confirm roster space above to see the impact.'
-                        : 'Select at least one player from each team to compare.'}
-                    </Text>
-                  )}
-                </Box>
-                <Box p={5} borderTopWidth="1px" borderTopStyle="solid">
-                  <Field.Root mb={3}>
-                    <Field.Label htmlFor={`trade-search-${side}`}>Find a player</Field.Label>
-                    <Input
-                      id={`trade-search-${side}`}
-                      type="search"
-                      placeholder="Search name or position"
-                      value={search[side]}
-                      onChange={(event) =>
-                        setSearch((previous) =>
-                          previous.map((value, index) =>
-                            index === side ? event.target.value : value,
-                          ),
-                        )
-                      }
-                    />
-                  </Field.Root>
                   <Flex
                     justify="space-between"
                     fontSize="xs"
@@ -478,6 +439,88 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
                     )}
                   </Box>
                 </Box>
+                <Box
+                  className="trade-lineup-detail"
+                  p={5}
+                  borderTopWidth="1px"
+                  borderTopStyle="solid"
+                  bg={impact ? 'indigo.subtle' : 'bg'}
+                  aria-label={`${team?.name ?? `Team ${side + 1}`} lineup impact`}
+                >
+                  <Text fontWeight="semibold" fontSize="sm">
+                    Week {league.week} lineup impact{' '}
+                    <InfoTooltip label="Trade lineup calculation">
+                      Both teams use the best legal current-week lineup with the same projection
+                      snapshot. This hypothetical comparison ignores game locks; check provider
+                      trade eligibility before acting.
+                    </InfoTooltip>
+                  </Text>
+                  {impact ? (
+                    <>
+                      <Flex align="baseline" gap={2} mt={1}>
+                        <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
+                          {impact.difference === null
+                            ? 'Unavailable'
+                            : `${impact.difference >= 0 ? '+' : ''}${impact.difference.toFixed(2)}`}
+                        </Text>
+                        <Text fontSize="sm" color="fg.muted">
+                          projected points
+                        </Text>
+                      </Flex>
+                      <Text fontSize="sm">
+                        Before: {points(impact.before)} → After: {points(impact.after)}
+                      </Text>
+                      <Text fontSize="sm" color="fg.muted" mt={2}>
+                        Active roster: {impact.rosterSize} (before {roster.length})
+                      </Text>
+                      <Text fontSize="sm" color="fg.muted" mt={2}>
+                        Position coverage before:{' '}
+                        {impact.beforeCoverage
+                          .map((entry) => `${entry.position} ${entry.count}`)
+                          .join(' · ')}
+                      </Text>
+                      <Text fontSize="sm" color="fg.muted">
+                        Position coverage after:{' '}
+                        {impact.coverage
+                          .map((entry) => `${entry.position} ${entry.count}`)
+                          .join(' · ')}
+                      </Text>
+                      <details className="decision-explorer-lineup-evidence">
+                        <summary>Before and after starting lineups</summary>
+                        {[
+                          { label: 'Before', evidence: beforeLineup },
+                          { label: 'After', evidence: afterLineup },
+                        ].map(({ label, evidence }) => {
+                          return (
+                            <div key={label}>
+                              <strong>{label}</strong>
+                              {evidence?.reason && <Text>{evidence.reason}</Text>}
+                              {evidence?.assignment.map(({ slot, player }, index) => (
+                                <Text fontSize="sm" key={`${slot}:${index}`}>
+                                  {slot}:{' '}
+                                  <PlayerProfileLink
+                                    leagueId={league.leagueId}
+                                    year={league.season}
+                                    playerId={player.id}
+                                  >
+                                    {player.name}
+                                  </PlayerProfileLink>{' '}
+                                  · {points(player.projectedPoints)}
+                                </Text>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </details>
+                    </>
+                  ) : (
+                    <Text fontSize="sm" color="fg.muted" mt={2}>
+                      {ready
+                        ? 'Confirm roster space above to see the impact.'
+                        : 'Select at least one player from each team to compare.'}
+                    </Text>
+                  )}
+                </Box>
               </Box>
             );
           })}
@@ -509,14 +552,39 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
     </Box>
   );
 }
-export function TradeAnalyzerPage({ search = {} }: { search?: StudioSearch }) {
+export function TradeAnalyzerPage({
+  search = {},
+  onContextChange,
+}: {
+  search?: StudioSearch;
+  onContextChange?: (context: { leagueId: string; year: number }) => void;
+}) {
   const api = useApi();
-  return <TradeWorkspace key={api.subject} api={api} search={search} />;
+  return (
+    <TradeWorkspace key={api.subject} api={api} search={search} onContextChange={onContextChange} />
+  );
 }
 
-function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; search: StudioSearch }) {
+function TradeWorkspace({
+  api,
+  search,
+  onContextChange,
+}: {
+  api: ReturnType<typeof useApi>;
+  search: StudioSearch;
+  onContextChange?: (context: { leagueId: string; year: number }) => void;
+}) {
   const [loaded, setLoaded] = useState<{ api: typeof api; leagues: League[] }>();
   const [scope, setScope] = useState<{ leagueId: string; year: number }>();
+  useEffect(() => {
+    if (!search.leagueId || !search.year) return;
+    // Restore explicit route scope while keeping refreshes in the current workspace.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setScope({ leagueId: search.leagueId, year: search.year });
+  }, [search.leagueId, search.year]);
+  useEffect(() => {
+    if (scope && (!search.leagueId || !search.year)) onContextChange?.(scope);
+  }, [scope, search.leagueId, search.year, onContextChange]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [retry, setRetry] = useState(0);
@@ -616,6 +684,64 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
   return (
     <Box className="decision-explorer decision-explorer-trades" maxW="1400px" mx="auto">
       <PageHeading
+        controls={
+          leagues.length > 0 && (
+            <Flex className="decision-command-context" align="end" wrap="wrap" gap={4} minW={0}>
+              <Field.Root maxW="260px">
+                <Field.Label htmlFor="trade-league">Trade league</Field.Label>
+                <NativeSelect.Root bg="bg">
+                  <NativeSelect.Field
+                    id="trade-league"
+                    value={scope?.leagueId ?? ''}
+                    onChange={(event) => {
+                      const league = leagues.find((entry) => entry.leagueId === event.target.value);
+                      if (league) {
+                        const next = { leagueId: league.leagueId, year: league.seasonId };
+                        setScope(next);
+                        onContextChange?.(next);
+                      }
+                    }}
+                  >
+                    {leagues.map((league) => (
+                      <option key={league.leagueId} value={league.leagueId}>
+                        {league.leagueName}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              <Field.Root maxW="110px">
+                <Field.Label htmlFor="trade-season">Trade season</Field.Label>
+                <NativeSelect.Root bg="bg">
+                  <NativeSelect.Field
+                    id="trade-season"
+                    value={scope?.year ?? ''}
+                    onChange={(event) => {
+                      if (scope) {
+                        const next = { ...scope, year: Number(event.target.value) };
+                        setScope(next);
+                        onContextChange?.(next);
+                      }
+                    }}
+                  >
+                    {Array.from({ length: 101 }, (_, index) => 2100 - index).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              {selected && (
+                <Text fontSize="sm" color="fg.muted" pb={2}>
+                  {selected.provider} · {selected.season} · Week {selected.week}
+                </Text>
+              )}
+            </Flex>
+          )
+        }
         title="Trade analyzer"
         description="See how a player exchange changes both teams’ weekly lineups."
       >
@@ -625,63 +751,7 @@ function TradeWorkspace({ api, search }: { api: ReturnType<typeof useApi>; searc
       </PageHeading>
       {busy && <LoadingSkeleton label="Loading rosters…" />}
       {error && <Text role="alert">{error}</Text>}
-      {leagues.length > 0 && (
-        <Flex
-          className="decision-explorer-context"
-          align="end"
-          wrap="wrap"
-          gap={4}
-          mb={6}
-          p={4}
-          bg="bg.subtle"
-          rounded="lg"
-        >
-          <Field.Root maxW="400px">
-            <Field.Label htmlFor="trade-league">Trade league</Field.Label>
-            <NativeSelect.Root bg="bg">
-              <NativeSelect.Field
-                id="trade-league"
-                value={scope?.leagueId ?? ''}
-                onChange={(event) => {
-                  const league = leagues.find((entry) => entry.leagueId === event.target.value);
-                  if (league) setScope({ leagueId: league.leagueId, year: league.seasonId });
-                }}
-              >
-                {leagues.map((league) => (
-                  <option key={league.leagueId} value={league.leagueId}>
-                    {league.leagueName}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          <Field.Root maxW="160px">
-            <Field.Label htmlFor="trade-season">Trade season</Field.Label>
-            <NativeSelect.Root bg="bg">
-              <NativeSelect.Field
-                id="trade-season"
-                value={scope?.year ?? ''}
-                onChange={(event) => {
-                  if (scope) setScope({ ...scope, year: Number(event.target.value) });
-                }}
-              >
-                {Array.from({ length: 101 }, (_, index) => 2100 - index).map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-          {selected && (
-            <Text fontSize="sm" color="fg.muted" pb={2}>
-              {selected.provider} · {selected.season} · Week {selected.week}
-            </Text>
-          )}
-        </Flex>
-      )}
+
       {!busy &&
         (selected?.error ? (
           <Text as="output">{selected.error}</Text>

@@ -213,7 +213,9 @@ function CompactMatchup({
   selected,
   disabled,
   onToggle,
+  managedTeamId,
 }: {
+  managedTeamId?: string;
   matchup: LiveMatchup;
   selected: boolean;
   disabled: boolean;
@@ -241,6 +243,7 @@ function CompactMatchup({
     >
       <Flex className="compact-matchup-line" align="center" gap={1} minW={0}>
         <Text className="compact-home-name" truncate flex="1" minW={0}>
+          {managedTeamId === matchup.home.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.home.name}
         </Text>
         <Text className="compact-home-score" flexShrink={0}>
@@ -257,6 +260,7 @@ function CompactMatchup({
           {score(matchup.away?.score ?? null)}
         </Text>
         <Text className="compact-away-name" truncate flex="1" minW={0} textAlign="right">
+          {managedTeamId === matchup.away?.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.away?.name || 'Bye'}
         </Text>
       </Flex>
@@ -264,7 +268,11 @@ function CompactMatchup({
   );
 }
 
-export function LiveMatchupsPage() {
+export function LiveMatchupsPage({
+  search = {},
+}: {
+  search?: { leagueId?: string; year?: number };
+}) {
   const api = useApi();
   const [leagues, setLeagues] = useState<LiveLeague[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -273,7 +281,9 @@ export function LiveMatchupsPage() {
   const [error, setError] = useState('');
   const [updated, setUpdated] = useState<Date>();
   const [retry, setRetry] = useState(0);
-  const [leagueFilter, setLeagueFilter] = useState('');
+  const [leagueFilter, setLeagueFilter] = useState(search.leagueId ?? '');
+  const [managedTeamIds, setManagedTeamIds] = useState<Record<string, string>>({});
+  const [contextNotice, setContextNotice] = useState('');
   const defaults = useRef({ api, initialized: false });
 
   useEffect(() => {
@@ -281,7 +291,9 @@ export function LiveMatchupsPage() {
       defaults.current = { api, initialized: false };
       setSelected([]);
       setLeagues([]);
-      setLeagueFilter('');
+      setLeagueFilter(search.leagueId ?? '');
+      setManagedTeamIds({});
+      setContextNotice('');
       setLoading(true);
     }
     let active = true;
@@ -294,11 +306,24 @@ export function LiveMatchupsPage() {
         const next = await api.getLiveMatchups(retry > 0);
         if (!active) return;
         setLeagues(next);
+        const requested = next.find(
+          (league) =>
+            league.leagueId === search.leagueId && (!search.year || league.season === search.year),
+        );
+        if (!defaults.current.initialized && search.leagueId && !requested) {
+          setLeagueFilter('');
+          setContextNotice(
+            'The requested league/season has no current Live snapshot. Showing available current leagues.',
+          );
+        }
+        const defaultLeagues = requested
+          ? [requested, ...next.filter((league) => league !== requested)].slice(0, 4)
+          : next.slice(0, 4);
         const managedTeams = api.managedTeam;
         const initialKeys =
           !defaults.current.initialized && managedTeams
             ? await Promise.all(
-                next.slice(0, 4).map(async (league) => {
+                defaultLeagues.map(async (league) => {
                   if (league.error) return undefined;
                   try {
                     const selection = await managedTeams.get(league.leagueId, league.season);
@@ -308,7 +333,12 @@ export function LiveMatchupsPage() {
                         matchup.home.teamId === selection.teamId ||
                         matchup.away?.teamId === selection.teamId,
                     );
-                    return matchup ? matchupKey(league.leagueId, matchup.id) : undefined;
+                    if (!matchup) return undefined;
+                    return {
+                      key: matchupKey(league.leagueId, matchup.id),
+                      leagueId: league.leagueId,
+                      teamId: selection.teamId,
+                    };
                   } catch {
                     // Scores and manual selection remain usable when a saved team cannot be read.
                     return undefined;
@@ -317,9 +347,15 @@ export function LiveMatchupsPage() {
               )
             : [];
         if (!active) return;
+        if (initialKeys.length)
+          setManagedTeamIds(
+            Object.fromEntries(
+              initialKeys.flatMap((entry) => (entry ? [[entry.leagueId, entry.teamId]] : [])),
+            ),
+          );
         if (!defaults.current.initialized) {
           defaults.current.initialized = true;
-          setSelected(initialKeys.filter((key): key is string => key !== undefined));
+          setSelected(initialKeys.flatMap((entry) => (entry ? [entry.key] : [])));
         } else {
           setSelected((previous) =>
             previous.filter((key) =>
@@ -349,7 +385,7 @@ export function LiveMatchupsPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [api, retry]);
+  }, [api, retry, search.leagueId, search.year]);
 
   const highlighted = selected.flatMap((key) =>
     leagues.flatMap((league) =>
@@ -415,6 +451,11 @@ export function LiveMatchupsPage() {
                 ? `Updated ${updated.toLocaleTimeString()}. Refreshes every minute.`
                 : ''}
           </Text>
+          {contextNotice && (
+            <Text as="output" fontSize="xs">
+              {contextNotice}
+            </Text>
+          )}
           {error && (
             <Box role="alert" className="notice error">
               {error}
@@ -443,6 +484,7 @@ export function LiveMatchupsPage() {
                         <CompactMatchup
                           key={key}
                           matchup={matchup}
+                          managedTeamId={managedTeamIds[league.leagueId]}
                           selected={selected.includes(key)}
                           disabled={selected.length >= 4 && !selected.includes(key)}
                           onToggle={() => toggle(key)}

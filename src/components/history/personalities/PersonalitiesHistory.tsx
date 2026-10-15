@@ -1,3 +1,4 @@
+import { RecordEvidence, RecordEvidenceLayout } from '../RecordEvidence';
 import { Wrapped } from './Wrapped';
 import { Archetypes } from './Archetypes';
 import { DraftOverlap } from './DraftOverlap';
@@ -76,52 +77,83 @@ export function PersonalitiesHistory({
         ))}
       </nav>
       <div id={`${viewId}-activity`} className="history-explorer-view" hidden={view !== 'activity'}>
-        <details open>
-          <summary>Transaction activity</summary>
-          <p>
-            Activity coverage: {records.length}/{years.length} selected seasons. Waiver claims are
-            unsupported when providers do not distinguish them from free-agent pickups.
-          </p>
-          <label>
-            <input type="checkbox" checked={labels} onChange={(e) => setLabels(e.target.checked)} />{' '}
-            Show playful activity labels
-          </label>
-          {labels && (
+        <RecordEvidenceLayout
+          evidence={
+            <RecordEvidence
+              records={records}
+              scope={manager}
+              entries={activity.map((row) => ({
+                id: `${row.year}:${row.key}`,
+                year: row.year,
+                title: `${row.manager} · ${row.year} activity`,
+                detail: (
+                  <>
+                    <p>
+                      {row.pickups ?? 'Unsupported'} pickups, {row.drops ?? 'unsupported'} drops and{' '}
+                      {row.trades ?? 'unsupported'} trades.
+                    </p>
+                    <p>
+                      Provider coverage: {row.coverage}. Waiver claims are unsupported when the
+                      provider does not distinguish them.
+                    </p>
+                  </>
+                ),
+              }))}
+              empty="No transaction activity for this manager in the selected seasons. Missing provider categories remain unsupported."
+            />
+          }
+        >
+          <details open>
+            <summary>Transaction activity</summary>
             <p>
-              Tinkerer: at least two pickups plus drops per covered week. Steady hand: fewer than
-              two. Requires complete coverage and at least four weeks.
+              Activity coverage: {records.length}/{years.length} selected seasons. Waiver claims are
+              unsupported when providers do not distinguish them from free-agent pickups.
             </p>
-          )}
-          <div style={{ overflowX: 'auto' }}>
-            <table>
-              <caption>Transactions per manager and season</caption>
-              <thead>
-                <tr>
-                  <th>Season</th>
-                  <th>Manager</th>
-                  <th>Pickups</th>
-                  <th>Drops</th>
-                  <th>Trades</th>
-                  <th>Coverage</th>
-                  {labels && <th>Activity</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {activity.map((row) => (
-                  <tr key={`${row.year}:${row.key}`}>
-                    <td>{row.year}</td>
-                    <th scope="row">{row.manager}</th>
-                    <td>{row.pickups ?? 'Unsupported'}</td>
-                    <td>{row.drops ?? 'Unsupported'}</td>
-                    <td>{row.trades ?? 'Unsupported'}</td>
-                    <td>{row.coverage}</td>
-                    {labels && <td>{row.label || 'Insufficient evidence'}</td>}
+            <label>
+              <input
+                type="checkbox"
+                checked={labels}
+                onChange={(e) => setLabels(e.target.checked)}
+              />{' '}
+              Show playful activity labels
+            </label>
+            {labels && (
+              <p>
+                Tinkerer: at least two pickups plus drops per covered week. Steady hand: fewer than
+                two. Requires complete coverage and at least four weeks.
+              </p>
+            )}
+            <div style={{ overflowX: 'auto' }}>
+              <table>
+                <caption>Transactions per manager and season</caption>
+                <thead>
+                  <tr>
+                    <th>Season</th>
+                    <th>Manager</th>
+                    <th>Pickups</th>
+                    <th>Drops</th>
+                    <th>Trades</th>
+                    <th>Coverage</th>
+                    {labels && <th>Activity</th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+                </thead>
+                <tbody>
+                  {activity.map((row) => (
+                    <tr key={`${row.year}:${row.key}`}>
+                      <td>{row.year}</td>
+                      <th scope="row">{row.manager}</th>
+                      <td>{row.pickups ?? 'Unsupported'}</td>
+                      <td>{row.drops ?? 'Unsupported'}</td>
+                      <td>{row.trades ?? 'Unsupported'}</td>
+                      <td>{row.coverage}</td>
+                      {labels && <td>{row.label || 'Insufficient evidence'}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </RecordEvidenceLayout>
         {!activity.length && (
           <p>No transaction activity available for this manager in the selected seasons.</p>
         )}

@@ -1,9 +1,7 @@
-import { Box, Button, Heading, Link, Stack, Text } from '@chakra-ui/react';
+import { Box, Button, Heading, Stack, Text } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { WritingApi, WritingProviderOption } from '../writing';
-
-export const codexSetupUrl =
-  'https://github.com/ryantrappy/react_refactor_fantasy_website/blob/improvement_batch/README.md#sign-in-to-codex-in-docker-with-your-chatgpt-account';
+import { CodexSetupGuide } from './CodexSetupGuide';
 
 export function CodexAccountSettings({
   api,
@@ -71,9 +69,7 @@ export function CodexAccountSettings({
             ? 'Your saved OpenAI key takes precedence. Use Remove OpenAI API key (Codex) below to use the server login instead.'
             : 'With no saved OpenAI key, Codex uses the enabled server login. For ChatGPT OAuth, the operator should confirm “Logged in using ChatGPT” during setup.'}
         </Text>
-        <Link href={codexSetupUrl} target="_blank" rel="noopener noreferrer">
-          Docker Codex OAuth setup instructions
-        </Link>
+        <CodexSetupGuide />
         {api && (
           <Button
             variant="outline"

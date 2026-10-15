@@ -8,12 +8,17 @@ export function WaiverAdvisor({
   api,
   leagueId,
   year,
+  loadedPool,
+  onPoolChange,
 }: {
   api: NonNullable<LeagueApi['waivers']>;
   leagueId: string;
   year: number;
+  loadedPool?: WaiverPool;
+  onPoolChange?: (pool: WaiverPool | undefined) => void;
 }) {
-  const [pool, setPool] = useState<WaiverPool>();
+  const [localPool, setPool] = useState<WaiverPool>();
+  const pool = loadedPool ?? localPool;
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [position, setPosition] = useState(''),
@@ -29,11 +34,14 @@ export function WaiverAdvisor({
           setBusy(true);
           setError('');
           try {
-            setPool(await api.get(leagueId, year));
+            const next = await api.get(leagueId, year);
+            setPool(next);
+            onPoolChange?.(next);
             setCandidateId('');
             setDropId('');
           } catch {
             setPool(undefined);
+            onPoolChange?.(undefined);
             setError('Available-player data could not refresh. Try again.');
           } finally {
             setBusy(false);

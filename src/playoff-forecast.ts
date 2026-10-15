@@ -27,6 +27,10 @@ export interface PlayoffForecast {
     playoff: number;
     bye: number;
     advance: number[];
+    // Exact counts from the same trials. Optional for compatibility with saved forecasts.
+    winDistribution?: { wins: number; count: number }[];
+    // Seed 0 means did not qualify; remaining bins are configured playoff seeds.
+    seedDistribution?: { seed: number; count: number }[];
   }[];
   projection: {
     used: boolean;
@@ -241,6 +245,8 @@ function* simulatePlayoffs(
     bye: 0,
     advance: rounds.map(() => 0),
   }));
+  const winCounts = teams.map(() => new Map<number, number>());
+  const seedCounts = teams.map(() => Array.from({ length: size + 1 }, () => 0));
   const shuffle = (list: number[]) => {
     for (let i = list.length - 1; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
@@ -276,7 +282,11 @@ function* simulatePlayoffs(
         h2h[b][a] += 1 - result;
       }
     }
-    w.forEach((wins, i) => (counts[i].projectedWins += wins));
+    w.forEach((wins, i) => {
+      counts[i].projectedWins += wins;
+      winCounts[i].set(wins, (winCounts[i].get(wins) ?? 0) + 1);
+      seedCounts[i][0]++;
+    });
     const tie = teams.map(() => random());
     const seeds = seedPlayoffTeams(
       teams.map((t) => t.teamId),
@@ -285,7 +295,11 @@ function* simulatePlayoffs(
       settings.rules,
       tie,
     );
-    seeds.forEach((i) => counts[i].playoff++);
+    seeds.forEach((i, index) => {
+      counts[i].playoff++;
+      seedCounts[i][0]--;
+      seedCounts[i][index + 1]++;
+    });
     let playoffRound = 0;
     const game = (a: number, b: number) => {
       const weeks = settings.rules?.roundWeeks[playoffRound] ?? [
@@ -348,12 +362,16 @@ function* simulatePlayoffs(
       scoreModel === 'historical' ? validateHistoricalForecast(data, throughWeek) : undefined,
     rounds,
     projection,
-    rows: counts.map((r) => ({
+    rows: counts.map((r, index) => ({
       ...r,
       projectedWins: r.projectedWins / simulations,
       playoff: r.playoff / simulations,
       bye: r.bye / simulations,
       advance: r.advance.map((n) => n / simulations),
+      winDistribution: [...winCounts[index]]
+        .sort(([a], [b]) => a - b)
+        .map(([wins, count]) => ({ wins, count })),
+      seedDistribution: seedCounts[index].map((count, seed) => ({ seed, count })),
     })),
   };
 }

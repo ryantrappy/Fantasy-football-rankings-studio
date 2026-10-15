@@ -18,7 +18,7 @@ import type {
   WritingProviderOption,
 } from '../writing';
 import { logClientError } from '../logging';
-import { codexSetupUrl } from './CodexAccountSettings';
+import { CodexSetupGuide } from './CodexSetupGuide';
 const modelSuggestions: Record<WritingProvider, string[]> = {
   codex: ['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol'],
   claude: ['sonnet', 'opus', 'haiku'],
@@ -111,6 +111,12 @@ export function WritingSuggestions({
           setError('Context-sharing preferences could not be loaded. Reload to try again.');
       },
     );
+    return () => {
+      mounted = false;
+    };
+  }, [api]);
+  useEffect(() => {
+    let mounted = true;
     void api.providers().then(
       (options) => {
         if (mounted) {
@@ -305,11 +311,7 @@ export function WritingSuggestions({
               ? 'Your saved personal key takes precedence over the server login.'
               : 'Server-managed login is configured by the operator and shares the operator’s account and quota. An optional personal key takes precedence.'}
           </Text>
-          {provider === 'codex' && (
-            <a href={codexSetupUrl} target="_blank" rel="noopener noreferrer">
-              Operator Codex setup instructions
-            </a>
-          )}
+          {provider === 'codex' && <CodexSetupGuide />}
           <Button
             type="button"
             variant="outline"

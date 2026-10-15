@@ -28,8 +28,8 @@ export const system = createSystem(
           variants: {
             variant: {
               outline: { borderColor: 'border' },
-              plain: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
-              ghost: { borderWidth: '1px', borderColor: 'currentColor', px: 4 },
+              plain: { borderWidth: '1px', borderColor: 'border', px: 4 },
+              ghost: { borderWidth: '1px', borderColor: 'border', px: 4 },
             },
           },
         }),
@@ -56,7 +56,7 @@ export const system = createSystem(
             error: { value: '#8f2929' },
           },
           border: {
-            DEFAULT: { value: '#71809a' },
+            DEFAULT: { value: '#dce2ee' },
             emphasized: { value: '#526078' },
             error: { value: '#8f2929' },
           },

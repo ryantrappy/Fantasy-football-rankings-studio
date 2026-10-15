@@ -43,7 +43,11 @@ it('saves an API key without rendering its value after submission', async () => 
 it('explains saved-key precedence and refreshes server readiness after removal', async () => {
   const api = {
     ...makeApi(),
-    writing: { providers: vi.fn().mockResolvedValue([{ id: 'codex', serverStatus: 'ready' }]) },
+    writing: {
+      providers: vi.fn().mockResolvedValue([{ id: 'codex', serverStatus: 'ready' }]),
+      instructions: vi.fn().mockResolvedValue({ instructions: '' }),
+      saveInstructions: vi.fn().mockImplementation((value) => Promise.resolve(value)),
+    },
   };
   vi.mocked(api.getAiCredentialStatus).mockResolvedValue({
     codexConfigured: true,
@@ -155,4 +159,69 @@ it('keeps password recovery and onboarding settings reachable when profile loadi
   expect(screen.getByRole('button', { name: 'Recover password' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'ESPN settings' }));
   expect(screen.getByRole('button', { name: 'Return from ESPN setup' })).toBeVisible();
+});
+
+it('retains personal writing drafts while switching profile views and saves them to the account', async () => {
+  const api = {
+    ...makeApi(),
+    writing: {
+      providers: vi.fn().mockResolvedValue([]),
+      instructions: vi.fn().mockResolvedValue({ instructions: 'My saved style' }),
+      saveInstructions: vi.fn().mockImplementation((value) => Promise.resolve(value)),
+    },
+  };
+  render(
+    <Provider>
+      <ProfilePage api={api} settings={<button>Existing ESPN setup</button>} />
+    </Provider>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Writing connections' }));
+  const input = await screen.findByLabelText('Writing instructions');
+  expect(input).toHaveValue('My saved style');
+  fireEvent.change(input, { target: { value: 'My unsaved style' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Profile details' }));
+  expect(input).not.toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'ESPN settings' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Writing connections' }));
+  expect(input).toHaveValue('My unsaved style');
+  expect(api.writing.instructions).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Save writing instructions' }));
+  await screen.findByText('Writing instructions saved.');
+  expect(api.writing.saveInstructions).toHaveBeenCalledWith({ instructions: 'My unsaved style' });
+});
+
+it('does not carry personal writing instructions or drafts into another account', async () => {
+  const api = {
+    ...makeApi(),
+    writing: {
+      providers: vi.fn().mockResolvedValue([]),
+      instructions: vi.fn().mockResolvedValue({ instructions: 'Private writing instructions' }),
+      saveInstructions: vi.fn().mockImplementation((value) => Promise.resolve(value)),
+    },
+  };
+  const view = render(
+    <Provider>
+      <ProfilePage api={api} initialView="connections" />
+    </Provider>,
+  );
+  fireEvent.change(await screen.findByLabelText('Writing instructions'), {
+    target: { value: 'Private unsaved draft' },
+  });
+  const next = {
+    ...makeApi(),
+    writing: {
+      providers: vi.fn().mockResolvedValue([]),
+      instructions: vi.fn().mockResolvedValue({ instructions: '' }),
+      saveInstructions: vi.fn().mockImplementation((value) => Promise.resolve(value)),
+    },
+  };
+  vi.mocked(next.getProfile).mockResolvedValue({ ...profile, userId: 'auth0|another' });
+  view.rerender(
+    <Provider>
+      <ProfilePage api={next} initialView="connections" />
+    </Provider>,
+  );
+  expect(screen.queryByDisplayValue('Private unsaved draft')).not.toBeInTheDocument();
+  expect(await screen.findByLabelText('Writing instructions')).toHaveValue('');
+  expect(next.writing.saveInstructions).not.toHaveBeenCalled();
 });

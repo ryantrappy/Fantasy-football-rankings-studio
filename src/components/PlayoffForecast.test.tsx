@@ -211,3 +211,69 @@ it('exposes seeded first-round bye odds alongside all configured rounds and titl
     expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
   expect(table.querySelectorAll('tbody tr')).toHaveLength(8);
 });
+
+it('shows real win and seed frequencies and retains the team path across table, histogram and Advanced', async () => {
+  const data = forecastData();
+  data.playoffSettings!.rules = {
+    provider: 'ESPN',
+    season: 2026,
+    tiebreakers: ['head-to-head', 'points-for'],
+    divisionWinnersFirst: false,
+    divisionByTeam: {},
+    roundWeeks: [[11, 12]],
+    reseed: true,
+  };
+  render(
+    <Provider>
+      <PlayoffForecast data={data} advanced={() => <p>Advanced evidence</p>} />
+    </Provider>,
+  );
+  const table = await screen.findByRole('table', { name: 'Playoff probabilities' });
+  fireEvent.click(within(table).getByRole('button', { name: 'Beta' }));
+  const inspector = screen.getByRole('complementary', { name: 'Selected team path' });
+  expect(within(inspector).getByRole('heading', { name: 'Beta' })).toBeVisible();
+  expect(inspector).toHaveTextContent('head-to-head record, then points scored');
+  expect(inspector).toHaveTextContent('weeks 11–12');
+  expect(inspector).toHaveTextContent('Survivors are reseeded');
+  fireEvent.click(screen.getByRole('button', { name: 'Histogram mode' }));
+  expect(screen.queryByRole('table', { name: 'Playoff probabilities' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Exact win and seed frequencies for Beta'));
+  const frequencies = screen.getByRole('table', { name: 'Beta win distribution' });
+  const counts = [...frequencies.querySelectorAll('tbody tr')].map((row) =>
+    Number(row.querySelectorAll('td')[0].textContent),
+  );
+  expect(counts.reduce((sum, count) => sum + count, 0)).toBe(20000);
+  expect(screen.getByRole('table', { name: 'Beta playoff seed distribution' })).toHaveTextContent(
+    'Did not qualify',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(inspector).toBeVisible();
+  expect(within(inspector).getByRole('heading', { name: 'Beta' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Forecast table' }));
+  expect(screen.getByRole('button', { name: 'Histogram mode' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Table view' }));
+  expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeVisible();
+});
+
+it('shows ties in the cutoff record without counting unavailable paired results as losses', async () => {
+  const data = forecastData();
+  data.scores
+    .filter((score) => score.week === 1)
+    .forEach((score) => {
+      score.actual = 100;
+    });
+  render(
+    <Provider>
+      <PlayoffForecast data={data} />
+    </Provider>,
+  );
+  await screen.findByRole('table', { name: 'Playoff probabilities' });
+  const inspector = screen.getByRole('complementary', { name: 'Selected team path' });
+  fireEvent.change(within(inspector).getByLabelText('Inspect playoff team'), {
+    target: { value: '1' },
+  });
+  expect(inspector).toHaveTextContent('3–0–1');
+});

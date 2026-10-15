@@ -1,3 +1,4 @@
+import { RecordEvidence, RecordEvidenceLayout } from '../RecordEvidence';
 import { Button, Flex } from '@chakra-ui/react';
 import { TradeContributions } from './TradeContributions';
 import { TradeNetwork } from './TradeNetwork';
@@ -119,56 +120,92 @@ export function MomentsHistory({
         className="history-explorer-view"
         hidden={view !== 'miracles' || missingManager || !data}
       >
-        <details open>
-          <summary>Monday miracles</summary>
-          <label>
-            Pre-Monday probability at most{' '}
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={threshold * 100}
-              onChange={(e) =>
-                setThreshold(Math.max(0, Math.min(100, Number(e.target.value))) / 100)
-              }
+        <RecordEvidenceLayout
+          evidence={
+            <RecordEvidence
+              records={record && data ? [{ year: season, data }] : []}
+              scope={`${season}:${manager}:${threshold}`}
+              entries={rows.map((row, index) => ({
+                id: `${row.week}:${row.teamId}:${index}`,
+                year: season,
+                title: `Week ${row.week}: ${name(row.teamId)} vs ${name(row.opponentTeamId)}`,
+                detail: (
+                  <>
+                    <p>
+                      {(row.probability * 100).toFixed(1)}% pre-Monday probability → win {row.final}
+                      .
+                    </p>
+                    <p>
+                      Source: {row.source}. Checkpoint: {row.preMondayAt}. Contributors:{' '}
+                      {row.contributors
+                        .map(
+                          (player) =>
+                            `${data?.playerIdentities?.[player.playerId]?.name || player.playerId}: ${player.points}`,
+                        )
+                        .join(', ') || 'not supplied'}
+                      .
+                    </p>
+                    <p>Archive provenance is user-supplied and must be verified by its author.</p>
+                  </>
+                ),
+              }))}
+              empty="No archived win meets the selected pre-Monday threshold for this manager and season. Missing probabilities are never inferred from final scores."
             />
-            %
-          </label>
-          <p>
-            Only supplied archives with an explicit pre-Monday checkpoint qualify. Final scores
-            never imply an earlier probability. Archive provenance is user-supplied and must be
-            verified by its author.
-          </p>
-          {!data?.matchupArchive?.length && (
-            <p>Unavailable: no in-game probability archive for this season.</p>
-          )}
-          {data?.matchupArchive?.length && !rows.length ? (
-            <p>No verified wins meet this threshold.</p>
-          ) : null}
-          <ul>
-            {rows.map((r, i) => (
-              <li key={i}>
-                Week {r.week}: {name(r.teamId)} over {name(r.opponentTeamId)},{' '}
-                {(r.probability * 100).toFixed(1)}% → win {r.final}. Source: {r.source}. Checkpoint:{' '}
-                {r.preMondayAt}. Contributors:{' '}
-                {r.contributors
-                  .map(
-                    (p) =>
-                      `${data?.playerIdentities?.[p.playerId]?.name || p.playerId}: ${p.points}`,
-                  )
-                  .join(', ') || 'Not supplied'}
-                .
-              </li>
-            ))}
-          </ul>
-        </details>
+          }
+        >
+          <details open>
+            <summary>Monday miracles</summary>
+            <label>
+              Pre-Monday probability at most{' '}
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={threshold * 100}
+                onChange={(e) =>
+                  setThreshold(Math.max(0, Math.min(100, Number(e.target.value))) / 100)
+                }
+              />
+              %
+            </label>
+            <p>
+              Only supplied archives with an explicit pre-Monday checkpoint qualify. Final scores
+              never imply an earlier probability. Archive provenance is user-supplied and must be
+              verified by its author.
+            </p>
+            {!data?.matchupArchive?.length && (
+              <p>Unavailable: no in-game probability archive for this season.</p>
+            )}
+            {data?.matchupArchive?.length && !rows.length ? (
+              <p>No verified wins meet this threshold.</p>
+            ) : null}
+            <ul>
+              {rows.map((r, i) => (
+                <li key={i}>
+                  Week {r.week}: {name(r.teamId)} over {name(r.opponentTeamId)},{' '}
+                  {(r.probability * 100).toFixed(1)}% → win {r.final}. Source: {r.source}.
+                  Checkpoint: {r.preMondayAt}. Contributors:{' '}
+                  {r.contributors
+                    .map(
+                      (p) =>
+                        `${data?.playerIdentities?.[p.playerId]?.name || p.playerId}: ${p.points}`,
+                    )
+                    .join(', ') || 'Not supplied'}
+                  .
+                </li>
+              ))}
+            </ul>
+          </details>
+        </RecordEvidenceLayout>
       </div>
       <div
         id={`${viewId}-trades`}
         className="history-explorer-view"
         hidden={view !== 'trades' || missingManager || !data}
       >
-        {visited.has('trades') && data && <TradeContributions data={data} manager={manager} open />}
+        {visited.has('trades') && data && (
+          <TradeContributions data={data} year={season} manager={manager} open />
+        )}
       </div>
       <div
         id={`${viewId}-network`}
@@ -184,14 +221,18 @@ export function MomentsHistory({
         className="history-explorer-view"
         hidden={view !== 'lineups' || missingManager || !data}
       >
-        {visited.has('lineups') && data && <LineupRegrets data={data} manager={manager} open />}
+        {visited.has('lineups') && data && (
+          <LineupRegrets data={data} year={season} manager={manager} open />
+        )}
       </div>
       <div
         id={`${viewId}-drops`}
         className="history-explorer-view"
         hidden={view !== 'drops' || missingManager || !data}
       >
-        {visited.has('drops') && data && <DroppedBreakouts data={data} manager={manager} open />}
+        {visited.has('drops') && data && (
+          <DroppedBreakouts data={data} year={season} manager={manager} open />
+        )}
       </div>
       <div
         id={`${viewId}-draft`}
@@ -207,59 +248,88 @@ export function MomentsHistory({
         className="history-explorer-view"
         hidden={view !== 'replay' || missingManager || !data}
       >
-        {visited.has('replay') && data && <ProbabilityReplay data={data} manager={manager} open />}
+        {visited.has('replay') && data && (
+          <ProbabilityReplay data={data} year={season} manager={manager} open />
+        )}
       </div>
       <div id={`${viewId}-archive`} className="history-explorer-view" hidden={view !== 'archive'}>
         {visited.has('archive') && (
-          <details open>
-            <summary>Import or export an archive</summary>
-            <p>Archive tools manage the league-wide archive for this season.</p>
-            <p>
-              Paste the documented JSON contract. Imports stay in this view until exported;
-              refreshing discards unsaved imports. No provider credentials or private notes belong
-              in this public archive.
-            </p>
-            <label>
-              Archive JSON <textarea value={json} onChange={(e) => setJson(e.target.value)} />
-            </label>
-            <Flex gap={3} wrap="wrap" mt={4}>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!data}
-                onClick={() => {
-                  try {
-                    setImports({ ...imports, [season]: importArchive(json, data!) });
-                    setError('');
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : 'Invalid archive');
-                  }
-                }}
-              >
-                Import archive
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!data?.matchupArchive}
-                onClick={() => {
-                  const url = URL.createObjectURL(
-                    new Blob([JSON.stringify(data?.matchupArchive, null, 2)], {
-                      type: 'application/json',
-                    }),
-                  );
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `${leagueId || 'league'}-${season}-archive.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                }}
-              >
-                Export archive
-              </Button>
-            </Flex>
-            {error && <p role="alert">{error}</p>}
-          </details>
+          <RecordEvidenceLayout
+            evidence={
+              <RecordEvidence
+                records={record && data ? [{ year: season, data }] : []}
+                scope={`archive:${season}`}
+                entries={(data?.matchupArchive ?? []).map((row, index) => ({
+                  id: `${row.week}:${row.teamId}:${index}`,
+                  year: season,
+                  title: `Week ${row.week}: ${name(row.teamId)} vs ${name(row.opponentTeamId)}`,
+                  detail: (
+                    <>
+                      <p>
+                        Source: {row.source}. {row.snapshots.length} supplied checkpoints.
+                      </p>
+                      <p>
+                        {row.snapshots[0]?.capturedAt || 'First checkpoint unavailable'} through{' '}
+                        {row.snapshots.at(-1)?.capturedAt || 'last checkpoint unavailable'}. Imports
+                        stay in this view until exported; provenance must be verified by the author.
+                      </p>
+                    </>
+                  ),
+                }))}
+                empty="No archive is loaded for this season. Import documented JSON to inspect its source and checkpoints."
+              />
+            }
+          >
+            <details open>
+              <summary>Import or export an archive</summary>
+              <p>Archive tools manage the league-wide archive for this season.</p>
+              <p>
+                Paste the documented JSON contract. Imports stay in this view until exported;
+                refreshing discards unsaved imports. No provider credentials or private notes belong
+                in this public archive.
+              </p>
+              <label>
+                Archive JSON <textarea value={json} onChange={(e) => setJson(e.target.value)} />
+              </label>
+              <Flex gap={3} wrap="wrap" mt={4}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!data}
+                  onClick={() => {
+                    try {
+                      setImports({ ...imports, [season]: importArchive(json, data!) });
+                      setError('');
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Invalid archive');
+                    }
+                  }}
+                >
+                  Import archive
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!data?.matchupArchive}
+                  onClick={() => {
+                    const url = URL.createObjectURL(
+                      new Blob([JSON.stringify(data?.matchupArchive, null, 2)], {
+                        type: 'application/json',
+                      }),
+                    );
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${leagueId || 'league'}-${season}-archive.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Export archive
+                </Button>
+              </Flex>
+              {error && <p role="alert">{error}</p>}
+            </details>
+          </RecordEvidenceLayout>
         )}
       </div>
     </section>

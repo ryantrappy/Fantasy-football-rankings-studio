@@ -26,10 +26,10 @@ jobs:
       - name: Use project Node version
         uses: actions/setup-node@v6
         with:
-          node-version: 22.12.0
+          node-version-file: .nvmrc
           cache: npm
       - name: Install exactly from lockfile
-        run: npm ci
+        run: npm ci --engine-strict
       - name: Check repository formatting
         run: npm run format:check
       - name: Run unit tests
@@ -53,10 +53,10 @@ jobs:
       - name: Use project Node version
         uses: actions/setup-node@v6
         with:
-          node-version: 22.12.0
+          node-version-file: .nvmrc
           cache: npm
       - name: Install exactly from lockfile
-        run: npm ci
+        run: npm ci --engine-strict
       - name: Install Playwright diagnostic runtime
         run: npx playwright install ffmpeg
       - name: Run deterministic Chrome browser checks

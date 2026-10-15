@@ -66,3 +66,9 @@ npm ls @tanstack/db @tanstack/react-router react react-dom
 Focused regressions cover real CLI output through TanStack AI, empty and bounded writing results, awaited collection writes and rejected cache validation, alongside existing cache isolation, refresh and session-disposal tests. Browser coverage checks interaction, accessibility and existing export baselines. Live ESPN checks remain separate from deterministic required checks.
 
 Integration verification: 879 unit tests passed (one optional live ESPN check skipped), with typecheck, lint, repository formatting, dependency compatibility and production build passing. The 148-scenario fresh-server browser suite initially passed 142; after resolving the new accessibility findings, all 11 Live and five heatmap accessibility regressions passed, covering every failed scenario. Canonical ranking PNG baselines and forecast responsiveness checks remained unchanged and passed.
+
+## CI runtime correction — TASK-154
+
+Actions previously pinned Node 22.12.0 while local verification ran on Node 26. The locked jsdom 30.1.3 requires Node `^22.22.2 || ^24.15.0 || >=26.0.0`, and Undici 8.12.2 requires Node `>=22.19.0`. Node 22.12 lacks `zlib.createZstdDecompress`, causing Undici to throw during import before Vitest can start jsdom workers. This failure reproduces directly with `require('undici')` under Node 22.12.
+
+Both Actions jobs now read Node 24.15.0 from `.nvmrc`, also used for local development, and install with `npm ci --engine-strict` so future incompatible upgrades fail at installation. The existing production runtime engine range remains unchanged; these additional requirements concern installed development/test tooling. Docker already uses Node 24.

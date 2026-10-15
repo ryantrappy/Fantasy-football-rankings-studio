@@ -1,7 +1,11 @@
 # Fantasy Power Rankings
 
 One React 19 / TanStack Start application serves the UI, public reports, authenticated server functions,
-Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
+Sleeper/ESPN adapters, and MongoDB persistence. The production runtime supports Node.js 22.12+.
+Development, dependency installation and tests use Node.js 24.15.0 from `.nvmrc`
+(`nvm install && nvm use`), matching the Node 24 Docker line. The jsdom test
+environment requires newer Node APIs than the production runtime minimum. CI
+reads the same file and checks dependency engines during installation.
 
 The workspace uses a shared navy, indigo and warm-accent design across navigation,
 overview, rankings, player/trade tools, reports and account settings. On narrow

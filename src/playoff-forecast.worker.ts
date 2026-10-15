@@ -1,15 +1,16 @@
-import { forecastPlayoffs } from './playoff-forecast';
+import { forecastPlayoffsCooperatively } from './playoff-forecast';
 import type { ForecastWorkerInput, ForecastWorkerResponse } from './playoff-forecast-worker-client';
 
-self.onmessage = ({ data }: MessageEvent<ForecastWorkerInput & { id: number }>) => {
+self.onmessage = async ({ data }: MessageEvent<ForecastWorkerInput & { id: number }>) => {
   let response: ForecastWorkerResponse;
   try {
     response = {
       id: data.id,
-      result: forecastPlayoffs(
+      result: await forecastPlayoffsCooperatively(
         data.data,
         data.settings,
         data.cutoff,
+        undefined,
         data.simulations,
         data.scoreModel,
       ),

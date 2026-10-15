@@ -141,12 +141,12 @@ it('executes the worker message handler with the requested cutoff and score mode
   const scope = {
     onmessage: undefined as
       | undefined
-      | ((event: { data: ForecastWorkerInput & { id: number } }) => void),
+      | ((event: { data: ForecastWorkerInput & { id: number } }) => Promise<void>),
     postMessage: vi.fn(),
   };
   vi.stubGlobal('self', scope);
   await import('./playoff-forecast.worker');
-  scope.onmessage!({
+  await scope.onmessage!({
     data: { id: 17, data, settings, cutoff: 1, simulations: 500, scoreModel: 'equal-strength' },
   });
   expect(scope.postMessage).toHaveBeenCalledWith({

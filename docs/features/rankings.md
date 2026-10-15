@@ -4,7 +4,7 @@ Read only when this area or a shared dependency is affected. Start at the [featu
 
 ## Important constraints
 
-- **Keep the original ranking download.** The visual refresh request explicitly says “Do not change the download version” (TASK-3). Publishing and compact export contracts retain the original PNG/default and all commentary (TASK-17, TASK-30). Pending theme-choice work is not permission to replace the existing export.
+- **Keep the original ranking download.** The visual refresh request explicitly says “Do not change the download version” (TASK-3). Publishing and compact export contracts retain the original PNG/default and all commentary (TASK-17, TASK-30). TASK-147 adds an explicit opt-in New theme; Classic remains the default and preserves the existing export.
 - **Preserve the writer's work.** Reloads, network failures, simultaneous editors, revision restoration, delayed publication, and league archiving must not silently lose or expose prose (TASK-15–TASK-20, TASK-83, TASK-86).
 - **Keep decision support inspectable.** Lineup, waiver, trade and player workflows must work without generated prose, disclose scoring/projection provenance, respect observed ownership, and remain read-only toward provider transactions. Writing suggestions are optional, configurable, cancellable and editable (TASK-13 and subtasks, TASK-90–TASK-95, TASK-99, TASK-110).
 
@@ -167,7 +167,7 @@ Source: [TASK-114](../../backlog/tasks/task-114%20-%20Resolve-ESPN-ranking-studi
 - Default authoring pairs the selected team with its editable take; Edit all takes retains the full inline editor. Selection does not change rank order or another team's prose.
 - The same protected draft hook, reorder sensors, manual/autosave, undo, recovery, conflicts, copy, revision and publication flows remain. Original/compact PNG rendering, stylesheet, records, trends and full commentary are unchanged.
 - Writing preserves provider/model choice, actionable operator readiness, saved/revocable provider consent and cancellation. Inspect current-roster context through the existing owner-only API; suggestions are editable and applied only by an explicit action. Account changes cannot inherit readiness/consent/evidence.
-- Verification and boundaries: [UI regression guidance](../ui-testing.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 remains separate.
+- Verification and boundaries: [UI regression guidance](../ui-testing.md), existing draft/service tests and unchanged PNG baselines, new focused authoring/model/consent/source-evidence browser regressions. TASK-147 provides a separately selected export theme.
 
 ## TASK-146 usability iteration — October 14, 2026
 
@@ -180,3 +180,12 @@ The usability iteration moves real edition actions above the list, adds completi
 - Preference-read failure releases the active request slot and supports retry. Account changes cannot inherit another writer's saved style; profile save/clear behavior is documented in the accounts contract.
 
 Source: [TASK-150](../../backlog/tasks/task-150%20-%20Save-private-writing-instructions-on-each-user-profile.md).
+
+### TASK-147 — Optional New export theme
+
+- Classic is the default for Original (1304px) and Compact (720px) PNGs, preserving existing geometry, typography, green header/rank circles, red lower-half circles, row backgrounds and movement colors. Canonical baselines remain unchanged.
+- Accessible Classic/New controls preview the chosen appearance. New uses the Manager Explorer navy, amber and pale-blue palette for both PNG sizes and the explicit publication appearance preview, retaining order, complete prose, records and trends. Public links retain their existing responsive reading layout and snapshot/revocation behavior.
+- The preference persists per authenticated account in this browser; absent/invalid preferences fall back to Classic. Account changes cannot inherit another account's choice. Storage failure leaves exports usable and discloses that the choice could not be saved.
+- Verified by export-theme browser checks at 1440px and 390px, existing Classic original/compact PNG baselines, and preference persistence/isolation/storage-failure unit tests.
+
+Source: [TASK-147](../../backlog/tasks/task-147%20-%20Allow-choosing-classic-or-new-rankings-export-theme.md).

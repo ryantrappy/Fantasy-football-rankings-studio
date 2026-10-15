@@ -2,15 +2,18 @@ import { useMemo } from 'react';
 import { DataTable } from './DataTable';
 import type { League, WeeklyRanking } from '../types';
 import { previousPosition } from '../util/rankings';
+import type { ExportTheme } from '../hooks/useExportTheme';
 
 export function RankingPreview({
   ranking,
   history,
   league,
+  theme = 'classic',
 }: {
   ranking: WeeklyRanking;
   history: WeeklyRanking[];
   league: League;
+  theme?: ExportTheme;
 }) {
   const rows = useMemo(
     () =>
@@ -27,7 +30,7 @@ export function RankingPreview({
   );
   return (
     <div
-      className="ranking-preview"
+      className={`ranking-preview${theme === 'new' ? ' new-export-theme' : ''}`}
       aria-label={`${league.leagueName} week ${ranking.week} rankings`}
     >
       <h2 className="export-title">{ranking.rankingsTitle || `Week ${ranking.week}`}</h2>

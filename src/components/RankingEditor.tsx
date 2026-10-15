@@ -28,6 +28,7 @@ import { Icon } from './Icon';
 import { SortableRankingList } from './SortableRankingList';
 import { KeyboardShortcutReference } from './KeyboardShortcutReference';
 import { InfoTooltip } from './InfoTooltip';
+import { useExportTheme } from '../hooks/useExportTheme';
 
 export interface EditorHandle {
   flush: () => Promise<void>;
@@ -48,6 +49,7 @@ export const RankingEditor = forwardRef<
   ref,
 ) {
   const editor = useRankingEditor(api, league, year, week);
+  const { theme, selectTheme, storageError: themeStorageError } = useExportTheme(api.subject);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [editingMode, setEditingMode] = useState(initialEditingMode);
   const [teamSelection, setTeamSelection] = useState({ scope: '', teamId: '' });
@@ -567,6 +569,16 @@ export const RankingEditor = forwardRef<
                     api={api.publishing}
                     id={ranking._id}
                     revision={ranking.revision ?? 0}
+                    preview={
+                      <div className="preview-scroll">
+                        <RankingPreview
+                          ranking={ranking}
+                          history={editor.history}
+                          league={league}
+                          theme={theme}
+                        />
+                      </div>
+                    }
                     disabled={
                       editor.dirty || editor.saving || !!editor.recovery || editor.hasConflict
                     }
@@ -881,6 +893,29 @@ export const RankingEditor = forwardRef<
               Compact preview (720px)
             </Button>
           </div>
+          <Flex
+            as="fieldset"
+            className="view-switch"
+            gap={2}
+            flexWrap="wrap"
+            aria-label="Export theme"
+            my={3}
+            border="0"
+            p={0}
+          >
+            {(['classic', 'new'] as const).map((value) => (
+              <Button
+                key={value}
+                type="button"
+                variant="outline"
+                aria-pressed={theme === value}
+                onClick={() => selectTheme(value)}
+              >
+                {value === 'classic' ? 'Classic export theme' : 'New export theme'}
+              </Button>
+            ))}
+          </Flex>
+          {themeStorageError && <chakra.output>{themeStorageError}</chakra.output>}
           {exportError && (
             <Box className="notice error" role="alert">
               {exportError}
@@ -892,7 +927,12 @@ export const RankingEditor = forwardRef<
               className={`export-canvas${previewFormat === 'compact' ? ' compact-export' : ''}`}
               style={{ zoom: previewScale }}
             >
-              <RankingPreview ranking={ranking} history={editor.history} league={league} />
+              <RankingPreview
+                ranking={ranking}
+                history={editor.history}
+                league={league}
+                theme={theme}
+              />
             </div>
           </Box>
         </Box>

@@ -1,11 +1,10 @@
 import { warmTab } from '../tab-data';
-import { HeaderControls } from '../components/AppShell';
+import { PageHeading } from '../components/PageHeading';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { logClientError } from '../logging';
 import {
   Box,
   Button,
-  Flex,
   Heading,
   NativeSelect,
   Text,
@@ -201,78 +200,40 @@ function RankingsPage() {
     if (!activeSchedule) return;
     rememberStudioSelection(api.subject, { leagueId: selected, year, week });
   }, [activeSchedule, api.subject, selected, week, year]);
+  useEffect(() => {
+    if (loading || !league || !activeSchedule) return;
+    // A newly requested edition may still be resolving; never replace it with old page state.
+    if (searchLeagueId && searchLeagueId !== selected) return;
+    if (searchYear !== undefined && searchYear !== year) return;
+    if (
+      searchWeek !== undefined &&
+      searchWeek !== week &&
+      activeSchedule.adjustedFrom !== searchWeek
+    )
+      return;
+    if (searchLeagueId === selected && searchYear === year && searchWeek === week) return;
+    // Share the resolved account selection with navigation and deep links.
+    void navigate({ search: { leagueId: selected, year, week, welcome }, replace: true });
+  }, [
+    loading,
+    league,
+    activeSchedule,
+    searchLeagueId,
+    searchYear,
+    searchWeek,
+    selected,
+    year,
+    week,
+    welcome,
+    navigate,
+  ]);
   return (
     <>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={4}
-        flexWrap="wrap"
-        mt={4}
-        mb={6}
-        className="page-heading"
-      >
-        <Box>
-          <Text mb={4} className="eyebrow">
-            The weekly edition
-          </Text>
-          <Heading as="h1" size="3xl" mb={4}>
-            Power rankings studio
-          </Heading>
-        </Box>
-        <Button asChild variant="outline">
-          <Link to="/leagues/manage">Manage leagues</Link>
-        </Button>
-        <Button asChild colorPalette="indigo">
-          <Link to="/leagues/new">Create league</Link>
-        </Button>
-      </Flex>
-      {error && (
-        <Box className="notice error" role="alert">
-          {error}
-          {!leagues.length && (
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => {
-                setLoading(true);
-                setError('');
-                setRetry((value) => value + 1);
-              }}
-            >
-              Try again
-            </Button>
-          )}
-        </Box>
-      )}
-      {loading ? (
-        <LoadingSkeleton label="Loading leagues…" />
-      ) : league ? (
-        <>
-          {welcome && searchLeagueId === league.leagueId && (
-            <chakra.output className="notice" display="block" mb={5}>
-              <Heading as="h2" size="md" mb={2}>
-                Your league is ready
-              </Heading>
-              <Text mb={3}>
-                Set the team order and write each take. Changes save as you work; use Preview &amp;
-                export when the edition is ready to share.
-              </Text>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  void navigate({
-                    search: { leagueId: selected, year, week },
-                    replace: true,
-                  })
-                }
-              >
-                Got it
-              </Button>
-            </chakra.output>
-          )}
-          <HeaderControls>
+      <PageHeading
+        title="Rankings studio"
+        description="Set the order, write the story, and share this week’s edition."
+        controls={
+          league ? (
             <fieldset className="selection-bar" disabled={switching}>
               <legend className="sr-only">Choose rankings</legend>
               <Field.Root width="auto" minW="120px" gap={2}>
@@ -346,14 +307,62 @@ function RankingsPage() {
                 </NativeSelect.Root>
               </Field.Root>
             </fieldset>
-          </HeaderControls>
+          ) : undefined
+        }
+      />
+      {error && (
+        <Box className="notice error" role="alert">
+          {error}
+          {!leagues.length && (
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                setError('');
+                setRetry((value) => value + 1);
+              }}
+            >
+              Try again
+            </Button>
+          )}
+        </Box>
+      )}
+      {loading ? (
+        <LoadingSkeleton label="Loading leagues…" />
+      ) : league ? (
+        <>
+          {welcome && searchLeagueId === league.leagueId && (
+            <chakra.output className="notice" display="block" mb={5}>
+              <Heading as="h2" size="md" mb={2}>
+                Your league is ready
+              </Heading>
+              <Text mb={3}>
+                Set the team order and write each take. Changes save as you work; use Preview &amp;
+                export when the edition is ready to share.
+              </Text>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  void navigate({
+                    search: { leagueId: selected, year, week },
+                    replace: true,
+                  })
+                }
+              >
+                Got it
+              </Button>
+            </chakra.output>
+          )}
+
           {scheduleError ? (
             <Box className="notice error" role="alert">
               {scheduleError}
             </Box>
           ) : activeSchedule ? (
             <>
-              <Text fontSize="sm" mb={4}>
+              <Text fontSize="sm" mb={4} className="ranking-schedule-context">
                 {activeSchedule.note}
                 {activeSchedule.choices.some((choice) => choice.savedOnly) &&
                   ' Saved editions outside that schedule remain available and are labeled in the week picker.'}
@@ -371,6 +380,7 @@ function RankingsPage() {
                 league={league}
                 year={year}
                 week={week}
+                showHeading={false}
               />
             </>
           ) : (

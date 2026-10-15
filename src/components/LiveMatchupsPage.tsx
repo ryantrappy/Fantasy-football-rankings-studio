@@ -1,6 +1,7 @@
+import './decision-explorer.css';
 import { PlayerProfileLink } from './PlayerProfileLink';
+import { InfoTooltip } from './InfoTooltip';
 import { Icon } from './Icon';
-import { HeaderControls } from './AppShell';
 import {
   Box,
   Button,
@@ -24,6 +25,15 @@ import {
 } from '../live-matchups';
 
 const score = (value: number | null) => (value == null ? '—' : value.toFixed(2));
+const playerStatus = (player: LivePlayer) => {
+  if (player.bye) return 'Bye';
+  if (player.availability) return player.availability;
+  if (player.remainingFraction === 0) return 'Final';
+  if (player.remainingFraction !== undefined && player.remainingFraction < 1)
+    return `${Math.round(player.remainingFraction * 100)}% left`;
+  if (player.remainingFraction === 1) return 'Upcoming';
+  return player.locked ? 'Locked' : 'Status unavailable';
+};
 const matchupKey = (leagueId: string, id: string) => `${leagueId}:${id}`;
 
 function Roster({
@@ -41,9 +51,15 @@ function Roster({
   const benchTotal = bench.reduce((total, player) => total + (player.points ?? 0), 0);
   const benchIncomplete = bench.some((player) => player.points == null);
   return (
-    <Box minW={0} aria-label={`${team.name} roster`}>
+    <Box
+      className="decision-explorer-live-roster"
+      minW={0}
+      as="section"
+      tabIndex={0}
+      aria-label={`${team.name} roster`}
+    >
       <Flex className="live-team-heading" justify="space-between" gap={2} align="baseline">
-        <Heading as="h4" className="live-roster-name" title={team.name}>
+        <Heading as="h3" className="live-roster-name" title={team.name}>
           {team.name}
         </Heading>
         <Text className="live-roster-score" fontWeight="bold" whiteSpace="nowrap">
@@ -59,6 +75,9 @@ function Roster({
           <Box key={group.label}>
             <Text className="live-roster-group live-lineup-heading">
               <span>{group.label}</span>
+              {group.label === 'Starters' && (
+                <span className="decision-explorer-live-columns">Status · Proj · Pts</span>
+              )}
               {group.label === 'Bench' && (
                 <span
                   className="live-bench-total"
@@ -102,7 +121,18 @@ function Roster({
                     '—'
                   )}
                 </span>
-                <span className="live-player-points">{score(row.player?.points ?? null)}</span>
+                <span
+                  className="decision-explorer-live-status"
+                  title={row.player ? playerStatus(row.player) : 'Player unavailable'}
+                >
+                  {row.player ? playerStatus(row.player) : '—'}
+                </span>
+                <span className="decision-explorer-live-projection" title="Projected points">
+                  {score(row.player?.projectedPoints ?? null)}
+                </span>
+                <span className="live-player-points" title="Observed points">
+                  {score(row.player?.points ?? null)}
+                </span>
               </div>
             ))}
           </Box>
@@ -151,7 +181,15 @@ function WinProbability({ matchup }: { matchup: LiveMatchup }) {
       className="live-probability"
       title="Estimate from current scores, current starters’ projections, remaining NFL game time, and independent player scoring variation (65% of projected points). Not calibrated odds. Missing inputs are shown as unavailable. Completed ties split 50/50."
     >
-      <span className="live-probability-label">Estimated win probability</span>
+      <span className="live-probability-label">
+        Win estimate{' '}
+        <InfoTooltip label="Win estimate methodology">
+          Estimate from current scores, current starters’ projections, remaining NFL game time and
+          independent player scoring variation (65% of projected points). Missing inputs remain
+          unavailable. Completed ties split 50/50.
+        </InfoTooltip>
+      </span>
+      <span className="decision-explorer-live-caveat">Uncalibrated</span>
       {home == null ? (
         <span className="live-probability-unavailable">Unavailable</span>
       ) : (
@@ -175,7 +213,9 @@ function CompactMatchup({
   selected,
   disabled,
   onToggle,
+  managedTeamId,
 }: {
+  managedTeamId?: string;
   matchup: LiveMatchup;
   selected: boolean;
   disabled: boolean;
@@ -203,6 +243,7 @@ function CompactMatchup({
     >
       <Flex className="compact-matchup-line" align="center" gap={1} minW={0}>
         <Text className="compact-home-name" truncate flex="1" minW={0}>
+          {managedTeamId === matchup.home.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.home.name}
         </Text>
         <Text className="compact-home-score" flexShrink={0}>
@@ -219,6 +260,7 @@ function CompactMatchup({
           {score(matchup.away?.score ?? null)}
         </Text>
         <Text className="compact-away-name" truncate flex="1" minW={0} textAlign="right">
+          {managedTeamId === matchup.away?.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.away?.name || 'Bye'}
         </Text>
       </Flex>
@@ -226,7 +268,11 @@ function CompactMatchup({
   );
 }
 
-export function LiveMatchupsPage() {
+export function LiveMatchupsPage({
+  search = {},
+}: {
+  search?: { leagueId?: string; year?: number };
+}) {
   const api = useApi();
   const [leagues, setLeagues] = useState<LiveLeague[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -235,7 +281,9 @@ export function LiveMatchupsPage() {
   const [error, setError] = useState('');
   const [updated, setUpdated] = useState<Date>();
   const [retry, setRetry] = useState(0);
-  const [leagueFilter, setLeagueFilter] = useState('');
+  const [leagueFilter, setLeagueFilter] = useState(search.leagueId ?? '');
+  const [managedTeamIds, setManagedTeamIds] = useState<Record<string, string>>({});
+  const [contextNotice, setContextNotice] = useState('');
   const defaults = useRef({ api, initialized: false });
 
   useEffect(() => {
@@ -243,7 +291,9 @@ export function LiveMatchupsPage() {
       defaults.current = { api, initialized: false };
       setSelected([]);
       setLeagues([]);
-      setLeagueFilter('');
+      setLeagueFilter(search.leagueId ?? '');
+      setManagedTeamIds({});
+      setContextNotice('');
       setLoading(true);
     }
     let active = true;
@@ -256,11 +306,24 @@ export function LiveMatchupsPage() {
         const next = await api.getLiveMatchups(retry > 0);
         if (!active) return;
         setLeagues(next);
+        const requested = next.find(
+          (league) =>
+            league.leagueId === search.leagueId && (!search.year || league.season === search.year),
+        );
+        if (!defaults.current.initialized && search.leagueId && !requested) {
+          setLeagueFilter('');
+          setContextNotice(
+            'The requested league/season has no current Live snapshot. Showing available current leagues.',
+          );
+        }
+        const defaultLeagues = requested
+          ? [requested, ...next.filter((league) => league !== requested)].slice(0, 4)
+          : next.slice(0, 4);
         const managedTeams = api.managedTeam;
         const initialKeys =
           !defaults.current.initialized && managedTeams
             ? await Promise.all(
-                next.slice(0, 4).map(async (league) => {
+                defaultLeagues.map(async (league) => {
                   if (league.error) return undefined;
                   try {
                     const selection = await managedTeams.get(league.leagueId, league.season);
@@ -270,7 +333,12 @@ export function LiveMatchupsPage() {
                         matchup.home.teamId === selection.teamId ||
                         matchup.away?.teamId === selection.teamId,
                     );
-                    return matchup ? matchupKey(league.leagueId, matchup.id) : undefined;
+                    if (!matchup) return undefined;
+                    return {
+                      key: matchupKey(league.leagueId, matchup.id),
+                      leagueId: league.leagueId,
+                      teamId: selection.teamId,
+                    };
                   } catch {
                     // Scores and manual selection remain usable when a saved team cannot be read.
                     return undefined;
@@ -279,9 +347,15 @@ export function LiveMatchupsPage() {
               )
             : [];
         if (!active) return;
+        if (initialKeys.length)
+          setManagedTeamIds(
+            Object.fromEntries(
+              initialKeys.flatMap((entry) => (entry ? [[entry.leagueId, entry.teamId]] : [])),
+            ),
+          );
         if (!defaults.current.initialized) {
           defaults.current.initialized = true;
-          setSelected(initialKeys.filter((key): key is string => key !== undefined));
+          setSelected(initialKeys.flatMap((entry) => (entry ? [entry.key] : [])));
         } else {
           setSelected((previous) =>
             previous.filter((key) =>
@@ -311,7 +385,7 @@ export function LiveMatchupsPage() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [api, retry]);
+  }, [api, retry, search.leagueId, search.year]);
 
   const highlighted = selected.flatMap((key) =>
     leagues.flatMap((league) =>
@@ -333,40 +407,40 @@ export function LiveMatchupsPage() {
 
   return (
     <>
-      <HeaderControls>
-        <Field.Root width="auto" minW="160px" gap={1}>
-          <Field.Label>League</Field.Label>
-          <NativeSelect.Root>
-            <NativeSelect.Field
-              value={leagueFilter}
-              onChange={(event) => setLeagueFilter(event.target.value)}
-            >
-              <option value="">All leagues</option>
-              {leagues.map((league) => (
-                <option key={league.leagueId} value={league.leagueId}>
-                  {league.leagueName}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </Field.Root>
-        <IconButton
-          aria-label="Refresh scores"
-          title="Refresh scores"
-          size="sm"
-          variant="ghost"
-          onClick={() => setRetry((value) => value + 1)}
-          disabled={refreshing}
-        >
-          <Icon name="refresh" />
-        </IconButton>
-      </HeaderControls>
-      <div className="live-workspace">
+      <div className="decision-explorer decision-explorer-live live-workspace">
         <aside className="live-sidebar" aria-label="All league matchups">
           <Heading as="h1" size="md" mb={1}>
             Live matchups
           </Heading>
+          <div className="decision-explorer-live-controls">
+            <Field.Root width="auto" minW="160px" gap={1}>
+              <Field.Label>League</Field.Label>
+              <NativeSelect.Root>
+                <NativeSelect.Field
+                  value={leagueFilter}
+                  onChange={(event) => setLeagueFilter(event.target.value)}
+                >
+                  <option value="">All leagues</option>
+                  {leagues.map((league) => (
+                    <option key={league.leagueId} value={league.leagueId}>
+                      {league.leagueName}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <IconButton
+              aria-label="Refresh scores"
+              title="Refresh scores"
+              size="sm"
+              variant="ghost"
+              onClick={() => setRetry((value) => value + 1)}
+              disabled={refreshing}
+            >
+              <Icon name="refresh" />
+            </IconButton>
+          </div>{' '}
           <Text fontSize="xs" color="fg.muted" mb={2}>
             {selected.length} of 4 selected
           </Text>
@@ -377,6 +451,11 @@ export function LiveMatchupsPage() {
                 ? `Updated ${updated.toLocaleTimeString()}. Refreshes every minute.`
                 : ''}
           </Text>
+          {contextNotice && (
+            <Text as="output" fontSize="xs">
+              {contextNotice}
+            </Text>
+          )}
           {error && (
             <Box role="alert" className="notice error">
               {error}
@@ -387,7 +466,7 @@ export function LiveMatchupsPage() {
             .filter((league) => !leagueFilter || league.leagueId === leagueFilter)
             .map((league) => (
               <Box as="section" key={league.leagueId} mb={3}>
-                <Heading as="h3" size="xs" mb={0}>
+                <Heading as="h2" size="xs" mb={0}>
                   {league.leagueName}
                 </Heading>
                 <Text fontSize="10px" color="fg.muted" mb={1}>
@@ -405,6 +484,7 @@ export function LiveMatchupsPage() {
                         <CompactMatchup
                           key={key}
                           matchup={matchup}
+                          managedTeamId={managedTeamIds[league.leagueId]}
                           selected={selected.includes(key)}
                           disabled={selected.length >= 4 && !selected.includes(key)}
                           onToggle={() => toggle(key)}
@@ -445,7 +525,7 @@ export function LiveMatchupsPage() {
                     {league.leagueName} · Week {league.week}
                   </Text>
                   <Heading
-                    as="h3"
+                    as="h2"
                     size="sm"
                     title={`${matchup.home.name} vs ${matchup.away?.name || 'Bye'}`}
                   >
@@ -465,6 +545,11 @@ export function LiveMatchupsPage() {
               </Flex>
               <MatchupRosters matchup={matchup} leagueId={league.leagueId} year={league.season} />
             </Box>
+          ))}
+          {Array.from({ length: 4 - highlighted.length }, (_, index) => (
+            <div key={`empty-${index}`} className="decision-explorer-live-empty">
+              Select a matchup for this quarter.
+            </div>
           ))}
         </section>
       </div>

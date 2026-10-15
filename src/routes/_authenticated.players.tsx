@@ -13,10 +13,15 @@ export const Route = createFileRoute('/_authenticated/players')({
   loader: ({ context, deps }) => warmTab('players', context, deps),
   component: () => {
     const search = Route.useSearch();
+    const navigate = Route.useNavigate();
     return (
       <PlayerProfilesPage
-        key={`${search.leagueId}:${search.year}:${search.playerId}`}
         search={search}
+        onContextChange={(context) => {
+          if (context.leagueId !== search.leagueId || context.year !== search.year) {
+            void navigate({ search: context, replace: true });
+          }
+        }}
       />
     );
   },

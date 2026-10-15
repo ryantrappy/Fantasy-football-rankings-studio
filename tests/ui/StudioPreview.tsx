@@ -8,6 +8,9 @@ import { HistoryPage } from '../../src/components/HistoryPage';
 import { ProfilePage } from '../../src/components/ProfilePage';
 import { ManageLeagues } from '../../src/components/ManageLeagues';
 import { CreateLeague } from '../../src/components/CreateLeague';
+import { PlayerProfilesPage } from '../../src/components/PlayerProfilesPage';
+import { TradeAnalyzerPage } from '../../src/components/TradeAnalyzerPage';
+import { OtherToolsPage } from '../../src/components/OtherToolsPage';
 import { EspnSetup } from '../../src/components/EspnSetup';
 import { afterPreviewData } from './loading-data';
 import { ApiContext, SessionContext } from '../../src/auth/session';
@@ -48,14 +51,63 @@ const profile = {
   email: 'manager@example.test',
   emailVerified: true,
 };
+let writingInstructions = { instructions: '' };
 const accountApi = {
   getProfile: async () => afterPreviewData(profile),
   updateProfile: async (value: { name: string; nickname: string }) => ({ ...profile, ...value }),
+  writing: {
+    instructions: async () => writingInstructions,
+    saveInstructions: async (value: { instructions: string }) => {
+      writingInstructions = value;
+      return writingInstructions;
+    },
+    providers: async () => [
+      {
+        id: 'codex' as const,
+        installed: true,
+        enabled: true,
+        status: 'ready' as const,
+        serverStatus: 'ready' as const,
+        credentialSource: 'server-account' as const,
+      },
+    ],
+  },
   getAiCredentialStatus: async () => ({ codexConfigured: false, claudeConfigured: false }),
   saveAiCredential: async () => ({ codexConfigured: false, claudeConfigured: false }),
   removeAiCredential: async () => ({ codexConfigured: false, claudeConfigured: false }),
 };
+let writingConsent = { codex: false, claude: false };
 const appApi = {
+  subject: 'studio-preview-owner',
+  writing: {
+    ...accountApi.writing,
+    consent: async () => writingConsent,
+    saveConsent: async ({
+      provider,
+      approved,
+    }: {
+      provider: 'codex' | 'claude';
+      approved: boolean;
+    }) => {
+      writingConsent = { ...writingConsent, [provider]: approved };
+      return writingConsent;
+    },
+    context: async ({ teamId }: { teamId: string }) => ({
+      teamName:
+        ranking.teams.find((team) => team.teamId === teamId)?.teamName || 'Unavailable team',
+      year: 2026,
+      throughWeek: 1,
+      facts: ['Completed scoring evidence: 120.0 points'],
+      depth: [
+        'Starter: Current receiver · 18.0 projected',
+        'Bench: Current reserve · 8.0 projected',
+      ],
+      depthNote: 'Only currently owned players are included.',
+      depthSnapshotAt: '2026-10-04T00:00:00Z',
+      notes: ['Historical roster unavailable before this snapshot.'],
+    }),
+    generate: async () => 'Verified suggestion from the selected team context.',
+  },
   getLiveLeague: async (id: string) =>
     (await appApi.getLiveMatchups()).find((entry) => entry.leagueId === id),
   ...editorApi,
@@ -124,10 +176,19 @@ export function StudioPreview() {
       <ApiContext value={appApi as never}>
         <InsightsAccess publicApi={publicApi}>
           <AppShell>
-            {path === '/overview' ? (
+            {path === '/players' ? (
+              <PlayerProfilesPage search={{ leagueId: '123', year: 2026 }} />
+            ) : path === '/trades' ? (
+              <TradeAnalyzerPage search={{ leagueId: '123', year: 2026 }} />
+            ) : path === '/tools' ? (
+              <OtherToolsPage />
+            ) : path === '/overview' ? (
               <WeeklyOverviewPage />
             ) : path === '/profile' ? (
-              <ProfilePage api={accountApi} />
+              <ProfilePage
+                api={accountApi}
+                settings={<EspnSetup api={credentialsApi} settings />}
+              />
             ) : path === '/leagues/manage' ? (
               <ManageLeagues api={appApi as never} />
             ) : path === '/leagues/new' ? (

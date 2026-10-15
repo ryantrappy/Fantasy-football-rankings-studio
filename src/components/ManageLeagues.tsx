@@ -6,6 +6,7 @@ import type { League, LeagueApi } from '../types';
 import { ManagedTeamPicker } from './ManagedTeamPicker';
 import { logClientError } from '../logging';
 export function ManageLeagues({ api }: { api: LeagueApi }) {
+  const [selectedLeague, setSelectedLeague] = useState('');
   const [archived, setArchived] = useState(false),
     [leagues, setLeagues] = useState<League[]>([]),
     [loading, setLoading] = useState(true),
@@ -45,316 +46,354 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
       active = false;
     };
   }, [api, archived, retry]);
+  const selectedId = leagues.some((league) => league.leagueId === selectedLeague)
+    ? selectedLeague
+    : leagues[0]?.leagueId;
   return (
     <Box>
       <PageHeading
         title="Manage leagues"
         eyebrow="Your league workspace"
         description="Choose your team and keep your leagues organized. Archived leagues keep their rankings and shared reports."
-      />
-      <Button
-        variant="outline"
-        disabled={busy}
-        onClick={() => {
-          setArchived((v) => !v);
-          setNotice('');
-        }}
       >
-        {archived ? 'Show active leagues' : 'Show archived leagues'}
-      </Button>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => {
+            setArchived((v) => !v);
+            setNotice('');
+          }}
+        >
+          {archived ? 'Show active leagues' : 'Show archived leagues'}
+        </Button>
+      </PageHeading>
       <Text as="output" my={3}>
         {notice}
       </Text>
-      {loading ? (
-        <LoadingSkeleton label="Loading leagues…" />
-      ) : leagues.length ? (
-        leagues.map((league) => (
-          <Box className="studio-card" key={league.leagueId} p={{ base: 4, md: 6 }} my={4}>
-            <Heading as="h2" size="md">
-              {league.leagueName}
-            </Heading>
-            <Text my={2}>
-              {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
-              {league.providerLeagueId ?? league.leagueId}
-            </Text>
-            {league.deleting && (
-              <Text as="output">
-                Deletion cleanup is pending. Retry Delete league to finish removing local data.
+      <div className="explorer-league-layout">
+        {!loading && leagues.length > 0 && (
+          <nav className="explorer-league-list" aria-label="League connections">
+            <h2>Connected {archived ? 'archived' : 'active'} leagues</h2>
+            <p>Select a league to edit its connection or managed team.</p>
+            {leagues.map((league) => (
+              <button
+                key={league.leagueId}
+                type="button"
+                disabled={busy}
+                aria-pressed={selectedId === league.leagueId}
+                onClick={() => setSelectedLeague(league.leagueId)}
+              >
+                <strong>{league.leagueName}</strong>
+                <span>
+                  {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
+                  {league.providerLeagueId ?? league.leagueId}
+                  {league.deleting ? ' · Cleanup pending' : ''}
+                </span>
+              </button>
+            ))}
+          </nav>
+        )}
+        {loading ? (
+          <LoadingSkeleton label="Loading leagues…" />
+        ) : leagues.length ? (
+          leagues.map((league) => (
+            <Box
+              className="studio-card explorer-league-detail"
+              hidden={selectedId !== league.leagueId}
+              key={league.leagueId}
+              p={{ base: 4, md: 6 }}
+              my={4}
+            >
+              <Heading as="h2" size="md">
+                {league.leagueName}
+              </Heading>
+              <Text my={2}>
+                {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} ·{' '}
+                {league.providerLeagueId ?? league.leagueId}
               </Text>
-            )}
-            {api.managedTeam && !league.deleting && (
-              <ManagedTeamPicker
-                key={`${api.subject}:${league.leagueId}:${league.providerLeagueId}`}
-                api={api.managedTeam}
-                leagueId={league.leagueId}
-                initialYear={league.seasonId}
-                subject={api.subject}
-              />
-            )}
-            {editing === league.leagueId ? (
-              <Box
-                as="form"
-                mb={3}
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const leagueName = name.trim();
-                  if (!leagueName) {
-                    setNameError('Enter a league display name.');
-                    return;
-                  }
-                  if (leagueName.length > 120) {
-                    setNameError('League display name must be at most 120 characters.');
-                    return;
-                  }
+              {league.deleting && (
+                <Text as="output">
+                  Deletion cleanup is pending. Retry Delete league to finish removing local data.
+                </Text>
+              )}
+              {api.managedTeam && !league.deleting && (
+                <ManagedTeamPicker
+                  key={`${api.subject}:${league.leagueId}:${league.providerLeagueId}`}
+                  api={api.managedTeam}
+                  leagueId={league.leagueId}
+                  initialYear={league.seasonId}
+                  subject={api.subject}
+                />
+              )}
+              {editing === league.leagueId ? (
+                <Box
+                  as="form"
+                  mb={3}
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const leagueName = name.trim();
+                    if (!leagueName) {
+                      setNameError('Enter a league display name.');
+                      return;
+                    }
+                    if (leagueName.length > 120) {
+                      setNameError('League display name must be at most 120 characters.');
+                      return;
+                    }
+                    setBusy(true);
+                    setError('');
+                    setNameError('');
+                    try {
+                      const renamed = await api.management!.rename(league.leagueId, leagueName);
+                      setLeagues((rows) =>
+                        rows.map((row) => (row.leagueId === renamed.leagueId ? renamed : row)),
+                      );
+                      setNotice(`${league.leagueName} renamed to ${renamed.leagueName}.`);
+                      setEditing('');
+                    } catch (e) {
+                      logClientError('leagues.rename', e);
+                      setNameError('Could not rename the league. Check the name and try again.');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <label htmlFor={`league-name-${league.leagueId}`}>Display name</label>
+                  <Input
+                    id={`league-name-${league.leagueId}`}
+                    value={name}
+                    aria-invalid={!!nameError}
+                    aria-describedby={
+                      nameError ? `league-name-error-${league.leagueId}` : undefined
+                    }
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      setNameError('');
+                    }}
+                  />
+                  {nameError && (
+                    <Text id={`league-name-error-${league.leagueId}`} role="alert">
+                      {nameError}
+                    </Text>
+                  )}
+                  <Flex gap={2} flexWrap="wrap" mt={3}>
+                    <Button type="submit" disabled={busy}>
+                      Save display name
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditing('');
+                        setNameError('');
+                      }}
+                    >
+                      Cancel rename
+                    </Button>
+                  </Flex>
+                </Box>
+              ) : (
+                <Flex gap={2} flexWrap="wrap">
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing(league.leagueId);
+                      setName(league.leagueName);
+                      setNameError('');
+                      setNotice('');
+                    }}
+                  >
+                    Edit display name
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={() => {
+                      setEditing(`provider-${league.leagueId}`);
+                      setProviderId(league.providerLeagueId ?? league.leagueId);
+                      setNameError('');
+                      setNotice('');
+                    }}
+                  >
+                    Edit provider league ID
+                  </Button>
+                </Flex>
+              )}
+              {editing === `provider-${league.leagueId}` && (
+                <Box
+                  as="form"
+                  mb={3}
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    const id = providerId.trim();
+                    if (!/^\d{1,30}$/.test(id)) {
+                      setNameError('Enter a valid numeric provider league ID.');
+                      return;
+                    }
+                    setBusy(true);
+                    setNameError('');
+                    try {
+                      const updated = await api.management!.updateProviderId(league.leagueId, id);
+                      setLeagues((rows) =>
+                        rows.map((row) => (row.leagueId === updated.leagueId ? updated : row)),
+                      );
+                      setNotice(
+                        `${league.leagueName} now uses provider league ID ${updated.providerLeagueId}.`,
+                      );
+                      setEditing('');
+                    } catch (e) {
+                      logClientError('leagues.providerId', e);
+                      setNameError(
+                        'Could not update the provider league ID. Check the ID and try again.',
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <label htmlFor={`provider-id-${league.leagueId}`}>Provider league ID</label>
+                  <Input
+                    id={`provider-id-${league.leagueId}`}
+                    inputMode="numeric"
+                    value={providerId}
+                    aria-invalid={!!nameError}
+                    aria-describedby={
+                      nameError ? `provider-id-error-${league.leagueId}` : undefined
+                    }
+                    onChange={(event) => {
+                      setProviderId(event.target.value);
+                      setNameError('');
+                    }}
+                  />
+                  {nameError && (
+                    <Text id={`provider-id-error-${league.leagueId}`} role="alert">
+                      {nameError}
+                    </Text>
+                  )}
+                  <Text fontSize="sm" mt={1}>
+                    The new ID is checked with {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} before
+                    saving.
+                  </Text>
+                  <Flex gap={2} flexWrap="wrap" mt={3}>
+                    <Button type="submit" disabled={busy}>
+                      Save provider league ID
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditing('');
+                        setNameError('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Flex>
+                </Box>
+              )}
+              <Button
+                mt={3}
+                disabled={busy}
+                onClick={async () => {
                   setBusy(true);
                   setError('');
-                  setNameError('');
                   try {
-                    const renamed = await api.management!.rename(league.leagueId, leagueName);
-                    setLeagues((rows) =>
-                      rows.map((row) => (row.leagueId === renamed.leagueId ? renamed : row)),
-                    );
-                    setNotice(`${league.leagueName} renamed to ${renamed.leagueName}.`);
-                    setEditing('');
-                  } catch (e) {
-                    logClientError('leagues.rename', e);
-                    setNameError('Could not rename the league. Check the name and try again.');
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <label htmlFor={`league-name-${league.leagueId}`}>Display name</label>
-                <Input
-                  id={`league-name-${league.leagueId}`}
-                  value={name}
-                  aria-invalid={!!nameError}
-                  aria-describedby={nameError ? `league-name-error-${league.leagueId}` : undefined}
-                  onChange={(event) => {
-                    setName(event.target.value);
-                    setNameError('');
-                  }}
-                />
-                {nameError && (
-                  <Text id={`league-name-error-${league.leagueId}`} role="alert">
-                    {nameError}
-                  </Text>
-                )}
-                <Flex gap={2} flexWrap="wrap" mt={3}>
-                  <Button type="submit" disabled={busy}>
-                    Save display name
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => {
-                      setEditing('');
-                      setNameError('');
-                    }}
-                  >
-                    Cancel rename
-                  </Button>
-                </Flex>
-              </Box>
-            ) : (
-              <Flex gap={2} flexWrap="wrap">
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    setEditing(league.leagueId);
-                    setName(league.leagueName);
-                    setNameError('');
-                    setNotice('');
-                  }}
-                >
-                  Edit display name
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    setEditing(`provider-${league.leagueId}`);
-                    setProviderId(league.providerLeagueId ?? league.leagueId);
-                    setNameError('');
-                    setNotice('');
-                  }}
-                >
-                  Edit provider league ID
-                </Button>
-              </Flex>
-            )}
-            {editing === `provider-${league.leagueId}` && (
-              <Box
-                as="form"
-                mb={3}
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  const id = providerId.trim();
-                  if (!/^\d{1,30}$/.test(id)) {
-                    setNameError('Enter a valid numeric provider league ID.');
-                    return;
-                  }
-                  setBusy(true);
-                  setNameError('');
-                  try {
-                    const updated = await api.management!.updateProviderId(league.leagueId, id);
-                    setLeagues((rows) =>
-                      rows.map((row) => (row.leagueId === updated.leagueId ? updated : row)),
-                    );
-                    setNotice(
-                      `${league.leagueName} now uses provider league ID ${updated.providerLeagueId}.`,
-                    );
-                    setEditing('');
-                  } catch (e) {
-                    logClientError('leagues.providerId', e);
-                    setNameError(
-                      'Could not update the provider league ID. Check the ID and try again.',
-                    );
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <label htmlFor={`provider-id-${league.leagueId}`}>Provider league ID</label>
-                <Input
-                  id={`provider-id-${league.leagueId}`}
-                  inputMode="numeric"
-                  value={providerId}
-                  aria-invalid={!!nameError}
-                  aria-describedby={nameError ? `provider-id-error-${league.leagueId}` : undefined}
-                  onChange={(event) => {
-                    setProviderId(event.target.value);
-                    setNameError('');
-                  }}
-                />
-                {nameError && (
-                  <Text id={`provider-id-error-${league.leagueId}`} role="alert">
-                    {nameError}
-                  </Text>
-                )}
-                <Text fontSize="sm" mt={1}>
-                  The new ID is checked with {league.leagueType === 0 ? 'Sleeper' : 'ESPN'} before
-                  saving.
-                </Text>
-                <Flex gap={2} flexWrap="wrap" mt={3}>
-                  <Button type="submit" disabled={busy}>
-                    Save provider league ID
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => {
-                      setEditing('');
-                      setNameError('');
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Flex>
-              </Box>
-            )}
-            <Button
-              mt={3}
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true);
-                setError('');
-                try {
-                  await api.management!.archive(league.leagueId, !archived);
-                  setNotice(`${league.leagueName} ${archived ? 'restored' : 'archived'}.`);
-                  setRetry((v) => v + 1);
-                } catch (e) {
-                  logClientError('leagues.archive', e);
-                  setError('Could not update the league. Try again.');
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {archived ? 'Restore league' : 'Archive league'}
-            </Button>
-            {deleting === league.leagueId ? (
-              <Box
-                as="form"
-                mt={4}
-                onSubmit={async (event) => {
-                  event.preventDefault();
-                  if (deleteConfirmation !== league.leagueName) {
-                    setNameError(`Type ${league.leagueName} to confirm deletion.`);
-                    return;
-                  }
-                  setBusy(true);
-                  setNameError('');
-                  try {
-                    await api.management!.delete(league.leagueId);
-                    setNotice(`${league.leagueName} and its local data were deleted.`);
+                    await api.management!.archive(league.leagueId, !archived);
+                    setNotice(`${league.leagueName} ${archived ? 'restored' : 'archived'}.`);
                     setRetry((v) => v + 1);
-                    setDeleting('');
                   } catch (e) {
-                    logClientError('leagues.delete', e);
-                    setNameError('Could not delete the league. Try again.');
+                    logClientError('leagues.archive', e);
+                    setError('Could not update the league. Try again.');
                   } finally {
                     setBusy(false);
                   }
                 }}
               >
-                <Text fontWeight="bold">Delete this workspace and its local rankings?</Text>
-                <Text fontSize="sm">
-                  This cannot delete the league at {league.leagueType === 0 ? 'Sleeper' : 'ESPN'}.
-                </Text>
-                <label htmlFor={`delete-${league.leagueId}`}>
-                  Type {league.leagueName} to confirm
-                </label>
-                <Input
-                  id={`delete-${league.leagueId}`}
-                  value={deleteConfirmation}
-                  onChange={(event) => {
-                    setDeleteConfirmation(event.target.value);
+                {archived ? 'Restore league' : 'Archive league'}
+              </Button>
+              {deleting === league.leagueId ? (
+                <Box
+                  as="form"
+                  mt={4}
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    if (deleteConfirmation !== league.leagueName) {
+                      setNameError(`Type ${league.leagueName} to confirm deletion.`);
+                      return;
+                    }
+                    setBusy(true);
                     setNameError('');
-                  }}
-                />
-                {nameError && <Text role="alert">{nameError}</Text>}
-                <Flex gap={2} flexWrap="wrap" mt={3}>
-                  <Button type="submit" colorPalette="red" disabled={busy}>
-                    Delete league permanently
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => {
+                    try {
+                      await api.management!.delete(league.leagueId);
+                      setNotice(`${league.leagueName} and its local data were deleted.`);
+                      setRetry((v) => v + 1);
                       setDeleting('');
+                    } catch (e) {
+                      logClientError('leagues.delete', e);
+                      setNameError('Could not delete the league. Try again.');
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  <Text fontWeight="bold">Delete this workspace and its local rankings?</Text>
+                  <Text fontSize="sm">
+                    This cannot delete the league at {league.leagueType === 0 ? 'Sleeper' : 'ESPN'}.
+                  </Text>
+                  <label htmlFor={`delete-${league.leagueId}`}>
+                    Type {league.leagueName} to confirm
+                  </label>
+                  <Input
+                    id={`delete-${league.leagueId}`}
+                    value={deleteConfirmation}
+                    onChange={(event) => {
+                      setDeleteConfirmation(event.target.value);
                       setNameError('');
                     }}
-                  >
-                    Cancel
-                  </Button>
-                </Flex>
-              </Box>
-            ) : (
-              <Button
-                mt={2}
-                variant="outline"
-                colorPalette="red"
-                disabled={busy}
-                onClick={() => {
-                  setDeleting(league.leagueId);
-                  setDeleteConfirmation('');
-                  setNameError('');
-                  setNotice('');
-                }}
-              >
-                Delete league
-              </Button>
-            )}
-          </Box>
-        ))
-      ) : (
-        <Text>No {archived ? 'archived' : 'active'} leagues.</Text>
-      )}
+                  />
+                  {nameError && <Text role="alert">{nameError}</Text>}
+                  <Flex gap={2} flexWrap="wrap" mt={3}>
+                    <Button type="submit" colorPalette="red" disabled={busy}>
+                      Delete league permanently
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        setDeleting('');
+                        setNameError('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Flex>
+                </Box>
+              ) : (
+                <Button
+                  mt={2}
+                  variant="outline"
+                  colorPalette="red"
+                  disabled={busy}
+                  onClick={() => {
+                    setDeleting(league.leagueId);
+                    setDeleteConfirmation('');
+                    setNameError('');
+                    setNotice('');
+                  }}
+                >
+                  Delete league
+                </Button>
+              )}
+            </Box>
+          ))
+        ) : (
+          <Text>No {archived ? 'archived' : 'active'} leagues.</Text>
+        )}
+      </div>
       {error && (
         <>
           <Text role="alert">{error}</Text>

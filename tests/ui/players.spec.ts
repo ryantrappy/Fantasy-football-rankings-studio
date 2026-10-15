@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 for (const width of [1280, 390]) {
-  test(`player browsing and comparisons at ${width}px`, async ({ page }) => {
+  test(`player browsing and comparisons at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/tests/ui/?mode=players');
     await page.getByLabel('Compare Jordan Runner', { exact: true }).check();
@@ -28,7 +28,7 @@ for (const width of [1280, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    await page.screenshot({ path: `test-results/players-${width}.png`, fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath(`players-${width}.png`), fullPage: true });
     expect((await new AxeBuilder({ page }).include('#root').analyze()).violations).toEqual([]);
     await page.getByRole('button', { name: 'Remove Jordan Runner from comparison' }).click();
     await expect(jordan).toHaveCount(0);

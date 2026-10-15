@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { calculateInsights } from '../../server/insights/calculate';
 import { droppedBreakouts } from './drops';
 import { DroppedBreakouts } from '../../components/history/moments/DroppedBreakouts';
@@ -36,7 +36,11 @@ it('browses manager evidence and configurable window', () => {
   expect(screen.getByText('60.0 / 45.0 — breakout')).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Post-drop window'), { target: { value: '1' } });
   expect(screen.getByText('20.0 / 15.0 — breakout')).toBeInTheDocument();
-  expect(screen.getByText(/Observed pickup by b/)).toHaveTextContent(
+  const table = within(screen.getByRole('table', { name: 'Waiver graveyard — observed drops' }));
+  expect(table.getByText(/Observed pickup by b/)).toHaveTextContent(
     'availability between recorded events is unknown',
   );
+  const inspector = screen.getByRole('complementary', { name: 'Record evidence' });
+  expect(inspector).toHaveTextContent('total 20.0; lift 15.0');
+  expect(inspector).toHaveTextContent('availability between recorded events is unknown');
 });

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Provider } from './ui/provider';
-import { CodexAccountSettings, codexSetupUrl } from './CodexAccountSettings';
+import { CodexAccountSettings } from './CodexAccountSettings';
 import type { WritingProviderOption } from '../writing';
 it.each([
   ['ready', 'Server Codex login is ready'],
@@ -21,9 +21,15 @@ it.each([
     expect(screen.getByText(/An API key is optional/)).toHaveTextContent(
       /share the operator’s account and quota/,
     );
+    const setup = screen.getByText('Operator Codex setup instructions', { selector: 'summary' });
+    expect(setup.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(setup);
+    expect(setup.closest('details')).toHaveAttribute('open');
+    expect(screen.getByText(/WRITING_AI_USERS/)).toBeVisible();
+    expect(screen.getByText(/login --device-auth/)).toBeVisible();
     expect(
-      screen.getByRole('link', { name: 'Docker Codex OAuth setup instructions' }),
-    ).toHaveAttribute('href', codexSetupUrl);
+      screen.queryByRole('link', { name: /Codex.*setup instructions/ }),
+    ).not.toBeInTheDocument();
   },
 );
 it('offers retry after a failed readiness request', async () => {

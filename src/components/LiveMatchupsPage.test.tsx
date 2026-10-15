@@ -66,7 +66,7 @@ it('defaults to the viewer’s home, away and bye matchups in the first four lea
   const board = screen.getByRole('region', { name: 'Highlighted matchups' });
   expect(
     within(board)
-      .getAllByRole('heading', { level: 3 })
+      .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent),
   ).toEqual([
     'Viewer 1 vs Opponent 1',
@@ -213,7 +213,7 @@ it('shows compact scores and limits highlighted rosters to four matchups', async
   await screen.findByRole('button', { name: 'Highlight Home 1 versus Away 1' });
   const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
   const details = screen.getByRole('region', { name: 'Highlighted matchups' });
-  expect(within(sidebar).getAllByRole('button')).toHaveLength(5);
+  expect(within(sidebar).getAllByRole('button')).toHaveLength(6);
   for (let index = 1; index <= 4; index++)
     fireEvent.click(
       screen.getByRole('button', { name: `Highlight Home ${index} versus Away ${index}` }),
@@ -240,3 +240,39 @@ vi.mock('./PlayerProfileLink', () => ({
     children: React.ReactNode;
   }) => <a href={`/players?leagueId=${leagueId}&year=${year}&playerId=${playerId}`}>{children}</a>,
 }));
+
+it('marks the exact saved managed side and prioritizes an explicitly linked current league', async () => {
+  const api = viewerApi(managedLeagues(6));
+  render(
+    <Provider>
+      <ApiContext value={api as never}>
+        <LiveMatchupsPage search={{ leagueId: 'league-5', year: 2026 }} />
+      </ApiContext>
+    </Provider>,
+  );
+  await screen.findByText('4 of 4 selected');
+  expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('league-5');
+  const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
+  const mine = within(sidebar).getByRole('button', { name: 'Remove Opponent 6 versus Viewer 6' });
+  expect(within(mine).getByLabelText('Managed team')).toBeInTheDocument();
+  expect(mine).toHaveTextContent('★ Viewer 6');
+  const board = screen.getByRole('region', { name: 'Highlighted matchups' });
+  expect(within(board).getAllByRole('heading', { level: 2 })[0]).toHaveTextContent(
+    'Opponent 6 vs Viewer 6',
+  );
+  expect(within(board).getAllByRole('heading', { level: 2 })).toHaveLength(4);
+});
+it('discloses a historical Live link instead of silently claiming the wrong season', async () => {
+  const api = viewerApi(managedLeagues(1));
+  render(
+    <Provider>
+      <ApiContext value={api as never}>
+        <LiveMatchupsPage search={{ leagueId: 'league-0', year: 2020 }} />
+      </ApiContext>
+    </Provider>,
+  );
+  expect(
+    await screen.findByText(/requested league\/season has no current Live snapshot/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('');
+});

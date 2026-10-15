@@ -4,7 +4,10 @@ import {
   updateProfile,
   getWritingConsent,
   saveWritingConsent,
+  getWritingInstructions,
+  saveWritingInstructions,
 } from '../profile.server';
+import { MAX_WRITING_INSTRUCTIONS_LENGTH } from '../../writing';
 const fetchMock = vi.fn();
 const profile = {
   user_id: 'auth0|owner',
@@ -13,6 +16,7 @@ const profile = {
   email: 'owner@example.com',
   email_verified: true,
   app_metadata: { role: 'admin' },
+  user_metadata: { writing_instructions: 'Private account style.' },
 };
 const reply = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status });
 beforeEach(() => {
@@ -145,3 +149,113 @@ it('rejects invalid consent writes before calling Auth0', async () => {
   ).rejects.toMatchObject({ status: 400 });
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it('persists and clears instructions independently for two accounts without changing profile metadata or consent', async () => {
+  const users = new Map([
+    [
+      'auth0|owner',
+      {
+        ...profile,
+        user_metadata: {
+          favorite: 'kept',
+          writing_context_approval: { codex: true, claude: false },
+        },
+      },
+    ],
+    [
+      'auth0|other',
+      {
+        ...profile,
+        user_id: 'auth0|other',
+        user_metadata: {
+          favorite: 'other',
+          writing_context_approval: { codex: false, claude: true },
+        },
+      },
+    ],
+  ]);
+  fetchMock.mockImplementation(async (url: string, init: RequestInit) => {
+    const owner = decodeURIComponent(url.split('/').at(-1)!);
+    const user = users.get(owner)!;
+    if (init.method === 'PATCH') {
+      const update = JSON.parse(init.body as string);
+      user.user_metadata = { ...user.user_metadata, ...update.user_metadata };
+    }
+    return reply(user);
+  });
+
+  expect(await getWritingInstructions('auth0|owner')).toEqual({ instructions: '' });
+  expect(
+    await saveWritingInstructions('auth0|owner', {
+      instructions: '  My voice.\nKeep the jokes.  ',
+    }),
+  ).toEqual({ instructions: 'My voice.\nKeep the jokes.' });
+  expect(await getWritingInstructions('auth0|owner')).toEqual({
+    instructions: 'My voice.\nKeep the jokes.',
+  });
+  expect(await getWritingInstructions('auth0|other')).toEqual({ instructions: '' });
+  expect(await getWritingConsent('auth0|owner')).toEqual({ codex: true, claude: false });
+  await saveWritingConsent('auth0|owner', { provider: 'claude', approved: true });
+  expect(await getWritingInstructions('auth0|owner')).toEqual({
+    instructions: 'My voice.\nKeep the jokes.',
+  });
+  expect(
+    await saveWritingInstructions('auth0|other', { instructions: 'A different style.' }),
+  ).toEqual({ instructions: 'A different style.' });
+  expect(await saveWritingInstructions('auth0|owner', { instructions: '   ' })).toEqual({
+    instructions: '',
+  });
+  expect(await getWritingInstructions('auth0|other')).toEqual({
+    instructions: 'A different style.',
+  });
+  expect(users.get('auth0|owner')?.user_metadata).toEqual({
+    favorite: 'kept',
+    writing_context_approval: { codex: true, claude: true },
+    writing_instructions: '',
+  });
+  expect(users.get('auth0|other')?.user_metadata).toEqual({
+    favorite: 'other',
+    writing_context_approval: { codex: false, claude: true },
+    writing_instructions: 'A different style.',
+  });
+  const firstWrite = fetchMock.mock.calls.find(([, init]) => init.method === 'PATCH');
+  expect(firstWrite?.[0]).toBe('https://tenant.auth0.com/api/v2/users/auth0%7Cowner');
+  expect(JSON.parse(firstWrite?.[1].body)).toEqual({
+    user_metadata: { writing_instructions: 'My voice.\nKeep the jokes.' },
+  });
+});
+
+it.each([
+  null,
+  { instructions: 123 },
+  { instructions: 'A'.repeat(MAX_WRITING_INSTRUCTIONS_LENGTH + 1) },
+  { instructions: 'Style', user_id: 'other' },
+  { instructions: 'Style', app_metadata: { role: 'admin' } },
+])('rejects invalid writing instructions before calling Auth0: %j', async (input) => {
+  await expect(saveWritingInstructions('auth0|owner', input)).rejects.toMatchObject({
+    status: 400,
+  });
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it('accepts the instruction length boundary and rejects mismatched response identities', async () => {
+  const instructions = 'A'.repeat(MAX_WRITING_INSTRUCTIONS_LENGTH);
+  fetchMock.mockResolvedValueOnce(
+    reply({ ...profile, user_metadata: { writing_instructions: instructions } }),
+  );
+  expect(await saveWritingInstructions('auth0|owner', { instructions })).toEqual({ instructions });
+  fetchMock.mockResolvedValueOnce(
+    reply({ ...profile, user_id: 'auth0|other', user_metadata: { writing_instructions: 'Other' } }),
+  );
+  await expect(getWritingInstructions('auth0|owner')).rejects.toMatchObject({ status: 502 });
+});
+
+it.each([undefined, 123, 'A'.repeat(MAX_WRITING_INSTRUCTIONS_LENGTH + 1)])(
+  'defaults missing or invalid saved instructions to empty',
+  async (saved) => {
+    fetchMock.mockResolvedValueOnce(
+      reply({ ...profile, user_metadata: { writing_instructions: saved } }),
+    );
+    expect(await getWritingInstructions('auth0|owner')).toEqual({ instructions: '' });
+  },
+);

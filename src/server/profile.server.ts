@@ -1,7 +1,11 @@
 import '@tanstack/react-start/server-only';
 import { z } from 'zod';
 import type { UserProfile } from '../profile';
-import type { WritingConsent } from '../writing';
+import {
+  MAX_WRITING_INSTRUCTIONS_LENGTH,
+  type WritingConsent,
+  type WritingInstructions,
+} from '../writing';
 import HttpException from './exceptions/HttpException';
 
 const updateSchema = z
@@ -147,6 +151,39 @@ export function updateProfile(owner: string, input: unknown) {
       'Enter a name and nickname of 1–100 characters. Only these fields can be edited.',
     );
   return profileRequest(owner, parsed.data);
+}
+
+function writingInstructions(data: {
+  user_metadata?: { writing_instructions?: unknown };
+}): WritingInstructions {
+  const saved = data.user_metadata?.writing_instructions;
+  return {
+    instructions:
+      typeof saved === 'string' && saved.length <= MAX_WRITING_INSTRUCTIONS_LENGTH ? saved : '',
+  };
+}
+export async function getWritingInstructions(owner: string): Promise<WritingInstructions> {
+  return writingInstructions(await userRequest(owner));
+}
+export async function saveWritingInstructions(
+  owner: string,
+  input: unknown,
+): Promise<WritingInstructions> {
+  const parsed = z
+    .object({ instructions: z.string().max(MAX_WRITING_INSTRUCTIONS_LENGTH).trim() })
+    .strict()
+    .safeParse(input);
+  if (!parsed.success)
+    throw new HttpException(
+      400,
+      `Enter writing instructions of at most ${MAX_WRITING_INSTRUCTIONS_LENGTH.toLocaleString('en-US')} characters.`,
+    );
+  // Auth0 merges top-level metadata keys; patch only this preference so consent and other settings remain intact.
+  return writingInstructions(
+    await userRequest(owner, {
+      user_metadata: { writing_instructions: parsed.data.instructions },
+    }),
+  );
 }
 
 // Keep context-sharing choices on the account, separate from editable identity fields.

@@ -1,4 +1,7 @@
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Named comparison overflow sections must support keyboard scrolling. */
+import './decision-explorer.css';
 import { PageHeading } from './PageHeading';
+import { InfoTooltip } from './InfoTooltip';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import {
   Box,
@@ -26,8 +29,10 @@ const checkboxStyle = { width: 18, height: 18, flexShrink: 0, accentColor: '#394
 
 export function PlayerProfilesPage({
   search = {},
+  onContextChange,
 }: {
   search?: { leagueId?: string; year?: number; playerId?: string };
+  onContextChange?: (context: { leagueId: string; year: number; playerId?: string }) => void;
 }) {
   const api = useApi();
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -50,6 +55,17 @@ export function PlayerProfilesPage({
     undefined,
   );
   const [customRange, setRange] = useState<number[]>();
+  useEffect(() => {
+    if (!search.leagueId) return;
+    // Explicit route changes (including Back) restore the requested scope.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setLeagueId(search.leagueId);
+    if (search.year) setYear(search.year);
+    resetContext();
+    if (search.playerId) setSelected([search.playerId]);
+    // Route-driven synchronization must not run on local selection changes.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.leagueId, search.year, search.playerId]);
 
   useEffect(() => {
     let active = true;
@@ -61,6 +77,11 @@ export function PlayerProfilesPage({
         if (!leagueId && rows[0]) {
           setLeagueId(rows[0].leagueId);
           if (!search.year) setYear(rows[0].seasonId);
+          onContextChange?.({
+            leagueId: rows[0].leagueId,
+            year: search.year ?? rows[0].seasonId,
+            ...(search.playerId ? { playerId: search.playerId } : {}),
+          });
         }
         if (!rows.length) setBusy(false);
       },
@@ -189,10 +210,63 @@ export function PlayerProfilesPage({
   const validRange = range[0] <= range[1];
 
   return (
-    <Box maxW="1200px" mx="auto">
+    <Box className="decision-explorer decision-explorer-players" maxW="1400px" mx="auto">
       <PageHeading
+        controls={
+          <Flex className="decision-command-context" wrap="wrap" align="end" gap={4} minW={0}>
+            <Field.Root flex="1" minW="160px">
+              <Field.Label htmlFor="player-league">Player league</Field.Label>
+              <NativeSelect.Root bg="bg" disabled={busy && !leagues.length}>
+                <NativeSelect.Field
+                  id="player-league"
+                  value={leagueId}
+                  onChange={(event) => {
+                    const nextYear =
+                      leagues.find((row) => row.leagueId === event.target.value)?.seasonId ?? year;
+                    setLeagueId(event.target.value);
+                    setYear(nextYear);
+                    onContextChange?.({ leagueId: event.target.value, year: nextYear });
+                    resetContext();
+                  }}
+                >
+                  {!leagues.length && <option value="">No connected leagues</option>}
+                  {leagues.map((row) => (
+                    <option key={row.leagueId} value={row.leagueId}>
+                      {row.leagueName}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+            <Field.Root width={{ base: '100%', sm: '140px' }}>
+              <Field.Label htmlFor="player-season">Player season</Field.Label>
+              <Input
+                id="player-season"
+                type="number"
+                min={2000}
+                max={2100}
+                value={year}
+                bg="bg"
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  if (Number.isInteger(next) && next >= 2000 && next <= 2100 && next !== year) {
+                    setYear(next);
+                    onContextChange?.({ leagueId, year: next });
+                    resetContext();
+                  }
+                }}
+              />
+            </Field.Root>
+            {league && (
+              <Text fontSize="sm" color="fg.muted" pb={2}>
+                {provider} · {year}
+                {live ? ` · Projection week ${live.week}` : ''}
+              </Text>
+            )}
+          </Flex>
+        }
         title="Player profiles & comparisons"
-        eyebrow="Know your roster"
         description="Find players and compare their projections and observed scoring in your league."
       >
         <Button
@@ -206,56 +280,7 @@ export function PlayerProfilesPage({
           {busy && leagueId ? 'Refreshing player data…' : 'Refresh player data'}
         </Button>
       </PageHeading>
-      <Flex wrap="wrap" align="end" gap={4} p={4} mb={5} bg="bg.subtle" rounded="lg">
-        <Field.Root flex="1" minW="200px">
-          <Field.Label htmlFor="player-league">Player league</Field.Label>
-          <NativeSelect.Root bg="bg" disabled={busy && !leagues.length}>
-            <NativeSelect.Field
-              id="player-league"
-              value={leagueId}
-              onChange={(event) => {
-                setLeagueId(event.target.value);
-                setYear(
-                  leagues.find((row) => row.leagueId === event.target.value)?.seasonId ?? year,
-                );
-                resetContext();
-              }}
-            >
-              {!leagues.length && <option value="">No connected leagues</option>}
-              {leagues.map((row) => (
-                <option key={row.leagueId} value={row.leagueId}>
-                  {row.leagueName}
-                </option>
-              ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-          </NativeSelect.Root>
-        </Field.Root>
-        <Field.Root width={{ base: '100%', sm: '140px' }}>
-          <Field.Label htmlFor="player-season">Player season</Field.Label>
-          <Input
-            id="player-season"
-            type="number"
-            min={2000}
-            max={2100}
-            value={year}
-            bg="bg"
-            onChange={(event) => {
-              const next = Number(event.target.value);
-              if (Number.isInteger(next) && next >= 2000 && next <= 2100 && next !== year) {
-                setYear(next);
-                resetContext();
-              }
-            }}
-          />
-        </Field.Root>
-        {league && (
-          <Text fontSize="sm" color="fg.muted" pb={2}>
-            {provider} · {year}
-            {live ? ` · Projection week ${live.week}` : ''}
-          </Text>
-        )}
-      </Flex>
+
       {busy && <LoadingSkeleton label="Loading player data…" />}
       {error && (
         <Text role="alert" mb={4} color="fg.error">
@@ -269,7 +294,201 @@ export function PlayerProfilesPage({
       ))}
       {!busy && (
         <>
-          <Box borderWidth="1px" borderStyle="solid" rounded="xl" p={4} mb={5} bg="bg">
+          <Box
+            as="section"
+            aria-label="Find players"
+            className="decision-explorer-panel decision-player-browser"
+            minW={0}
+            bg="bg"
+            p={4}
+            borderWidth="1px"
+            borderStyle="solid"
+            rounded="xl"
+          >
+            <Heading as="h2" size="lg" mb={4}>
+              Find players
+            </Heading>
+            <Flex className="decision-player-browser-filters" align="end" wrap="wrap" gap={3}>
+              <Field.Root mb={3}>
+                <Field.Label htmlFor="player-search">
+                  Search player name, position or provider ID
+                </Field.Label>
+                <Input
+                  id="player-search"
+                  type="search"
+                  placeholder="Name, team, position or ID"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </Field.Root>
+              <Field.Root mb={3}>
+                <Field.Label htmlFor="player-position">Position filter</Field.Label>
+                <NativeSelect.Root>
+                  <NativeSelect.Field
+                    id="player-position"
+                    value={position}
+                    onChange={(event) => setPosition(event.target.value)}
+                  >
+                    <option value="">All positions</option>
+                    {positions.map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </NativeSelect.Field>
+                  <NativeSelect.Indicator />
+                </NativeSelect.Root>
+              </Field.Root>
+              {!!selected.length && (
+                <Flex className="decision-player-range" gap={3} wrap="wrap">
+                  {[0, 1].map((index) => (
+                    <Field.Root key={index} width="120px">
+                      <Field.Label htmlFor={`comparison-week-${index}`}>
+                        {index === 0 ? 'First week' : 'Last week'}
+                      </Field.Label>
+                      <Input
+                        id={`comparison-week-${index}`}
+                        type="number"
+                        min={1}
+                        max={18}
+                        value={range[index]}
+                        bg="bg"
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isInteger(value) && value >= 1 && value <= 18)
+                            setRange((previous) =>
+                              (previous ?? range).map((week, i) => (i === index ? value : week)),
+                            );
+                        }}
+                      />
+                    </Field.Root>
+                  ))}
+                </Flex>
+              )}
+              {(query || position) && (
+                <Button
+                  size="sm"
+                  variant="plain"
+                  mb={2}
+                  onClick={() => {
+                    setQuery('');
+                    setPosition('');
+                  }}
+                >
+                  Reset filters
+                </Button>
+              )}
+            </Flex>
+            {!validRange && (
+              <Text role="alert" mb={4} color="fg.error">
+                Choose a first week no later than the last week.
+              </Text>
+            )}
+            <Text fontSize="xs" color="fg.muted" mb={3}>
+              {shown.length} of {profiles.length} players · Current projection
+            </Text>
+            <Box
+              as="fieldset"
+              border="0"
+              p={0}
+              m={0}
+              minW={0}
+              maxH="400px"
+              overflowY="auto"
+              aria-label="Players to compare"
+            >
+              {shown.map((player) => (
+                <Box
+                  className="decision-explorer-player-option"
+                  as="label"
+                  display="flex"
+                  alignItems="center"
+                  gap={3}
+                  key={player.key}
+                  p={3}
+                  mb={2}
+                  rounded="lg"
+                  borderWidth="1px"
+                  borderStyle="solid"
+                  borderColor={selected.includes(player.id) ? 'indigo.solid' : 'border'}
+                  bg={selected.includes(player.id) ? 'indigo.subtle' : 'bg'}
+                  cursor="pointer"
+                >
+                  <input
+                    type="checkbox"
+                    style={checkboxStyle}
+                    aria-label={`Compare ${player.name}`}
+                    checked={selected.includes(player.id)}
+                    onChange={() => toggle(player.id)}
+                  />
+                  <Box minW={0} flex="1">
+                    <Text fontWeight="semibold" overflowWrap="anywhere">
+                      {player.name}
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted" mt={1} overflowWrap="anywhere">
+                      {player.position ?? 'Unknown position'} · {player.ownership}
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted" mt={1}>
+                      ID {player.id} · Proj. {points(player.projection)}
+                    </Text>
+                  </Box>
+                </Box>
+              ))}
+              {!shown.length && (
+                <Text py={3} color="fg.muted">
+                  {profiles.length
+                    ? 'No players match your filters.'
+                    : 'No covered players are available. Connect a league or refresh provider data.'}
+                </Text>
+              )}
+            </Box>
+            {api.waivers && league && (
+              <Box
+                className="decision-player-pool"
+                mt={4}
+                pt={4}
+                borderTopWidth="1px"
+                borderTopStyle="solid"
+                borderColor="border"
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  width="100%"
+                  disabled={poolBusy}
+                  onClick={() => setPoolRetry((value) => value + 1)}
+                >
+                  {poolBusy
+                    ? 'Loading unowned players…'
+                    : pool
+                      ? 'Refresh unowned players'
+                      : 'Include verified unowned pool'}
+                </Button>
+                <Text fontSize="xs" color="fg.muted" mt={2}>
+                  Requires a managed team and supported provider coverage.
+                </Text>
+                {poolError && (
+                  <Text as="output" display="block" fontSize="sm" mt={2} color="fg.error">
+                    {poolError}
+                  </Text>
+                )}
+                {pool?.notices.map((notice) => (
+                  <Text fontSize="xs" mt={2} key={notice}>
+                    {notice}
+                  </Text>
+                ))}
+              </Box>
+            )}
+          </Box>
+          <Box
+            className="decision-explorer-panel"
+            borderWidth="1px"
+            borderStyle="solid"
+            rounded="xl"
+            p={4}
+            mb={5}
+            bg="bg"
+          >
             <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
               <Box>
                 <Heading as="h2" size="md">
@@ -313,388 +532,300 @@ export function PlayerProfilesPage({
                 })}
               </Flex>
             )}
-          </Box>
-          <Box
-            display="grid"
-            gridTemplateColumns={{ base: 'minmax(0, 1fr)', lg: '320px minmax(0, 1fr)' }}
-            alignItems="start"
-            gap={5}
-          >
-            <Box
-              as="section"
-              aria-label="Find players"
-              minW={0}
-              bg="bg"
-              p={4}
-              borderWidth="1px"
-              borderStyle="solid"
-              rounded="xl"
-            >
-              <Heading as="h2" size="lg" mb={4}>
-                Find players
-              </Heading>
-              <Field.Root mb={3}>
-                <Field.Label htmlFor="player-search">
-                  Search player name, position or provider ID
-                </Field.Label>
-                <Input
-                  id="player-search"
-                  type="search"
-                  placeholder="Name, team, position or ID"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-              </Field.Root>
-              <Field.Root mb={3}>
-                <Field.Label htmlFor="player-position">Position filter</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    id="player-position"
-                    value={position}
-                    onChange={(event) => setPosition(event.target.value)}
-                  >
-                    <option value="">All positions</option>
-                    {positions.map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-              {(query || position) && (
-                <Button
-                  size="sm"
-                  variant="plain"
-                  mb={2}
-                  onClick={() => {
-                    setQuery('');
-                    setPosition('');
-                  }}
-                >
-                  Reset filters
-                </Button>
-              )}
-              <Text fontSize="xs" color="fg.muted" mb={3}>
-                {shown.length} of {profiles.length} players · Current projection
-              </Text>
-              <Box
-                as="fieldset"
-                border="0"
-                p={0}
-                m={0}
-                minW={0}
-                maxH="400px"
-                overflowY="auto"
-                aria-label="Players to compare"
+            {chosen.length >= 2 && validRange && (
+              <section
+                className="decision-explorer-table-wrap player-comparison-matrix"
+                tabIndex={0}
+                aria-label="Side-by-side player comparison"
               >
-                {shown.map((player) => (
-                  <Box
-                    as="label"
-                    display="flex"
-                    alignItems="center"
-                    gap={3}
-                    key={player.key}
-                    p={3}
-                    mb={2}
-                    rounded="lg"
-                    borderWidth="1px"
-                    borderStyle="solid"
-                    borderColor={selected.includes(player.id) ? 'indigo.solid' : 'border'}
-                    bg={selected.includes(player.id) ? 'indigo.subtle' : 'bg'}
-                    cursor="pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      style={checkboxStyle}
-                      aria-label={`Compare ${player.name}`}
-                      checked={selected.includes(player.id)}
-                      onChange={() => toggle(player.id)}
-                    />
-                    <Box minW={0} flex="1">
-                      <Text fontWeight="semibold" overflowWrap="anywhere">
-                        {player.name}
-                      </Text>
-                      <Text fontSize="xs" color="fg.muted" mt={1} overflowWrap="anywhere">
-                        {player.position ?? 'Unknown position'} · {player.ownership}
-                      </Text>
-                      <Text fontSize="xs" color="fg.muted" mt={1}>
-                        ID {player.id} · Proj. {points(player.projection)}
-                      </Text>
-                    </Box>
-                  </Box>
-                ))}
-                {!shown.length && (
-                  <Text py={3} color="fg.muted">
-                    {profiles.length
-                      ? 'No players match your filters.'
-                      : 'No covered players are available. Connect a league or refresh provider data.'}
-                  </Text>
-                )}
-              </Box>
-              {api.waivers && league && (
-                <Box mt={4} pt={4} borderTopWidth="1px" borderTopStyle="solid" borderColor="border">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    width="100%"
-                    disabled={poolBusy}
-                    onClick={() => setPoolRetry((value) => value + 1)}
-                  >
-                    {poolBusy
-                      ? 'Loading unowned players…'
-                      : pool
-                        ? 'Refresh unowned players'
-                        : 'Include verified unowned pool'}
-                  </Button>
-                  <Text fontSize="xs" color="fg.muted" mt={2}>
-                    Requires a managed team and supported provider coverage.
-                  </Text>
-                  {poolError && (
-                    <Text as="output" display="block" fontSize="sm" mt={2} color="fg.error">
-                      {poolError}
-                    </Text>
-                  )}
-                  {pool?.notices.map((notice) => (
-                    <Text fontSize="xs" mt={2} key={notice}>
-                      {notice}
-                    </Text>
-                  ))}
-                </Box>
-              )}
-            </Box>
-            <Box as="section" aria-label="Player comparison" minW={0}>
-              <Flex justify="space-between" align="start" wrap="wrap" gap={4} mb={4}>
-                <Box>
-                  <Heading as="h2" size="lg">
-                    {chosen.length === 1 ? 'Player profile' : 'Player comparison'}
-                  </Heading>
-                  <Text fontSize="sm" color="fg.muted" mt={1}>
-                    Observed points · Weeks {range[0]}–{range[1]}
-                  </Text>
-                </Box>
-                {!!selected.length && (
-                  <Flex gap={3} wrap="wrap">
-                    {[0, 1].map((index) => (
-                      <Field.Root key={index} width="120px">
-                        <Field.Label htmlFor={`comparison-week-${index}`}>
-                          {index === 0 ? 'First week' : 'Last week'}
-                        </Field.Label>
-                        <Input
-                          id={`comparison-week-${index}`}
-                          type="number"
-                          min={1}
-                          max={18}
-                          value={range[index]}
-                          bg="bg"
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            if (Number.isInteger(value) && value >= 1 && value <= 18)
-                              setRange((previous) =>
-                                (previous ?? range).map((week, i) => (i === index ? value : week)),
-                              );
-                          }}
-                        />
-                      </Field.Root>
+                <table className="decision-explorer-table">
+                  <caption>
+                    Side-by-side weekly comparison · Weeks {range[0]}–{range[1]}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Metric</th>
+                      {chosen.map((player) => (
+                        <th scope="col" key={player.key}>
+                          {player.name}
+                          <span className="comparison-player-context">
+                            {player.position ?? 'Position unavailable'} · {player.ownership}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <th scope="row">Window average</th>
+                      {chosen.map((player) => (
+                        <td key={player.key}>
+                          {points(comparePlayerRange(player, range[0], range[1]).average)}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th scope="row">Window total</th>
+                      {chosen.map((player) => (
+                        <td key={player.key}>
+                          {points(comparePlayerRange(player, range[0], range[1]).total)}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th scope="row">Observed coverage</th>
+                      {chosen.map((player) => {
+                        const compared = comparePlayerRange(player, range[0], range[1]);
+                        return (
+                          <td key={player.key}>
+                            {compared.covered}/{compared.expected} weeks
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr>
+                      <th scope="row">Current projection · combined where comparable</th>
+                      {chosen.map((player) => (
+                        <td key={player.key}>
+                          {points(player.projection)}
+                          {player.projectionWeek ? ` · Week ${player.projectionWeek}` : ''}
+                        </td>
+                      ))}
+                    </tr>
+                    {(['Sleeper', 'ESPN'] as const).map((source) => (
+                      <tr key={source}>
+                        <th scope="row">{source} projection</th>
+                        {chosen.map((player) => (
+                          <td key={player.key}>
+                            {points(
+                              player.projectionSources?.find((entry) => entry.provider === source)
+                                ?.points,
+                            )}
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-                  </Flex>
-                )}
-              </Flex>
-              {!validRange && (
-                <Text role="alert" mb={4} color="fg.error">
-                  Choose a first week no later than the last week.
+                    <tr>
+                      <th scope="row">Provider disagreement</th>
+                      {chosen.map((player) => (
+                        <td key={player.key}>{points(player.projectionSpread)}</td>
+                      ))}
+                    </tr>
+                    {Array.from(
+                      { length: range[1] - range[0] + 1 },
+                      (_, index) => range[0] + index,
+                    ).map((week) => (
+                      <tr key={week}>
+                        <th scope="row">Week {week} observed</th>
+                        {chosen.map((player) => (
+                          <td key={player.key}>{points(player.observed[week])}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <Text fontSize="xs">
+                  Totals and averages use covered weeks only. Missing weeks and source projections
+                  are unavailable. Projection weeks may be outside the observed window; identity,
+                  freshness and sources remain in each profile below.
                 </Text>
-              )}
-              {!selected.length && (
-                <Box p={6} borderWidth="1px" borderStyle="solid" rounded="xl" bg="bg">
-                  <Heading as="h3" size="md">
-                    Start with a player
-                  </Heading>
-                  <Text color="fg.muted" mt={2}>
-                    Use the player list to see projections, ownership and scoring history here.
-                  </Text>
-                </Box>
-              )}
-              {!!selected.length && !chosen.length && (
-                <Text>
-                  Selected players are unavailable in this snapshot. Try refreshing or choose
-                  another player.
+              </section>
+            )}
+          </Box>
+          <Box as="section" aria-label="Player comparison" minW={0}>
+            <Flex justify="space-between" align="start" wrap="wrap" gap={4} mb={4}>
+              <Box>
+                <Heading as="h2" size="lg">
+                  {chosen.length === 1 ? 'Player profile' : 'Player comparison'}
+                </Heading>
+                <Text fontSize="sm" color="fg.muted" mt={1}>
+                  Observed points · Weeks {range[0]}–{range[1]}
                 </Text>
-              )}
-              {validRange && (
-                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                  {chosen.map((player) => {
-                    const compared = comparePlayerRange(player, range[0], range[1]);
-                    return (
-                      <Box
-                        as="section"
-                        aria-label={`${player.name} profile`}
-                        key={player.key}
-                        minW={0}
-                        bg="bg"
-                        borderWidth="1px"
-                        borderStyle="solid"
-                        rounded="xl"
-                        overflow="hidden"
-                      >
-                        <Box p={4}>
-                          <Flex justify="space-between" align="start" gap={2}>
-                            <Box minW={0}>
-                              <Heading as="h3" size="md" overflowWrap="anywhere">
-                                {player.name}
-                              </Heading>
-                              <Text fontSize="sm" color="fg.muted" mt={1}>
-                                {player.position ?? 'Position unavailable'} · {player.ownership}
-                              </Text>
-                            </Box>
-                            <Button
-                              size="sm"
-                              variant="plain"
-                              flexShrink={0}
-                              aria-label={`Remove ${player.name} profile`}
-                              onClick={() => toggle(player.id)}
-                            >
-                              ×
-                            </Button>
-                          </Flex>
-                          <Text fontSize="xs" color="fg.muted" mt={3}>
-                            Status:{' '}
-                            {player.availability === undefined
-                              ? 'Unavailable'
-                              : player.availability || 'No flagged injury at snapshot'}{' '}
-                            · Bye:{' '}
-                            {player.bye === undefined ? 'Unavailable' : player.bye ? 'Yes' : 'No'}
-                          </Text>
-                        </Box>
-                        <Box p={4} bg="indigo.subtle" borderTopWidth="1px" borderTopStyle="solid">
-                          <Text fontSize="sm" fontWeight="semibold">
-                            {player.projectionWeek
-                              ? `Week ${player.projectionWeek} projection`
-                              : 'Current projection'}
-                          </Text>
-                          <Flex align="baseline" gap={2} wrap="wrap" mt={1}>
-                            <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
-                              {points(player.projection)}
+              </Box>
+            </Flex>
+
+            {!selected.length && (
+              <Box p={6} borderWidth="1px" borderStyle="solid" rounded="xl" bg="bg">
+                <Heading as="h3" size="md">
+                  Start with a player
+                </Heading>
+                <Text color="fg.muted" mt={2}>
+                  Use the player list to see projections, ownership and scoring history here.
+                </Text>
+              </Box>
+            )}
+            {!!selected.length && !chosen.length && (
+              <Text>
+                Selected players are unavailable in this snapshot. Try refreshing or choose another
+                player.
+              </Text>
+            )}
+            {validRange && (
+              <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                {chosen.map((player) => {
+                  const compared = comparePlayerRange(player, range[0], range[1]);
+                  return (
+                    <Box
+                      as="section"
+                      aria-label={`${player.name} profile`}
+                      className="decision-explorer-panel"
+                      key={player.key}
+                      minW={0}
+                      bg="bg"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      rounded="xl"
+                      overflow="hidden"
+                    >
+                      <Box p={4}>
+                        <Flex justify="space-between" align="start" gap={2}>
+                          <Box minW={0}>
+                            <Heading as="h3" size="md" overflowWrap="anywhere">
+                              {player.name}
+                            </Heading>
+                            <Text fontSize="sm" color="fg.muted" mt={1}>
+                              {player.position ?? 'Position unavailable'} · {player.ownership}
                             </Text>
-                            <Text fontSize="sm" color="fg.muted">
-                              points
-                            </Text>
-                          </Flex>
-                          {player.projectionSpread !== undefined && (
-                            <Text fontSize="xs" color="fg.muted" mt={2}>
-                              Source disagreement: {player.projectionSpread.toFixed(2)} points
-                            </Text>
-                          )}
-                        </Box>
-                        <Box p={4}>
-                          <SimpleGrid columns={2} gap={3}>
-                            {[
-                              ['Observed total', compared.total],
-                              ['Observed average', compared.average],
-                            ].map(([label, value]) => (
-                              <Box key={label as string}>
-                                <Text fontSize="xs" color="fg.muted">
-                                  {label}
-                                </Text>
-                                <Text fontSize="lg" fontWeight="bold">
-                                  {points(value as number | null)}
-                                </Text>
-                              </Box>
-                            ))}
-                          </SimpleGrid>
-                          <Text fontSize="sm" color="fg.muted" mt={3}>
-                            Coverage: {compared.covered}/{compared.expected} weeks · Weeks{' '}
-                            {range[0]}–{range[1]}
-                          </Text>
-                          {compared.covered < compared.expected && (
-                            <Text fontSize="xs" color="fg.muted" mt={2}>
-                              Totals and averages use covered weeks only. Missing weeks are
-                              unavailable.
-                            </Text>
-                          )}
-                          <Box as="details" mt={4}>
-                            <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-                              Weekly scores
-                            </summary>
-                            <Box
-                              as="table"
-                              width="100%"
-                              mt={3}
-                              fontSize="sm"
-                              style={{ borderCollapse: 'collapse' }}
-                            >
-                              <caption style={{ textAlign: 'left', marginBottom: 8 }}>
-                                {player.name} · Weeks {range[0]}–{range[1]}
-                              </caption>
-                              <thead>
-                                <tr>
-                                  <th scope="col" style={{ textAlign: 'left' }}>
-                                    Week
-                                  </th>
-                                  <th scope="col" style={{ textAlign: 'right' }}>
-                                    Points
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {compared.weeks.map((week) => (
-                                  <tr key={week.week}>
-                                    <td style={{ padding: '8px 0' }}>{week.week}</td>
-                                    <td style={{ textAlign: 'right' }}>{points(week.points)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </Box>
                           </Box>
-                          <Box
-                            as="details"
-                            mt={4}
-                            fontSize="xs"
-                            color="fg.muted"
-                            overflowWrap="anywhere"
+                          <Button
+                            size="sm"
+                            variant="plain"
+                            flexShrink={0}
+                            aria-label={`Remove ${player.name} profile`}
+                            onClick={() => toggle(player.id)}
                           >
-                            <summary style={{ cursor: 'pointer' }}>
-                              Identity &amp; data sources
-                            </summary>
-                            <Text mt={3}>{player.key}</Text>
-                            <Text mt={2}>
-                              Observation source: {player.reportAt ?? 'Unavailable'} ·
-                              roster/projection source: {player.rosterAt ?? 'Unavailable'}. Verify
-                              freshness before acting.
-                            </Text>
-                            {player.projectionSources?.map((source) => (
-                              <Text mt={2} key={source.provider}>
-                                {source.provider}: {source.points.toFixed(2)} · player ID{' '}
-                                {source.playerId} · fetched {source.capturedAt}
+                            ×
+                          </Button>
+                        </Flex>
+                        <Text fontSize="xs" color="fg.muted" mt={3}>
+                          Status:{' '}
+                          {player.availability === undefined
+                            ? 'Unavailable'
+                            : player.availability || 'No flagged injury at snapshot'}{' '}
+                          · Bye:{' '}
+                          {player.bye === undefined ? 'Unavailable' : player.bye ? 'Yes' : 'No'}
+                        </Text>
+                      </Box>
+                      <Box p={4} bg="indigo.subtle" borderTopWidth="1px" borderTopStyle="solid">
+                        <Text fontSize="sm" fontWeight="semibold">
+                          {player.projectionWeek
+                            ? `Week ${player.projectionWeek} projection`
+                            : 'Current projection'}
+                        </Text>
+                        <Flex align="baseline" gap={2} wrap="wrap" mt={1}>
+                          <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
+                            {points(player.projection)}
+                          </Text>
+                          <Text fontSize="sm" color="fg.muted">
+                            points
+                          </Text>
+                        </Flex>
+                        {player.projectionSpread !== undefined && (
+                          <Text fontSize="xs" color="fg.muted" mt={2}>
+                            Source disagreement: {player.projectionSpread.toFixed(2)} points
+                          </Text>
+                        )}
+                      </Box>
+                      <Box p={4}>
+                        <SimpleGrid columns={2} gap={3}>
+                          {[
+                            ['Observed total', compared.total],
+                            ['Observed average', compared.average],
+                          ].map(([label, value]) => (
+                            <Box key={label as string}>
+                              <Text fontSize="xs" color="fg.muted">
+                                {label}
                               </Text>
-                            ))}
-                            {player.projectionNote && <Text mt={2}>{player.projectionNote}</Text>}
+                              <Text fontSize="lg" fontWeight="bold">
+                                {points(value as number | null)}
+                              </Text>
+                            </Box>
+                          ))}
+                        </SimpleGrid>
+                        <Text fontSize="sm" color="fg.muted" mt={3}>
+                          Coverage: {compared.covered}/{compared.expected} weeks · Weeks {range[0]}–
+                          {range[1]}
+                        </Text>
+                        {compared.covered < compared.expected && (
+                          <Text fontSize="xs" color="fg.muted" mt={2}>
+                            Totals and averages use covered weeks only. Missing weeks are
+                            unavailable.
+                          </Text>
+                        )}
+                        <Box as="details" mt={4}>
+                          <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
+                            Weekly scores
+                          </summary>
+                          <Box
+                            as="table"
+                            width="100%"
+                            mt={3}
+                            fontSize="sm"
+                            style={{ borderCollapse: 'collapse' }}
+                          >
+                            <caption style={{ textAlign: 'left', marginBottom: 8 }}>
+                              {player.name} · Weeks {range[0]}–{range[1]}
+                            </caption>
+                            <thead>
+                              <tr>
+                                <th scope="col" style={{ textAlign: 'left' }}>
+                                  Week
+                                </th>
+                                <th scope="col" style={{ textAlign: 'right' }}>
+                                  Points
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {compared.weeks.map((week) => (
+                                <tr key={week.week}>
+                                  <td style={{ padding: '8px 0' }}>{week.week}</td>
+                                  <td style={{ textAlign: 'right' }}>{points(week.points)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
                           </Box>
+                        </Box>
+                        <Box
+                          as="details"
+                          mt={4}
+                          fontSize="xs"
+                          color="fg.muted"
+                          overflowWrap="anywhere"
+                        >
+                          <summary style={{ cursor: 'pointer' }}>
+                            Identity &amp; data sources
+                          </summary>
+                          <Text mt={3}>{player.key}</Text>
+                          <Text mt={2}>
+                            Observation source: {player.reportAt ?? 'Unavailable'} ·
+                            roster/projection source: {player.rosterAt ?? 'Unavailable'}. Verify
+                            freshness before acting.
+                          </Text>
+                          {player.projectionSources?.map((source) => (
+                            <Text mt={2} key={source.provider}>
+                              {source.provider}: {source.points.toFixed(2)} · player ID{' '}
+                              {source.playerId} · fetched {source.capturedAt}
+                            </Text>
+                          ))}
+                          {player.projectionNote && <Text mt={2}>{player.projectionNote}</Text>}
                         </Box>
                       </Box>
-                    );
-                  })}
-                </SimpleGrid>
-              )}
-            </Box>
+                    </Box>
+                  );
+                })}
+              </SimpleGrid>
+            )}
           </Box>
-          <Box
-            as="details"
-            mt={5}
-            p={4}
-            borderWidth="1px"
-            borderStyle="solid"
-            rounded="lg"
-            color="fg.muted"
-            fontSize="sm"
-          >
-            <summary style={{ cursor: 'pointer' }}>Scoring coverage and data limits</summary>
-            <Text mt={3}>
-              Observed points use this league’s scoring and only the roster weeks present in its
-              reports. Missing weeks are unavailable, not zero. This is partial season coverage, not
-              career history or cross-provider name matching. Targets, snap share and other usage
-              metrics are unavailable.
+          <Box mt={5} fontSize="sm" color="fg.muted">
+            Scoring coverage{' '}
+            <InfoTooltip label="Scoring coverage and data limits">
+              Observed points use this league’s scoring and only roster weeks present in its
+              reports. This is partial season coverage, not career history or cross-provider name
+              matching. Targets, snap share and other usage metrics are unavailable.
+            </InfoTooltip>
+            <Text mt={2}>
+              Missing weeks are unavailable, not zero. Totals and averages use covered weeks only.
             </Text>
           </Box>
         </>

@@ -289,8 +289,13 @@ without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
 for diagnosis. The browser suite uses one worker in CI because its PNG exports share
-one Vite server and can delay page startup; local `npm run test:ui` runs with
-Playwright's normal parallelism. Run the same checks above before proposing a change.
+one Vite server and can delay page startup. The cold forecast timing checks run
+first with one worker; local functional UI checks then use Playwright's normal
+parallelism. Run the same checks above before proposing a change.
+
+See [UI regression testing](docs/ui-testing.md) for retained workflow coverage, fixture
+boundaries, export baselines and generated artifact handling. Completed redesign
+mockups and one-off validation reports are available through Git history.
 
 `check:local` is a separate live integration check, not a deterministic CI gate. It
 builds and runs a separate disposable instance of the production app, verifies signed
@@ -881,6 +886,25 @@ Context-sharing approval is saved per assistant on the Auth0 user under
 including requests from an already-open page. These preferences use the same server-only Auth0
 Management API configuration as profile editing (`read:users` and `update:users`).
 
+### Personal writing instructions
+
+Open **Your profile → Writing connections → Your writing instructions** to paste
+your own writing guide, including multiline text or Markdown. Save it to apply your
+voice to subsequent Codex or Claude writing requests; edit and save to replace it,
+or use **Clear writing instructions** to return to the default guidance. The editor
+accepts up to 20,000 characters, preserves drafts when switching profile views or
+retrying a failed save, and shows unsaved changes and save feedback.
+
+Instructions are stored in your Auth0 account's `user_metadata.writing_instructions`
+using the existing server-only Management API configuration. Reads and writes derive
+the account from verified authorization and disable caching. Only the requesting
+user's saved text is sent to the selected assistant; other users start with blank
+instructions. This preference guides style and emphasis while the existing factual
+context, talking-point format, output limits, consent, and cancellation still apply.
+It is not included in league records or public reports. Metadata writes patch only
+the instruction key, preserving other settings and context-sharing choices according
+to [Auth0's metadata merge behavior](https://auth0.com/docs/api/management/v2/users/patch-users-by-id).
+
 ### Choose your managed team
 
 In **Manage leagues**, choose **My team season** and **My managed team**, then select **Save my team**. The private choice is saved to your account for that league and season, so it follows you across devices. Choose **No team / commissioner mode** to clear it and continue using league-wide reports. Each new season needs its own choice. Changing the provider league ID clears choices; a missing team or changed manager requires reselection.
@@ -944,7 +968,7 @@ The [NFL provider evaluation](docs/nfl-data-providers.md) compares projection an
 
 ### Writing connection readiness
 
-**Your profile → Writing assistant connections** shows the server Codex login status and links to the Docker OAuth instructions above. It distinguishes access disabled for your account, a missing CLI, a failed login check, and cached login readiness. Refresh after the operator changes setup. The status contains no tokens or other users' identifiers, and users outside the server allowlist cannot inspect its login state.
+**Your profile → Writing assistant connections** shows the server Codex login status and includes expandable operator setup instructions inside the app, also available in the rankings builder. The guidance follows the Docker OAuth steps above and does not depend on a GitHub branch URL. Readiness distinguishes access disabled for your account, a missing CLI, a failed login check, and cached login readiness. Refresh after the operator changes setup. The status contains no tokens or other users' identifiers, and users outside the server allowlist cannot inspect its login state.
 
 Saved OpenAI keys take precedence even when the server login is ready. Remove your saved key to use the enabled server account; settings refresh readiness after removal. A ready login does not prove ChatGPT authentication mode, account model access, or available quota. Confirm **Logged in using ChatGPT** on the Docker host when configuring OAuth.
 

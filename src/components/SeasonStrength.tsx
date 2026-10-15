@@ -1,3 +1,4 @@
+import './analytics-explorer.css';
 import { useId, useMemo, useState } from 'react';
 import { Box, Button, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
 import { barX, defineChart, text } from '@tanstack/charts';
@@ -20,14 +21,14 @@ const number = (value: number | null) =>
 const signed = (value: number | null) =>
   value === null ? 'Unavailable' : `${value > 0 ? '+' : ''}${number(value)}`;
 const palette: Record<string, string> = {
-  RB: '#79b5fc',
-  WR: '#59dc94',
-  QB: '#ffd34a',
-  TE: '#b69afa',
-  K: '#ef95c7',
-  DEF: '#5ed4e6',
+  RB: '#176b50',
+  WR: '#b55d14',
+  QB: '#3949ab',
+  TE: '#9d4282',
+  K: '#267b9d',
+  DEF: '#7b641a',
 };
-const extras = ['#e9a36b', '#a5c47f', '#92a4e8', '#d7a2a2'];
+const extras = ['#765025', '#526925', '#5866a0', '#9e3d40'];
 const color = (position: string, positions: string[]) =>
   palette[position] ??
   extras[positions.filter((p) => !palette[p]).indexOf(position) % extras.length];
@@ -63,8 +64,12 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
         };
       });
     });
-    const max = Math.max(1, ...segments.map((s) => s.end));
+    const max = Math.max(0, ...segments.map((s) => s.end));
     const min = Math.min(0, ...segments.map((s) => s.end));
+    // Round each tail independently so a small negative score does not create a large empty range.
+    const lower = min < 0 ? scaleLinear().domain([min, 0]).nice(5).domain()[0] : 0;
+    const upper = max > 0 ? scaleLinear().domain([0, max]).nice(5).domain()[1] : 0;
+    const xScale = scaleLinear().domain(lower === upper ? [0, 1] : [lower, upper]);
     const totals = rows
       .filter((row) => row.total !== null)
       .map((row) => ({
@@ -74,6 +79,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
       }));
     const names = new Map(rows.map((row) => [row.teamId, row.teamName]));
     return defineChart({
+      margin: { right: Math.max(62, ...totals.map((row) => row.label.length * 8 + 16)) },
       marks: [
         barX(segments, {
           x1: 'start',
@@ -90,7 +96,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
               x: 'center',
               y: 'teamId',
               text: 'label',
-              fill: '#14251f',
+              fill: '#ffffff',
               fontSize: 12,
               fontWeight: 700,
             },
@@ -114,8 +120,9 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
       },
       scales: {
         x: {
-          scale: scaleLinear().domain([min, max * 1.12]),
+          scale: xScale,
           axis: {
+            ticks: { values: xScale.ticks(5) },
             label:
               model.mode === 'completed'
                 ? 'Completed-week starter fantasy points'
@@ -148,9 +155,15 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
 export function SeasonStrength({
   data,
   managedTeamId,
+  view = 'both',
+  teamId,
+  onTeamChange,
 }: {
   data: SeasonInsights;
   managedTeamId?: string | null;
+  view?: 'both' | 'positions' | 'schedule';
+  teamId?: string;
+  onTeamChange?: (teamId: string) => void;
 }) {
   const [mode, setMode] = useState<PositionStrengthMode>('completed');
   const completed = mode === 'completed';
@@ -158,9 +171,23 @@ export function SeasonStrength({
   const schedule = useMemo(() => remainingScheduleStrength(data), [data]);
   const [sort, setSort] = useState('total');
   const sortId = useId();
+  const opponentId = useId();
+  const [localTeamId, setLocalTeamId] = useState('');
+  const opponentTeamId = teamId ?? localTeamId;
   const teamLabel = (row: { teamId: string; teamName: string }) => (
     <>
-      {row.teamName}
+      {onTeamChange ? (
+        <button
+          type="button"
+          className="forecast-team-link"
+          aria-pressed={row.teamId === teamId}
+          onClick={() => onTeamChange(row.teamId)}
+        >
+          {row.teamName}
+        </button>
+      ) : (
+        row.teamName
+      )}
       {row.teamId === managedTeamId && <small> Your team</small>}
     </>
   );
@@ -168,16 +195,15 @@ export function SeasonStrength({
   return (
     <Box
       as="section"
-      className="insight-section season-strength"
+      className="insight-section season-strength analytics-explorer"
       aria-label="Roster and remaining schedule strength"
     >
-      <Text className="eyebrow" mb={4}>
-        Where every team stands
-      </Text>
-      <Heading as="h2" size="xl" mb={4}>
-        Roster strength &amp; the road ahead
-      </Heading>
-      <Box className="panel" p={{ base: 4, md: 6 }} mb={6}>
+      {view === 'both' && (
+        <Heading as="h2" size="xl" mb={4}>
+          Roster strength &amp; the road ahead
+        </Heading>
+      )}
+      <Box hidden={view === 'schedule'} className="panel" p={{ base: 4, md: 6 }} mb={6}>
         <Flex justify="space-between" align="center" gap={4} flexWrap="wrap">
           <Heading as="h3" size="lg" mb={4}>
             {completed ? 'Completed-week scoring' : 'Roster projections'}
@@ -310,7 +336,7 @@ export function SeasonStrength({
               1 is strongest. Equal totals to two decimal places share a rank; the next rank skips
               tied teams. Ranks compare teams with complete{' '}
               {completed ? 'actual starter data' : 'projections'}. Gray cells are unavailable, never
-              zero.
+              zero. Blue ranks 1–2; green 3–4; amber 5; coral 6 and below.
             </Text>
             <Box overflowX="auto">
               <DataTable
@@ -333,19 +359,18 @@ export function SeasonStrength({
                     value: (row: PositionStrength['rows'][number]) => row.points[position],
                     cell: (row: PositionStrength['rows'][number]) => {
                       const rank = row.ranks[position];
-                      const count = positions.rows.filter((r) => r.ranks[position] !== null).length;
-                      const fill =
+                      const tier =
                         rank === null
-                          ? '#e4e8e6'
-                          : rank <= Math.ceil(count / 4)
-                            ? '#79b5fc'
-                            : rank <= Math.ceil(count / 2)
-                              ? '#59dc94'
-                              : rank <= Math.ceil((count * 3) / 4)
-                                ? '#ffd34a'
-                                : '#f3a1a1';
+                          ? 'tier-unavailable'
+                          : rank <= 2
+                            ? 'tier-1'
+                            : rank <= 4
+                              ? 'tier-2'
+                              : rank === 5
+                                ? 'tier-3'
+                                : 'tier-4';
                       return (
-                        <span className="position-rank-cell" style={{ background: fill }}>
+                        <span className={`position-rank-cell ${tier}`}>
                           <strong>{rank === null ? '—' : `#${rank}`}</strong>
                           <small>
                             {number(row.points[position])}
@@ -420,7 +445,7 @@ export function SeasonStrength({
           />
         )}
       </Box>
-      <Box className="panel" p={{ base: 4, md: 6 }}>
+      <Box hidden={view === 'positions'} className="panel" p={{ base: 4, md: 6 }}>
         <Heading as="h3" size="lg" mb={4}>
           Remaining schedule strength
         </Heading>
@@ -498,67 +523,89 @@ export function SeasonStrength({
               Incomplete schedules or opponent estimates remain unranked. Ties share a rank, with
               the next rank skipped. A zero difficulty means league-average opponents.
             </Text>
-            {schedule.rows.map((team) => (
-              <details key={team.teamId} className="schedule-strength-details">
-                <summary>
-                  {team.teamName}
-                  {team.teamId === managedTeamId ? ' · Your team' : ''} · week-by-week opponents
-                </summary>
-                <Box overflowX="auto">
-                  <DataTable
-                    label={`${team.teamName} remaining opponents`}
-                    data={team.opponents}
-                    getRowId={(row) => String(row.week)}
-                    columns={[
-                      {
-                        id: 'week',
-                        header: 'Week',
-                        value: (row) => row.week,
-                        cell: (row) => row.week,
-                      },
-                      {
-                        id: 'opponent',
-                        header: 'Opponent',
-                        value: (row) => row.opponentName,
-                        rowHeader: true,
-                        cell: (row) => row.opponentName,
-                      },
-                      {
-                        id: 'points',
-                        header: 'Expected opponent points',
-                        value: (row) => row.points,
-                        cell: (row) => number(row.points),
-                      },
-                      {
-                        id: 'baseline',
-                        header: 'League average',
-                        value: (row) => row.baseline,
-                        cell: (row) => number(row.baseline),
-                      },
-                      {
-                        id: 'difference',
-                        header: 'Difference',
-                        value: (row) => row.difference,
-                        cell: (row) => signed(row.difference),
-                      },
-                      {
-                        id: 'source',
-                        header: 'Basis',
-                        value: (row) => row.source,
-                        cell: (row) =>
-                          row.source === 'projection'
-                            ? `${data.playoffProjection?.provider} weekly lineup`
-                            : row.source === 'historical'
-                              ? 'Completed-score average'
-                              : row.status === 'bye'
-                                ? 'Excluded bye'
-                                : 'Unavailable',
-                      },
-                    ]}
-                  />
-                </Box>
-              </details>
-            ))}
+            <label htmlFor={opponentId}>Weekly opponents for</label>
+            <NativeSelect.Root my={3} maxW="sm">
+              <NativeSelect.Field
+                id={opponentId}
+                value={opponentTeamId}
+                onChange={(event) => (onTeamChange ?? setLocalTeamId)(event.target.value)}
+              >
+                <option value="">All teams</option>
+                {schedule.rows.map((team) => (
+                  <option key={team.teamId} value={team.teamId}>
+                    {team.teamName}
+                  </option>
+                ))}
+              </NativeSelect.Field>
+              <NativeSelect.Indicator />
+            </NativeSelect.Root>
+            {schedule.rows
+              .filter((team) => !opponentTeamId || team.teamId === opponentTeamId)
+              .map((team) => (
+                <details
+                  open={!!opponentTeamId || undefined}
+                  key={team.teamId}
+                  className="schedule-strength-details"
+                >
+                  <summary>
+                    {team.teamName}
+                    {team.teamId === managedTeamId ? ' · Your team' : ''} · week-by-week opponents
+                  </summary>
+                  <Box overflowX="auto">
+                    <DataTable
+                      label={`${team.teamName} remaining opponents`}
+                      data={team.opponents}
+                      getRowId={(row) => String(row.week)}
+                      columns={[
+                        {
+                          id: 'week',
+                          header: 'Week',
+                          value: (row) => row.week,
+                          cell: (row) => row.week,
+                        },
+                        {
+                          id: 'opponent',
+                          header: 'Opponent',
+                          value: (row) => row.opponentName,
+                          rowHeader: true,
+                          cell: (row) => row.opponentName,
+                        },
+                        {
+                          id: 'points',
+                          header: 'Expected opponent points',
+                          value: (row) => row.points,
+                          cell: (row) => number(row.points),
+                        },
+                        {
+                          id: 'baseline',
+                          header: 'League average',
+                          value: (row) => row.baseline,
+                          cell: (row) => number(row.baseline),
+                        },
+                        {
+                          id: 'difference',
+                          header: 'Difference',
+                          value: (row) => row.difference,
+                          cell: (row) => signed(row.difference),
+                        },
+                        {
+                          id: 'source',
+                          header: 'Basis',
+                          value: (row) => row.source,
+                          cell: (row) =>
+                            row.source === 'projection'
+                              ? `${data.playoffProjection?.provider} weekly lineup`
+                              : row.source === 'historical'
+                                ? 'Completed-score average'
+                                : row.status === 'bye'
+                                  ? 'Excluded bye'
+                                  : 'Unavailable',
+                        },
+                      ]}
+                    />
+                  </Box>
+                </details>
+              ))}
           </>
         )}
       </Box>

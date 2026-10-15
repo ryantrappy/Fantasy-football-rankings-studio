@@ -16,5 +16,5 @@ export default defineConfig({
     ],
   },
   optimizeDeps: { entries: ['tests/ui/index.html'] },
-  server: { port: 3107 },
+  server: { port: 3107, watch: { ignored: ['**/test-results*/**', '**/playwright-report/**'] } },
 });

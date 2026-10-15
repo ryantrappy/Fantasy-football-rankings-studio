@@ -118,7 +118,11 @@ it.each([2, 4, 6, 8])('conserves playoff slots and round winners for %i teams', 
   expect(r.reason).toBeUndefined();
   expect(r.rows.reduce((s, r) => s + r.playoff, 0)).toBeCloseTo(size, 8);
   expect(r.rows.reduce((s, r) => s + r.advance.at(-1)!, 0)).toBeCloseTo(1, 8);
+  expect(r.rows.reduce((sum, row) => sum + row.bye, 0)).toBeCloseTo(size === 6 ? 2 : 0, 8);
   for (const row of r.rows) {
+    expect(row.bye).toBeGreaterThanOrEqual(0);
+    expect(row.bye).toBeLessThanOrEqual(row.playoff);
+    expect(row.bye).toBeLessThanOrEqual(row.advance[0]);
     let prior = row.playoff;
     for (const p of row.advance) {
       expect(p).toBeLessThanOrEqual(prior);
@@ -348,4 +352,72 @@ it('uses the standings comparison without current projections while retaining ba
   expect(after.rows.filter((r) => Number(r.teamId) % 2 === 0).every((r) => r.playoff === 1)).toBe(
     true,
   );
+});
+
+it('counts exact top-two first-round bye events from completed six-team seeding', () => {
+  const data = fixture();
+  data.scores.forEach((score) => {
+    score.actual = Number(score.teamId) % 2 === 0 ? 200 - Number(score.teamId) * 10 : 20;
+  });
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4, 2000);
+  expect(result.reason).toBeUndefined();
+  expect(result.rows.filter((row) => row.bye === 1).map((row) => row.teamId)).toEqual(['0', '2']);
+  expect(
+    result.rows.filter((row) => !['0', '2'].includes(row.teamId)).every((row) => row.bye === 0),
+  ).toBe(true);
+});
+
+it('counts exact win and playoff-seed frequencies without changing existing seeded probabilities', async () => {
+  const { analyticsData } = await import('../tests/ui/AnalyticsPreview');
+  const result = forecastPlayoffs(analyticsData, analyticsData.playoffSettings!, 4, 400);
+  expect(
+    result.rows.map(({ projectedWins, playoff, bye, advance }) => ({
+      projectedWins,
+      playoff,
+      bye,
+      advance,
+    })),
+  ).toEqual([
+    { projectedWins: 2.525, playoff: 0.0175, bye: 0, advance: [0.015] },
+    { projectedWins: 6.715, playoff: 0.9125, bye: 0, advance: [0.3525] },
+    { projectedWins: 3.185, playoff: 0.095, bye: 0, advance: [0.05] },
+    { projectedWins: 7.575, playoff: 0.975, bye: 0, advance: [0.5825] },
+  ]);
+  for (const row of result.rows) {
+    expect(row.winDistribution!.reduce((sum, bin) => sum + bin.count, 0)).toBe(400);
+    expect(row.winDistribution!.reduce((sum, bin) => sum + bin.wins * bin.count, 0) / 400).toBe(
+      row.projectedWins,
+    );
+    expect(row.seedDistribution!.reduce((sum, bin) => sum + bin.count, 0)).toBe(400);
+    expect(
+      row.seedDistribution!.filter((bin) => bin.seed > 0).reduce((sum, bin) => sum + bin.count, 0) /
+        400,
+    ).toBe(row.playoff);
+  }
+});
+
+it('retains fractional win totals and exact configured seed counts including six-team byes', () => {
+  const data = fixture(8);
+  const result = forecastPlayoffs(data, { regularSeasonEnd: 10, playoffTeams: 6 }, 4, 200);
+  for (let seed = 1; seed <= 6; seed++)
+    expect(
+      result.rows.reduce(
+        (sum, row) => sum + row.seedDistribution!.find((bin) => bin.seed === seed)!.count,
+        0,
+      ),
+    ).toBe(200);
+  expect(result.rows.reduce((sum, row) => sum + row.seedDistribution![0].count, 0)).toBe(400);
+  for (const row of result.rows)
+    expect(
+      row
+        .seedDistribution!.filter((bin) => bin.seed === 1 || bin.seed === 2)
+        .reduce((sum, bin) => sum + bin.count, 0) / 200,
+    ).toBe(row.bye);
+  data.scores
+    .filter((score) => score.teamId === '0' && score.week > 1)
+    .forEach((score) => {
+      score.actual = 110;
+    });
+  const tied = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4, 200);
+  expect(tied.rows[0].winDistribution).toEqual([{ wins: 3.5, count: 200 }]);
 });

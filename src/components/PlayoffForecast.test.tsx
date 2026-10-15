@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { PlayoffForecast } from './PlayoffForecast';
 import { Provider } from './ui/provider';
 import type { SeasonInsights } from '../insights';
@@ -33,17 +33,23 @@ it('shows cutoff-controlled probabilities and the scenario limitations', async (
   expect(screen.getByText(/random remaining opponents/)).toBeInTheDocument();
   expect(screen.getByText(/Projection mode:.*historical scoring only/)).toBeInTheDocument();
   expect(
+    screen.queryByRole('table', { name: 'Historical forecast reliability' }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(
     screen.getByRole('table', { name: 'Historical forecast reliability' }),
   ).toBeInTheDocument();
   expect(screen.getByText(/2 held-out games/)).toBeInTheDocument();
-  expect(screen.getByText(/±0.69 percentage points/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Forecast table' }));
+  expect(screen.getByText(/±0.69 percentage points/)).toBeVisible();
   fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '2' } });
   await screen.findByRole('table', { name: 'Playoff probabilities' });
   expect(screen.getByRole('note')).toHaveTextContent(/only 2 completed scoring weeks/);
   expect(screen.getByRole('note')).toHaveTextContent(/especially uncertain/);
   expect(screen.getByRole('note')).toBeVisible();
   expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeInTheDocument();
-  expect(screen.getByText(/No eligible held-out games yet/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(screen.getByText(/No eligible held-out games yet/)).toBeVisible();
 });
 it('shows cached week-by-week playoff and title chances with exact values', async () => {
   render(
@@ -142,4 +148,132 @@ it('discloses weekly coverage and removes current lineup assumptions at an older
     screen.queryByRole('table', { name: 'Weekly lineup projection coverage' }),
   ).not.toBeInTheDocument();
   expect(screen.getByText(/excluded from this retrospective cutoff/)).toBeInTheDocument();
+});
+
+it('opens Advanced on demand and preserves its state while deactivating background evaluation', async () => {
+  const advanced = vi.fn((active: boolean) => (
+    <div>
+      <output>{active ? 'Evaluation active' : 'Evaluation inactive'}</output>
+      <input aria-label="Retained advanced setting" defaultValue="one" />
+    </div>
+  ));
+  render(
+    <Provider>
+      <PlayoffForecast data={forecastData()} advanced={advanced} />
+    </Provider>,
+  );
+  await screen.findByRole('table', { name: 'Playoff probabilities' });
+  expect(advanced).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(screen.getByText('Evaluation active')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Retained advanced setting'), {
+    target: { value: 'two' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Forecast table' }));
+  expect(advanced).toHaveBeenLastCalledWith(false);
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(screen.getByLabelText('Retained advanced setting')).toHaveValue('two');
+});
+
+it('exposes seeded first-round bye odds alongside all configured rounds and title odds', async () => {
+  const data = forecastData();
+  data.teams = Array.from({ length: 8 }, (_, index) => ({
+    ...data.teams[0],
+    teamId: String(index),
+    teamName: `Team ${index}`,
+  }));
+  data.scores = [1, 2, 3, 4].flatMap((week) =>
+    data.teams.map((team, index) => ({
+      teamId: team.teamId,
+      opponentTeamId: String(index ^ 1),
+      week,
+      actual: 90 + index * 3,
+      projected: null,
+      starters: [],
+    })),
+  );
+  data.playoffSettings = { regularSeasonEnd: 10, playoffTeams: 6 };
+  render(
+    <Provider>
+      <PlayoffForecast data={data} />
+    </Provider>,
+  );
+  const table = await screen.findByRole('table', { name: 'Playoff probabilities' });
+  for (const name of [
+    'Projected record',
+    'Make playoffs',
+    'Earn bye',
+    'Reach semifinal',
+    'Reach final',
+    'Win title',
+  ])
+    expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(8);
+});
+
+it('shows real win and seed frequencies and retains the team path across table, histogram and Advanced', async () => {
+  const data = forecastData();
+  data.playoffSettings!.rules = {
+    provider: 'ESPN',
+    season: 2026,
+    tiebreakers: ['head-to-head', 'points-for'],
+    divisionWinnersFirst: false,
+    divisionByTeam: {},
+    roundWeeks: [[11, 12]],
+    reseed: true,
+  };
+  render(
+    <Provider>
+      <PlayoffForecast data={data} advanced={() => <p>Advanced evidence</p>} />
+    </Provider>,
+  );
+  const table = await screen.findByRole('table', { name: 'Playoff probabilities' });
+  fireEvent.click(within(table).getByRole('button', { name: 'Beta' }));
+  const inspector = screen.getByRole('complementary', { name: 'Selected team path' });
+  expect(within(inspector).getByRole('heading', { name: 'Beta' })).toBeVisible();
+  expect(inspector).toHaveTextContent('head-to-head record, then points scored');
+  expect(inspector).toHaveTextContent('weeks 11–12');
+  expect(inspector).toHaveTextContent('Survivors are reseeded');
+  fireEvent.click(screen.getByRole('button', { name: 'Histogram mode' }));
+  expect(screen.queryByRole('table', { name: 'Playoff probabilities' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByText('Exact win and seed frequencies for Beta'));
+  const frequencies = screen.getByRole('table', { name: 'Beta win distribution' });
+  const counts = [...frequencies.querySelectorAll('tbody tr')].map((row) =>
+    Number(row.querySelectorAll('td')[0].textContent),
+  );
+  expect(counts.reduce((sum, count) => sum + count, 0)).toBe(20000);
+  expect(screen.getByRole('table', { name: 'Beta playoff seed distribution' })).toHaveTextContent(
+    'Did not qualify',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
+  expect(inspector).toBeVisible();
+  expect(within(inspector).getByRole('heading', { name: 'Beta' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Forecast table' }));
+  expect(screen.getByRole('button', { name: 'Histogram mode' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Table view' }));
+  expect(screen.getByRole('table', { name: 'Playoff probabilities' })).toBeVisible();
+});
+
+it('shows ties in the cutoff record without counting unavailable paired results as losses', async () => {
+  const data = forecastData();
+  data.scores
+    .filter((score) => score.week === 1)
+    .forEach((score) => {
+      score.actual = 100;
+    });
+  render(
+    <Provider>
+      <PlayoffForecast data={data} />
+    </Provider>,
+  );
+  await screen.findByRole('table', { name: 'Playoff probabilities' });
+  const inspector = screen.getByRole('complementary', { name: 'Selected team path' });
+  fireEvent.change(within(inspector).getByLabelText('Inspect playoff team'), {
+    target: { value: '1' },
+  });
+  expect(inspector).toHaveTextContent('3–0–1');
 });

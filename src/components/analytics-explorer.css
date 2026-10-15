@@ -1,0 +1,478 @@
+.analytics-explorer {
+  min-width: 0;
+  max-width: 100%;
+  color: #17223b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.analytics-explorer [hidden] {
+  display: none !important;
+}
+.analytics-explorer .page-heading {
+  margin: 22px 0 20px;
+}
+.analytics-explorer .page-heading h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.analytics-explorer .page-heading p {
+  margin-bottom: 0;
+  color: #526078;
+}
+.analytics-explorer-workspace {
+  border: 1px solid #dce2ee;
+  border-radius: 10px;
+  background: #fff;
+  min-width: 0;
+  overflow: clip;
+}
+.analytics-explorer-toolbar {
+  padding: 16px 24px;
+  border-bottom: 1px solid #dce2ee;
+}
+.analytics-explorer-context {
+  color: #526078;
+  margin: 0;
+}
+.analytics-explorer-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 20px;
+  padding: 0 24px;
+  border-bottom: 1px solid #dce2ee;
+}
+.analytics-explorer-tabs button {
+  min-height: 46px;
+  padding: 10px 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #526078;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: normal;
+  height: auto;
+}
+.analytics-explorer-tabs button[aria-pressed='true'] {
+  border-bottom-color: #3949ab;
+  color: #3949ab;
+  background: transparent;
+}
+.analytics-explorer-tabs button:hover {
+  color: #3949ab;
+  background: #eef1ff;
+}
+.analytics-explorer-content {
+  padding: 22px 26px;
+  min-width: 0;
+}
+.analytics-explorer-content > div > .panel,
+.analytics-explorer-content .season-strength > .panel {
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.analytics-explorer-content .season-strength {
+  margin: 0;
+}
+.analytics-explorer-content .season-strength > .panel + .panel {
+  margin-top: 24px;
+}
+.analytics-explorer-content .season-strength > .panel[hidden] + .panel {
+  margin-top: 0;
+}
+.analytics-explorer h2 {
+  font-size: 20px;
+  line-height: 1.3;
+}
+.analytics-explorer h3 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.analytics-explorer .eyebrow {
+  display: none;
+}
+.analytics-explorer p.insights-meta,
+.analytics-explorer ul.insights-meta {
+  color: #526078;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.analytics-explorer .analytics-explorer-content .insights-method {
+  margin-top: 20px;
+}
+.analytics-explorer p {
+  max-width: 78ch;
+}
+.analytics-explorer table {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.analytics-explorer th {
+  background: #f3f5fb;
+  color: #526078;
+}
+.analytics-explorer th,
+.analytics-explorer td {
+  border-color: #dce2ee;
+}
+.analytics-explorer .position-rank-cell {
+  color: #263168;
+  border-radius: 5px;
+  min-width: 72px;
+}
+.analytics-explorer .position-rank-cell small {
+  color: #263168;
+}
+.analytics-explorer .schedule-strength-details {
+  border: 1px solid #dce2ee;
+  padding: 12px 15px;
+  border-radius: 7px;
+  margin: 10px 0;
+}
+.analytics-explorer-forecast > .analytics-explorer-tabs {
+  padding: 0;
+  margin: 20px 0;
+}
+.analytics-explorer-calibration {
+  margin-top: 0;
+  box-shadow: none;
+}
+.analytics-explorer-local-tabs {
+  gap: 8px;
+  padding: 0;
+  margin: 20px 0;
+  border: 0;
+}
+.analytics-explorer-local-tabs button {
+  padding: 8px 12px;
+  min-height: 38px;
+  border: 1px solid #dce2ee;
+  border-radius: 6px;
+}
+.analytics-explorer-local-tabs button[aria-pressed='true'] {
+  border-color: #3949ab;
+  background: #eef1ff;
+}
+.analytics-explorer button:focus-visible,
+.analytics-explorer select:focus-visible,
+.analytics-explorer summary:focus-visible {
+  outline: 3px solid #3949ab;
+  outline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .analytics-explorer-content,
+  .analytics-explorer-toolbar {
+    padding: 16px;
+  }
+  .analytics-explorer-tabs {
+    padding-inline: 16px;
+    gap: 0 16px;
+  }
+  .analytics-explorer-local-tabs {
+    padding-inline: 0;
+    gap: 8px;
+  }
+  .analytics-explorer-tabs button {
+    font-size: 13px;
+  }
+  .analytics-explorer .page-heading h1 {
+    font-size: 26px;
+  }
+}
+
+/* Keep evidence dense without inheriting the old report's callout treatment. */
+.analytics-explorer .analytics-explorer-content .insights-method {
+  display: block;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.analytics-explorer p.insights-meta,
+.analytics-explorer ul.insights-meta {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  width: auto;
+}
+.analytics-explorer .insights-method ul {
+  margin-top: 8px;
+  padding-left: 18px;
+}
+.analytics-explorer .table-sort-button {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  min-height: 28px;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+}
+.analytics-explorer th:first-child {
+  min-width: 160px;
+}
+.analytics-explorer fieldset button[aria-pressed='true'] {
+  background: #3949ab;
+  color: #fff;
+  border-color: #3949ab;
+}
+.analytics-explorer fieldset button[aria-pressed='false'] {
+  background: #fff;
+  color: #3949ab;
+  border-color: #dce2ee;
+}
+.analytics-explorer.analytics-explorer-forecast .analytics-explorer-calibration {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  border-radius: 0;
+}
+/* Columns follow DOM order downward; an expanded evidence card never creates an empty grid row. */
+.forecast-histogram-grid {
+  column-width: 280px;
+  column-gap: 12px;
+}
+.forecast-histogram-row {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid #dce2ee;
+  border-radius: 8px;
+  background: #f8faff;
+}
+.forecast-histogram-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #dce2ee;
+  overflow: hidden;
+}
+.forecast-histogram-fill {
+  display: block;
+  height: 100%;
+  background: #3949ab;
+  border-radius: 999px;
+}
+.analytics-explorer .forecast-top-tabs {
+  padding: 0 20px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #dce2ee;
+  background: #fff;
+}
+.forecast-split-layout:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+.forecast-main-pane {
+  padding: 20px;
+  min-width: 0;
+}
+.forecast-advanced-pane:not([hidden]) {
+  padding: 20px;
+}
+.forecast-path-inspector {
+  padding: 20px;
+  background: #f3f5fb;
+  border-left: 1px solid #dce2ee;
+  min-width: 0;
+  position: sticky;
+  top: 68px;
+  align-self: start;
+  height: 100%;
+}
+.forecast-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #dce2ee;
+  font-size: 12.5px;
+}
+.forecast-kv span {
+  color: #526078;
+}
+.forecast-kv strong {
+  color: #17223b;
+  font-variant-numeric: tabular-nums;
+}
+.forecast-team-link {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #3949ab;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+@media (max-width: 960px) {
+  .forecast-split-layout:not([hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .forecast-path-inspector {
+    position: static;
+    border-left: 0;
+    border-top: 1px solid #dce2ee;
+  }
+}
+
+/* The evidence pane stays in normal page flow on phones and alongside every view on desktop. */
+.season-insights-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+}
+.season-team-inspector {
+  position: sticky;
+  top: 68px;
+  align-self: start;
+  min-width: 0;
+  padding: 20px;
+  background: #f3f5fb;
+  border-left: 1px solid #dce2ee;
+  overflow-wrap: anywhere;
+}
+.analytics-inspector-values {
+  margin: 0;
+  font-size: 12px;
+}
+.analytics-inspector-values > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #dce2ee;
+}
+.analytics-inspector-values dt {
+  color: #526078;
+}
+.analytics-inspector-values dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.analytics-explorer .position-rank-cell.tier-1,
+.analytics-explorer .position-rank-cell.tier-1 small {
+  background: #dbeafe;
+  color: #1e40af;
+}
+.analytics-explorer .position-rank-cell.tier-2,
+.analytics-explorer .position-rank-cell.tier-2 small {
+  background: #d1fae5;
+  color: #065f46;
+}
+.analytics-explorer .position-rank-cell.tier-3,
+.analytics-explorer .position-rank-cell.tier-3 small {
+  background: #fef3c7;
+  color: #92400e;
+}
+.analytics-explorer .position-rank-cell.tier-4,
+.analytics-explorer .position-rank-cell.tier-4 small {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.analytics-explorer .position-rank-cell.tier-unavailable,
+.analytics-explorer .position-rank-cell.tier-unavailable small {
+  background: #edf0f5;
+  color: #526078;
+}
+.forecast-path-inspector {
+  height: auto;
+  overflow-wrap: anywhere;
+}
+.forecast-advanced-pane:not([hidden]) {
+  padding: 0;
+}
+.forecast-histogram-scroll,
+.forecast-distribution-values {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.forecast-histogram-bins {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  min-height: 132px;
+  padding: 8px 0;
+}
+.forecast-histogram-bin {
+  display: flex;
+  flex: 1 0 40px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.forecast-histogram-bin > span {
+  display: block;
+  width: 26px;
+  background: #3949ab;
+  border-radius: 3px 3px 0 0;
+}
+.forecast-distribution-values summary {
+  margin: 12px 0;
+  font-size: 12px;
+  color: #3949ab;
+  cursor: pointer;
+}
+.analytics-explorer .forecast-team-link[aria-pressed='true'] {
+  background: #eef1ff;
+  border-radius: 3px;
+}
+@media (max-width: 960px) {
+  .season-insights-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .season-team-inspector {
+    position: static;
+    border-left: 0;
+    border-top: 1px solid #dce2ee;
+  }
+}
+.analytics-explorer fieldset[aria-label='Forecast display mode'] button {
+  transition: none;
+}
+.forecast-histogram-scroll:focus-visible {
+  outline: 3px solid #3949ab;
+  outline-offset: 2px;
+}
+
+/* Keep the existing table export beside its heading without changing the table or its scroll area. */
+@media (min-width: 721px) {
+  .analytics-heading-export {
+    position: relative;
+  }
+  .analytics-heading-export > .analytics-heading-export-title {
+    display: flex;
+    align-items: center;
+    min-height: 36px;
+    padding-right: 270px;
+  }
+  .analytics-heading-export-table > .table-export-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid #dce2ee;
+    background: #f3f5fb;
+    color: #17223b;
+    font-size: 12px;
+  }
+}

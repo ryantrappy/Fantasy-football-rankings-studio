@@ -24,7 +24,13 @@ export interface WritingProviderOption {
   credentialSource?: 'saved-key' | 'server-account' | 'none';
 }
 export type WritingConsent = Record<WritingProvider, boolean>;
+export const MAX_WRITING_INSTRUCTIONS_LENGTH = 20000;
+export interface WritingInstructions {
+  instructions: string;
+}
 export interface WritingApi {
+  instructions(): Promise<WritingInstructions>;
+  saveInstructions(data: WritingInstructions): Promise<WritingInstructions>;
   consent(): Promise<WritingConsent>;
   saveConsent(data: { provider: WritingProvider; approved: boolean }): Promise<WritingConsent>;
   context(selection: WritingSelection): Promise<WritingContext>;

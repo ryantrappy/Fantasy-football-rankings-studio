@@ -49,6 +49,9 @@ it('dismisses and restores team conditions without sharing another account’s p
   expect(screen.getByRole('link', { name: 'Review lineup' })).toHaveAttribute('href', '#lineup-10');
   fireEvent.click(screen.getByRole('button', { name: /Dismiss Starter/ }));
   expect(screen.queryByText(/confirmed OUT/)).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Show dismissed risks for this team' }),
+  ).toHaveTextContent('Dismissed alerts (1)');
   rerender(view('owner-b'));
   expect(screen.getByText(/confirmed OUT/)).toBeInTheDocument();
   rerender(view('owner-a'));
@@ -96,4 +99,41 @@ it('downgrades stale conditions as time passes without a new provider snapshot',
   } finally {
     vi.useRealTimers();
   }
+});
+
+it('shows the first critical risk and retains every remaining action behind a counted disclosure', () => {
+  render(
+    <Provider>
+      <RosterRiskAlerts
+        team={{
+          teamId: '1',
+          name: 'Dense team',
+          score: null,
+          players: Array.from({ length: 9 }, (_, index) => ({
+            id: String(index),
+            name: `Player ${index}`,
+            position: 'RB',
+            starter: true,
+            points: null,
+            projectedPoints: 10,
+            locked: undefined,
+            bye: false,
+            availability: index === 0 ? 'OUT' : null,
+          })),
+        }}
+        leagueId="1"
+        year={2026}
+        week={5}
+        capturedAt={new Date().toISOString()}
+        slots={Array(9).fill('RB')}
+      />
+    </Provider>,
+  );
+  expect(screen.getByText(/Player 0 is a starter with confirmed OUT/)).toBeVisible();
+  const disclosure = screen.getByText('Expand all 10 roster risks');
+  expect(disclosure).toBeVisible();
+  fireEvent.click(disclosure);
+  expect(
+    screen.getByRole('button', { name: /Dismiss Player 8 game\/lineup lock status/ }),
+  ).toBeVisible();
 });

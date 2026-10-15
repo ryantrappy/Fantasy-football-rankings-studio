@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { calculateInsights } from '../../server/insights/calculate';
 import { tradeContributions } from './contributions';
 import { TradeContributions } from '../../components/history/moments/TradeContributions';
@@ -70,10 +70,16 @@ it('renders window, championship evidence, coverage and unranked context', () =>
     screen.getByText('Recipient later champion; asset championship role unverified'),
   ).toBeInTheDocument();
   expect(screen.getAllByText('2 / 20.0')).toHaveLength(2);
-  expect(screen.getByText(/3\/3 observed player weeks/)).toHaveTextContent(
+  const table = within(
+    screen.getByRole('table', { name: 'Acquired assets — season-long observed contribution' }),
+  );
+  expect(table.getByText(/3\/3 observed player weeks/)).toHaveTextContent(
     'Unranked: context-dependent',
   );
   expect(screen.getByText(/Weeks 3–5/)).toHaveTextContent('before next observed trade, week 6');
+  const inspector = screen.getByRole('complementary', { name: 'Record evidence' });
+  expect(inspector).toHaveTextContent('3/3 observed player weeks');
+  expect(inspector).toHaveTextContent('Championship role and future value are unverified');
 });
 
 it('never attributes championship membership to a player dropped before postseason', () => {

@@ -65,3 +65,41 @@ it('does not copy a live ESPN link when saving fails and permits retry', async (
     expect(screen.getByRole('button', { name: 'Copy share link' })).toBeEnabled(),
   );
 });
+
+it('keeps snapshot caveats and owner revocation reachable in the compact sharing menu', async () => {
+  const reportSharing = {
+    get: vi.fn().mockResolvedValue(true),
+    set: vi.fn().mockResolvedValue(false),
+  };
+  render(
+    <Provider>
+      <ApiContext.Provider
+        value={
+          { createReportSnapshot: vi.fn(), reportSharing } as unknown as ReturnType<
+            typeof createApi
+          >
+        }
+      >
+        <ShareReport
+          compact
+          path="/history"
+          search={{ leagueId: '123' }}
+          espn
+          snapshotData={input}
+        />
+      </ApiContext.Provider>
+    </Provider>,
+  );
+  const summary = screen.getByText('Share report', { exact: true });
+  const details = summary.closest('details')!;
+  expect(details.open).toBe(false);
+  fireEvent.click(summary);
+  await screen.findByRole('button', { name: 'Disable public reports' });
+  expect(screen.getByText(/including private ESPN data.*expire after 10 days/)).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Disable public reports' }));
+  await waitFor(() => expect(reportSharing.set).toHaveBeenCalledWith('123', false));
+  expect(await screen.findByRole('button', { name: 'Enable public reports' })).toBeVisible();
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(details.open).toBe(false);
+  expect(summary).toHaveFocus();
+});

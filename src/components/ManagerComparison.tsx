@@ -1,3 +1,4 @@
+import './analytics-explorer.css';
 import { Box, Field, Flex, Heading, NativeSelect, SimpleGrid, Text } from '@chakra-ui/react';
 import { useMemo, useState } from 'react';
 import type { SeasonRecord } from '../league-summary';
@@ -54,7 +55,7 @@ export function ManagerComparison({
       borderColor="border"
       rounded="lg"
       p={{ base: 4, md: 6 }}
-      className="panel insight-section"
+      className="panel insight-section analytics-explorer"
     >
       <Text mb={4} className="eyebrow">
         Side by side

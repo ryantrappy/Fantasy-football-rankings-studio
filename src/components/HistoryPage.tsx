@@ -1,4 +1,4 @@
-import { HeaderControls } from './AppShell';
+import { PageHeading } from './PageHeading';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { normalizeLeagueId, type ReportPageProps } from './report-search';
@@ -33,6 +33,7 @@ import { LeagueSummary } from '../components/LeagueSummary';
 import { reportFreshnessLabel } from './report-freshness';
 import { ManagerComparison } from './ManagerComparison';
 import { HistoryAnalytics } from './history/HistoryAnalytics';
+import { Icon } from './Icon';
 
 const n = (value: number | null) =>
   value === null ? '—' : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -48,6 +49,7 @@ export function HistoryPage({
   const api = useInsightsApi(),
     { years: requestedYears } = search,
     leagueId = normalizeLeagueId(search.leagueId);
+  const unresolvedYears = leagueId ? undefined : requestedYears;
   const [catalog, setCatalog] = useState<{
     api: typeof api;
     leagueId: string;
@@ -78,10 +80,12 @@ export function HistoryPage({
     catalog?.api === api && catalog.leagueId === leagueId ? catalog : undefined;
   const years = useMemo(() => {
     if (!currentCatalog) return [];
-    if (requestedYears) return requestedYears.filter((year) => currentCatalog.years.includes(year));
+    if (requestedYears !== undefined)
+      return requestedYears.filter((year) => currentCatalog.years.includes(year));
+    if (!shared && !snapshot) return currentCatalog.years;
     const prior = currentCatalog.years.filter((year) => year < defaultSeason());
     return (prior.length ? prior : currentCatalog.years).slice(0, 3);
-  }, [currentCatalog, requestedYears]);
+  }, [currentCatalog, requestedYears, shared, snapshot]);
   const key = `${leagueId}:${years.join(',')}:${refresh}`;
   const reportScope = `${leagueId}:${years.join(',')}`;
   const current = loaded?.api === api && loaded.key === key ? loaded : undefined;
@@ -107,7 +111,13 @@ export function HistoryPage({
         }
         if (cancelled) return;
         if (!leagueId && leagues[0]) {
-          void navigate({ search: { leagueId: leagues[0].leagueId }, replace: true });
+          void navigate({
+            search: {
+              leagueId: leagues[0].leagueId,
+              ...(unresolvedYears !== undefined ? { years: unresolvedYears } : {}),
+            },
+            replace: true,
+          });
           return;
         }
         if (!leagueId) {
@@ -127,7 +137,7 @@ export function HistoryPage({
     return () => {
       cancelled = true;
     };
-  }, [api, leagueId, navigate, shared, initialLeague]);
+  }, [api, leagueId, navigate, shared, initialLeague, unresolvedYears]);
   useEffect(() => {
     if (!years.length) return;
     let cancelled = false;
@@ -179,36 +189,47 @@ export function HistoryPage({
     currentCatalog?.activeManagerKeys || [],
     includeFormer,
   );
+  const selectedManager = managers.some((entry) => entry.key === manager)
+    ? manager
+    : [...managers].sort((a, b) => a.managerName.localeCompare(b.managerName))[0]?.key || '';
   const historyRows = records
     .flatMap((record) => summarizeLeague([record]).map((row) => ({ year: record.year, ...row })))
-    .filter((row) => managers.some((m) => m.key === row.key) && (!manager || row.key === manager))
+    .filter((row) => managers.some((m) => m.key === row.key) && row.key === selectedManager)
     .sort((a, b) => b.year - a.year || a.managerName.localeCompare(b.managerName));
   function choose(next: number[]) {
     void navigate({ search: { leagueId, years: [...next].sort((a, b) => b - a) } });
-    setManager('');
   }
   return (
     <>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={4}
-        flexWrap="wrap"
-        mt={4}
-        mb={6}
-        className="page-heading"
+      <PageHeading
+        className="history-command-bar"
+        title="League history"
+        description="Follow a manager through rivalries, seasons and league stories."
+        controls={
+          !shared && (
+            <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
+              <Field.Label>League</Field.Label>
+              <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
+                <NativeSelect.Field
+                  value={leagueId}
+                  onChange={(e) => {
+                    setManager('');
+                    void navigate({ search: { leagueId: e.target.value } });
+                  }}
+                >
+                  {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
+                  {currentCatalog?.leagues.map((l) => (
+                    <option key={l.leagueId} value={l.leagueId}>
+                      {l.leagueName}
+                    </option>
+                  ))}
+                </NativeSelect.Field>
+                <NativeSelect.Indicator />
+              </NativeSelect.Root>
+            </Field.Root>
+          )
+        }
       >
-        <Box>
-          <Text mb={4} className="eyebrow">
-            The league archive
-          </Text>
-          <Heading as="h1" size="3xl" mb={4}>
-            League history
-          </Heading>
-          <Text mb={4}>
-            One good move is a moment. Find the managers who repeat it across seasons.
-          </Text>
-        </Box>
         {!snapshot && (
           <Button asChild colorPalette="indigo">
             <Link
@@ -221,6 +242,7 @@ export function HistoryPage({
         )}
         {!shared && (
           <ShareReport
+            compact
             key={`${reportScope}:${records.map((r) => r.data.generatedAt).join(',')}`}
             path="/history"
             search={{ leagueId, years }}
@@ -240,31 +262,7 @@ export function HistoryPage({
             }
           />
         )}
-      </Flex>
-      {!shared && (
-        <HeaderControls>
-          <Field.Root width="auto" minW="120px" gap={2} className="pickup-filter">
-            <Field.Label>League</Field.Label>
-            <NativeSelect.Root disabled={!currentCatalog || !!currentCatalog.error}>
-              <NativeSelect.Field
-                value={leagueId}
-                onChange={(e) => {
-                  setManager('');
-                  void navigate({ search: { leagueId: e.target.value } });
-                }}
-              >
-                {!currentCatalog && <option value={leagueId}>Loading leagues…</option>}
-                {currentCatalog?.leagues.map((l) => (
-                  <option key={l.leagueId} value={l.leagueId}>
-                    {l.leagueName}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
-          </Field.Root>
-        </HeaderControls>
-      )}
+      </PageHeading>
       {!currentCatalog ? (
         <LoadingSkeleton label="Finding linked seasons…" />
       ) : currentCatalog.error ? (
@@ -298,54 +296,80 @@ export function HistoryPage({
                 borderColor="border"
                 rounded="lg"
                 p={{ base: 4, md: 6 }}
-                className="panel"
+                className="panel history-season-context"
               >
-                <Heading as="h2" size="xl" mb={4}>
-                  Seasons to compare
-                </Heading>
-                <Text mb={4}>
-                  The most recent three prior seasons are selected initially. Add older years for a
-                  longer view. Unavailable seasons are shown separately and never counted as zeros.
-                </Text>
-                <fieldset className="history-years">
-                  <legend>Include seasons</legend>
-                  {currentCatalog.years.map((year) => (
-                    <label key={year}>
-                      <chakra.input
-                        accentColor="green.700"
-                        width="auto"
-                        type="checkbox"
-                        checked={years.includes(year)}
-                        onChange={(e) =>
-                          choose(
-                            e.target.checked ? [...years, year] : years.filter((y) => y !== year),
-                          )
+                <details className="history-season-picker">
+                  <summary>
+                    <span className="eyebrow">Seasons to compare</span>
+                    <strong>
+                      {years.length
+                        ? [...years].sort((a, b) => a - b).join(' · ')
+                        : 'Choose seasons'}
+                    </strong>
+                    <span>
+                      {records.length} of {years.length} seasons loaded
+                    </span>
+                    <Icon name="down" size={16} />
+                  </summary>
+                  <div className="history-season-options">
+                    <Text mb={4}>
+                      {shared || snapshot
+                        ? 'The most recent three prior seasons are selected initially. Add older years for a longer view.'
+                        : 'All available seasons are included unless you choose specific years.'}{' '}
+                      Unavailable seasons are shown separately and never counted as zeros.
+                    </Text>
+                    <fieldset className="history-years">
+                      <legend>Include seasons</legend>
+                      {currentCatalog.years.map((year) => (
+                        <label key={year}>
+                          <chakra.input
+                            accentColor="indigo.600"
+                            width="auto"
+                            type="checkbox"
+                            checked={years.includes(year)}
+                            onChange={(e) =>
+                              choose(
+                                e.target.checked
+                                  ? [...years, year]
+                                  : years.filter((y) => y !== year),
+                              )
+                            }
+                          />
+                          {year}
+                          {year === defaultSeason() ? ' · in progress' : ''}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <Flex flexWrap="wrap" gap={4} className="history-actions">
+                      <Button
+                        variant="plain"
+                        type="button"
+                        onClick={() => choose(currentCatalog.years)}
+                      >
+                        Select all seasons
+                      </Button>
+                      <Button
+                        variant="plain"
+                        type="button"
+
+                        onClick={() =>
+                          choose(currentCatalog.years.filter((y) => y < defaultSeason()))
                         }
-                      />
-                      {year}
-                      {year === defaultSeason() ? ' · in progress' : ''}
-                    </label>
-                  ))}
-                </fieldset>
-                <Flex flexWrap="wrap" gap={4} className="history-actions">
-                  <Button
-                    variant="plain"
-                    type="button"
+                      >
+                        Select all prior seasons
+                      </Button>
+                    </Flex>
+                  </div>
+                </details>
+                <Button
+                  variant="plain"
+                  type="button"
 
-                    onClick={() => choose(currentCatalog.years.filter((y) => y < defaultSeason()))}
-                  >
-                    Select all prior seasons
-                  </Button>
-                  <Button
-                    variant="plain"
-                    type="button"
-
-                    disabled={loading || !years.length || !!snapshot}
-                    onClick={() => setRefresh((v) => v + 1)}
-                  >
-                    Refresh selected seasons
-                  </Button>
-                </Flex>
+                  disabled={loading || !years.length || !!snapshot}
+                  onClick={() => setRefresh((v) => v + 1)}
+                >
+                  Refresh selected seasons
+                </Button>
               </Box>
               {!years.length && <Text mb={4}>Select at least one season to compare.</Text>}
               {loading && (
@@ -422,298 +446,279 @@ export function HistoryPage({
                     filenameContext: `${leagueId}-${years.join('-')}`,
                   }}
                 >
-                  <Text mb={4} className="insights-meta">
-                    Included:{' '}
-                    {records
-                      .map((r) => r.year)
-                      .sort((a, b) => b - a)
-                      .join(', ')}{' '}
-                    · {records.length} of {years.length} selected seasons loaded
-                    {loading ? ' · provisional while refreshing' : ''}.{' '}
-                    {records
-                      .map(
-                        (record) =>
-                          `${record.year}: ${reportFreshnessLabel(record.data.generatedAt).toLowerCase()}`,
-                      )
-                      .join(' · ')}
-                    . Managers match by provider account ID; renamed teams stay together. New owners
-                    and changed co-owner groups start a separate record. Unknown owners stay
-                    separate by season.
-                  </Text>
-                  <label className="history-toggle">
-                    <chakra.input
-                      accentColor="green.700"
-                      width="auto"
-                      type="checkbox"
-                      checked={includeFormer}
-                      onChange={(e) => {
-                        setIncludeFormer(e.target.checked);
-                        setManager('');
-                      }}
-                    />{' '}
-                    Include former managers
-                  </label>
-                  <Text mb={4} className="insights-meta">
-                    Active membership uses the latest linked season ({currentCatalog.activeSeason}).
-                    Historical comparisons still include every team that played.
-                  </Text>
-                  <LeagueSummary
-                    records={records}
-                    historical
-                    activeManagerKeys={currentCatalog.activeManagerKeys || []}
-                    includeFormer={includeFormer}
-                  />
-                  <ManagerComparison records={records} years={years} />
+                  <details className="history-report-coverage">
+                    <summary>
+                      Data coverage &amp; freshness · {records.length} of {years.length} seasons
+                      loaded{loading ? ' · loading' : ''}
+                    </summary>
+                    <Text mb={4} className="insights-meta">
+                      Included:{' '}
+                      {records
+                        .map((r) => r.year)
+                        .sort((a, b) => b - a)
+                        .join(', ')}{' '}
+                      · {records.length} of {years.length} selected seasons loaded
+                      {loading ? ' · provisional while refreshing' : ''}.{' '}
+                      {records
+                        .map(
+                          (record) =>
+                            `${record.year}: ${reportFreshnessLabel(record.data.generatedAt).toLowerCase()}`,
+                        )
+                        .join(' · ')}
+                      . Managers match by provider account ID; renamed teams stay together. New
+                      owners and changed co-owner groups start a separate record. Unknown owners
+                      stay separate by season.
+                    </Text>
+                    <p>
+                      Active membership uses the latest linked season ({currentCatalog.activeSeason}
+                      ). Rivalries and league-wide comparisons retain every team that played.
+                    </p>
+                  </details>
                   <HistoryAnalytics
-                    key={reportScope}
                     records={records}
                     years={years}
                     leagueId={leagueId}
                     shared={shared}
                     snapshot={!!snapshot}
-                  />
-                  <Box
-                    as="section"
-                    bg="bg"
-                    borderWidth="1px"
-                    borderStyle="solid"
-                    borderColor="border"
-                    rounded="lg"
-                    p={{ base: 4, md: 6 }}
-                    className="panel insight-section"
-                  >
-                    <Flex
-                      direction={{ base: 'column', md: 'row' }}
-                      align={{ base: 'stretch', md: 'center' }}
-                      justify="space-between"
-                      gap={4}
-                      className="insight-heading"
-                    >
-                      <Box>
-                        <Text mb={4} className="eyebrow">
-                          Year by year
-                        </Text>
-                        <Heading as="h2" size="xl" mb={4}>
-                          Track the manager, not the team name
-                        </Heading>
-                      </Box>
-                      <Field.Root width="auto" minW="120px" gap={2}>
-                        <Field.Label>Manager history</Field.Label>
-                        <NativeSelect.Root>
-                          <NativeSelect.Field
-                            value={manager}
-                            onChange={(e) => setManager(e.target.value)}
-                          >
-                            <option value="">All managers</option>
-                            {managers.map((m) => (
-                              <option key={m.key} value={m.key}>
-                                {m.managerName}
-                              </option>
-                            ))}
-                          </NativeSelect.Field>
-                          <NativeSelect.Indicator />
-                        </NativeSelect.Root>
-                      </Field.Root>
-                    </Flex>
-                    <Box overflowX="auto" className="insight-table-wrap">
-                      <DataTable
-                        label="Manager season history"
-                        data={historyRows}
-                        getRowId={(r) => `${r.year}:${r.key}`}
-                        initialSorting={[
-                          { id: '0', desc: true },
-                          { id: '1', desc: false },
-                        ]}
-                        columns={[
-                          {
-                            id: '0',
-                            header: 'Season',
-                            value: (r) => r.year,
-                            cell: (r) => (
-                              <>
-                                {snapshot ? (
-                                  <Button
-                                    variant="plain"
-                                    onClick={() => snapshot.openSeason(r.year)}
-                                  >
-                                    {r.year}
-                                  </Button>
-                                ) : (
-                                  <ChakraLink asChild>
-                                    <Link
-                                      to={shared ? '/shared/insights' : '/insights'}
-                                      search={{ leagueId, year: r.year }}
-                                    >
-                                      {r.year}
-                                    </Link>
-                                  </ChakraLink>
-                                )}
-                              </>
-                            ),
-                          },
-                          {
-                            id: '1',
-                            header: 'Manager / team that year',
-                            value: (r) => r.managerName,
-                            exportValue: (r) => `${r.managerName} — ${r.teamName}`,
-                            rowHeader: true,
-                            cell: (r) => (
-                              <>
-                                {r.managerName}
-                                <small>{r.teamName}</small>
-                              </>
-                            ),
-                          },
-                          {
-                            id: 'regular-season-finish',
-                            header: 'Regular-season placement',
-                            value: (r) =>
-                              average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
-                            cell: (r) => (
-                              <>
-                                {n(
-                                  average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
-                                )}
-                              </>
-                            ),
-                          },
-                          {
-                            id: 'finish',
-                            header: 'Final placement',
-                            value: (r) => average(r.finishTotal, r.finishSeasons),
-                            cell: (r) => <>{n(average(r.finishTotal, r.finishSeasons))}</>,
-                          },
-                          {
-                            id: 'playoffs',
-                            header: 'Playoffs',
-                            value: (r) => (r.playoffSeasons ? r.playoffAppearances : null),
-                            cell: (r) => (
-                              <>{r.playoffSeasons ? (r.playoffAppearances ? 'Yes' : 'No') : '—'}</>
-                            ),
-                          },
-                          {
-                            id: 'title',
-                            header: 'Champion',
-                            value: (r) => (r.championshipSeasons ? r.championships : null),
-                            cell: (r) => (
-                              <>{r.championshipSeasons ? (r.championships ? 'Yes' : 'No') : '—'}</>
-                            ),
-                          },
-                          {
-                            id: 'last',
-                            header: 'Last place',
-                            value: (r) => (r.lastPlaceSeasons ? r.lastPlaces : null),
-                            cell: (r) => (
-                              <>{r.lastPlaceSeasons ? (r.lastPlaces ? 'Yes' : 'No') : '—'}</>
-                            ),
-                          },
-                          {
-                            id: '2',
-                            header: 'Avg. vs. median',
-                            value: (r) => average(r.medianPercentTotal, r.medianWeeks),
-                            exportValue: (r) => {
-                              const value = average(r.medianPercentTotal, r.medianWeeks);
-                              return value === null ? null : `${n(value)}% (${r.weeks} weeks)`;
-                            },
-                            cell: (r) => (
-                              <>
-                                {n(average(r.medianPercentTotal, r.medianWeeks))}%
-                                <small>{r.weeks} weeks</small>
-                              </>
-                            ),
-                          },
-                          {
-                            id: '3',
-                            header: 'All-play win rate',
-                            headerTooltip:
-                              'Your win percentage if you played every other team each week, based on available scores. Wins count as 1, ties as half, and losses as 0, divided by total matchups.',
-                            value: (r) => percentage(r.allPlayWins, r.allPlayGames),
-                            cell: (r) => <>{n(percentage(r.allPlayWins, r.allPlayGames))}%</>,
-                          },
-                          {
-                            id: '4',
-                            header: 'Luck index',
-                            value: (r) => luckIndex(r),
-                            cell: (r) => <>{n(luckIndex(r))} pp</>,
-                          },
-                          {
-                            id: '5',
-                            header: 'Trade gain / trade',
-                            value: (r) => average(r.tradeGainTotal, r.gradedTrades),
-                            cell: (r) => (
-                              <>
-                                {n(average(r.tradeGainTotal, r.gradedTrades))}
-                                <small>{r.gradedTrades} graded</small>
-                              </>
-                            ),
-                          },
-                          {
-                            id: '6',
-                            header: 'Pickup lift / pickup',
-                            value: (r) => average(r.pickupLiftTotal, r.ratedPickups),
-                            cell: (r) => (
-                              <>
-                                {n(average(r.pickupLiftTotal, r.ratedPickups))}
-                                <small>{r.ratedPickups} rated</small>
-                              </>
-                            ),
-                          },
-                          {
-                            id: '7',
-                            header: 'Pickup hit rate',
-                            value: (r) => percentage(r.pickupHits, r.ratedPickups),
-                            cell: (r) => <>{n(percentage(r.pickupHits, r.ratedPickups))}%</>,
-                          },
-                          {
-                            id: '8',
-                            header: 'Best lineup / wk',
-                            value: (r) => average(r.bestLineupPoints, r.lineupWeeks),
-                            cell: (r) => <>{n(average(r.bestLineupPoints, r.lineupWeeks))}</>,
-                          },
-                          {
-                            id: '9',
-                            header: 'Start accuracy',
-                            value: (r) => lineupAccuracy(r.correctStarts, r.lineupSlots),
-                            exportValue: (r) =>
-                              r.lineupSlots
-                                ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
-                                : null,
-                            cell: (r) => (
-                              <>
-                                {r.lineupSlots
-                                  ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
-                                  : '—'}
-                              </>
-                            ),
-                          },
-                        ]}
+                    managerKey={selectedManager}
+                    onManagerChange={setManager}
+                    activeManagerKeys={currentCatalog.activeManagerKeys || []}
+                    includeFormer={includeFormer}
+                    onIncludeFormerChange={(value) => {
+                      setIncludeFormer(value);
+                      setManager('');
+                    }}
+                    leagueOverview={
+                      <LeagueSummary
+                        records={records}
+                        historical
+                        activeManagerKeys={currentCatalog.activeManagerKeys || []}
+                        includeFormer={includeFormer}
                       />
+                    }
+                    comparison={<ManagerComparison records={records} years={years} />}
+                    seasonHistory={
+                      <Box
+                        as="section"
+                        bg="bg"
+                        borderWidth="1px"
+                        borderStyle="solid"
+                        borderColor="border"
+                        rounded="lg"
+                        p={{ base: 4, md: 6 }}
+                        className="panel insight-section"
+                      >
+                        <Heading as="h3" size="lg" mb={4}>
+                          Detailed manager season history
+                        </Heading>
+                        <Box overflowX="auto" className="insight-table-wrap">
+                          <DataTable
+                            label="Manager season history"
+                            data={historyRows}
+                            getRowId={(r) => `${r.year}:${r.key}`}
+                            initialSorting={[
+                              { id: '0', desc: true },
+                              { id: '1', desc: false },
+                            ]}
+                            columns={[
+                              {
+                                id: '0',
+                                header: 'Season',
+                                value: (r) => r.year,
+                                cell: (r) => (
+                                  <>
+                                    {snapshot ? (
+                                      <Button
+                                        variant="plain"
+                                        onClick={() => snapshot.openSeason(r.year)}
+                                      >
+                                        {r.year}
+                                      </Button>
+                                    ) : (
+                                      <ChakraLink asChild>
+                                        <Link
+                                          to={shared ? '/shared/insights' : '/insights'}
+                                          search={{ leagueId, year: r.year }}
+                                        >
+                                          {r.year}
+                                        </Link>
+                                      </ChakraLink>
+                                    )}
+                                  </>
+                                ),
+                              },
+                              {
+                                id: '1',
+                                header: 'Manager / team that year',
+                                value: (r) => r.managerName,
+                                exportValue: (r) => `${r.managerName} — ${r.teamName}`,
+                                rowHeader: true,
+                                cell: (r) => (
+                                  <>
+                                    {r.managerName}
+                                    <small>{r.teamName}</small>
+                                  </>
+                                ),
+                              },
+                              {
+                                id: 'regular-season-finish',
+                                header: 'Regular-season placement',
+                                value: (r) =>
+                                  average(r.regularSeasonFinishTotal, r.regularSeasonFinishSeasons),
+                                cell: (r) => (
+                                  <>
+                                    {n(
+                                      average(
+                                        r.regularSeasonFinishTotal,
+                                        r.regularSeasonFinishSeasons,
+                                      ),
+                                    )}
+                                  </>
+                                ),
+                              },
+                              {
+                                id: 'finish',
+                                header: 'Final placement',
+                                value: (r) => average(r.finishTotal, r.finishSeasons),
+                                cell: (r) => <>{n(average(r.finishTotal, r.finishSeasons))}</>,
+                              },
+                              {
+                                id: 'playoffs',
+                                header: 'Playoffs',
+                                value: (r) => (r.playoffSeasons ? r.playoffAppearances : null),
+                                cell: (r) => (
+                                  <>
+                                    {r.playoffSeasons ? (r.playoffAppearances ? 'Yes' : 'No') : '—'}
+                                  </>
+                                ),
+                              },
+                              {
+                                id: 'title',
+                                header: 'Champion',
+                                value: (r) => (r.championshipSeasons ? r.championships : null),
+                                cell: (r) => (
+                                  <>
+                                    {r.championshipSeasons ? (r.championships ? 'Yes' : 'No') : '—'}
+                                  </>
+                                ),
+                              },
+                              {
+                                id: 'last',
+                                header: 'Last place',
+                                value: (r) => (r.lastPlaceSeasons ? r.lastPlaces : null),
+                                cell: (r) => (
+                                  <>{r.lastPlaceSeasons ? (r.lastPlaces ? 'Yes' : 'No') : '—'}</>
+                                ),
+                              },
+                              {
+                                id: '2',
+                                header: 'Avg. vs. median',
+                                value: (r) => average(r.medianPercentTotal, r.medianWeeks),
+                                exportValue: (r) => {
+                                  const value = average(r.medianPercentTotal, r.medianWeeks);
+                                  return value === null ? null : `${n(value)}% (${r.weeks} weeks)`;
+                                },
+                                cell: (r) => (
+                                  <>
+                                    {n(average(r.medianPercentTotal, r.medianWeeks))}%
+                                    <small>{r.weeks} weeks</small>
+                                  </>
+                                ),
+                              },
+                              {
+                                id: '3',
+                                header: 'All-play win rate',
+                                headerTooltip:
+                                  'Your win percentage if you played every other team each week, based on available scores. Wins count as 1, ties as half, and losses as 0, divided by total matchups.',
+                                value: (r) => percentage(r.allPlayWins, r.allPlayGames),
+                                cell: (r) => <>{n(percentage(r.allPlayWins, r.allPlayGames))}%</>,
+                              },
+                              {
+                                id: '4',
+                                header: 'Luck index',
+                                value: (r) => luckIndex(r),
+                                cell: (r) => <>{n(luckIndex(r))} pp</>,
+                              },
+                              {
+                                id: '5',
+                                header: 'Trade gain / trade',
+                                value: (r) => average(r.tradeGainTotal, r.gradedTrades),
+                                cell: (r) => (
+                                  <>
+                                    {n(average(r.tradeGainTotal, r.gradedTrades))}
+                                    <small>{r.gradedTrades} graded</small>
+                                  </>
+                                ),
+                              },
+                              {
+                                id: '6',
+                                header: 'Pickup lift / pickup',
+                                value: (r) => average(r.pickupLiftTotal, r.ratedPickups),
+                                cell: (r) => (
+                                  <>
+                                    {n(average(r.pickupLiftTotal, r.ratedPickups))}
+                                    <small>{r.ratedPickups} rated</small>
+                                  </>
+                                ),
+                              },
+                              {
+                                id: '7',
+                                header: 'Pickup hit rate',
+                                value: (r) => percentage(r.pickupHits, r.ratedPickups),
+                                cell: (r) => <>{n(percentage(r.pickupHits, r.ratedPickups))}%</>,
+                              },
+                              {
+                                id: '8',
+                                header: 'Best lineup / wk',
+                                value: (r) => average(r.bestLineupPoints, r.lineupWeeks),
+                                cell: (r) => <>{n(average(r.bestLineupPoints, r.lineupWeeks))}</>,
+                              },
+                              {
+                                id: '9',
+                                header: 'Start accuracy',
+                                value: (r) => lineupAccuracy(r.correctStarts, r.lineupSlots),
+                                exportValue: (r) =>
+                                  r.lineupSlots
+                                    ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                    : null,
+                                cell: (r) => (
+                                  <>
+                                    {r.lineupSlots
+                                      ? `${n(lineupAccuracy(r.correctStarts, r.lineupSlots))}% (${r.correctStarts} / ${r.lineupSlots})`
+                                      : '—'}
+                                  </>
+                                ),
+                              },
+                            ]}
+                          />
+                        </Box>
+                      </Box>
+                    }
+                  />
+                  <details className="history-report-coverage">
+                    <summary>Coverage and interpretation</summary>
+                    <Box as="section" className="insights-method">
+                      <Text mb={4}>
+                        Trading and waiver summaries aggregate the four-week assessments in Season
+                        Insights; they do not pretend to value entire careers or draft picks. Trade
+                        results use equal observation windows and positional baselines. Pickup lift
+                        uses the dropped-player or positional baseline shown on each season page.
+                        Per-move averages weight each graded move equally. Scoring rates weight each
+                        observed week or all-play comparison, not each season equally. Selection and
+                        failed seasons affect the leaders shown above.
+                      </Text>
+                      {records.map((r) => (
+                        <details key={r.year}>
+                          <summary>{r.year} data notes</summary>
+                          <ul>
+                            {r.data.notes.map((note) => (
+                              <li key={note}>{note}</li>
+                            ))}
+                          </ul>
+                        </details>
+                      ))}
                     </Box>
-                  </Box>
-                  <Box as="section" className="insights-method">
-                    <Heading as="h2" size="xl" mb={4}>
-                      Coverage and interpretation
-                    </Heading>
-                    <Text mb={4}>
-                      Trading and waiver summaries aggregate the four-week assessments in Season
-                      Insights; they do not pretend to value entire careers or draft picks. Trade
-                      results use equal observation windows and positional baselines. Pickup lift
-                      uses the dropped-player or positional baseline shown on each season page.
-                      Per-move averages weight each graded move equally. Scoring rates weight each
-                      observed week or all-play comparison, not each season equally. Selection and
-                      failed seasons affect the leaders shown above.
-                    </Text>
-                    {records.map((r) => (
-                      <details key={r.year}>
-                        <summary>{r.year} data notes</summary>
-                        <ul>
-                          {r.data.notes.map((note) => (
-                            <li key={note}>{note}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    ))}
-                  </Box>
+                  </details>
                 </ReportExportScope>
               )}
             </>

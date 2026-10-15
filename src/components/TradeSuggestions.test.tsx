@@ -117,10 +117,14 @@ function tree(api: ReturnType<typeof makeApi>, search = {}) {
   );
 }
 afterEach(() => window.localStorage.clear());
+async function openIdeas() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Find trade ideas' }));
+}
 
 it('shows ranked exchanges, both lineup gains and coverage, sources, horizon and a prefilled scenario', async () => {
   const api = makeApi();
   render(tree(api));
+  await openIdeas();
   const first = await screen.findByRole('article', { name: 'Suggestion 1 with Two' });
   expect(first).toHaveTextContent('Send Depth RB · Receive Depth WR');
   expect(first).toHaveTextContent('One: +12.00');
@@ -157,6 +161,7 @@ it.each([saved(null), { ...saved(), needsReselection: true }, { ...saved(), team
     const api = makeApi([snapshot()], selection);
     window.localStorage.setItem('managed-team-season:v1:["owner","100"]', '2025');
     render(tree(api));
+    await openIdeas();
     const select = await screen.findByLabelText('My managed team');
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('My team season')).not.toBeInTheDocument();
@@ -172,6 +177,7 @@ it('does not generate trades from an unsaved or failed team choice', async () =>
   const api = makeApi([snapshot()], saved(null));
   api.managedTeam.set.mockRejectedValueOnce(new Error('Save failed'));
   render(tree(api));
+  await openIdeas();
   fireEvent.change(await screen.findByLabelText('My managed team'), { target: { value: '1' } });
   expect(screen.queryByRole('article')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Save my team' }));
@@ -182,8 +188,10 @@ it('does not generate trades from an unsaved or failed team choice', async () =>
 it('clears the inspected scenario when the saved managed team changes', async () => {
   const api = makeApi();
   render(tree(api));
+  await openIdeas();
   const first = await screen.findByRole('article', { name: 'Suggestion 1 with Two' });
   fireEvent.click(within(first).getByRole('button'));
+  fireEvent.click(screen.getByRole('button', { name: 'Find trade ideas' }));
   fireEvent.click(screen.getByRole('button', { name: 'Change my team' }));
   fireEvent.change(await screen.findByLabelText('My managed team'), { target: { value: '2' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save my team' }));
@@ -196,6 +204,7 @@ it('clears the inspected scenario when the saved managed team changes', async ()
 it('uses the requested owned scope and resets recommendations and scenarios across leagues and seasons', async () => {
   const api = makeApi([snapshot(), snapshot('200', 'Other ')]);
   render(tree(api, { leagueId: '200', year: 2026 }));
+  await openIdeas();
   const first = await screen.findByRole('article', { name: 'Suggestion 1 with Other Two' });
   expect(api.managedTeam.get).toHaveBeenCalledWith('200', 2026, false);
   fireEvent.click(within(first).getByRole('button'));
@@ -204,6 +213,7 @@ it('uses the requested owned scope and resets recommendations and scenarios acro
   expect(screen.queryByLabelText('Send Other Depth RB')).not.toBeInTheDocument();
   expect(screen.getByText(/unavailable for the selected season/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('Trade league'), { target: { value: '100' } });
+  await openIdeas();
   await screen.findByRole('article', { name: 'Suggestion 1 with Two' });
   expect(screen.queryByRole('article', { name: /Other Two/ })).not.toBeInTheDocument();
   expect(screen.getByLabelText('Send Depth RB')).not.toBeChecked();
@@ -216,9 +226,11 @@ it('uses the remembered workspace scope only when it belongs to an owned league'
   );
   const api = makeApi([snapshot(), snapshot('200', 'Other ')]);
   const view = render(tree(api));
+  await openIdeas();
   await screen.findByRole('article', { name: 'Suggestion 1 with Other Two' });
   view.unmount();
   render(tree(api, { leagueId: 'unowned', year: 2025 }));
+  await openIdeas();
   await screen.findByRole('article', { name: 'Suggestion 1 with Two' });
   expect(api.managedTeam.get).not.toHaveBeenCalledWith(
     'unowned',
@@ -238,8 +250,10 @@ it('ignores a delayed managed-team response after a league switch', async () => 
       : Promise.resolve(saved()),
   );
   render(tree(api));
+  await openIdeas();
   await screen.findByText('Loading your managed team…');
   fireEvent.change(screen.getByLabelText('Trade league'), { target: { value: '200' } });
+  await openIdeas();
   await screen.findByRole('article', { name: 'Suggestion 1 with Other Two' });
   resolve(saved('2'));
   await waitFor(() =>
@@ -255,10 +269,12 @@ it('ignores a delayed managed-team response after a league switch', async () => 
 it('clears account-specific snapshots immediately on account change', async () => {
   const api = makeApi();
   const view = render(tree(api));
+  await openIdeas();
   const first = await screen.findByRole('article', { name: 'Suggestion 1 with Two' });
   fireEvent.click(within(first).getByRole('button'));
   const other = { ...makeApi([snapshot('200', 'Other ')]), subject: 'other-owner' };
   view.rerender(tree(other));
+  await openIdeas();
   expect(screen.queryByRole('article', { name: 'Suggestion 1 with Two' })).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Send Depth RB')).not.toBeInTheDocument();
   await screen.findByRole('article', { name: 'Suggestion 1 with Other Two' });
@@ -269,15 +285,18 @@ it('shows empty, unavailable and provider-restricted results explicitly', async 
   league.lineupSlots = ['RB'];
   const api = makeApi([league]);
   render(tree(api));
+  await openIdeas();
   await screen.findByText(/No suitable one-for-one trades/);
   league.tradeRules = { deadlinePassed: true };
   fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
+  await openIdeas();
   await screen.findByText(/trade deadline has passed/);
   expect(api.managedTeam.get).toHaveBeenLastCalledWith('100', 2026, true);
   expect(screen.queryByRole('article')).not.toBeInTheDocument();
   delete league.tradeRules;
   league.matchups[0].home.players[1].projectedPoints = undefined;
   fireEvent.click(screen.getByRole('button', { name: 'Refresh trade rosters' }));
+  await openIdeas();
   await screen.findByText(
     /Complete managed-team lineup, identity or projection coverage is unavailable/,
   );

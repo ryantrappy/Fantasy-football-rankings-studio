@@ -260,7 +260,7 @@
   :is(input, select, textarea):not([type='checkbox']):not([type='radio']):not(.export-canvas *) {
   border-style: solid;
   border-width: 1px;
-  border-color: #71809a;
+  border-color: #8995a7;
   border-radius: 8px;
   background-color: #fff;
   min-height: 42px;
@@ -637,5 +637,773 @@
   .history-analytics .history-filters > label,
   .history-analytics .history-filters > label:has(input[type='number']) {
     flex-basis: 100%;
+  }
+}
+
+/* Manager explorer keeps one archive view and its evidence in focus. */
+.studio-surface .history-season-context {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 14px;
+  border-color: var(--studio-line);
+  background: #fff;
+}
+.history-season-picker {
+  flex: 1;
+  min-width: 0;
+}
+.history-season-picker > summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.history-season-picker > summary .eyebrow {
+  margin: 0;
+  font-size: 11px;
+}
+.history-season-picker > summary strong {
+  font-size: 15px;
+}
+.history-season-picker > summary > span:not(.eyebrow) {
+  color: var(--studio-muted);
+  font-size: 12px;
+}
+.history-season-options {
+  padding: 16px 0 4px;
+}
+.history-season-options .history-years {
+  margin: 14px 0;
+}
+.history-report-coverage {
+  margin: 12px 0;
+  color: var(--studio-muted);
+  font-size: 13px;
+}
+.history-report-coverage > summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+.history-report-coverage p {
+  margin: 12px 0;
+}
+.history-explorer {
+  margin: 26px 0;
+  color: var(--studio-ink);
+}
+.history-explorer [hidden] {
+  display: none !important;
+}
+.history-explorer :is(button, select, input, textarea) {
+  font: inherit;
+}
+.history-explorer button {
+  cursor: pointer;
+}
+.history-explorer button:disabled {
+  cursor: default;
+}
+.history-explorer button:focus-visible {
+  outline: 3px solid #a64b12;
+  outline-offset: 3px;
+}
+.history-explorer .history-explorer-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-bottom: 18px;
+}
+.history-explorer .history-explorer-intro .eyebrow {
+  margin: 0 0 7px;
+  color: #3949ab;
+  font-size: 11px;
+  font-weight: 700;
+}
+.history-explorer .history-explorer-intro h2 {
+  font-size: 23px;
+  margin: 0;
+  line-height: 1.3;
+}
+.history-explorer .history-explorer-intro p:last-child {
+  margin: 8px 0 0;
+  color: var(--studio-muted);
+  font-size: 13px;
+}
+.history-explorer label.history-explorer-former {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--studio-muted);
+}
+.history-explorer .history-explorer-former input {
+  width: auto;
+  margin: 0;
+  accent-color: #3949ab;
+}
+.history-explorer .history-explorer-manager-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 18px;
+  font-size: 12px;
+  max-width: 360px;
+}
+.history-explorer .history-explorer-manager-select-mobile {
+  display: none;
+}
+.history-explorer .history-explorer-managers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.history-explorer .history-explorer-managers button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  min-height: 44px;
+  max-width: 100%;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--studio-muted);
+  font-size: 13px;
+}
+.history-explorer .history-explorer-managers button[aria-pressed='true'] {
+  background: #eef1ff;
+  color: #3949ab;
+  border-color: #3949ab;
+}
+.history-explorer .history-explorer-avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--studio-line);
+  border-radius: 50%;
+  background: #f5f7fb;
+  color: #3949ab;
+  font-size: 11px;
+  font-weight: 650;
+  flex-shrink: 0;
+}
+.history-explorer .history-explorer-dossier {
+  border: 1px solid var(--studio-line);
+  border-radius: 12px;
+  background: #fff;
+  overflow: clip;
+}
+.history-explorer .history-explorer-profile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px 28px;
+  padding: 24px;
+}
+.history-explorer .history-explorer-identity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-width: 0;
+}
+.history-explorer .history-explorer-identity > div {
+  min-width: 0;
+}
+.history-explorer .history-explorer-identity .history-explorer-avatar {
+  width: 46px;
+  height: 46px;
+  font-size: 17px;
+  background: #eef1ff;
+}
+.history-explorer .history-explorer-identity h2 {
+  margin: 0;
+  font-size: 24px;
+  overflow-wrap: anywhere;
+}
+.history-explorer .history-explorer-identity p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--studio-muted);
+}
+.history-explorer .history-explorer-stats {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.history-explorer .history-explorer-stats dt {
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  color: var(--studio-muted);
+}
+.history-explorer .history-explorer-stats dd {
+  margin: 4px 0 0;
+  font-size: 23px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.history-explorer .history-explorer-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--studio-line);
+}
+.history-explorer .history-explorer-tabs > button {
+  min-height: 44px;
+  padding: 10px 0;
+  margin-bottom: -1px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--studio-muted);
+  font-size: 13px;
+  font-weight: 550;
+}
+.history-explorer .history-explorer-tabs > button[aria-selected='true'] {
+  color: #3949ab;
+  border-bottom-color: #3949ab;
+}
+.history-explorer .history-explorer-tabs > button:hover {
+  color: #3949ab;
+}
+.history-explorer [role='tabpanel'] {
+  min-width: 0;
+}
+.history-explorer [role='tabpanel'] > section {
+  min-width: 0;
+  padding: 24px;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  background: #fff;
+}
+.history-explorer .history-explorer-subnav,
+.history-explorer .history-explorer-view-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px;
+}
+.history-explorer .history-explorer-subnav > button,
+.history-explorer .history-explorer-view-switch > button {
+  border: 1px solid var(--studio-line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--studio-muted);
+  font-size: 12px;
+  padding: 7px 10px;
+  min-height: 44px;
+}
+.history-explorer .history-explorer-subnav > button[aria-pressed='true'],
+.history-explorer .history-explorer-view-switch > button[aria-pressed='true'] {
+  color: #3949ab;
+  border-color: #3949ab;
+  background: #eef1ff;
+  font-weight: 600;
+}
+.history-explorer .history-explorer-sectionhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.history-explorer .history-explorer-sectionhead h3 {
+  font-size: 18px;
+  margin: 0;
+}
+.history-explorer .history-explorer-sectionhead p {
+  font-size: 12px;
+  color: var(--studio-muted);
+  margin: 6px 0 18px;
+}
+.history-explorer .history-rivalry-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  margin: 0 -24px -24px;
+  border-top: 1px solid var(--studio-line);
+}
+.history-explorer .history-rivalry-main {
+  padding: 20px 24px;
+  min-width: 0;
+}
+.history-explorer .history-rivalry-highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.history-explorer .history-rivalry-highlight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  min-width: 0;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  text-align: left;
+  background: #f6f7fb;
+  color: var(--studio-ink);
+}
+.history-explorer .history-rivalry-highlight:not(:disabled):hover {
+  background: #eef1ff;
+  border-color: #8c99cf;
+}
+.history-explorer .history-rivalry-highlight span {
+  color: var(--studio-muted);
+  font-size: 11px;
+}
+.history-explorer .history-rivalry-highlight strong {
+  font-size: 15px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.history-explorer .history-rivalry-highlight small {
+  color: var(--studio-muted);
+  font-size: 11px;
+}
+.history-explorer .history-explorer-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.history-explorer .history-explorer-toolbar > label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--studio-muted);
+  margin: 0;
+  min-width: 0;
+  max-width: 100%;
+}
+.history-explorer :is(input:not([type='checkbox']), select, textarea) {
+  min-height: 44px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 1px solid #9ba9c0;
+  border-radius: 6px;
+  color: var(--studio-ink);
+  max-width: 100%;
+}
+.history-explorer .history-explorer-toolbar input[type='number'] {
+  width: 120px;
+}
+.history-explorer .history-explorer-toolbar input[type='search'] {
+  width: 220px;
+}
+.history-explorer .insight-table-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+.history-explorer .insight-table {
+  font-size: 12px;
+  margin: 0;
+}
+.history-explorer .insight-table :is(th, td) {
+  padding: 11px 10px;
+}
+.history-explorer .insight-table caption {
+  font-size: 12px;
+  padding: 10px;
+}
+.history-explorer .insight-table th {
+  font-size: 11px;
+}
+.history-explorer .history-rivalry-opponent {
+  padding: 4px 0;
+  min-height: 32px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: #3949ab;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  text-align: left;
+}
+.history-explorer .history-rivalry-opponent[aria-pressed='true'] {
+  font-weight: 750;
+  color: #243c80;
+}
+.history-explorer .history-rivalry-matrix button {
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #3949ab;
+  background: transparent;
+  min-height: 44px;
+}
+.history-explorer .history-rivalry-matrix button[aria-pressed='true'] {
+  border-color: #3949ab;
+  background: #eef1ff;
+}
+.history-explorer .history-rivalry-matrix small {
+  display: block;
+  color: var(--studio-muted);
+  font-size: 10px;
+}
+.history-explorer .history-explorer-footnote {
+  color: var(--studio-muted);
+  font-size: 11px;
+  margin: 10px 0 16px;
+}
+.history-explorer .history-rivalry-inspector {
+  min-width: 0;
+  padding: 22px 20px;
+  border-left: 1px solid var(--studio-line);
+  background: #f4f6fc;
+}
+.history-explorer .history-explorer-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--studio-muted);
+}
+.history-explorer .history-rivalry-inspector h3 {
+  margin: 12px 0 8px;
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.history-explorer .history-rivalry-inspector p {
+  font-size: 12px;
+  color: var(--studio-muted);
+  margin: 8px 0;
+}
+.history-explorer .history-rivalry-stats {
+  margin: 18px 0;
+  font-size: 12px;
+}
+.history-explorer .history-rivalry-stats > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 5px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--studio-line);
+}
+.history-explorer .history-rivalry-stats dt {
+  color: var(--studio-muted);
+}
+.history-explorer .history-rivalry-stats dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.history-explorer .history-rivalry-inspector h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 650;
+  color: var(--studio-muted);
+  margin: 22px 0 12px;
+}
+.history-explorer .history-rivalry-games {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 12px;
+}
+.history-explorer .history-rivalry-games li {
+  padding: 0 0 15px;
+}
+.history-explorer .history-rivalry-games :is(strong, small) {
+  display: block;
+  margin-top: 3px;
+}
+.history-explorer .history-rivalry-games :is(a, small) {
+  font-size: 11px;
+  color: var(--studio-muted);
+}
+.history-explorer .history-rivalry-win {
+  color: #176b50;
+}
+.history-explorer .history-rivalry-loss {
+  color: #9e3d40;
+}
+.history-explorer .history-rivalry-tie {
+  color: var(--studio-muted);
+}
+.history-explorer :is(.history-explorer-methodology, .history-explorer-method) {
+  margin-top: 18px;
+  padding: 12px 0 0;
+  font-size: 12px;
+  color: var(--studio-muted);
+}
+.history-explorer :is(.history-explorer-methodology, .history-explorer-method) > summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+  font-weight: 550;
+  color: var(--studio-ink);
+}
+.history-explorer .history-explorer-analysis {
+  border-top: 0;
+  padding: 0;
+}
+.history-explorer .history-explorer-analysis > summary {
+  font-size: 18px;
+  font-weight: 650;
+  list-style: none;
+  margin-bottom: 12px;
+}
+.history-explorer .history-explorer-view > details[open] {
+  border-top: 0;
+  padding-top: 0;
+}
+.history-explorer .history-explorer-view > details[open] > summary {
+  font-size: 17px;
+  font-weight: 650;
+}
+.history-explorer .history-explorer-view :is(h2, h3) {
+  margin-top: 0;
+}
+.history-explorer .history-explorer-library {
+  padding: 0;
+  margin-top: 20px;
+  border: 1px solid var(--studio-line);
+  border-radius: 10px;
+  background: #fff;
+}
+.history-explorer .history-explorer-library > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: 62px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.history-explorer .history-explorer-library > summary > span {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.history-explorer .history-explorer-library small {
+  color: var(--studio-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.history-explorer .history-explorer-library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 20px 20px;
+}
+.history-explorer .history-explorer-library-grid > button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid var(--studio-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--studio-ink);
+  text-align: left;
+  font-size: 13px;
+}
+.history-explorer .history-explorer-library-grid > button > span {
+  flex: 1;
+  min-width: 0;
+}
+.history-explorer .history-explorer-library-grid small {
+  display: block;
+  margin-top: 4px;
+}
+.history-explorer .history-explorer-library-grid > button[aria-pressed='true'] {
+  border-color: #3949ab;
+  background: #eef1ff;
+}
+.history-explorer .history-explorer-library-grid > button:hover {
+  background: #f4f6fc;
+}
+.history-explorer .history-explorer-library-grid svg {
+  flex-shrink: 0;
+}
+.history-explorer .history-explorer-archive-view {
+  padding: 20px;
+  border-top: 1px solid var(--studio-line);
+  min-width: 0;
+}
+.history-explorer .history-explorer-archive-view > details {
+  padding: 0;
+  border-top: 0;
+}
+.history-explorer .history-explorer-archive-view > details > summary {
+  font-size: 18px;
+  font-weight: 650;
+}
+@media (max-width: 900px) {
+  .history-explorer .history-rivalry-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .history-explorer .history-rivalry-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--studio-line);
+  }
+  .history-explorer .history-rivalry-inspector .history-rivalry-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 24px;
+  }
+  .history-explorer .history-explorer-library-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .studio-surface .history-season-context {
+    padding: 12px 16px;
+  }
+  .history-season-picker > summary {
+    gap: 7px 12px;
+  }
+  .history-season-picker > summary .eyebrow {
+    flex-basis: 100%;
+  }
+  .history-explorer .history-explorer-intro h2 {
+    font-size: 20px;
+  }
+  .history-explorer .history-explorer-manager-select-mobile {
+    display: flex;
+  }
+  .history-explorer .history-explorer-managers {
+    display: none;
+  }
+  .history-explorer .history-explorer-profile {
+    padding: 18px 16px;
+  }
+  .history-explorer .history-explorer-identity h2 {
+    font-size: 22px;
+  }
+  .history-explorer .history-explorer-stats {
+    gap: 20px;
+  }
+  .history-explorer .history-explorer-stats dd {
+    font-size: 20px;
+  }
+  .history-explorer .history-explorer-tabs {
+    padding: 0 16px;
+    gap: 0 20px;
+  }
+  .history-explorer [role='tabpanel'] > section {
+    padding: 18px 16px;
+  }
+  .history-explorer .history-rivalry-layout {
+    margin: 0 -16px -18px;
+  }
+  .history-explorer .history-rivalry-main {
+    padding: 16px;
+  }
+  .history-explorer .history-rivalry-highlights {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .history-explorer .history-rivalry-highlight {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 9px 12px;
+  }
+  .history-explorer .history-rivalry-highlight small {
+    grid-column: 1 / -1;
+  }
+  .history-explorer .history-explorer-toolbar {
+    justify-content: flex-start;
+  }
+  .history-explorer .history-explorer-toolbar > label {
+    flex: 1 1 140px;
+  }
+  .history-explorer .history-explorer-toolbar input[type='search'] {
+    width: 100%;
+  }
+  .history-explorer :is(input:not([type='checkbox']), select, textarea) {
+    font-size: 16px;
+  }
+  .history-explorer .history-rivalry-inspector {
+    padding: 20px 16px;
+  }
+  .history-explorer .history-rivalry-inspector .history-rivalry-stats {
+    display: block;
+  }
+  .history-explorer .history-explorer-library > summary {
+    padding: 14px 16px;
+  }
+  .history-explorer .history-explorer-library-grid {
+    grid-template-columns: 1fr;
+    padding: 0 16px 16px;
+  }
+  .history-explorer .history-explorer-archive-view {
+    padding: 16px;
+  }
+  .history-explorer .history-explorer-view-switch {
+    width: 100%;
+  }
+  .history-explorer .insight-table :is(th, td) {
+    padding: 10px 8px;
+  }
+  .history-explorer .history-explorer-subnav > button {
+    padding: 6px 8px;
+  }
+}
+.history-explorer fieldset.history-explorer-managers,
+.history-explorer fieldset.history-explorer-library-grid {
+  min-width: 0;
+  border: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+.history-explorer fieldset.history-explorer-managers {
+  padding: 0;
+}
+.history-explorer .table-sort-button {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .studio-surface .history-season-context {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .history-season-picker {
+    width: 100%;
+  }
+  .history-explorer .history-rivalry-table :is(th, td):last-child {
+    display: none;
+  }
+  .history-explorer .history-rivalry-table :is(th, td):nth-child(2) {
+    white-space: nowrap;
   }
 }

@@ -2,16 +2,31 @@ import { PageHeading } from './PageHeading';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { logClientError } from '../logging';
 import { Box, Button, Field, Heading, Input, Stack, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { ProfileApi, UserProfile } from '../profile';
 import type { AiCredentialStatus, AiCredentialsApi } from '../ai-credentials';
 import type { WritingApi, WritingProvider } from '../writing';
 import { CodexAccountSettings } from './CodexAccountSettings';
+import { WritingInstructionsSettings } from './WritingInstructionsSettings';
 import { errorMessage } from '../api/client';
 
-type AccountApi = ProfileApi & AiCredentialsApi & { writing?: Pick<WritingApi, 'providers'> };
+type AccountApi = ProfileApi &
+  AiCredentialsApi & {
+    writing?: Pick<WritingApi, 'providers' | 'instructions' | 'saveInstructions'>;
+  };
 
-export function ProfilePage({ api }: { api: AccountApi }) {
+export function ProfilePage({
+  api,
+  settings,
+  recovery,
+  initialView = 'details',
+}: {
+  api: AccountApi;
+  settings?: ReactNode;
+  recovery?: ReactNode;
+  initialView?: 'details' | 'connections' | 'espn';
+}) {
+  const [view, setView] = useState(initialView);
   const [result, setResult] = useState<{
     api: ProfileApi;
     profile?: UserProfile;
@@ -35,25 +50,48 @@ export function ProfilePage({ api }: { api: AccountApi }) {
   }, [api, retry]);
   const current = result?.api === api ? result : undefined;
   return (
-    <Box
-      as="section"
-      className="account-card"
-      maxW="2xl"
-      mx="auto"
-      p={{ base: 4, md: 8 }}
-      borderWidth="1px"
-      rounded="lg"
-      bg="bg"
-    >
-      <Stack gap={5}>
-        <PageHeading
-          title="Your profile"
-          eyebrow="Make it your studio"
-          description="Manage your display name, league connections and writing assistant settings."
-        />
-        {!current && <LoadingSkeleton label="Loading your profile…" />}
+    <section className="explorer-profile">
+      <PageHeading
+        title="Your profile"
+        description="Your identity and the connections you use to write and play."
+      />
+      <div className="explorer-profile-workspace">
+        {current?.profile && (
+          <div className="explorer-account-identity">
+            <div>
+              <h2>{current.profile.name || current.profile.nickname}</h2>
+              <p>{current.profile.email || 'Email not provided'}</p>
+            </div>
+          </div>
+        )}
+        <nav className="explorer-view-nav" aria-label="Profile views">
+          <button
+            type="button"
+            aria-pressed={view === 'details'}
+            onClick={() => setView('details')}
+          >
+            Profile details
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === 'connections'}
+            onClick={() => setView('connections')}
+          >
+            Writing connections
+          </button>
+          {settings && (
+            <button type="button" aria-pressed={view === 'espn'} onClick={() => setView('espn')}>
+              ESPN settings
+            </button>
+          )}
+        </nav>
+        {!current && (
+          <div className="explorer-profile-pane">
+            <LoadingSkeleton label="Loading your profile…" />
+          </div>
+        )}
         {current?.error && (
-          <>
+          <div className="explorer-profile-pane">
             <Text role="alert">{current.error}</Text>
             <Button
               onClick={() => {
@@ -63,19 +101,58 @@ export function ProfilePage({ api }: { api: AccountApi }) {
             >
               Retry
             </Button>
-          </>
+          </div>
+        )}
+        {(current?.profile || recovery) && (
+          <div
+            className="explorer-profile-pane explorer-profile-details"
+            hidden={view !== 'details'}
+          >
+            <Stack gap={4} className="explorer-profile-form">
+              {current?.profile && (
+                <ProfileForm
+                  key={current.profile.userId}
+                  api={api}
+                  profile={current.profile}
+                  onSaved={(profile) => setResult({ api, profile })}
+                />
+              )}
+            </Stack>
+            <aside className="explorer-profile-access" aria-label="Account access">
+              <h2>Account access</h2>
+              <p>
+                Edit your name and nickname here. Your email and sign-in details are managed through
+                your identity provider. Social accounts may restore the provider’s name on your next
+                sign-in.
+              </p>
+              {recovery}
+            </aside>
+          </div>
         )}
         {current?.profile && (
-          <>
-            <ProfileForm key={current.profile.userId} api={api} profile={current.profile} />
-            <AiCredentialSettings api={api} />
-          </>
+          <div className="explorer-profile-pane" hidden={view !== 'connections'}>
+            <AiCredentialSettings key={current.profile.userId} api={api} />
+          </div>
         )}
-      </Stack>
-    </Box>
+
+        {settings && (
+          <div className="explorer-profile-pane" hidden={view !== 'espn'}>
+            {settings}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
-function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }) {
+function ProfileForm({
+  api,
+  profile,
+  onSaved,
+}: {
+  api: ProfileApi;
+  profile: UserProfile;
+  onSaved: (profile: UserProfile) => void;
+}) {
   const [name, setName] = useState(profile.name);
   const [nickname, setNickname] = useState(profile.nickname);
   const [busy, setBusy] = useState(false);
@@ -83,16 +160,15 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
   const [saved, setSaved] = useState(false);
   return (
     <>
-      <Text>
-        Email: {profile.email || 'Not provided'}
-        {profile.email ? (profile.emailVerified ? ' (verified)' : ' (not verified)') : ''}
-      </Text>
-      <Text overflowWrap="anywhere">Account ID: {profile.userId}</Text>
-      <Text>
-        Edit your name and nickname below. Your email and sign-in details are managed through your
-        identity provider. Social accounts may restore the provider’s name on your next sign-in.
-      </Text>
+      <div className="explorer-profile-identity-fields">
+        <Text>
+          Email: {profile.email || 'Not provided'}
+          {profile.email ? (profile.emailVerified ? ' (verified)' : ' (not verified)') : ''}
+        </Text>
+        <Text overflowWrap="anywhere">Account ID: {profile.userId}</Text>
+      </div>
       <form
+        className="explorer-profile-edit-form"
         onSubmit={async (event) => {
           event.preventDefault();
           if (busy) return;
@@ -104,6 +180,7 @@ function ProfileForm({ api, profile }: { api: ProfileApi; profile: UserProfile }
             setName(next.name);
             setNickname(next.nickname);
             setSaved(true);
+            onSaved(next);
           } catch (failure) {
             logClientError('ProfilePage', failure);
             setError(errorMessage(failure));
@@ -174,7 +251,7 @@ function AiCredentialSettings({ api }: { api: AccountApi }) {
     };
   }, [api, retry]);
   return (
-    <Stack gap={4} pt={5} borderTopWidth="1px">
+    <Stack gap={4}>
       <Heading as="h2" size="lg">
         Writing assistant connections
       </Heading>
@@ -182,6 +259,7 @@ function AiCredentialSettings({ api }: { api: AccountApi }) {
         Optionally save your own OpenAI key for Codex or Anthropic key for Claude. Keys are
         encrypted and used only for your writing requests; saved values are never shown again.
       </Text>
+      {api.writing && <WritingInstructionsSettings api={api.writing} />}
       <CodexAccountSettings api={api.writing} revision={status?.codexConfigured} />
       {!status && !error && <Text as="output">Loading AI key settings…</Text>}
       {error && (

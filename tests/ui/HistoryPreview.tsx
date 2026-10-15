@@ -1,5 +1,11 @@
 import { HistoryAnalytics } from '../../src/components/history/HistoryAnalytics';
 import { calculateInsights } from '../../src/server/insights/calculate';
+import { HistoryPage } from '../../src/components/HistoryPage';
+import { InsightsAccess } from '../../src/auth/InsightsAccess';
+import { ApiContext } from '../../src/auth/session';
+import type { LeagueApi } from '../../src/types';
+import { useState } from 'react';
+import { league } from './fixture';
 
 const teams = ['Alex', 'Blair', 'Casey', 'Devon'].map((managerName, index) => ({
   teamId: String(index + 1),
@@ -87,7 +93,64 @@ const records = [2024, 2025].map((year) => ({
 }));
 
 export function HistoryPreview() {
+  const owner = new URLSearchParams(window.location.search).get('owner') === 'true';
   return (
-    <HistoryAnalytics records={records} years={[2025, 2024, 2023]} leagueId="preview" shared />
+    <ApiContext.Provider value={owner ? ownerApi : null}>
+      <HistoryAnalytics
+        records={records}
+        years={[2025, 2024, 2023]}
+        leagueId="preview"
+        shared={!owner}
+      />
+    </ApiContext.Provider>
+  );
+}
+
+// Exercise production consent, snapshot and revocation controls against isolated fixture storage.
+const ownerApi = {
+  createReportSnapshot: async (
+    input: Parameters<NonNullable<LeagueApi['createReportSnapshot']>>[0],
+  ) => {
+    sessionStorage.setItem('history-preview-snapshot', JSON.stringify(input));
+    return {
+      publicId: `${input.wrapped?.scope}-${input.activeSeason}`,
+      expiresAt: '2026-10-24T00:00:00Z',
+    };
+  },
+  reportSharing: {
+    get: async () => sessionStorage.getItem('history-preview-sharing') !== 'disabled',
+    set: async (_id: string, enabled: boolean) => {
+      sessionStorage.setItem('history-preview-sharing', enabled ? 'enabled' : 'disabled');
+      return enabled;
+    },
+  },
+} as LeagueApi;
+
+const historyApi = {
+  getLeagueSeasons: async () => ({
+    years: [2025, 2024],
+    activeManagerKeys: teams.map((team) => team.managerKey),
+    activeSeason: 2025,
+  }),
+  getInsights: async (_leagueId: string, year: number) =>
+    records.find((record) => record.year === year)!.data,
+  dispose: () => {},
+};
+export function HistoryPagePreview() {
+  const [search, setSearch] = useState<{ leagueId: string; years?: number[] }>({
+    leagueId: league.leagueId,
+    years: [2025, 2024],
+  });
+  return (
+    <InsightsAccess publicApi={historyApi as never}>
+      <HistoryPage
+        search={search}
+        navigate={async ({ search: next }) => {
+          setSearch(next);
+        }}
+        shared
+        initialLeague={league}
+      />
+    </InsightsAccess>
   );
 }

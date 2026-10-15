@@ -5,24 +5,31 @@ export function PageHeading({
   title,
   description,
   eyebrow,
+  controls,
   children,
+  className,
 }: {
   title: string;
   description: string;
-  eyebrow: string;
+  eyebrow?: string;
+  controls?: ReactNode;
   children?: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="studio-heading">
+    <section className={`studio-heading page-command-bar${className ? ` ${className}` : ''}`}>
       <div className="studio-heading-copy">
-        <span className="studio-eyebrow">
-          <Icon name="ball" size={16} />
-          {eyebrow}
-        </span>
+        {eyebrow && (
+          <span className="studio-eyebrow">
+            <Icon name="ball" size={16} />
+            {eyebrow}
+          </span>
+        )}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
+      {controls && <div className="page-command-controls">{controls}</div>}
       {children && <div className="studio-heading-actions">{children}</div>}
-    </div>
+    </section>
   );
 }

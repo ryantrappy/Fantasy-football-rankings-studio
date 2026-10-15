@@ -16,6 +16,7 @@ export async function warmReport(
   api: Pick<PublicInsightsApi, 'getInsights' | 'getLeagueSeasons'>,
   scope: Scope,
   history = false,
+  historyDefault: 'recent' | 'all' = 'recent',
 ) {
   if (!scope.leagueId) return;
   if (!history) {
@@ -27,8 +28,13 @@ export async function warmReport(
   }
   const catalog = await api.getLeagueSeasons(scope.leagueId);
   const prior = catalog.years.filter((year) => year < defaultSeason());
-  const years = scope.years ?? (prior.length ? prior : catalog.years).slice(0, 3);
-  // Match the page's bounded default; do not fetch every historical season.
+  const years =
+    scope.years !== undefined
+      ? scope.years.filter((year) => catalog.years.includes(year))
+      : historyDefault === 'all'
+        ? catalog.years
+        : (prior.length ? prior : catalog.years).slice(0, 3);
+  // Private History includes the full catalogue; shared defaults stay recent. Both load in bounded batches.
   for (let offset = 0; offset < years.length; offset += 3)
     await Promise.allSettled(
       years.slice(offset, offset + 3).map((year) => api.getInsights(scope.leagueId!, year)),
@@ -85,7 +91,7 @@ export async function warmTab(tab: Tab, context: RouterContext, scope: Scope = {
       const reportApi =
         context.sessionInsightsApi ??
         (leagues.some((league) => league.leagueId === leagueId) ? api : context.publicInsightsApi);
-      await warmReport(reportApi, { ...scope, leagueId }, tab === 'history');
+      await warmReport(reportApi, { ...scope, leagueId }, tab === 'history', 'all');
       return;
     }
     if (tab === 'players') {

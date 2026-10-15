@@ -9,12 +9,12 @@ import { ChartPointTooltip } from './ChartPointTooltip';
 
 type Metric = 'playoff' | 'championship';
 const colors = [
-  '#246747',
-  '#a34f2d',
-  '#345eae',
-  '#8a4aa0',
-  '#a2720c',
-  '#007e86',
+  '#3949ab',
+  '#176b50',
+  '#b55d14',
+  '#9d4282',
+  '#7b641a',
+  '#267b9d',
   '#b03362',
   '#5a681c',
   '#8052b4',
@@ -117,7 +117,7 @@ export function PlayoffTimeline({
         </Box>
         <Button
           size="sm"
-          colorPalette="green"
+          colorPalette="indigo"
           variant={metric === 'playoff' ? 'solid' : 'outline'}
           aria-pressed={metric === 'playoff'}
           onClick={() => onMetricChange('playoff')}
@@ -126,7 +126,7 @@ export function PlayoffTimeline({
         </Button>
         <Button
           size="sm"
-          colorPalette="green"
+          colorPalette="indigo"
           variant={metric === 'championship' ? 'solid' : 'outline'}
           aria-pressed={metric === 'championship'}
           onClick={() => onMetricChange('championship')}

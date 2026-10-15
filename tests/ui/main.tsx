@@ -1,5 +1,6 @@
+import { AnalyticsPreview } from './AnalyticsPreview';
 import { SeasonStrengthPreview } from './SeasonStrengthPreview';
-import { HistoryPreview } from './HistoryPreview';
+import { HistoryPreview, HistoryPagePreview } from './HistoryPreview';
 import { createRoot } from 'react-dom/client';
 import { Container } from '@chakra-ui/react';
 import {
@@ -19,6 +20,7 @@ import { LeagueSummary } from '../../src/components/LeagueSummary';
 import { api, league, ranking, history, playoffData } from './fixture';
 import '../../src/index.css';
 import '../../src/studio.css';
+import '../../src/explorer.css';
 import { PalettePreview } from './PalettePreview';
 import { LiveWorkspace } from './LiveWorkspace';
 import { OverviewPreview } from './OverviewPreview';
@@ -48,7 +50,11 @@ function PreviewApp() {
         </header>
       )}
       <Container className="studio-surface" maxW="1280px" p={4}>
-        {mode === 'history' ? (
+        {mode === 'analytics' ? (
+          <AnalyticsPreview />
+        ) : mode === 'history-page' ? (
+          <HistoryPagePreview />
+        ) : mode === 'history' ? (
           <HistoryPreview />
         ) : mode === 'season-strength' ? (
           <SeasonStrengthPreview />
@@ -120,7 +126,7 @@ function PreviewApp() {
             ]}
           />
         ) : (
-          <RankingEditor api={api} league={league} year={2026} week={2} />
+          <RankingEditor api={api} league={league} year={2026} week={2} initialEditingMode="all" />
         )}
       </Container>
     </Provider>
@@ -146,6 +152,9 @@ const router = createRouter({
       '/insights',
       '/playoffs',
       '/history',
+      '/tools',
+      '/players',
+      '/trades',
     ].map((path) => createRoute({ getParentRoute: () => rootRoute, path, component: PreviewApp })),
   ]),
   history: createMemoryHistory({

@@ -66,10 +66,12 @@ it('imports, filters, and reports provenance and verified comeback outcome', () 
     </ChakraProvider>,
   );
   expect(screen.getByText(/Unavailable: no in-game/)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Archive tools' }));
   fireEvent.change(screen.getByLabelText('Archive JSON'), {
     target: { value: JSON.stringify([archive]) },
   });
   fireEvent.click(screen.getByText('Import archive'));
+  fireEvent.click(screen.getByRole('button', { name: 'Monday miracles' }));
   expect(screen.getByText(/5.0% → win 101–100/)).toHaveTextContent('Scoring service export');
   fireEvent.change(screen.getByLabelText('Moments manager'), { target: { value: 'b' } });
   expect(screen.getByText(/No verified wins/)).toBeInTheDocument();

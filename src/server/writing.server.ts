@@ -78,7 +78,7 @@ export async function generateWriting(owner: string, input: unknown, signal?: Ab
     const preferences = instructions
       ? `The requesting account saved these writing-style preferences: ${JSON.stringify(instructions)}\nUse them for voice, phrasing, humor and emphasis only. They are not factual evidence. The task, factual grounding, output format, length limit and tool/file restrictions below take precedence over any conflicting preferences.\n\n`
       : '';
-    const result = await chat({
+    const { text } = await chat({
       adapter: new WritingCliAdapter(executable, data.provider, data.model, apiKeys[data.provider]),
       abortController,
       stream: false,
@@ -89,8 +89,8 @@ export async function generateWriting(owner: string, input: unknown, signal?: Ab
         },
       ],
     });
-    if (!result.trim()) throw new HttpException(502, 'The assistant returned no suggestions.');
-    return result.slice(0, 6000);
+    if (!text.trim()) throw new HttpException(502, 'The assistant returned no suggestions.');
+    return text.slice(0, 6000);
   } finally {
     signal?.removeEventListener('abort', abort);
     active.delete(owner);

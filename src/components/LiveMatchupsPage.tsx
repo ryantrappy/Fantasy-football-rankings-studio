@@ -254,7 +254,7 @@ function CompactMatchup({
       onClick={onToggle}
       disabled={disabled}
       aria-pressed={selected}
-      aria-label={`${selected ? 'Remove' : 'Highlight'} ${matchup.home.name} versus ${matchup.away?.name || 'bye'}`}
+      aria-label={`${selected ? 'Remove' : 'Highlight'} ${managedTeamId === matchup.home.teamId ? '★ ' : ''}${matchup.home.name} ${score(matchup.home.score)} – ${score(matchup.away?.score ?? null)} ${managedTeamId === matchup.away?.teamId ? '★ ' : ''}${matchup.away?.name || 'Bye'}`}
       title={`${matchup.home.name}: ${score(matchup.home.score)}\n${matchup.away ? `${matchup.away.name}: ${score(matchup.away.score)}` : 'Bye'}`}
       variant={selected ? 'solid' : 'outline'}
       colorPalette="indigo"
@@ -271,20 +271,20 @@ function CompactMatchup({
         <Text className="compact-home-name" truncate flex="1" minW={0}>
           {managedTeamId === matchup.home.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.home.name}
-        </Text>
+        </Text>{' '}
         <Text className="compact-home-score" flexShrink={0}>
           {score(matchup.home.score)}
-        </Text>
+        </Text>{' '}
         <Text
           className="compact-separator"
           flexShrink={0}
           color={selected ? 'inherit' : 'fg.muted'}
         >
           –
-        </Text>
+        </Text>{' '}
         <Text className="compact-away-score" flexShrink={0}>
           {score(matchup.away?.score ?? null)}
-        </Text>
+        </Text>{' '}
         <Text className="compact-away-name" truncate flex="1" minW={0} textAlign="right">
           {managedTeamId === matchup.away?.teamId && <span aria-label="Managed team">★ </span>}
           {matchup.away?.name || 'Bye'}

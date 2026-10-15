@@ -351,20 +351,24 @@ test('matchup heatmap keyboard inspection preserves directional evidence and the
   await page.getByRole('button', { name: 'Matchup heatmap', exact: true }).click();
   const table = page.getByRole('table', { name: 'All-manager matchup heatmap', exact: true });
   const positive = table.getByRole('button', {
-    name: /Inspect Alex versus Blair: 8-0-0, 8 games, 100%/,
+    name: /Inspect Alex versus Blair: 8-0-0 8 games · 100%/,
   });
   await expect(positive).toHaveClass(/history-heatmap-win/);
   await expect(
-    table.getByRole('button', { name: /Inspect Blair versus Alex: 0-8-0, 8 games, 0%/ }),
+    table.getByRole('button', { name: /Inspect Blair versus Alex: 0-8-0 8 games · 0%/ }),
   ).toHaveClass(/history-heatmap-loss/);
   await expect(
-    table.getByRole('button', { name: 'Inspect Alex versus Casey: no verified games' }),
+    table.getByRole('button', {
+      name: 'Inspect Alex versus Casey: Unavailable 0 games; no verified games',
+    }),
   ).toHaveClass(/history-heatmap-unavailable/);
   await expect(table.getByText('Same manager', { exact: true })).toHaveCount(4);
   await positive.focus();
   await page.keyboard.press('ArrowDown');
   await expect(
-    table.getByRole('button', { name: 'Inspect Casey versus Blair: no verified games' }),
+    table.getByRole('button', {
+      name: 'Inspect Casey versus Blair: Unavailable 0 games; no verified games',
+    }),
   ).toBeFocused();
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowUp');

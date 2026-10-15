@@ -6,6 +6,14 @@ import type { LiveLeague } from '../live-matchups';
 import type { ManagedTeamSelection } from '../types';
 import { LiveMatchupsPage } from './LiveMatchupsPage';
 
+function matchupName(action: string, home: string, away: string) {
+  const escaped = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const points = '(?:—|-?\\d+\\.\\d{2})';
+  return new RegExp(
+    `^${action} (?:★ )?${escaped(home)} ${points} – ${points} (?:★ )?${escaped(away)}$`,
+  );
+}
+
 function managedLeagues(count: number): LiveLeague[] {
   const team = (teamId: string, name: string) => ({ teamId, name, score: 100, players: [] });
   return Array.from({ length: count }, (_, index) => ({
@@ -78,21 +86,19 @@ it('defaults to the viewer’s home, away and bye matchups in the first four lea
     leagues.slice(0, 4).map((league) => [league.leagueId, league.season]),
   );
   expect(
-    screen.getByRole('button', { name: 'Highlight Viewer 5 versus Opponent 5' }),
+    screen.getByRole('button', { name: matchupName('Highlight', 'Viewer 5', 'Opponent 5') }),
   ).toBeDisabled();
 });
 
 it('selects all available managed matchups when there are fewer than four leagues', async () => {
   render(livePage(viewerApi(managedLeagues(2))));
   await screen.findByText('2 of 4 selected');
-  expect(screen.getByRole('button', { name: 'Remove Viewer 1 versus Opponent 1' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
-  expect(screen.getByRole('button', { name: 'Remove Opponent 2 versus Viewer 2' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  expect(
+    screen.getByRole('button', { name: matchupName('Remove', 'Viewer 1', 'Opponent 1') }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect(
+    screen.getByRole('button', { name: matchupName('Remove', 'Opponent 2', 'Viewer 2') }),
+  ).toHaveAttribute('aria-pressed', 'true');
 });
 
 it('skips missing, stale, failed and unmatched team choices without filling from later leagues', async () => {
@@ -111,7 +117,7 @@ it('skips missing, stale, failed and unmatched team choices without filling from
   expect(screen.getByText('0 of 4 selected')).toBeInTheDocument();
   expect(api.managedTeam.get).toHaveBeenCalledTimes(4);
   expect(
-    screen.getByRole('button', { name: 'Highlight Viewer 5 versus Opponent 5' }),
+    screen.getByRole('button', { name: matchupName('Highlight', 'Viewer 5', 'Opponent 5') }),
   ).toBeEnabled();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
@@ -119,18 +125,23 @@ it('skips missing, stale, failed and unmatched team choices without filling from
 it('preserves manual selections and an intentionally cleared board across refreshes', async () => {
   const api = viewerApi(managedLeagues(1));
   render(livePage(api));
-  await screen.findByRole('button', { name: 'Remove Viewer 1 versus Opponent 1' });
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Viewer 1 versus Opponent 1' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Highlight Other 1 versus Rival 1' }));
+  await screen.findByRole('button', { name: matchupName('Remove', 'Viewer 1', 'Opponent 1') });
+  fireEvent.click(
+    screen.getByRole('button', { name: matchupName('Remove', 'Viewer 1', 'Opponent 1') }),
+  );
+  fireEvent.click(
+    screen.getByRole('button', { name: matchupName('Highlight', 'Other 1', 'Rival 1') }),
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Refresh scores' }));
   await waitFor(() => expect(api.getLiveMatchups).toHaveBeenCalledTimes(2));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh scores' })).toBeEnabled());
-  expect(screen.getByRole('button', { name: 'Remove Other 1 versus Rival 1' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  expect(
+    screen.getByRole('button', { name: matchupName('Remove', 'Other 1', 'Rival 1') }),
+  ).toHaveAttribute('aria-pressed', 'true');
   expect(api.managedTeam.get).toHaveBeenCalledTimes(1);
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Other 1 versus Rival 1' }));
+  fireEvent.click(
+    screen.getByRole('button', { name: matchupName('Remove', 'Other 1', 'Rival 1') }),
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Refresh scores' }));
   await waitFor(() => expect(api.getLiveMatchups).toHaveBeenCalledTimes(3));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh scores' })).toBeEnabled());
@@ -145,14 +156,15 @@ it('keeps a manual choice made while managed-team defaults are still loading', a
   const api = viewerApi(managedLeagues(1));
   api.managedTeam.get.mockReturnValue(pending);
   render(livePage(api));
-  fireEvent.click(await screen.findByRole('button', { name: 'Highlight Other 1 versus Rival 1' }));
-  await act(async () => resolve({ teamId: 'viewer-0', needsReselection: false, teams: [] }));
-  expect(screen.getByRole('button', { name: 'Remove Other 1 versus Rival 1' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
+  fireEvent.click(
+    await screen.findByRole('button', { name: matchupName('Highlight', 'Other 1', 'Rival 1') }),
   );
+  await act(async () => resolve({ teamId: 'viewer-0', needsReselection: false, teams: [] }));
   expect(
-    screen.getByRole('button', { name: 'Highlight Viewer 1 versus Opponent 1' }),
+    screen.getByRole('button', { name: matchupName('Remove', 'Other 1', 'Rival 1') }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect(
+    screen.getByRole('button', { name: matchupName('Highlight', 'Viewer 1', 'Opponent 1') }),
   ).toHaveAttribute('aria-pressed', 'false');
 });
 
@@ -166,11 +178,11 @@ it('uses the new viewer’s team choice when the account API changes', async () 
     teams: [],
   });
   const { rerender } = render(livePage(first));
-  await screen.findByRole('button', { name: 'Remove Viewer 1 versus Opponent 1' });
+  await screen.findByRole('button', { name: matchupName('Remove', 'Viewer 1', 'Opponent 1') });
   rerender(livePage(second));
-  await screen.findByRole('button', { name: 'Remove Other 1 versus Rival 1' });
+  await screen.findByRole('button', { name: matchupName('Remove', 'Other 1', 'Rival 1') });
   expect(
-    screen.getByRole('button', { name: 'Highlight Viewer 1 versus Opponent 1' }),
+    screen.getByRole('button', { name: matchupName('Highlight', 'Viewer 1', 'Opponent 1') }),
   ).toHaveAttribute('aria-pressed', 'false');
 });
 
@@ -210,20 +222,26 @@ it('shows compact scores and limits highlighted rosters to four matchups', async
       </ApiContext.Provider>
     </Provider>,
   );
-  await screen.findByRole('button', { name: 'Highlight Home 1 versus Away 1' });
+  await screen.findByRole('button', { name: matchupName('Highlight', 'Home 1', 'Away 1') });
   const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
   const details = screen.getByRole('region', { name: 'Highlighted matchups' });
   expect(within(sidebar).getAllByRole('button')).toHaveLength(6);
   for (let index = 1; index <= 4; index++)
     fireEvent.click(
-      screen.getByRole('button', { name: `Highlight Home ${index} versus Away ${index}` }),
+      screen.getByRole('button', {
+        name: matchupName('Highlight', `Home ${index}`, `Away ${index}`),
+      }),
     );
   expect(screen.getByText('4 of 4 selected')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Highlight Home 5 versus Away 5' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: matchupName('Highlight', 'Home 5', 'Away 5') }),
+  ).toBeDisabled();
   expect(within(details).getByText('Player 1')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Home 1 versus Away 1' }));
+  fireEvent.click(screen.getByRole('button', { name: matchupName('Remove', 'Home 1', 'Away 1') }));
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Highlight Home 5 versus Away 5' })).toBeEnabled(),
+    expect(
+      screen.getByRole('button', { name: matchupName('Highlight', 'Home 5', 'Away 5') }),
+    ).toBeEnabled(),
   );
 });
 
@@ -253,7 +271,9 @@ it('marks the exact saved managed side and prioritizes an explicitly linked curr
   await screen.findByText('4 of 4 selected');
   expect(screen.getByRole('combobox', { name: 'League' })).toHaveValue('league-5');
   const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
-  const mine = within(sidebar).getByRole('button', { name: 'Remove Opponent 6 versus Viewer 6' });
+  const mine = within(sidebar).getByRole('button', {
+    name: matchupName('Remove', 'Opponent 6', 'Viewer 6'),
+  });
   expect(within(mine).getByLabelText('Managed team')).toBeInTheDocument();
   expect(mine).toHaveTextContent('★ Viewer 6');
   const board = screen.getByRole('region', { name: 'Highlighted matchups' });
@@ -316,4 +336,28 @@ it('keeps kickoff, injury and source freshness evidence together when schedules 
   fireEvent.click(screen.getByRole('button', { name: 'Refresh scores' }));
   await screen.findByText('Postponed · kickoff unavailable');
   expect(screen.getByText('QUESTIONABLE')).toBeInTheDocument();
+});
+
+it('names compact controls with their full visible score order, managed markers and bye evidence', async () => {
+  const leagues = managedLeagues(3);
+  leagues[2].matchups[1].home.score = null;
+  render(livePage(viewerApi(leagues)));
+  await screen.findByText('3 of 4 selected');
+  const sidebar = screen.getByRole('complementary', { name: 'All league matchups' });
+  for (const button of sidebar.querySelectorAll('.compact-matchup')) {
+    const visible = Array.from(button.querySelectorAll('.compact-matchup-line > *'))
+      .map((cell) => cell.textContent!.trim().replace(/\s+/g, ' '))
+      .join(' ');
+    const action = button.getAttribute('aria-pressed') === 'true' ? 'Remove' : 'Highlight';
+    expect(button).toHaveAccessibleName(`${action} ${visible}`);
+  }
+  expect(
+    within(sidebar).getByRole('button', { name: 'Remove ★ Viewer 1 100.00 – 100.00 Opponent 1' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect(
+    within(sidebar).getByRole('button', { name: 'Remove Opponent 2 100.00 – 100.00 ★ Viewer 2' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  expect(
+    within(sidebar).getByRole('button', { name: 'Remove ★ Viewer 3 — – — Bye' }),
+  ).toHaveAttribute('aria-pressed', 'true');
 });

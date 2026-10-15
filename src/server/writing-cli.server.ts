@@ -240,7 +240,7 @@ export class WritingCliAdapter extends BaseTextAdapter<
   readonly name = 'writing-cli';
   constructor(
     private executable: string,
-    private provider: WritingProvider,
+    private cliProvider: WritingProvider,
     model: string,
     private apiKey?: string,
   ) {
@@ -255,7 +255,7 @@ export class WritingCliAdapter extends BaseTextAdapter<
       .join('\n\n');
     const text = await runWritingCli(
       this.executable,
-      this.provider,
+      this.cliProvider,
       this.model,
       prompt,
       options.abortController?.signal,

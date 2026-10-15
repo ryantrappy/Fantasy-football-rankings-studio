@@ -24,7 +24,7 @@ it('runs a no-shell CLI with a restricted environment and collects output throug
     });
     return child;
   });
-  const text = await chat({
+  const { text } = await chat({
     adapter: new WritingCliAdapter('/approved/codex', 'codex', 'test-model'),
     messages: [{ role: 'user', content: 'Use only these stats.' }],
     stream: false,

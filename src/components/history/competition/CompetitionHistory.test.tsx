@@ -169,7 +169,7 @@ it('selects heatmap pairs without losing manager, season, search or original mat
   fireEvent.click(screen.getByRole('button', { name: 'Rivalries' }));
   fireEvent.click(screen.getByRole('button', { name: 'Matchup heatmap' }));
   const heatmap = within(screen.getByRole('table', { name: 'All-manager matchup heatmap' }));
-  fireEvent.click(heatmap.getByRole('button', { name: /Inspect b versus a: 0-2-2, 4 games, 25%/ }));
+  fireEvent.click(heatmap.getByRole('button', { name: /Inspect b versus a: 0-2-2 4 games · 25%/ }));
   expect(screen.getByRole('heading', { name: 'b vs. a' })).toBeTruthy();
   expect(screen.getByRole('complementary', { name: 'Selected rivalry' }).textContent).toContain(
     '4 verified meetings',

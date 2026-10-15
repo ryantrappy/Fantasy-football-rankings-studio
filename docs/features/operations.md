@@ -169,3 +169,11 @@ Source: [TASK-96](../../backlog/tasks/task-96%20-%20Evaluate-the-next-sport-and-
 - Cleanup does not authorize runtime feature reductions, baseline changes or weaker assertions. Full unit/UI and required static/build gates must pass before completion.
 
 Source: [TASK-151](../../backlog/tasks/task-151%20-%20The-UI-validation-tests-folders-should-be-cleaned-up-when-they-are-not-longer-needed.md).
+
+### TASK-153 — Stable TanStack Start and compatible dependency updates
+
+- Use the stable TanStack Start release with aligned Router and DB adapters, retaining the Node server build, private server-function caching, server-only settings and Oxc React Compiler integration.
+- Non-streaming AI results preserve verified writing context, consent, restricted CLI execution, cancellation, empty-result errors and bounded suggestions. Confirmed league/ranking saves await asynchronous collection writes and propagate cache validation failures.
+- Preserve existing tables, charts, exports, account-scoped cache freshness and safe session disposal. Accessible heatmap/Live button names include their visible records, samples and scores under the upgraded Axe checker. Validate dependency compatibility, focused regressions, full unit tests, static checks, production build and browser coverage; keep live-provider checks separate.
+
+Source: [TASK-153](../../backlog/tasks/task-153%20-%20Upgrade-to-tanstack-1.0-and-update-other-dependencies-while-doing-this.md). Versions and migration details: [Dependency upgrade](../dependency-upgrade.md).

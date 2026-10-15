@@ -22,17 +22,19 @@ function renderHeatmap(records = [season()]) {
 it('shows directional exact records, half-win ties, low samples and neutral missing/self cells', () => {
   const { table } = renderHeatmap();
   const winning = table.getByRole('button', {
-    name: 'Inspect a versus b: 1-0-1, 2 games, 75% wins with ties counted half, low sample',
+    name: 'Inspect a versus b: 1-0-1 2 games · 75% Low sample; wins with ties counted half',
   });
   const losing = table.getByRole('button', {
-    name: 'Inspect b versus a: 0-1-1, 2 games, 25% wins with ties counted half, low sample',
+    name: 'Inspect b versus a: 0-1-1 2 games · 25% Low sample; wins with ties counted half',
   });
   expect(winning).toHaveClass('history-heatmap-win');
   expect(losing).toHaveClass('history-heatmap-loss');
-  expect(winning).toHaveTextContent('1-0-12 games · 75%Low sample');
-  const unavailable = table.getByRole('button', { name: 'Inspect a versus c: no verified games' });
+  expect(winning).toHaveTextContent('1-0-1 2 games · 75% Low sample');
+  const unavailable = table.getByRole('button', {
+    name: 'Inspect a versus c: Unavailable 0 games; no verified games',
+  });
   expect(unavailable).toHaveClass('history-heatmap-unavailable');
-  expect(unavailable).toHaveTextContent('Unavailable0 games');
+  expect(unavailable).toHaveTextContent('Unavailable 0 games');
   expect(table.getAllByText('Same manager')).toHaveLength(4);
   expect(table.queryByRole('button', { name: /Inspect a versus a/ })).not.toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Matchup heatmap color legend' })).toHaveTextContent(
@@ -43,7 +45,7 @@ it('shows directional exact records, half-win ties, low samples and neutral miss
 it('shows an all-tie series as balanced rather than as wins or losses', () => {
   const { table } = renderHeatmap([season(2024, [[100, 100, 80, 80]])]);
   expect(
-    table.getByRole('button', { name: /Inspect a versus b: 0-0-1, 1 games, 50%/ }),
+    table.getByRole('button', { name: /Inspect a versus b: 0-0-1 1 games · 50%/ }),
   ).toHaveClass('history-heatmap-balanced');
 });
 
@@ -60,12 +62,12 @@ it('joins renamed ownership identities and distinguishes different groups with t
   expect(table.getByRole('rowheader', { name: 'Alex Morgan (ownership group 2)' })).toBeVisible();
   expect(
     table.getByRole('button', {
-      name: /Inspect Alex Morgan \(ownership group 1\) versus b: 2-0-2, 4 games, 75%/,
+      name: /Inspect Alex Morgan \(ownership group 1\) versus b: 2-0-2 4 games · 75%/,
     }),
   ).toBeVisible();
   expect(
     table.getByRole('button', {
-      name: 'Inspect Alex Morgan (ownership group 1) versus Alex Morgan (ownership group 2): no verified games',
+      name: 'Inspect Alex Morgan (ownership group 1) versus Alex Morgan (ownership group 2): Unavailable 0 games; no verified games',
     }),
   ).toBeVisible();
 });

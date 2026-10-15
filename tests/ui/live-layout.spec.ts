@@ -1,6 +1,14 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+function matchupName(action: string, home: string, away: string) {
+  const escaped = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const points = '(?:—|-?\\d+\\.\\d{2})';
+  return new RegExp(
+    `^${action} (?:★ )?${escaped(home)} ${points} – ${points} (?:★ )?${escaped(away)}$`,
+  );
+}
+
 for (const width of [1440, 390]) {
   test(`managed teams open automatically for the first four leagues at ${width}px`, async ({
     page,
@@ -10,10 +18,19 @@ for (const width of [1440, 390]) {
     const sidebar = page.getByRole('complementary', { name: 'All league matchups' });
     const board = page.getByRole('region', { name: 'Highlighted matchups' });
     await expect(board).toHaveAttribute('data-count', '4');
+    for (const button of await sidebar.locator('.compact-matchup').all()) {
+      const visible = (await button.locator('.compact-matchup-line > *').allTextContents())
+        .map((value) => value.trim().replace(/\s+/g, ' '))
+        .join(' ');
+      const action =
+        (await button.getAttribute('aria-pressed')) === 'true' ? 'Remove' : 'Highlight';
+      await expect(button).toHaveAccessibleName(`${action} ${visible}`);
+    }
+
     for (const index of [2, 5, 8, 11]) {
       await expect(
         sidebar.getByRole('button', {
-          name: `Remove Home ${index} versus Away ${index}`,
+          name: matchupName('Remove', `Home ${index}`, `Away ${index}`),
           exact: true,
         }),
       ).toHaveAttribute('aria-pressed', 'true');
@@ -22,21 +39,30 @@ for (const width of [1440, 390]) {
       ).toBeVisible();
     }
     await expect(
-      sidebar.getByRole('button', { name: 'Highlight Home 14 versus Away 14', exact: true }),
+      sidebar.getByRole('button', {
+        name: matchupName('Highlight', 'Home 14', 'Away 14'),
+        exact: true,
+      }),
     ).toBeDisabled();
     await sidebar
-      .getByRole('button', { name: 'Remove Home 11 versus Away 11', exact: true })
+      .getByRole('button', { name: matchupName('Remove', 'Home 11', 'Away 11'), exact: true })
       .click();
     await sidebar
-      .getByRole('button', { name: 'Highlight Home 14 versus Away 14', exact: true })
+      .getByRole('button', { name: matchupName('Highlight', 'Home 14', 'Away 14'), exact: true })
       .click();
     await page.getByRole('button', { name: 'Refresh scores' }).click();
     await expect(page.getByRole('button', { name: 'Refresh scores' })).toBeEnabled();
     await expect(
-      sidebar.getByRole('button', { name: 'Remove Home 14 versus Away 14', exact: true }),
+      sidebar.getByRole('button', {
+        name: matchupName('Remove', 'Home 14', 'Away 14'),
+        exact: true,
+      }),
     ).toHaveAttribute('aria-pressed', 'true');
     await expect(
-      sidebar.getByRole('button', { name: 'Highlight Home 11 versus Away 11', exact: true }),
+      sidebar.getByRole('button', {
+        name: matchupName('Highlight', 'Home 11', 'Away 11'),
+        exact: true,
+      }),
     ).toHaveAttribute('aria-pressed', 'false');
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
@@ -63,8 +89,8 @@ test('compact sidebar selectors and the live grid fill four fixed quarters', asy
   ).toBeVisible();
   await expect(page.locator('header').getByRole('navigation')).toBeVisible();
   const sidebar = page.getByRole('complementary', { name: 'All league matchups' });
-  await sidebar.getByRole('button', { name: 'Highlight Home 1 versus Away 1' }).click();
-  await sidebar.getByRole('button', { name: 'Highlight Home 2 versus Away 2' }).click();
+  await sidebar.getByRole('button', { name: matchupName('Highlight', 'Home 1', 'Away 1') }).click();
+  await sidebar.getByRole('button', { name: matchupName('Highlight', 'Home 2', 'Away 2') }).click();
   const board = page.getByRole('region', { name: 'Highlighted matchups' });
   await expect(board).toHaveAttribute('data-count', '2');
   const boardBox = (await board.boundingBox())!;
@@ -74,17 +100,15 @@ test('compact sidebar selectors and the live grid fill four fixed quarters', asy
     expect(box.height).toBeLessThan(boardBox.height / 2 + 15);
   }
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('two-matchups.png') });
-  await sidebar.getByRole('button', { name: 'Highlight Home 3 versus Away 3' }).click();
-  await sidebar.getByRole('button', { name: 'Highlight Home 4 versus Away 4' }).click();
+  await sidebar.getByRole('button', { name: matchupName('Highlight', 'Home 3', 'Away 3') }).click();
+  await sidebar.getByRole('button', { name: matchupName('Highlight', 'Home 4', 'Away 4') }).click();
   await expect(board).toHaveAttribute('data-count', '4');
   expect(await page.locator('.live-matchup-card').count()).toBe(4);
-  for (const name of [
-    'Home 1 versus Away 1',
-    'Home 2 versus Away 2',
-    'Home 3 versus Away 3',
-    'Home 4 versus Away 4',
-  ]) {
-    const button = sidebar.getByRole('button', { name: `Remove ${name}`, exact: true });
+  for (const name of [1, 2, 3, 4]) {
+    const button = sidebar.getByRole('button', {
+      name: matchupName('Remove', `Home ${name}`, `Away ${name}`),
+      exact: true,
+    });
     await expect(button).toHaveAttribute('aria-pressed', 'true');
     await expect(button).toBeEnabled();
   }
@@ -116,8 +140,8 @@ test('compact sidebar selectors and the live grid fill four fixed quarters', asy
 test('phone matchups show complete rosters in the page flow', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/tests/ui/?mode=live');
-  await page.getByRole('button', { name: 'Highlight Home 1 versus Away 1' }).click();
-  await page.getByRole('button', { name: 'Highlight Home 2 versus Away 2' }).click();
+  await page.getByRole('button', { name: matchupName('Highlight', 'Home 1', 'Away 1') }).click();
+  await page.getByRole('button', { name: matchupName('Highlight', 'Home 2', 'Away 2') }).click();
   const size = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     height: document.documentElement.scrollHeight,

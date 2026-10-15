@@ -39,7 +39,7 @@ function HeatmapCell({ row, opponent }: { row: HeatmapRow; opponent: HeatmapRow 
     <button
       type="button"
       className={`history-heatmap-cell history-heatmap-${color}`}
-      aria-label={`Inspect ${row.name} versus ${opponent.name}: ${record.games ? `${record.wins}-${record.losses}-${record.ties}, ${record.games} games, ${winRate(rate!)} wins with ties counted half${record.games < minimum ? ', low sample' : ''}` : 'no verified games'}`}
+      aria-label={`Inspect ${row.name} versus ${opponent.name}: ${record.games ? `${record.wins}-${record.losses}-${record.ties} ${record.games} games · ${winRate(rate!)}${record.games < minimum ? ' Low sample' : ''}; wins with ties counted half` : 'Unavailable 0 games; no verified games'}`}
       aria-pressed={identity === selected}
       tabIndex={identity === focus ? 0 : -1}
       onFocus={() => setFocused(identity)}
@@ -48,11 +48,16 @@ function HeatmapCell({ row, opponent }: { row: HeatmapRow; opponent: HeatmapRow 
     >
       <strong>
         {record.games ? `${record.wins}-${record.losses}-${record.ties}` : 'Unavailable'}
-      </strong>
+      </strong>{' '}
       <small>
         {record.games} games{rate === null ? '' : ` · ${winRate(rate)}`}
       </small>
-      {record.games > 0 && record.games < minimum && <small>Low sample</small>}
+      {record.games > 0 && record.games < minimum && (
+        <>
+          {' '}
+          <small>Low sample</small>
+        </>
+      )}
     </button>
   );
 }

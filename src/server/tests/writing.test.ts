@@ -50,7 +50,7 @@ beforeEach(() => {
     apiKeys: {},
   });
   mocks.find.mockResolvedValue('/bin/codex');
-  mocks.chat.mockResolvedValue('- Discuss scoring.');
+  mocks.chat.mockResolvedValue({ text: '- Discuss scoring.', chunks: [] });
 });
 it('uses the verified owner for context and blocks other owners before provider reads', async () => {
   await getWritingContext('owner', selection);
@@ -82,10 +82,10 @@ it('passes only verified factual context to TanStack AI and permits retry after 
   expect(mocks.chat.mock.calls[1][0].messages[0].content).toContain('No completed scoring weeks');
 });
 it('allows only one simultaneous request per account even during CLI discovery', async () => {
-  let finish!: (value: string) => void;
+  let finish!: (value: { text: string; chunks: [] }) => void;
   mocks.chat.mockImplementation(
     () =>
-      new Promise<string>((resolve) => {
+      new Promise<{ text: string; chunks: [] }>((resolve) => {
         finish = resolve;
       }),
   );
@@ -94,7 +94,7 @@ it('allows only one simultaneous request per account even during CLI discovery',
   const second = generateWriting('owner', input);
   await expect(second).rejects.toMatchObject({ status: 409 });
   await vi.waitFor(() => expect(mocks.chat).toHaveBeenCalledTimes(1));
-  finish('A suggestion');
+  finish({ text: 'A suggestion', chunks: [] });
   await expect(first).resolves.toBe('A suggestion');
 });
 it('aborts server generation and releases the account request slot', async () => {
@@ -181,4 +181,12 @@ it('releases the account request slot when loading instructions fails and uses u
   mocks.instructions.mockResolvedValue({ instructions: 'Updated private voice.' });
   await expect(generateWriting('owner', input)).resolves.toBe('- Discuss scoring.');
   expect(mocks.chat.mock.calls[0][0].messages[0].content).toContain('Updated private voice.');
+});
+
+it('rejects empty non-streaming AI results and preserves the suggestion length bound', async () => {
+  const input = { ...selection, provider: 'codex', model: '', approved: true };
+  mocks.chat.mockResolvedValueOnce({ text: '   ', chunks: [] });
+  await expect(generateWriting('owner', input)).rejects.toMatchObject({ status: 502 });
+  mocks.chat.mockResolvedValueOnce({ text: 'a'.repeat(6100), chunks: [] });
+  await expect(generateWriting('owner', input)).resolves.toBe('a'.repeat(6000));
 });

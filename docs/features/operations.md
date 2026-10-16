@@ -184,3 +184,10 @@ Source: [TASK-153](../../backlog/tasks/task-153%20-%20Upgrade-to-tanstack-1.0-an
 - The production Node engine contract remains unchanged; verification includes an exact-runtime clean install, full deterministic unit suite and static/build gates.
 
 Source: [TASK-154](../../backlog/tasks/task-154%20-%20Repair-CI-test-runtime-compatibility-after-dependency-upgrades.md).
+
+### TASK-157 — Independent workspace browser regression cases
+
+- All nine workspace views retain hierarchy, navigation, view-specific workflows, overflow, accessibility, page-error and screenshot checks at 1280px and 390px. Each screen/viewport is an independent case with the unchanged default timeout.
+- Splitting the two multi-screen loops improves failure attribution and avoids sharing one timeout across nine unrelated audits; no feature assertion or baseline is removed.
+
+Source: [TASK-157](../../backlog/tasks/task-157%20-%20Give-each-workspace-screen-its-own-browser-regression-case.md).

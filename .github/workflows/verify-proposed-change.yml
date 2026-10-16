@@ -83,6 +83,7 @@ jobs:
         shard: [1, 2, 3, 4]
     env:
       CI: true
+      BROWSER_SHARD: ${{ matrix.shard }}
       PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/results.json
     steps:
       - name: Check out repository
@@ -97,7 +98,7 @@ jobs:
       - name: Install Playwright diagnostic runtime
         run: npx playwright install ffmpeg
       - name: Run deterministic Chrome browser checks
-        run: npm run test:ui -- --project=ui --no-deps --workers=1 --shard=${{ matrix.shard }}/4 --reporter=line,html,json
+        run: npm run test:ui -- --project=ui --no-deps --workers=1 --reporter=line,html,json
       - name: Retain browser timings and outcomes
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

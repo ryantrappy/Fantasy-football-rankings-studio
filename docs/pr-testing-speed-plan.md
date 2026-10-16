@@ -139,3 +139,11 @@ Local validation confirmed all 164 functional test identities appear exactly onc
 | Aggregate            | 3s       | All predecessors succeeded                  |
 
 The four retained JSON reports total **164 expected, zero skipped, zero unexpected and zero flaky**. The suite is preserved exactly once across shards; both PNG baselines remain on macOS Chrome. This is a measured single-run improvement, not a five-run reliability or median claim. The initial 5–7 minute estimate was slightly optimistic: runner setup, aggregation and file-level imbalance produced 7m21s. Shard 1 remains the bottleneck; further balancing is a future optimization, not a reason to drop coverage.
+
+## Duration balancing (TASK-159)
+
+The initial numeric shards placed analytics, functional forecast and history together. Their browser test steps ranged from 135s to 424s in the final automatic run. The next change groups whole specs using median per-spec test durations from runs 38850892402, 38851825175 and 38851838533. Longest files are distributed across the least-loaded group, giving estimated test work of **221s, 227s, 227s and 223s**, before setup and recording/report overhead. These are estimates from prior results; hosted verification determines the actual improvement.
+
+The workflow sets `BROWSER_SHARD` (1–4) and no longer passes numeric `--shard`. Groups one through three explicitly match files in `playwright.config.ts`; group four excludes those lists and includes everything else. New or renamed specs therefore remain covered automatically. Empty or out-of-range group selections fail, while an unset variable preserves normal local selection and the cold-performance dependency. Whole-file grouping keeps tests within a file sequential and avoids introducing test-level concurrency. Rebalance using retained results when workloads change; confirm exact test identity equality across groups before pushing.
+
+The Ubuntu trial is tracked separately as [TASK-158](../backlog/tasks/task-158%20-%20Trial-Ubuntu-runners-for-functional-browser-checks-while-retaining-macOS-PNG-baselines.md), in To Do. It requires comparable measured runs, unchanged coverage, macOS PNG baselines and a go/no-go recommendation. No runner migration is included in balancing.

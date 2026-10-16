@@ -126,7 +126,29 @@ function PreviewApp() {
             ]}
           />
         ) : (
-          <RankingEditor api={api} league={league} year={2026} week={2} initialEditingMode="all" />
+          <RankingEditor
+            api={
+              mode === 'theme'
+                ? {
+                    ...api,
+                    subject: new URLSearchParams(location.search).get('owner') || 'theme-owner',
+                    publishing: {
+                      status: async () => null,
+                      publish: async () => ({
+                        publicId: 'theme-edition',
+                        revision: 1,
+                        publishedAt: '2026-10-15',
+                      }),
+                      unpublish: async () => {},
+                    },
+                  }
+                : api
+            }
+            league={league}
+            year={2026}
+            week={2}
+            initialEditingMode="all"
+          />
         )}
       </Container>
     </Provider>

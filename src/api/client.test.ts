@@ -430,3 +430,35 @@ it('coalesces selected-league reads and refreshes them without sharing other lea
   expect(functions.getLiveLeague).toHaveBeenCalledTimes(4);
   expect(functions.getLiveMatchups).not.toHaveBeenCalled();
 });
+
+describe.each(['league', 'ranking'] as const)('asynchronous %s cache writes', (kind) => {
+  it('waits for confirmed cache publication and propagates write failures', async () => {
+    vi.mocked(functions.listLeagues).mockResolvedValue({ ok: true, data: [] });
+    vi.mocked(functions.getRankings).mockResolvedValue({ ok: true, data: [] });
+    vi.mocked(functions.createLeague).mockResolvedValue({ ok: true, data: league });
+    vi.mocked(functions.saveRanking).mockResolvedValue({ ok: true, data: ranking });
+    const api = session(`async-${kind}`);
+    const collection = kind === 'league' ? api.leagueCollection : api.rankingsFor(league.leagueId);
+    await collection.preload();
+    let publish!: () => void;
+    const write = vi.spyOn(collection.utils, 'writeUpsert').mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          publish = resolve;
+        }),
+    );
+    const save = () => (kind === 'league' ? api.createLeague(league) : api.saveRanking(ranking));
+    let finished = false;
+    const pending = save().then(() => {
+      finished = true;
+    });
+    await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    expect(finished).toBe(false);
+    publish();
+    await pending;
+    expect(finished).toBe(true);
+    write.mockRejectedValueOnce(new Error('Cache validation failed'));
+    await expect(save()).rejects.toThrow('Cache validation failed');
+    write.mockRestore();
+  });
+});

@@ -1,3 +1,37 @@
+export interface NflSchedule {
+  status:
+    | 'scheduled'
+    | 'rescheduled'
+    | 'postponed'
+    | 'canceled'
+    | 'in-progress'
+    | 'final'
+    | 'bye'
+    | 'unavailable';
+  kickoffAt?: string;
+  source: 'ESPN NFL scoreboard';
+  capturedAt: string;
+}
+
+export function kickoffLabel(schedule: NflSchedule | undefined, timeZone: string): string {
+  if (!schedule || schedule.status === 'unavailable') return 'Kickoff unavailable';
+  if (schedule.status === 'bye') return 'Bye';
+  if (schedule.status === 'postponed') return 'Postponed · kickoff unavailable';
+  if (schedule.status === 'canceled') return 'Canceled';
+  if (schedule.status === 'in-progress' || schedule.status === 'final') return '';
+  const prefix = schedule.status === 'rescheduled' ? 'Rescheduled · ' : '';
+  if (!schedule.kickoffAt || !Number.isFinite(Date.parse(schedule.kickoffAt)))
+    return `${prefix}Kickoff unavailable`;
+  return `${prefix}${new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(schedule.kickoffAt))}`;
+}
+
 export interface LivePlayer {
   id: string;
   name: string;
@@ -22,6 +56,7 @@ export interface LivePlayer {
   projectionSpread?: number;
   projectionNote?: string;
   remainingFraction?: number;
+  nflSchedule?: NflSchedule;
 }
 
 export interface LiveTeam {

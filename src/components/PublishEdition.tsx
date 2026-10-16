@@ -1,5 +1,5 @@
 import { Box, Button, Flex, Input, Text } from '@chakra-ui/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { PublicationStatus, PublishingApi } from '../publishing';
 import { logClientError } from '../logging';
 export function PublishEdition({
@@ -7,12 +7,15 @@ export function PublishEdition({
   id,
   revision,
   disabled,
+  preview,
 }: {
   api: PublishingApi;
   id: string;
   revision: number;
   disabled: boolean;
+  preview?: ReactNode;
 }) {
+  const [showPreview, setShowPreview] = useState(false);
   const [status, setStatus] = useState<PublicationStatus | null>(),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
@@ -74,6 +77,16 @@ export function PublishEdition({
         <Text mb={3}>
           Save your changes and resolve any draft recovery or conflict before publishing.
         </Text>
+      )}
+      {preview && (
+        <details onToggle={(event) => setShowPreview(event.currentTarget.open)}>
+          <summary>Preview publication appearance</summary>
+          <Text mb={2}>
+            Current edition content in your selected export theme. Save changes before publishing.
+            Public links keep their responsive reading layout.
+          </Text>
+          {showPreview && preview}
+        </details>
       )}
       <Flex gap={2} flexWrap="wrap">
         <Button disabled={disabled || busy} onClick={() => void change()}>

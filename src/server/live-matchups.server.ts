@@ -11,7 +11,7 @@ import {
 } from '../live-matchups';
 import SleeperProvider from './providers/sleeper.provider';
 import EspnProvider, { type EspnAccess } from './providers/espn.provider';
-import { nflRemaining, sleeperLiveProjections } from './live-projections.server';
+import { nflRemaining, nflSchedule, sleeperLiveProjections } from './live-projections.server';
 import { sleeperNames } from './insights/load.server';
 import { enrichLiveProjections } from './combined-projections.server';
 import {
@@ -87,7 +87,7 @@ export async function loadLiveLeague(
       Number(state.data.season) === league.seasonId && state.data.season_type !== 'pre'
         ? Math.max(1, Math.min(18, state.data.leg))
         : Math.max(1, Math.min(18, season.settings?.last_scored_leg ?? 1));
-    const [rows, rosters, catalog, projections, remaining] = await Promise.all([
+    const [rows, rosters, catalog, projections, remaining, schedule] = await Promise.all([
       provider.get<SleeperRow[]>(`${season.league_id}/matchups/${result.week}`),
       provider.get<
         { roster_id: number; players?: string[]; reserve?: string[]; taxi?: string[] }[]
@@ -97,6 +97,7 @@ export async function loadLiveLeague(
         (): Awaited<ReturnType<typeof sleeperLiveProjections>> => [],
       ),
       nflRemaining(league.seasonId, result.week).catch(() => undefined),
+      nflSchedule(league.seasonId, result.week).catch(() => undefined),
     ]);
     result.lineupSlots = (season.roster_positions ?? []).filter(
       (slot) => !['BN', 'BENCH', 'IR', 'TAXI'].includes(slot),
@@ -139,7 +140,15 @@ export async function loadLiveLeague(
           name: catalog.names[id] || id,
           position: catalog.positions[id],
           availability: catalog.availability[id],
-          bye: remaining && catalog.teams[id] ? !remaining.has(catalog.teams[id]) : undefined,
+          bye:
+            catalog.teams[id] && schedule?.has(catalog.teams[id])
+              ? schedule.get(catalog.teams[id])!.status === 'bye'
+              : undefined,
+          nflSchedule: (catalog.teams[id] ? schedule?.get(catalog.teams[id]) : undefined) ?? {
+            status: 'unavailable',
+            source: 'ESPN NFL scoreboard',
+            capturedAt: result.capturedAt!,
+          },
           locked:
             remaining && catalog.teams[id] && Number.isFinite(remaining.get(catalog.teams[id]))
               ? remaining.get(catalog.teams[id])! < 1
@@ -197,7 +206,10 @@ export async function loadLiveLeague(
       ? []
       : Array.from({ length: count }, () => espnLineupSlot(Number(id)) ?? `Unsupported slot ${id}`),
   );
-  const remaining = await nflRemaining(league.seasonId, result.week).catch(() => undefined);
+  const [remaining, schedule] = await Promise.all([
+    nflRemaining(league.seasonId, result.week).catch(() => undefined),
+    nflSchedule(league.seasonId, result.week).catch(() => undefined),
+  ]);
   const matchupPeriod = Number(
     Object.entries(data.settings?.scheduleSettings?.matchupPeriods || {}).find(([, weeks]) =>
       weeks.includes(result.week),
@@ -233,7 +245,15 @@ export async function loadLiveLeague(
         availability: player?.injuryStatus,
         reserve: entry.lineupSlotId === 21,
         owned: true,
-        bye: remaining && player?.proTeamId ? !remaining.has(String(player.proTeamId)) : undefined,
+        bye:
+          player?.proTeamId && schedule?.has(String(player.proTeamId))
+            ? schedule.get(String(player.proTeamId))!.status === 'bye'
+            : undefined,
+        nflSchedule: (player?.proTeamId ? schedule?.get(String(player.proTeamId)) : undefined) ?? {
+          status: 'unavailable',
+          source: 'ESPN NFL scoreboard',
+          capturedAt: result.capturedAt!,
+        },
         locked:
           remaining && player?.proTeamId && Number.isFinite(remaining.get(String(player.proTeamId)))
             ? remaining.get(String(player.proTeamId))! < 1

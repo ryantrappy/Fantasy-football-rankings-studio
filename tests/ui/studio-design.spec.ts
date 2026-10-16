@@ -13,11 +13,11 @@ const views = [
   ['espn', 'ESPN settings'],
 ];
 for (const width of [1280, 390]) {
-  test(`workspace screens keep their hierarchy and fit at ${width}px`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (error) => errors.push(error.message));
-    await page.setViewportSize({ width, height: 900 });
-    for (const [view, title] of views) {
+  for (const [view, title] of views) {
+    test(`workspace ${view} keeps its hierarchy and fits at ${width}px`, async ({ page }) => {
+      const errors: string[] = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      await page.setViewportSize({ width, height: 900 });
       await page.goto(`/tests/ui/?mode=workspace-${view}`);
       await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
       const heading = page.locator('.studio-heading, .page-heading').first();
@@ -71,9 +71,9 @@ for (const width of [1280, 390]) {
         .analyze();
       expect(result.violations, `${view}: ${JSON.stringify(result.violations)}`).toEqual([]);
       await page.screenshot({ path: `test-results/studio-${view}-${width}.png`, fullPage: true });
-    }
-    expect(errors).toEqual([]);
-  });
+      expect(errors).toEqual([]);
+    });
+  }
 }
 
 test('keyboard access and branded navigation remain usable', async ({ page }) => {

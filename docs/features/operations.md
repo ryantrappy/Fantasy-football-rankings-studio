@@ -113,12 +113,12 @@ Source: [TASK-62](../../backlog/tasks/task-62%20-%20Add-example-values-commented
 
 ### TASK-64 — Run deterministic browser checks serially in CI
 
-- CI browser checks use a bounded worker count that avoids startup timeouts.
+- CI browser checks use one worker per runner across four independent macOS groups of whole spec files balanced by observed duration, each with its own Vite server, preserving bounded concurrency and export baselines. Quality and isolated Ubuntu forecast checks run alongside the shards.
 - Local browser runs retain normal parallel execution.
 - Cold forecast timing checks run alone before the functional browser project so suite CPU contention does not distort their wall-clock measurements; functional checks retain local parallelism. Seeded parity, trial count, long-task checks and the 50 ms input-gap limit remain enforced, including the completion task.
-- Relevant Playwright configuration test behavior is verified and documented.
+- Group selections preserve every functional case exactly once. Unassigned/new spec files automatically run in group four; invalid group indexes fail configuration loading. Local runs without a group index retain the complete suite. Per-shard JSON timings/outcomes and failure diagnostics retain shard/run/attempt identity; the aggregate check fails on any failed, cancelled or skipped required job. Local project dependency behavior is retained and documented.
 
-Source: [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md).
+Sources: [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md), [TASK-159](../../backlog/tasks/task-159%20-%20Balance-browser-CI-groups-using-observed-spec-durations.md).
 
 ### TASK-65 — Update ranking-editor test fixtures for getMatchups
 
@@ -169,3 +169,25 @@ Source: [TASK-96](../../backlog/tasks/task-96%20-%20Evaluate-the-next-sport-and-
 - Cleanup does not authorize runtime feature reductions, baseline changes or weaker assertions. Full unit/UI and required static/build gates must pass before completion.
 
 Source: [TASK-151](../../backlog/tasks/task-151%20-%20The-UI-validation-tests-folders-should-be-cleaned-up-when-they-are-not-longer-needed.md).
+
+### TASK-153 — Stable TanStack Start and compatible dependency updates
+
+- Use the stable TanStack Start release with aligned Router and DB adapters, retaining the Node server build, private server-function caching, server-only settings and Oxc React Compiler integration.
+- Non-streaming AI results preserve verified writing context, consent, restricted CLI execution, cancellation, empty-result errors and bounded suggestions. Confirmed league/ranking saves await asynchronous collection writes and propagate cache validation failures.
+- Preserve existing tables, charts, exports, account-scoped cache freshness and safe session disposal. Accessible heatmap/Live button names include their visible records, samples and scores under the upgraded Axe checker. Validate dependency compatibility, focused regressions, full unit tests, static checks, production build and browser coverage; keep live-provider checks separate.
+
+Source: [TASK-153](../../backlog/tasks/task-153%20-%20Upgrade-to-tanstack-1.0-and-update-other-dependencies-while-doing-this.md). Versions and migration details: [Dependency upgrade](../dependency-upgrade.md).
+
+### TASK-154 — Match CI tooling to dependency runtime requirements
+
+- CI quality/browser jobs and local development share Node 24.15.0 from `.nvmrc`, compatible with locked jsdom/Undici. Installation enforces dependency engines before tests run.
+- The production Node engine contract remains unchanged; verification includes an exact-runtime clean install, full deterministic unit suite and static/build gates.
+
+Source: [TASK-154](../../backlog/tasks/task-154%20-%20Repair-CI-test-runtime-compatibility-after-dependency-upgrades.md).
+
+### TASK-157 — Independent workspace browser regression cases
+
+- All nine workspace views retain hierarchy, navigation, view-specific workflows, overflow, accessibility, page-error and screenshot checks at 1280px and 390px. Each screen/viewport is an independent case with the unchanged default timeout.
+- Splitting the two multi-screen loops improves failure attribution and avoids sharing one timeout across nine unrelated audits; no feature assertion or baseline is removed.
+
+Source: [TASK-157](../../backlog/tasks/task-157%20-%20Give-each-workspace-screen-its-own-browser-regression-case.md).

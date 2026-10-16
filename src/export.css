@@ -209,3 +209,44 @@
   line-height: 1.35;
   text-align: left;
 }
+
+/* Optional Manager Explorer palette; never applies to the Classic download. */
+.ranking-preview.new-export-theme {
+  background: #f6f7fb;
+  color: #172b4c;
+  font-family: system-ui, sans-serif;
+  border-color: #cbd4e4;
+}
+.new-export-theme .export-title {
+  background: #172b4c;
+  color: #f4f7ff;
+  font-family: system-ui, sans-serif;
+  border-bottom: 4px solid #f1bd81;
+}
+.new-export-theme .export-table th {
+  background: #e8edff;
+  color: #172b4c;
+}
+.new-export-theme .export-table tbody tr:nth-child(even) {
+  background: #eef2ff;
+}
+.new-export-theme .export-rank-circle.top-half {
+  background: #243c80;
+}
+.new-export-theme .export-rank-circle.bottom-half {
+  background: #52617a;
+}
+.new-export-theme .export-team-details,
+.new-export-theme .export-last-week {
+  color: #52617a;
+}
+.new-export-theme .export-movement.up {
+  color: #216541;
+}
+.new-export-theme .export-movement.down {
+  color: #9b303d;
+}
+.compact-export .new-export-theme .export-table tbody tr,
+.compact-export .new-export-theme .export-comments {
+  border-color: #cbd4e4;
+}

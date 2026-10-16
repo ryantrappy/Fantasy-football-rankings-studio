@@ -113,6 +113,15 @@ Source: [TASK-109](../../backlog/tasks/task-109%20-%20Quantify-remaining-fantasy
 
 Source: [TASK-111](../../backlog/tasks/task-111%20-%20Toggle-position-strength-between-remaining-projections-and-completed-week-actual-points.md).
 
+### TASK-156 — Compare combined completed-week scoring across multiple positions
+
+- Completed-week scoring defaults to all observed positions and exposes labeled checkboxes to select one or more, including K + DEF and provider-supported custom positions. All positions restores the full breakdown; the last selected position cannot be deselected.
+- The stacked chart, legend, sort options, position ranking columns and explicitly labeled combined total use the same selected positions. Selection changes reset sort to the combined total; team selection, exact points, negative/zero scores, competition ranks and missing-coverage disclosures remain available.
+- Combined totals sum only selected starter positions over the unchanged completed horizon, rounded after aggregation. Selecting positions never relaxes complete-lineup validation or substitutes zero for missing data. Projections retain their all-position view; returning to completed mode restores the filter. A new report with no matching selected positions falls back to all observed positions.
+- Calculation and rendered interaction tests cover both provider fixtures, K + DEF sums, custom positions, negatives, ties, unavailable teams, sorting, mode switching and reset. See [calculations](../calculations.md) for aggregation rules.
+
+Source: [TASK-156](../../backlog/tasks/task-156%20-%20Ability-to-filter-the-Completed-week-scoring-in-season-insights-by-multiple-positions-and-show-the-sum-of-those.md).
+
 ### TASK-113 — Preserve the configured season start when measuring completed position coverage
 
 - Completed positional coverage uses the configured reporting start through the completed cutoff, rather than silently moving the start to the earliest returned score.

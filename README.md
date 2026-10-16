@@ -1,7 +1,11 @@
 # Fantasy Power Rankings
 
 One React 19 / TanStack Start application serves the UI, public reports, authenticated server functions,
-Sleeper/ESPN adapters, and MongoDB persistence. Node.js 22.12+ is required.
+Sleeper/ESPN adapters, and MongoDB persistence. The production runtime supports Node.js 22.12+.
+Development, dependency installation and tests use Node.js 24.15.0 from `.nvmrc`
+(`nvm install && nvm use`), matching the Node 24 Docker line. The jsdom test
+environment requires newer Node APIs than the production runtime minimum. CI
+reads the same file and checks dependency engines during installation.
 
 The workspace uses a shared navy, indigo and warm-accent design across navigation,
 overview, rankings, player/trade tools, reports and account settings. On narrow
@@ -288,10 +292,13 @@ format checking, unit tests, type checking, lint, a production build, and the Ch
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
-for diagnosis. The browser suite uses one worker in CI because its PNG exports share
-one Vite server and can delay page startup. The cold forecast timing checks run
-first with one worker; local functional UI checks then use Playwright's normal
-parallelism. Run the same checks above before proposing a change.
+for diagnosis. CI splits the browser suite across four macOS runners with one worker
+and a separate Vite server each, avoiding PNG-export contention. Quality and isolated
+Ubuntu forecast timing checks run alongside the browser shards. Each shard retains
+JSON timings/outcomes; the stable `All required checks` job fails if any required job
+fails, is cancelled or is skipped. Local cold forecast checks still run first with
+one worker, followed by normal functional UI parallelism. Run the same checks above
+before proposing a change.
 
 See [UI regression testing](docs/ui-testing.md) for retained workflow coverage, fixture
 boundaries, export baselines and generated artifact handling. Completed redesign
@@ -361,6 +368,12 @@ missing starter scores or positions remain unavailable. Actual rankings also wor
 for historical seasons without current projections. Older reports may need a
 refresh to capture starter positions. **Projected remaining weeks** restores the
 forecast view. Remaining schedule difficulty keeps its existing basis.
+
+Under **Positions to compare**, select one or more positions to compare their
+combined completed-week points, such as **K + DEF**. The chart, ranking columns,
+and total use the same selection; missing lineup coverage remains unavailable.
+**All positions** restores the full breakdown. Switching to projections and back
+keeps your completed-week position selection.
 
 **Remaining schedule strength** ranks regular-season fantasy opponents from
 easiest to hardest. Difficulty is the average opponent score minus the same-week

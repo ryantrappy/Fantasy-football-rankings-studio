@@ -464,6 +464,18 @@ bench scores, best-possible lineups, and projections never enter these totals.
 FLEX and SUPER_FLEX starters count once under their primary position; DST displays
 as DEF. Commissioner adjustments to team totals are not allocated to positions.
 
+**Positions to compare** defaults to all observed positions. Select one or more
+positions to filter both the signed stacked chart and ranking table; for example,
+K + DEF totals sum only those starters' actual points across the same completed
+weeks. The total is rounded to two decimals after summing; individual position
+values and competition ranks retain their existing rounding and tie rules.
+Filtering never relaxes full-lineup coverage validation, so missing metadata or
+scores at an unselected position still make a team unavailable. At least one
+position remains selected, and **All positions** restores the complete breakdown.
+Projection mode shows all positions and retains the completed-mode selection for
+the return switch. A selection with no positions supported by a new report falls
+back to all its observed positions.
+
 Starter positions are captured in the report: ESPN uses each weekly box score's
 primary position and Sleeper uses its player catalog. Historical rankings do not
 require current roster ownership. Saved reports preserve starter positions;

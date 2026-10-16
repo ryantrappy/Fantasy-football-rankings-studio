@@ -807,3 +807,17 @@
     min-height: 36px;
   }
 }
+
+.decision-explorer-live .live-player-kickoff {
+  display: block;
+  font-size: 9px;
+  line-height: 1.25;
+  font-weight: normal;
+  color: var(--chakra-colors-fg-muted);
+  overflow-wrap: anywhere;
+}
+.decision-explorer-live .live-schedule-sources {
+  font-size: 10px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}

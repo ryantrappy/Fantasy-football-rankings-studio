@@ -323,7 +323,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       const saved = unwrap(
         await functions.createLeague({ data: league, headers: await headers() }),
       );
-      leagueCollection.utils.writeUpsert(saved);
+      await leagueCollection.utils.writeUpsert(saved);
       await invalidateProviderData();
       return saved;
     },
@@ -393,7 +393,7 @@ export function createApi(getToken: () => Promise<string>, subject?: string) {
       const saved = unwrap(
         await functions.saveRanking({ data: ranking, headers: await headers() }),
       );
-      rankingsFor(ranking.leagueId).utils.writeUpsert(saved);
+      await rankingsFor(ranking.leagueId).utils.writeUpsert(saved);
       return saved;
     },
   };

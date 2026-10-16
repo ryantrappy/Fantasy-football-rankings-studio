@@ -86,7 +86,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
           x2: 'end',
           y: 'teamId',
           key: 'id',
-          fill: (s) => color(s.position, model.positions),
+          fill: (s) => color(s.position, model.availablePositions),
           inset: 5,
         }),
         decorative(
@@ -147,7 +147,7 @@ function ProjectionBars({ model, sort }: { model: PositionStrength; sort: string
     <Chart
       definition={definition}
       height={Math.max(230, model.rows.length * 42 + 70)}
-      ariaLabel={`${model.mode === 'completed' ? 'Completed-week actual starter points' : 'Roster projections'} by position. Full team names, position values and totals are in the tables below.`}
+      ariaLabel={`${model.mode === 'completed' ? 'Completed-week actual starter points' : 'Roster projections'} by position. Positions: ${model.positions.join(', ')}. Totals sum these positions. Full team names, position values and totals are in the tables below.`}
     />
   );
 }
@@ -167,7 +167,17 @@ export function SeasonStrength({
 }) {
   const [mode, setMode] = useState<PositionStrengthMode>('completed');
   const completed = mode === 'completed';
-  const positions = useMemo(() => positionStrength(data, mode), [data, mode]);
+  const [selectedPositions, setSelectedPositions] = useState<string[] | null>(null);
+  const positions = useMemo(
+    () => positionStrength(data, mode, selectedPositions),
+    [data, mode, selectedPositions],
+  );
+  const filtered = completed && positions.positions.length < positions.availablePositions.length;
+  const totalLabel = completed
+    ? filtered
+      ? `${positions.positions.join(' + ')} actual points`
+      : 'Total actual points'
+    : 'Total projected points';
   const schedule = useMemo(() => remainingScheduleStrength(data), [data]);
   const [sort, setSort] = useState('total');
   const sortId = useId();
@@ -249,9 +259,7 @@ export function SeasonStrength({
                   value={sort}
                   onChange={(event) => setSort(event.target.value)}
                 >
-                  <option value="total">
-                    {completed ? 'Total actual points' : 'Total projected points'}
-                  </option>
+                  <option value="total">{totalLabel}</option>
                   {positions.positions.map((position) => (
                     <option key={position} value={position}>
                       {position} strength
@@ -263,6 +271,46 @@ export function SeasonStrength({
             </label>
           )}
         </Flex>
+        {completed && hasPositions && (
+          <Box as="fieldset" border="0" p="0" mb={4}>
+            <legend>Positions to compare</legend>
+            <Flex gap={4} flexWrap="wrap" align="center" mt={2}>
+              {positions.availablePositions.map((position) => (
+                <label key={position}>
+                  <input
+                    type="checkbox"
+                    checked={positions.positions.includes(position)}
+                    disabled={
+                      positions.positions.length === 1 && positions.positions.includes(position)
+                    }
+                    onChange={(event) => {
+                      setSelectedPositions(
+                        event.target.checked
+                          ? [...positions.positions, position]
+                          : positions.positions.filter((value) => value !== position),
+                      );
+                      setSort('total');
+                    }}
+                  />{' '}
+                  {position}
+                </label>
+              ))}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSelectedPositions(null);
+                  setSort('total');
+                }}
+              >
+                All positions
+              </Button>
+            </Flex>
+            <Text mt={2}>
+              Select one or more positions. Chart and table totals sum only the selected positions.
+            </Text>
+          </Box>
+        )}
         <Text mb={4}>
           {completed ? (
             "Actual points from the starters each manager fielded in completed weeks, grouped by primary position. Bench points and future or unfinished weeks are excluded. FLEX and SUPER_FLEX starters count under the player's position once. Commissioner adjustments to team totals are not assigned to a position."
@@ -322,7 +370,7 @@ export function SeasonStrength({
                   <Box
                     width="14px"
                     height="14px"
-                    bg={color(position, positions.positions)}
+                    bg={color(position, positions.availablePositions)}
                     aria-hidden="true"
                   />
                   {position}
@@ -340,7 +388,7 @@ export function SeasonStrength({
             </Text>
             <Box overflowX="auto">
               <DataTable
-                key={`ranks:${mode}:${sort}`}
+                key={`ranks:${mode}:${sort}:${positions.positions.join(':')}`}
                 label="Position group rankings"
                 data={positions.rows}
                 getRowId={(row) => row.teamId}
@@ -382,7 +430,7 @@ export function SeasonStrength({
                   })),
                   {
                     id: 'total',
-                    header: completed ? 'Total actual points' : 'Total projected points',
+                    header: totalLabel,
                     value: (row) => row.total,
                     cell: (row) => number(row.total),
                   },

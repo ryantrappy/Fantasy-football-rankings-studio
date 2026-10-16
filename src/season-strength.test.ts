@@ -132,6 +132,38 @@ it('ranks completed actual starters, ignoring projections, bench, optimal lineup
   expect(positionStrength(data, 'completed')).toEqual(model);
 });
 
+it.each(['Sleeper', 'ESPN'] as const)(
+  'sums selected completed positions for %s without weakening coverage',
+  (provider) => {
+    const data = fixture();
+    data.playoffProjection!.provider = provider;
+    data.scores.forEach((score, i) => {
+      score.starters = [
+        { playerId: 'rb', position: 'RB', points: 100 },
+        { playerId: 'k', position: 'K', points: i === 2 ? 0 : 8 },
+        { playerId: 'def', position: 'DST', points: -2 },
+        { playerId: 'lb', position: 'LB', points: 3 },
+      ];
+    });
+    delete data.scores[3].starters[0].position;
+    const model = positionStrength(data, 'completed', ['DEF', 'K', 'K', 'unknown']);
+    expect(model.positions).toEqual(['K', 'DEF']);
+    expect(model.availablePositions).toEqual(['RB', 'K', 'DEF', 'LB']);
+    expect(model.rows.map((row) => row.total)).toEqual([6, 6, -2, null]);
+    expect(model.rows[0].points).toEqual({ K: 8, DEF: -2 });
+    expect(model.rows.map((row) => row.ranks.K)).toEqual([1, 1, 3, null]);
+    expect(model.rows[3].coveredWeeks).toBe(0);
+    expect(positionStrength(data, 'completed', ['LB']).rows[0].total).toBe(3);
+    expect(positionStrength(data, 'completed', ['unknown'])).toEqual(
+      positionStrength(data, 'completed'),
+    );
+    expect(positionStrength(data, 'completed', [])).toEqual(positionStrength(data, 'completed'));
+    expect(positionStrength(data, 'projected', ['K', 'DEF'])).toEqual(
+      positionStrength(data, 'projected'),
+    );
+  },
+);
+
 it('requires complete actual starter coverage across a common completed horizon', () => {
   const data = fixture();
   data.completedWeek = 3;

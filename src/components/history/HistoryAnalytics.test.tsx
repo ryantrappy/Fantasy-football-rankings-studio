@@ -291,7 +291,7 @@ it('keeps every former ownership group in the heatmap and adopts its inspected m
   const heatmap = within(screen.getByRole('table', { name: 'All-manager matchup heatmap' }));
   expect(heatmap.getAllByRole('rowheader')).toHaveLength(4);
   fireEvent.click(
-    heatmap.getByRole('button', { name: /Inspect Casey versus Devon: 8-0-0, 8 games/ }),
+    heatmap.getByRole('button', { name: /Inspect Casey versus Devon: 8-0-0 8 games/ }),
   );
   expect(include).toHaveBeenCalledWith(true);
   expect(choose).toHaveBeenCalledWith('casey');

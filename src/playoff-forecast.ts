@@ -348,7 +348,7 @@ function* simulatePlayoffs(
       playoffRound++;
     }
     // Keep the same random stream and accumulators across interactive batches.
-    if ((trial + 1) % 100 === 0) yield;
+    if ((trial + 1) % 10 === 0) yield;
   }
   return {
     schedule: {
@@ -419,11 +419,25 @@ export async function forecastPlayoffsAsync(
   );
   signal?.throwIfAborted();
   if (result) return result;
+  return forecastPlayoffsCooperatively(data, settings, cutoff, signal, simulations, scoreModel);
+}
+
+// Workers also yield: an uninterrupted CPU-bound worker can starve input timers
+// on constrained hosts even when the main thread has no JavaScript long tasks.
+export async function forecastPlayoffsCooperatively(
+  data: SeasonInsights,
+  settings: PlayoffSettings,
+  cutoff: number,
+  signal?: AbortSignal,
+  simulations = 20000,
+  scoreModel: 'historical' | 'equal-strength' = 'historical',
+): Promise<PlayoffForecast> {
+  signal?.throwIfAborted();
   const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel);
   for (;;) {
     await pause(signal);
     signal?.throwIfAborted();
-    const deadline = performance.now() + 8;
+    const deadline = performance.now() + 4;
     do {
       const step = iterator.next();
       if (step.done) return step.value;

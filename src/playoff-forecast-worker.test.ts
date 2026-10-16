@@ -154,3 +154,57 @@ it('executes the worker message handler with the requested cutoff and score mode
     result: forecastPlayoffs(data, settings, 1, 500, 'equal-strength'),
   });
 });
+
+it('yields worker execution before completion while retaining exact seeded results', async () => {
+  const { forecastPlayoffs } = await import('./playoff-forecast');
+  const scope = {
+    onmessage: undefined as
+      | undefined
+      | ((event: { data: ForecastWorkerInput & { id: number } }) => Promise<void>),
+    postMessage: vi.fn(),
+  };
+  vi.stubGlobal('self', scope);
+  await import('./playoff-forecast.worker');
+  vi.useFakeTimers();
+  let elapsed = 0;
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => (elapsed += 5));
+  try {
+    const pending = scope.onmessage!({
+      data: { id: 23, data, settings, cutoff: 2, simulations: 500, scoreModel: 'historical' },
+    });
+    expect(scope.postMessage).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(scope.postMessage).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    await vi.runAllTimersAsync();
+    await pending;
+    expect(scope.postMessage).toHaveBeenCalledTimes(1);
+    expect(scope.postMessage).toHaveBeenCalledWith({
+      id: 23,
+      result: forecastPlayoffs(data, settings, 2, 500),
+    });
+  } finally {
+    clock.mockRestore();
+    vi.useRealTimers();
+  }
+});
+
+it('cancels cooperative work between slices and clears its pending wakeup', async () => {
+  const { forecastPlayoffsCooperatively } = await import('./playoff-forecast');
+  vi.useFakeTimers();
+  let elapsed = 0;
+  const clock = vi.spyOn(performance, 'now').mockImplementation(() => (elapsed += 5));
+  try {
+    const controller = new AbortController();
+    const pending = forecastPlayoffsCooperatively(data, settings, 2, controller.signal);
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    controller.abort();
+    await rejected;
+    expect(vi.getTimerCount()).toBe(0);
+  } finally {
+    clock.mockRestore();
+    vi.useRealTimers();
+  }
+});

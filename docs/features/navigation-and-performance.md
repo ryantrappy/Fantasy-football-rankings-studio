@@ -131,3 +131,10 @@ Source: [TASK-143](../../backlog/tasks/task-143%20-%20Reduce-report-loading-late
 The usability iteration keeps one sticky navy brand/navigation/profile bar, with compact Live height, inline page-owned title/context/actions, accessible sharing disclosures and a contextual Other tools switcher. Original loading, focus, cache, account and navigation contracts remain. See [UI regression guidance](../ui-testing.md).
 
 The screenshot follow-up aligns workspace control typography, flat borders, attached ranking tabs, compact toolbars and 340px desktop inspectors with the usability designs. Phone panels return to normal flow; control state, keyboard focus and export isolation remain required. See [UI regression guidance](../ui-testing.md).
+
+### TASK-155 — Cooperative forecast workers on constrained hosts
+
+- Worker and main-thread fallback share a 4 ms cooperative slice target, checking the clock every ten trials without changing seeded draws, 20,000-trial results, caching, queueing or cancellation.
+- Strict browser timing retains the 50 ms maximum input gap, long-task detection and completion-tail measurement. Worker response/yield and cooperative cancellation regressions complement existing client queue/termination checks.
+
+Source: [TASK-155](../../backlog/tasks/task-155%20-%20Bound-forecast-worker-computation-between-browser-scheduling-yields.md).

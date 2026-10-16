@@ -60,6 +60,8 @@ export function gameRemaining(game: Game): number | undefined {
 }
 type Scoreboard = { remaining: Map<string, number>; schedule: Map<string, NflSchedule> };
 const gamesCache = new Map<string, { expires: number; value: Promise<Scoreboard> }>();
+// Keep successful observations independently of the short-lived response cache.
+const scheduleHistory = new Map<string, Map<string, NflSchedule>>();
 function nflScoreboard(year: number, week: number) {
   const key = `${year}:${week}`;
   const cached = gamesCache.get(key);
@@ -71,8 +73,8 @@ function nflScoreboard(year: number, week: number) {
       'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard',
       { params: { dates: year, seasontype: 2, week, limit: 100 }, timeout: 10000 },
     )
-    .then(async ({ data }) => {
-      const previous = await cached?.value.catch(() => undefined);
+    .then(({ data }) => {
+      const previous = scheduleHistory.get(key);
       if (!data.events?.length) throw new Error('NFL schedule unavailable');
       const capturedAt = new Date().toISOString();
       const remaining = new Map<string, number>();
@@ -83,7 +85,7 @@ function nflScoreboard(year: number, week: number) {
         for (const competitor of game.competitions?.[0]?.competitors || []) {
           for (const key of teamKeys(competitor.team ?? {})) {
             remaining.set(key, fraction ?? Number.NaN);
-            const prior = previous?.schedule.get(key);
+            const prior = previous?.get(key);
             schedule.set(
               key,
               kickoff.status === 'scheduled' &&
@@ -100,6 +102,9 @@ function nflScoreboard(year: number, week: number) {
         for (const key of teamKeys(team))
           schedule.set(key, { status: 'bye', source: 'ESPN NFL scoreboard', capturedAt });
       }
+      scheduleHistory.delete(key);
+      if (scheduleHistory.size >= 36) scheduleHistory.delete(scheduleHistory.keys().next().value!);
+      scheduleHistory.set(key, schedule);
       return { remaining, schedule };
     });
   // Cache failed reads too: a provider outage must not trigger one retry per league/player.

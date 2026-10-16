@@ -67,6 +67,42 @@ it('coalesces remaining-time and schedule reads, maps both provider team keys, r
   expect(next.get('WAS')?.capturedAt).not.toBe(capturedAt);
   expect(get).toHaveBeenCalledTimes(2);
 });
+it('retains changed kickoff history when another period refreshes and after failed reads', async () => {
+  vi.resetModules();
+  vi.useFakeTimers();
+  get.mockReset().mockResolvedValue({ data: { events: [game()] } });
+  const { nflSchedule } = await import('../live-projections.server');
+  await nflSchedule(2026, 6);
+  await nflSchedule(2025, 6);
+  vi.advanceTimersByTime(45_001);
+  await nflSchedule(2025, 6);
+  get.mockRejectedValueOnce(new Error('Unavailable'));
+  await expect(nflSchedule(2026, 6)).rejects.toThrow('Unavailable');
+  vi.advanceTimersByTime(45_001);
+  get.mockResolvedValue({ data: { events: [game('2026-10-19T00:20Z')] } });
+  expect((await nflSchedule(2026, 6)).get('WAS')).toMatchObject({
+    status: 'rescheduled',
+    kickoffAt: '2026-10-19T00:20:00.000Z',
+  });
+  vi.advanceTimersByTime(45_001);
+  await nflSchedule(2025, 6);
+  expect((await nflSchedule(2026, 6)).get('WAS')?.status).toBe('rescheduled');
+});
+it('bounds retained kickoff history to the most recently refreshed 36 periods', async () => {
+  vi.resetModules();
+  vi.useFakeTimers();
+  get.mockReset().mockResolvedValue({ data: { events: [game()] } });
+  const { nflSchedule } = await import('../live-projections.server');
+  for (const year of [2024, 2025, 2026])
+    for (let week = 1; week <= 12; week++) await nflSchedule(year, week);
+  vi.advanceTimersByTime(45_001);
+  await nflSchedule(2024, 1);
+  await nflSchedule(2026, 13);
+  get.mockResolvedValue({ data: { events: [game('2026-10-19T00:20Z')] } });
+  vi.advanceTimersByTime(45_001);
+  expect((await nflSchedule(2024, 1)).get('WAS')?.status).toBe('rescheduled');
+  expect((await nflSchedule(2024, 2)).get('WAS')?.status).toBe('scheduled');
+});
 it('bounds unavailable-read retries until the cache expires', async () => {
   vi.resetModules();
   vi.useFakeTimers();

@@ -1,6 +1,45 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+for (const width of [1440, 390]) {
+  test(`compares combined completed positions with keyboard controls at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/tests/ui/?mode=season-strength');
+    const bars = page.locator('.season-strength svg rect');
+    await expect(bars.first()).toBeVisible();
+    const allBarCount = await bars.count();
+    for (const position of ['RB', 'WR', 'QB', 'TE']) {
+      const checkbox = page.getByRole('checkbox', { name: position, exact: true });
+      await checkbox.focus();
+      await page.keyboard.press('Space');
+      await expect(checkbox).not.toBeChecked();
+    }
+    const table = page.getByRole('table', { name: 'Position group rankings' });
+    await expect(table.getByRole('columnheader', { name: 'K + DEF actual points' })).toBeVisible();
+    await expect(table.getByRole('columnheader', { name: 'RB', exact: true })).toHaveCount(0);
+    await expect(
+      table
+        .locator('tbody tr')
+        .filter({ hasText: 'Fourth & Long' })
+        .getByRole('cell', { name: '24', exact: true }),
+    ).toBeVisible();
+    await expect(bars).toHaveCount(allBarCount - 16);
+    await expect(page.getByRole('img', { name: /Positions: K, DEF/ })).toBeVisible();
+    await page.getByRole('checkbox', { name: 'K', exact: true }).uncheck();
+    await expect(page.getByRole('checkbox', { name: 'DEF', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'All positions', exact: true }).click();
+    await expect(bars).toHaveCount(allBarCount);
+    await expect(table.getByRole('columnheader', { name: 'Total actual points' })).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ),
+    ).toBe(true);
+  });
+}
+
 test('shows real stacked bars, heatmap values, sort controls and remaining opponents', async ({
   page,
 }) => {

@@ -366,6 +366,12 @@ for historical seasons without current projections. Older reports may need a
 refresh to capture starter positions. **Projected remaining weeks** restores the
 forecast view. Remaining schedule difficulty keeps its existing basis.
 
+Under **Positions to compare**, select one or more positions to compare their
+combined completed-week points, such as **K + DEF**. The chart, ranking columns,
+and total use the same selection; missing lineup coverage remains unavailable.
+**All positions** restores the full breakdown. Switching to projections and back
+keeps your completed-week position selection.
+
 **Remaining schedule strength** ranks regular-season fantasy opponents from
 easiest to hardest. Difficulty is the average opponent score minus the same-week
 league average, in points per scoring week. Expand a team to see opponents,

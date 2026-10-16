@@ -86,6 +86,53 @@ it('defaults to completed-week starter points and switches to projections and ba
 });
 
 it.each(['Sleeper', 'ESPN'] as const)(
+  'filters completed %s scoring to multiple positions, retains the selection across modes and restores all positions',
+  (provider) => {
+    const data = structuredClone(strengthData);
+    data.playoffProjection!.provider = provider;
+    data.scores.find((score) => score.teamId === '4')!.lineupAvailable = false;
+    render(wrap(data));
+    for (const position of ['RB', 'WR', 'QB', 'TE']) {
+      fireEvent.click(screen.getByRole('checkbox', { name: position }));
+    }
+    const table = screen.getByRole('table', { name: 'Position group rankings' });
+    expect(
+      within(table).getByRole('columnheader', { name: 'K + DEF actual points' }),
+    ).toBeVisible();
+    expect(within(table).queryByRole('columnheader', { name: 'RB' })).not.toBeInTheDocument();
+    const team = within(table).getByText('Fourth & Long').closest('tr')!;
+    expect(within(team).getByRole('cell', { name: '24' })).toBeVisible();
+    expect(
+      within(table).getByText('The Underdogs with a very long team name').closest('tr'),
+    ).toHaveTextContent('Unavailable');
+    expect(screen.getByRole('img')).toHaveAccessibleName(
+      /Positions: K, DEF. Totals sum these positions/,
+    );
+    expect(axisDefinition().scales.x.scale.domain()).toEqual([-8, 35]);
+    expect(
+      within(screen.getByLabelText('Sort roster charts by')).queryByRole('option', {
+        name: 'RB strength',
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Sort roster charts by'), { target: { value: 'DEF' } });
+    fireEvent.click(screen.getByRole('checkbox', { name: 'K' }));
+    expect(screen.getByRole('checkbox', { name: 'DEF' })).toBeDisabled();
+    expect(screen.getByLabelText('Sort roster charts by')).toHaveValue('total');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'K' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Projected remaining weeks' }));
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'RB' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Completed weeks only' }));
+    expect(screen.getByRole('checkbox', { name: 'RB' })).not.toBeChecked();
+    expect(screen.getByRole('columnheader', { name: 'K + DEF actual points' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'All positions' }));
+    expect(screen.getByRole('checkbox', { name: 'RB' })).toBeChecked();
+    expect(screen.getByRole('columnheader', { name: 'Total actual points' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'RB' })).toBeVisible();
+  },
+);
+
+it.each(['Sleeper', 'ESPN'] as const)(
   'shows saved %s next-week rankings when later projection weeks are empty',
   (provider) => {
     const data = structuredClone(strengthData);

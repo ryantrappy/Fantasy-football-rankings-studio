@@ -35,7 +35,11 @@ function projectedPositionPoints(row: ReturnType<typeof currentWeekly>[number], 
   return points;
 }
 
-export function positionStrength(data: SeasonInsights, mode: PositionStrengthMode = 'projected') {
+export function positionStrength(
+  data: SeasonInsights,
+  mode: PositionStrengthMode = 'projected',
+  selectedPositions?: readonly string[] | null,
+) {
   const weekly = currentWeekly(data);
   const end = data.regularSeasonSchedule?.endWeek ?? data.playoffSettings?.regularSeasonEnd;
   const postseason =
@@ -89,10 +93,12 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
           Object.values(row.positionPoints ?? {}).flatMap((points) => Object.keys(points)),
         ),
   );
-  const positions = [
+  const availablePositions = [
     ...standardPositions.filter((p) => positionSet.has(p)),
     ...[...positionSet].filter((p) => !standardPositions.includes(p)).sort(),
   ];
+  const selected = availablePositions.filter((position) => selectedPositions?.includes(position));
+  const positions = mode === 'completed' && selected.length ? selected : availablePositions;
   const rows = data.teams.map((team) => {
     const covered = weeks.flatMap((week) => {
       if (mode === 'completed') {
@@ -134,7 +140,11 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
       points,
       total: complete
         ? round(
-            covered.reduce((sum, row) => sum + Object.values(row).reduce((a, b) => a + b, 0), 0),
+            covered.reduce(
+              (sum, row) =>
+                sum + positions.reduce((total, position) => total + (row[position] ?? 0), 0),
+              0,
+            ),
           )
         : null,
       ranks: {} as Record<string, number | null>,
@@ -154,6 +164,7 @@ export function positionStrength(data: SeasonInsights, mode: PositionStrengthMod
   return {
     weeks,
     positions,
+    availablePositions,
     rows,
     mode,
     notice:

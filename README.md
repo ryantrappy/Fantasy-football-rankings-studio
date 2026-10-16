@@ -292,10 +292,13 @@ format checking, unit tests, type checking, lint, a production build, and the Ch
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
-for diagnosis. The browser suite uses one worker in CI because its PNG exports share
-one Vite server and can delay page startup. The cold forecast timing checks run
-first with one worker; local functional UI checks then use Playwright's normal
-parallelism. Run the same checks above before proposing a change.
+for diagnosis. CI splits the browser suite across four macOS runners with one worker
+and a separate Vite server each, avoiding PNG-export contention. Quality and isolated
+Ubuntu forecast timing checks run alongside the browser shards. Each shard retains
+JSON timings/outcomes; the stable `All required checks` job fails if any required job
+fails, is cancelled or is skipped. Local cold forecast checks still run first with
+one worker, followed by normal functional UI parallelism. Run the same checks above
+before proposing a change.
 
 See [UI regression testing](docs/ui-testing.md) for retained workflow coverage, fixture
 boundaries, export baselines and generated artifact handling. Completed redesign

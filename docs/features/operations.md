@@ -113,10 +113,10 @@ Source: [TASK-62](../../backlog/tasks/task-62%20-%20Add-example-values-commented
 
 ### TASK-64 — Run deterministic browser checks serially in CI
 
-- CI browser checks use a bounded worker count that avoids startup timeouts.
+- CI browser checks use one worker per runner across four independent macOS file-level shards, each with its own Vite server, preserving bounded concurrency and export baselines. Quality and isolated Ubuntu forecast checks run alongside the shards.
 - Local browser runs retain normal parallel execution.
 - Cold forecast timing checks run alone before the functional browser project so suite CPU contention does not distort their wall-clock measurements; functional checks retain local parallelism. Seeded parity, trial count, long-task checks and the 50 ms input-gap limit remain enforced, including the completion task.
-- Relevant Playwright configuration test behavior is verified and documented.
+- Shard selections preserve every functional case exactly once. Per-shard JSON timings/outcomes and failure diagnostics retain shard/run/attempt identity; the aggregate check fails on any failed, cancelled or skipped required job. Local project dependency behavior is retained and documented.
 
 Source: [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md).
 

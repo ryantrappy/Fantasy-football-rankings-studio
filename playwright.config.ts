@@ -6,7 +6,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   // PNG exports share one Vite server and can delay page startup on CI runners.
-  // Keep local runs parallel, but make the CI suite deterministic.
+  // Keep local runs parallel; CI shards use separate runners with one worker each.
   workers: process.env.CI ? 1 : undefined,
   projects: [
     {

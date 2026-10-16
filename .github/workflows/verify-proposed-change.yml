@@ -65,7 +65,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: forecast-performance-failure-${{ github.run_id }}
+          name: forecast-performance-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
@@ -73,12 +73,17 @@ jobs:
           retention-days: 14
 
   browser:
-    needs: forecast-performance
-    name: Browser interactions, accessibility, and export baseline
+    name: Browser checks (${{ matrix.shard }}/4)
     runs-on: macos-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       CI: true
+      PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/results.json
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -92,14 +97,42 @@ jobs:
       - name: Install Playwright diagnostic runtime
         run: npx playwright install ffmpeg
       - name: Run deterministic Chrome browser checks
-        run: npm run test:ui -- --project=ui --no-deps
+        run: npm run test:ui -- --project=ui --no-deps --workers=1 --shard=${{ matrix.shard }}/4 --reporter=line,html,json
+      - name: Retain browser timings and outcomes
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-results-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/results.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Retain browser failure diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-failure-${{ github.run_id }}
+          name: playwright-failure-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+  verify:
+    name: All required checks
+    if: ${{ always() }}
+    needs: [quality, forecast-performance, browser]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require every test job to succeed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node <<'NODE'
+          const results = JSON.parse(process.env.RESULTS);
+          for (const job of ['quality', 'forecast-performance', 'browser']) {
+            const result = results[job]?.result;
+            console.log(`${job}: ${result}`);
+            if (result !== 'success') process.exitCode = 1;
+          }
+          NODE

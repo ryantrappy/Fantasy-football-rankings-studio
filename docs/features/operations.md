@@ -177,3 +177,10 @@ Source: [TASK-151](../../backlog/tasks/task-151%20-%20The-UI-validation-tests-fo
 - Preserve existing tables, charts, exports, account-scoped cache freshness and safe session disposal. Accessible heatmap/Live button names include their visible records, samples and scores under the upgraded Axe checker. Validate dependency compatibility, focused regressions, full unit tests, static checks, production build and browser coverage; keep live-provider checks separate.
 
 Source: [TASK-153](../../backlog/tasks/task-153%20-%20Upgrade-to-tanstack-1.0-and-update-other-dependencies-while-doing-this.md). Versions and migration details: [Dependency upgrade](../dependency-upgrade.md).
+
+### TASK-154 — Match CI tooling to dependency runtime requirements
+
+- CI quality/browser jobs and local development share Node 24.15.0 from `.nvmrc`, compatible with locked jsdom/Undici. Installation enforces dependency engines before tests run.
+- The production Node engine contract remains unchanged; verification includes an exact-runtime clean install, full deterministic unit suite and static/build gates.
+
+Source: [TASK-154](../../backlog/tasks/task-154%20-%20Repair-CI-test-runtime-compatibility-after-dependency-upgrades.md).

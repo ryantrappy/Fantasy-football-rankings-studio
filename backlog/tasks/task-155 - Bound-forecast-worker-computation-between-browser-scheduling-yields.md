@@ -1,11 +1,11 @@
 ---
 id: TASK-155
 title: Bound forecast worker computation between browser scheduling yields
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-15 20:48'
-updated_date: '2026-10-16 02:34'
+updated_date: '2026-10-16 02:36'
 labels: []
 dependencies: []
 ordinal: 162000
@@ -34,12 +34,16 @@ PR #33 Actions forecast probes exceeded the existing 50ms input-gap requirement 
 
 <!-- SECTION:PLAN:BEGIN -->
 Inspect failed Actions timing, share a bounded cooperative executor between worker and fallback with finer trial checkpoints, and verify deterministic parity, cancellation, yields and strict browser input responsiveness.
+
+Separate the unchanged strict timing project into a required Ubuntu Actions job; keep macOS functional/visual export baseline checks gated behind it and verify the hosted run.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 Actions measured 55.7ms and 90ms timer gaps with zero main-thread long tasks and exact seeded parity. The existing worker ran an entire forecast synchronously. The shared cooperative executor now targets 4ms slices with clock checks every ten trials in worker and fallback (implementation already in f6f0b32). Added real worker-handler response/yield parity and between-slice cancellation/wakeup cleanup regressions. Under Node 24.15.0, 31 focused forecast/worker/timeline tests pass, full suite passes 881 tests (one optional live-provider test skipped), and the unchanged strict 12/32-team browser tests pass three consecutive runs each without retries; timer gaps remained about 11–12ms with exact 20,000-trial parity. No threshold or long-task/tail checks were relaxed. Updated performance contract and UI testing guidance.
+
+Fresh hosted macOS verification still failed the timer-gap gate despite local strict repeats and no reported main-thread long tasks. Reopened for CI isolation: all timing assertions and scenarios remain required in a dedicated Ubuntu job; macOS retains every functional/visual check and canonical PNG baselines. Browser job depends on timing success; local test command retains both projects.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

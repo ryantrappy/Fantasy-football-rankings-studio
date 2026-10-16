@@ -6,13 +6,13 @@ Start with four independent macOS browser shards, each with one Playwright worke
 
 Use jobs within the existing workflow first. Separate workflow runs do not inherently make tests faster, and introduce more check/dependency management. Separate runners supply the useful parallelism. After measuring this first change, consider moving functional tests to Ubuntu while retaining a small macOS PNG job.
 
-Phase 1 is implemented on PR #33: four macOS shards, independent job starts, per-shard JSON results and an aggregate status check. No test coverage or product behavior changed. Hosted timing verification is pending; subsequent phases remain proposals.
+Phase 1 is implemented on PR #33: four macOS shards, independent job starts, per-shard JSON results and an aggregate status check. No test coverage or product behavior changed. The first hosted run passed in 7m21s with all 164 functional cases and both cold performance cases; subsequent phases remain proposals.
 
 ## Baseline: latest PR #33
 
 [PR #33 — more_enhancements](https://github.com/ryantrappy/Fantasy-football-rankings-studio/pull/33) is the latest PR by creation time. Inspected head: `798dd53246c02f3582c2c8bf4562091331cb58af`. GitHub redirects the local repository's older remote name to `Fantasy-football-rankings-studio`.
 
-The newest [head run, 38849159710](https://github.com/ryantrappy/Fantasy-football-rankings-studio/actions/runs/38849159710), was still running when inspected: quality passed in 1m35s, forecast performance passed in 1m10s, and browser checks were active. Do not treat that run as a completed pass or use its elapsed time as its final duration.
+The final pre-change [head run, 38849159710](https://github.com/ryantrappy/Fantasy-football-rankings-studio/actions/runs/38849159710), finished in **18m52s**, with quality passing in 1m35s and forecast performance passing in 1m10s. Its browser suite had 162 passes and two calibration failures, each also failing its retry. This is the direct baseline with the same 164 functional cases used after the CI change.
 
 Use these completed runs from the same PR for timing evidence:
 
@@ -122,4 +122,20 @@ Before switching required checks:
 
 ## Implementation checks
 
-Local validation confirmed all 164 functional test identities appear exactly once across shards (49, 33, 42 and 40 cases), plus both isolated forecast cases. The aggregate script was checked against all 64 combinations of success/failure/cancellation/skipping. Formatting, TypeScript and lint passed. Hosted results will establish runtime success and speed; test discovery alone does not.
+Local validation confirmed all 164 functional test identities appear exactly once across shards (49, 33, 42 and 40 cases), plus both isolated forecast cases. The aggregate script was checked against all 64 combinations of success/failure/cancellation/skipping. Formatting, TypeScript and lint passed. The production build and full local deterministic unit suite also passed (885 tests, one optional live-provider skip). The first sandboxed unit attempt could not bind test HTTP servers; rerunning with loopback access passed.
+
+## First hosted result
+
+[Run 38850892402](https://github.com/ryantrappy/Fantasy-football-rankings-studio/actions/runs/38850892402) at `60e9635` passed all seven jobs in **7m21s** (creation through completion), compared with **18m52s** at the unchanged application baseline `798dd53`: **61% less elapsed time**. It was also 59% faster than the earlier green 17m54s run, which had a functional forecast retry. No application code, test assertions, fixture data or PNG baseline changed between the direct baseline and this run.
+
+| Job                  | Duration | Functional results                          |
+| -------------------- | -------- | ------------------------------------------- |
+| Browser shard 1      | 7m06s    | 49 passed                                   |
+| Browser shard 2      | 5m02s    | 33 passed, including both calibration cases |
+| Browser shard 3      | 4m21s    | 42 passed                                   |
+| Browser shard 4      | 2m57s    | 40 passed                                   |
+| Quality              | 2m04s    | All checks passed                           |
+| Forecast performance | 1m04s    | Both cold cases passed                      |
+| Aggregate            | 3s       | All predecessors succeeded                  |
+
+The four retained JSON reports total **164 expected, zero skipped, zero unexpected and zero flaky**. The suite is preserved exactly once across shards; both PNG baselines remain on macOS Chrome. This is a measured single-run improvement, not a five-run reliability or median claim. The initial 5–7 minute estimate was slightly optimistic: runner setup, aggregation and file-level imbalance produced 7m21s. Shard 1 remains the bottleneck; further balancing is a future optimization, not a reason to drop coverage.

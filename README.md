@@ -292,7 +292,7 @@ format checking, unit tests, type checking, lint, a production build, and the Ch
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
-for diagnosis. The Ubuntu trial splits functional checks across four Ubuntu runners, with the
+for diagnosis. CI splits functional checks across four Ubuntu runners, with the
 three canonical PNG comparisons on a separate macOS runner. Every job has one
 worker and its own Vite server. A manual macOS control retains the complete
 four-group suite for comparison. Quality and isolated

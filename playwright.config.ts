@@ -1,6 +1,14 @@
 import { defineConfig } from '@playwright/test';
 
 const coldForecast = /\d+-team cold forecast yields to input with identical seeded results/;
+const pngBaseline = /@png-baseline/;
+const uiSuite = process.env.UI_SUITE ?? 'all';
+if (!['all', 'functional', 'exports'].includes(uiSuite)) {
+  throw new Error('UI_SUITE must be all, functional or exports');
+}
+if (uiSuite === 'exports' && process.env.BROWSER_SHARD !== undefined) {
+  throw new Error('Export baselines must run without BROWSER_SHARD');
+}
 
 // Whole files grouped by median duration from the first three sharded CI runs.
 // Group four runs everything outside these lists, including new/renamed specs.
@@ -51,8 +59,12 @@ export default defineConfig({
     },
     {
       name: 'ui',
-      grepInvert: coldForecast,
       ...browserSelection,
+      ...(uiSuite === 'exports' ? { grep: pngBaseline } : {}),
+      grepInvert:
+        uiSuite === 'functional'
+          ? new RegExp(`${coldForecast.source}|${pngBaseline.source}`)
+          : coldForecast,
       // Timer latency is a wall-clock performance measurement: run it before
       // CPU-heavy PNG exports/calibration, then retain normal UI parallelism.
       dependencies: ['forecast-performance'],

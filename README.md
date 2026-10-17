@@ -292,8 +292,10 @@ format checking, unit tests, type checking, lint, a production build, and the Ch
 without production credentials. Browser coverage includes ranking interactions,
 keyboard behavior, light/dark contrast checks, and the unchanged original PNG export
 baseline. Failed browser runs upload the HTML report, trace, screenshot, and video
-for diagnosis. CI splits the browser suite across four macOS runners with one worker
-and a separate Vite server each, avoiding PNG-export contention. Quality and isolated
+for diagnosis. The Ubuntu trial splits functional checks across four Ubuntu runners, with the
+three canonical PNG comparisons on a separate macOS runner. Every job has one
+worker and its own Vite server. A manual macOS control retains the complete
+four-group suite for comparison. Quality and isolated
 Ubuntu forecast timing checks run alongside the browser shards. Each shard retains
 JSON timings/outcomes; the stable `All required checks` job fails if any required job
 fails, is cancelled or is skipped. Local cold forecast checks still run first with
@@ -554,7 +556,7 @@ reorder, undo, save, league creation, chart rendering, and PNG downloads at desk
 and mobile widths. These tests use local fixtures and do not access league data.
 The PNG baseline was captured with the original pre-migration stylesheet and
 markup in standards mode at full size on macOS Chrome; CI therefore runs the browser
-job on macOS Chrome. Do not update the baseline to accept an unintended export
+PNG comparisons on macOS Chrome. Do not update the baseline to accept an unintended export
 redesign. Unit tests, type checking, and lint remain `npm test`, `npm run typecheck`,
 and `npm run lint`.
 

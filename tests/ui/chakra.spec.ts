@@ -3,46 +3,52 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 // Chrome color conversion can vary by one channel level; geometry and visible changes still fail.
 for (const width of [1440, 390]) {
-  test(`download keeps the original appearance at ${width}px`, async ({ page }, testInfo) => {
-    await page.setViewportSize({ width, height: 1000 });
-    await page.goto('/tests/ui/');
-    await page.getByLabel('Edition title').waitFor();
-    await page.getByRole('button', { name: 'Preview & export' }).click();
-    await page.getByRole('button', { name: 'Compact preview (720px)' }).click();
-    const downloadEvent = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download PNG' }).click();
-    const download = await downloadEvent;
-    expect(download.suggestedFilename()).toBe('power-rankings-2026-week-2.png');
-    const png = await readFile((await download.path())!);
-    await writeFile(testInfo.outputPath('original-export.png'), png);
-    await testInfo.attach('original-export', { body: png, contentType: 'image/png' });
-    expect(png).toMatchSnapshot('rankings-original.png', { maxDiffPixels: 0, threshold: 0.01 });
-  });
+  test(
+    `download keeps the original appearance at ${width}px`,
+    { tag: '@png-baseline' },
+    async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto('/tests/ui/');
+      await page.getByLabel('Edition title').waitFor();
+      await page.getByRole('button', { name: 'Preview & export' }).click();
+      await page.getByRole('button', { name: 'Compact preview (720px)' }).click();
+      const downloadEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download PNG' }).click();
+      const download = await downloadEvent;
+      expect(download.suggestedFilename()).toBe('power-rankings-2026-week-2.png');
+      const png = await readFile((await download.path())!);
+      await writeFile(testInfo.outputPath('original-export.png'), png);
+      await testInfo.attach('original-export', { body: png, contentType: 'image/png' });
+      expect(png).toMatchSnapshot('rankings-original.png', { maxDiffPixels: 0, threshold: 0.01 });
+    },
+  );
 }
 
-test('compact download keeps every team and long commentary readable without clipping', async ({
-  page,
-}, testInfo) => {
-  await page.setViewportSize({ width: 390, height: 1000 });
-  await page.goto('/tests/ui/');
-  await page
-    .getByLabel('Edition title')
-    .fill('A compact ranking with a deliberately long headline');
-  await page
-    .getByLabel('Commentary for Fourth & Long')
-    .fill(
-      'This deliberately long mobile commentary preserves every word, including SupercalifragilisticexpialidociousWithoutBreaks, on a compact image without clipping.',
-    );
-  await page.getByRole('button', { name: 'Preview & export' }).click();
-  const downloadEvent = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download compact PNG' }).click();
-  const download = await downloadEvent;
-  expect(download.suggestedFilename()).toBe('power-rankings-2026-week-2-compact.png');
-  const png = await readFile((await download.path())!);
-  await writeFile(testInfo.outputPath('compact-export.png'), png);
-  await testInfo.attach('compact-export', { body: png, contentType: 'image/png' });
-  expect(png).toMatchSnapshot('rankings-compact.png', { maxDiffPixels: 0, threshold: 0.01 });
-});
+test(
+  'compact download keeps every team and long commentary readable without clipping',
+  { tag: '@png-baseline' },
+  async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 1000 });
+    await page.goto('/tests/ui/');
+    await page
+      .getByLabel('Edition title')
+      .fill('A compact ranking with a deliberately long headline');
+    await page
+      .getByLabel('Commentary for Fourth & Long')
+      .fill(
+        'This deliberately long mobile commentary preserves every word, including SupercalifragilisticexpialidociousWithoutBreaks, on a compact image without clipping.',
+      );
+    await page.getByRole('button', { name: 'Preview & export' }).click();
+    const downloadEvent = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Download compact PNG' }).click();
+    const download = await downloadEvent;
+    expect(download.suggestedFilename()).toBe('power-rankings-2026-week-2-compact.png');
+    const png = await readFile((await download.path())!);
+    await writeFile(testInfo.outputPath('compact-export.png'), png);
+    await testInfo.attach('compact-export', { body: png, contentType: 'image/png' });
+    expect(png).toMatchSnapshot('rankings-compact.png', { maxDiffPixels: 0, threshold: 0.01 });
+  },
+);
 
 test('editing, keyboard reorder, undo, and save still work', async ({ page }) => {
   await page.goto('/tests/ui/');

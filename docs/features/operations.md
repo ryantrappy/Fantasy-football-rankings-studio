@@ -113,12 +113,12 @@ Source: [TASK-62](../../backlog/tasks/task-62%20-%20Add-example-values-commented
 
 ### TASK-64 — Run deterministic browser checks serially in CI
 
-- CI browser checks use one worker per runner across four independent macOS groups of whole spec files balanced by observed duration, each with its own Vite server, preserving bounded concurrency and export baselines. Quality and isolated Ubuntu forecast checks run alongside the shards.
+- CI browser checks use one worker per runner and duration-balanced whole-file groups, each with its own Vite server. TASK-158 trials four Ubuntu functional groups plus an independent macOS job for all three unchanged canonical PNG cases. An explicit manual macOS control retains the original complete four-group suite. Quality and isolated Ubuntu forecast checks run alongside them.
 - Local browser runs retain normal parallel execution.
 - Cold forecast timing checks run alone before the functional browser project so suite CPU contention does not distort their wall-clock measurements; functional checks retain local parallelism. Seeded parity, trial count, long-task checks and the 50 ms input-gap limit remain enforced, including the completion task.
-- Group selections preserve every functional case exactly once. Unassigned/new spec files automatically run in group four; invalid group indexes fail configuration loading. Local runs without a group index retain the complete suite. Per-shard JSON timings/outcomes and failure diagnostics retain shard/run/attempt identity; the aggregate check fails on any failed, cancelled or skipped required job. Local project dependency behavior is retained and documented.
+- Group selections preserve every functional case exactly once. Unassigned/new spec files automatically run in group four; invalid group indexes fail configuration loading. Local runs without a group index retain the complete suite. Per-shard JSON timings/outcomes and failure diagnostics retain shard/run/attempt identity; the aggregate check fails on any failed, cancelled or skipped required job. The only intentional skip is the separate PNG job in the explicit macOS control, where the complete browser groups already include its cases. Local project dependency behavior is retained and documented.
 
-Sources: [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md), [TASK-159](../../backlog/tasks/task-159%20-%20Balance-browser-CI-groups-using-observed-spec-durations.md).
+Sources: [TASK-158](../../backlog/tasks/task-158%20-%20Trial-Ubuntu-runners-for-functional-browser-checks-while-retaining-macOS-PNG-baselines.md), [TASK-64](../../backlog/tasks/task-64%20-%20Run-deterministic-browser-checks-serially-in-CI.md), [TASK-159](../../backlog/tasks/task-159%20-%20Balance-browser-CI-groups-using-observed-spec-durations.md).
 
 ### TASK-65 — Update ranking-editor test fixtures for getMatchups
 

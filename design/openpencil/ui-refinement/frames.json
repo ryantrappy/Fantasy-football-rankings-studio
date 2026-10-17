@@ -1,0 +1,62 @@
+[
+  {
+    "page": "Desktop · UI refinement proposal",
+    "frames": [
+      {
+        "name": "Rankings studio · 1440px",
+        "id": "0:5",
+        "layers": 187
+      },
+      {
+        "name": "Season insights · 1440px",
+        "id": "0:207",
+        "layers": 252
+      },
+      {
+        "name": "Live matchups · 1440px",
+        "id": "0:468",
+        "layers": 101
+      },
+      {
+        "name": "Manage leagues · 1440px",
+        "id": "0:576",
+        "layers": 64
+      },
+      {
+        "name": "Connect league · 1440px",
+        "id": "0:645",
+        "layers": 75
+      }
+    ]
+  },
+  {
+    "page": "Mobile · UI refinement proposal",
+    "frames": [
+      {
+        "name": "Rankings studio · 390px",
+        "id": "0:727",
+        "layers": 196
+      },
+      {
+        "name": "Season insights · 390px",
+        "id": "0:938",
+        "layers": 261
+      },
+      {
+        "name": "Live matchups · 390px",
+        "id": "0:1208",
+        "layers": 82
+      },
+      {
+        "name": "Manage leagues · 390px",
+        "id": "0:1297",
+        "layers": 65
+      },
+      {
+        "name": "Connect league · 390px",
+        "id": "0:1367",
+        "layers": 79
+      }
+    ]
+  }
+]

@@ -118,7 +118,7 @@
 .profile-menu {
   flex-shrink: 0;
 }
-.profile-menu summary {
+.profile-menu > .disclosure-trigger {
   border-radius: 7px;
   font-size: 12px;
   font-weight: 600;
@@ -161,7 +161,7 @@
   position: relative;
   margin-left: auto;
 }
-.share-report-menu > summary {
+.share-report-menu > .disclosure-trigger {
   cursor: pointer;
   border: 1px solid #dce2ee;
   border-radius: 7px;
@@ -504,7 +504,7 @@
   padding: 5px 10px;
   font-size: 12px;
 }
-.app-shell-live .profile-menu summary {
+.app-shell-live .profile-menu > .disclosure-trigger {
   height: 34px;
 }
 @media (max-width: 767px) {
@@ -907,7 +907,7 @@
   align-items: flex-end;
 }
 .history-command-bar .studio-heading-actions .chakra-button,
-.history-command-bar .share-report-menu > summary {
+.history-command-bar .share-report-menu > .disclosure-trigger {
   min-height: 36px;
   height: auto;
   padding: 7px 12px;
@@ -1111,7 +1111,7 @@
 }
 @media (max-width: 767px) {
   .history-command-bar .studio-heading-actions .chakra-button,
-  .history-command-bar .share-report-menu > summary {
+  .history-command-bar .share-report-menu > .disclosure-trigger {
     min-height: 44px;
     padding-top: 11px;
     padding-bottom: 11px;
@@ -1146,5 +1146,167 @@
   }
   .ranking-focused .editor-panel {
     padding: 14px;
+  }
+}
+
+/* Disclosure controls share the native button semantics and preserve their content. */
+.profile-menu > .disclosure-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+}
+:is(.profile-menu-items, .share-report-menu-content)[hidden] {
+  display: none;
+}
+.app-shell :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid #3949ab;
+  outline-offset: 2px;
+}
+.workspace-toolbar :is(button, a):focus-visible,
+.snapshot-nav button:focus-visible {
+  outline-color: #f1bd81;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .app-shell :is(button, a, input, select, textarea):not(.export-canvas *) {
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+}
+.ranking-edit-take,
+.ranking-return-list {
+  border: 1px solid #dce2ee;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #3949ab;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ranking-return-list {
+  display: none;
+}
+@media (max-width: 991px) {
+  .ranking-focused .team-editor-heading {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: start;
+  }
+  .ranking-focused .team-editor-heading .team-identity {
+    min-width: 0;
+    width: auto;
+    grid-column: 2;
+  }
+  .ranking-focused .team-editor-heading .reorder-controls {
+    grid-column: 2;
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    width: auto;
+  }
+  .ranking-take-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+  }
+  .ranking-take-snippet {
+    max-width: 100%;
+    width: auto;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .ranking-team-select {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: left;
+  }
+  .ranking-return-list {
+    display: inline-flex;
+    margin-bottom: 12px;
+    min-height: 44px;
+    align-items: center;
+  }
+}
+@media (max-width: 767px) {
+  .app-shell-live .workspace-toolbar {
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+  }
+  .workspace-toolbar .app-nav a,
+  .app-shell-live .workspace-header .app-nav a,
+  .profile-menu > .disclosure-trigger,
+  .app-shell-live .profile-menu > .disclosure-trigger,
+  .share-report-menu > .disclosure-trigger {
+    min-height: 44px;
+    height: auto;
+  }
+  :is(.workspace-selectors, .page-command-controls) [data-scope='native-select'],
+  :is(.workspace-selectors, .page-command-controls) select {
+    width: 100%;
+    min-width: 0;
+  }
+  :is(.workspace-selectors, .page-command-controls)
+    .selection-bar
+    > [data-scope='field']:first-child {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+  :is(.workspace-selectors, .page-command-controls)
+    .selection-bar
+    > [data-scope='field']:not(:first-child) {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+  :is(.workspace-selectors, .page-command-controls) :is(select, button, input),
+  .profile-menu-items :is(a, button) {
+    min-height: 44px;
+  }
+}
+
+.workspace-toolbar .profile-menu-items :is(a, button):focus-visible {
+  outline-color: #3949ab;
+}
+@media (max-width: 767px) {
+  .app-shell-live .decision-explorer-live-controls {
+    flex-wrap: wrap;
+  }
+  .app-shell-live .decision-explorer-live-controls > [data-scope='field'] {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .app-shell-live .decision-explorer-live-controls :is(select, button) {
+    min-height: 44px;
+    height: auto;
+  }
+}
+@media (max-width: 991px) {
+  .ranking-edit-take {
+    min-height: 44px;
+  }
+}
+@media (max-width: 767px) {
+  .app-shell
+    .studio-surface
+    :is(.page-command-controls, .decision-explorer-live-controls)
+    :is(select, input, button):not(.export-canvas *) {
+    min-height: 44px;
+  }
+  .app-shell-live .decision-explorer-live-controls button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .app-shell .explorer-info-trigger {
+    min-width: 44px;
+    min-height: 44px;
   }
 }

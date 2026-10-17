@@ -10,7 +10,11 @@ let routeSearch: { leagueId?: string; year?: number; years?: number[] } = {
   year: 2026,
 };
 vi.mock('@tanstack/react-router', () => ({
-  useRouterState: () => pathname,
+  useRouterState: ({
+    select,
+  }: {
+    select: (state: { location: { pathname: string; href: string } }) => unknown;
+  }) => select({ location: { pathname, href: `${pathname}?${JSON.stringify(routeSearch)}` } }),
   useSearch: () => routeSearch,
   Link: ({
     to,
@@ -114,9 +118,8 @@ it('keeps exactly seven main destinations and all account destinations reachable
     'Other tools',
   ]);
   const summary = screen.getByLabelText('Profile menu');
-  const details = summary.closest('details')!;
-  details.open = true;
-  expect(screen.getByRole('link', { name: 'Create league' })).toHaveAttribute(
+  fireEvent.click(summary);
+  expect(screen.getByRole('link', { name: 'Connect league' })).toHaveAttribute(
     'href',
     '/leagues/new',
   );
@@ -125,11 +128,11 @@ it('keeps exactly seven main destinations and all account destinations reachable
     '/leagues/manage',
   );
   fireEvent.keyDown(document, { key: 'Escape' });
-  expect(details.open).toBe(false);
+  expect(summary).toHaveAttribute('aria-expanded', 'false');
   expect(summary).toHaveFocus();
-  details.open = true;
+  fireEvent.click(summary);
   fireEvent.pointerDown(screen.getByRole('main'));
-  expect(details.open).toBe(false);
+  expect(summary).toHaveAttribute('aria-expanded', 'false');
   pathname = '/insights';
 });
 it('marks Other tools active for a player deep link and preserves a return breadcrumb', () => {
@@ -199,3 +202,59 @@ it.each([undefined, [2025, 2023], []])(
     routeSearch = { leagueId: '123', year: 2026 };
   },
 );
+
+it('dismisses the profile menu after router navigation, including history changes', () => {
+  const view = render(
+    <Provider>
+      <AppShell>
+        <Page />
+      </AppShell>
+    </Provider>,
+  );
+  const trigger = screen.getByRole('button', { name: 'Profile menu' });
+  fireEvent.click(trigger);
+  expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  pathname = '/live';
+  view.rerender(
+    <Provider>
+      <AppShell>
+        <Page />
+      </AppShell>
+    </Provider>,
+  );
+  expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  expect(document.querySelector('.profile-menu-items')).toHaveAttribute('inert');
+  pathname = '/insights';
+  view.rerender(
+    <Provider>
+      <AppShell>
+        <Page />
+      </AppShell>
+    </Provider>,
+  );
+  expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+it('dismisses on same-path search changes and prevents focus remaining in the closing menu', () => {
+  const view = render(
+    <Provider>
+      <AppShell>
+        <Page />
+      </AppShell>
+    </Provider>,
+  );
+  const trigger = screen.getByRole('button', { name: 'Profile menu' });
+  fireEvent.click(trigger);
+  screen.getByRole('link', { name: 'Edit profile' }).focus();
+  routeSearch = { leagueId: '456', year: 2026 };
+  view.rerender(
+    <Provider>
+      <AppShell>
+        <Page />
+      </AppShell>
+    </Provider>,
+  );
+  expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  expect(trigger).toHaveFocus();
+  routeSearch = { leagueId: '123', year: 2026 };
+});

@@ -1,7 +1,9 @@
+import { DisclosureMotion } from './DisclosureMotion';
+import { useInlineDetailNavigation } from './useInlineDetailNavigation';
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Named histogram scroll regions need keyboard access. */
 import './analytics-explorer.css';
 import { Box, Button, Field, Flex, Heading, NativeSelect, Text } from '@chakra-ui/react';
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import type { SeasonInsights } from '../insights';
 import { usePlayoffForecast } from '../hooks/usePlayoffForecast';
 import { DataTable } from './DataTable';
@@ -14,6 +16,9 @@ export function PlayoffForecast({
   data: SeasonInsights;
   advanced?: (active: boolean) => ReactNode;
 }) {
+  const { detailId, detail, trigger, openDetail, returnToReport } = useInlineDetailNavigation();
+  const [assumptionsOpen, setAssumptionsOpen] = useState(false);
+  const assumptionsId = useId();
   const settings = data.playoffSettings;
   const maxWeek = Math.min(data.completedWeek, settings?.regularSeasonEnd ?? 0);
   const [selected, setSelected] = useState<number>();
@@ -97,6 +102,17 @@ export function PlayoffForecast({
           Advanced
         </Button>
       </Flex>
+      {inspectedRow && settings && (
+        <button
+          type="button"
+          className="analytics-detail-navigation forecast-detail-navigation"
+          ref={trigger}
+          aria-controls={detailId}
+          onClick={openDetail}
+        >
+          View selected team details
+        </button>
+      )}
       <div className="forecast-split-layout">
         <div className="forecast-main-pane">
           <div
@@ -200,70 +216,81 @@ export function PlayoffForecast({
                     especially uncertain and can move sharply as more results arrive.
                   </Text>
                 )}
-                <Box as="details" mb={4} className="forecast-method">
-                  <summary>Forecast assumptions and projection coverage</summary>
-                  <Text mb={3}>
-                    {forecast.simulations.toLocaleString()} simulations{' '}
-                    {view === 'chart'
-                      ? 'at each completed regular-season week'
-                      : `using scores through week ${forecast.throughWeek}`}
-                    . {settings!.playoffTeams} playoff places; regular season ends week{' '}
-                    {settings!.regularSeasonEnd}. All percentages are unconditional chances from
-                    their cutoff, not chances conditional on reaching a round. Projected record
-                    averages final regular-season wins and losses across simulations. Byes count as
-                    advancement. Earn bye is the unconditional chance of a top-two seed in a
-                    six-team bracket.
-                  </Text>
-                  <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
-                    Projection mode: {forecast.projection.note}
-                  </Text>
-                  <Text mb={3}>
-                    Known schedule: {forecast.schedule.knownWeeks} of{' '}
-                    {forecast.schedule.remainingWeeks} remaining regular-season weeks. Missing weeks
-                    use random remaining opponents.
-                  </Text>
-                  {forecast.projection.used && data.playoffProjection && (
+                <Box mb={4} className="forecast-method">
+                  <button
+                    type="button"
+                    className="forecast-method-trigger"
+                    aria-label="Forecast assumptions and projection coverage"
+                    aria-expanded={assumptionsOpen}
+                    aria-controls={assumptionsId}
+                    onClick={() => setAssumptionsOpen(!assumptionsOpen)}
+                  >
+                    Forecast assumptions and projection coverage
+                  </button>
+                  <DisclosureMotion id={assumptionsId} open={assumptionsOpen}>
                     <Text mb={3}>
-                      Availability:{' '}
-                      {data.playoffProjection.availabilityChecked
-                        ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
-                        : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
-                      No extra injury discount is added to provider estimates.
-                      {data.playoffProjection.weekly &&
-                        ' Current injury labels apply only to the next week; later weeks use their own provider estimates and scheduled byes. Current roster ownership is held fixed.'}
+                      {forecast.simulations.toLocaleString()} simulations{' '}
+                      {view === 'chart'
+                        ? 'at each completed regular-season week'
+                        : `using scores through week ${forecast.throughWeek}`}
+                      . {settings!.playoffTeams} playoff places; regular season ends week{' '}
+                      {settings!.regularSeasonEnd}. All percentages are unconditional chances from
+                      their cutoff, not chances conditional on reaching a round. Projected record
+                      averages final regular-season wins and losses across simulations. Byes count
+                      as advancement. Earn bye is the unconditional chance of a top-two seed in a
+                      six-team bracket.
                     </Text>
-                  )}
-                  {forecast.projection.used && forecast.projection.weeks && (
-                    <Box as="details" mb={3}>
-                      <summary>Weekly lineup projection coverage</summary>
-                      <DataTable
-                        label="Weekly lineup projection coverage"
-                        data={forecast.projection.weeks}
-                        getRowId={(row) => String(row.week)}
-                        columns={[
-                          {
-                            id: 'week',
-                            header: 'Week',
-                            value: (row) => row.week,
-                            cell: (row) => row.week,
-                            rowHeader: true,
-                          },
-                          {
-                            id: 'teams',
-                            header: 'Projected teams',
-                            value: (row) => row.projectedTeams,
-                            cell: (row) => `${row.projectedTeams} of ${data.teams.length}`,
-                          },
-                          {
-                            id: 'fallback',
-                            header: 'Historical fallback teams',
-                            value: (row) => data.teams.length - row.projectedTeams,
-                            cell: (row) => data.teams.length - row.projectedTeams,
-                          },
-                        ]}
-                      />
-                    </Box>
-                  )}
+                    <Text mb={3} fontWeight={forecast.projection.used ? 'bold' : 'normal'}>
+                      Projection mode: {forecast.projection.note}
+                    </Text>
+                    <Text mb={3}>
+                      Known schedule: {forecast.schedule.knownWeeks} of{' '}
+                      {forecast.schedule.remainingWeeks} remaining regular-season weeks. Missing
+                      weeks use random remaining opponents.
+                    </Text>
+                    {forecast.projection.used && data.playoffProjection && (
+                      <Text mb={3}>
+                        Availability:{' '}
+                        {data.playoffProjection.availabilityChecked
+                          ? `${data.playoffProjection.unavailablePlayers || 0} confirmed unavailable players excluded; ${data.playoffProjection.uncertainPlayers || 0} questionable/doubtful rostered players retain provider estimates.`
+                          : 'Provider injury status was unavailable; projection estimates alone are used.'}{' '}
+                        No extra injury discount is added to provider estimates.
+                        {data.playoffProjection.weekly &&
+                          ' Current injury labels apply only to the next week; later weeks use their own provider estimates and scheduled byes. Current roster ownership is held fixed.'}
+                      </Text>
+                    )}
+                    {forecast.projection.used && forecast.projection.weeks && (
+                      <Box as="details" mb={3}>
+                        <summary>Weekly lineup projection coverage</summary>
+                        <DataTable
+                          label="Weekly lineup projection coverage"
+                          data={forecast.projection.weeks}
+                          getRowId={(row) => String(row.week)}
+                          columns={[
+                            {
+                              id: 'week',
+                              header: 'Week',
+                              value: (row) => row.week,
+                              cell: (row) => row.week,
+                              rowHeader: true,
+                            },
+                            {
+                              id: 'teams',
+                              header: 'Projected teams',
+                              value: (row) => row.projectedTeams,
+                              cell: (row) => `${row.projectedTeams} of ${data.teams.length}`,
+                            },
+                            {
+                              id: 'fallback',
+                              header: 'Historical fallback teams',
+                              value: (row) => data.teams.length - row.projectedTeams,
+                              cell: (row) => data.teams.length - row.projectedTeams,
+                            },
+                          ]}
+                        />
+                      </Box>
+                    )}
+                  </DisclosureMotion>
                 </Box>
                 {data.completedWeek > settings!.regularSeasonEnd && (
                   <Text mb={3} fontWeight="bold">
@@ -565,7 +592,16 @@ export function PlayoffForecast({
           </div>
         </div>
         {inspectedRow && settings && (
-          <aside className="forecast-path-inspector" aria-label="Selected team path">
+          <aside
+            className="forecast-path-inspector"
+            aria-label="Selected team path"
+            id={detailId}
+            ref={detail}
+            tabIndex={-1}
+          >
+            <button type="button" className="analytics-detail-navigation" onClick={returnToReport}>
+              Return to forecast view
+            </button>
             <Text fontSize="xs" color="fg.muted" mb={1}>
               Selected team path
             </Text>

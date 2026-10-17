@@ -12,7 +12,7 @@ for (const [width, height] of [
     await expect(page.getByRole('region', { name: 'Manager explorer' })).toBeVisible();
     const league = page.getByRole('combobox', { name: 'League', exact: true });
     const insights = page.getByRole('link', { name: 'Current season insights', exact: true });
-    const sharing = page.locator('.share-report-menu > summary');
+    const sharing = page.getByRole('button', { name: 'Share report', exact: true });
     const controls = await Promise.all(
       [league, insights, sharing].map((item) => item.boundingBox()),
     );
@@ -31,8 +31,9 @@ for (const [width, height] of [
     }
     await sharing.focus();
     await page.keyboard.press('Enter');
-    await expect(page.locator('.share-report-menu')).toHaveAttribute('open', '');
+    await expect(sharing).toHaveAttribute('aria-expanded', 'true');
     await page.keyboard.press('Escape');
+    await expect(sharing).toHaveAttribute('aria-expanded', 'false');
     await expect(sharing).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,

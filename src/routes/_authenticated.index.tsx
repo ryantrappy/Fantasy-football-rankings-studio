@@ -412,7 +412,7 @@ function RankingsPage() {
               URL. Private leagues also need ESPN cookies saved in ESPN settings.
             </Text>
             <ChakraLink asChild>
-              <Link to="/leagues/new">Create league</Link>
+              <Link to="/leagues/new">Connect league</Link>
             </ChakraLink>
           </Box>
         )

@@ -1,0 +1,27 @@
+.table-overflow-cue {
+  position: sticky;
+  left: 0;
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0;
+  color: #526078;
+  font-size: 12px;
+}
+table:not(.export-table) :is(th, td).table-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+table:not(.export-table) th.table-numeric .table-sort-button {
+  justify-content: flex-end;
+  text-align: right;
+}
+table:not(.export-table)[data-horizontal-overflow='true'] :is(th[scope='row'], .table-identity) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: 1px 0 0 #dce2ee;
+}
+table:not(.export-table)[data-horizontal-overflow='true'] .table-identity {
+  background: #f3f5fb;
+}

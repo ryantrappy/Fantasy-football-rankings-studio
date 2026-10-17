@@ -67,13 +67,13 @@ test('seven destinations, contextual tools and account dismissal work with a key
   const menu = page.getByLabel('Profile menu');
   await menu.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('link', { name: 'Create league', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Connect league', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(menu).toBeFocused();
-  await expect(page.getByRole('link', { name: 'Create league', exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Connect league', exact: true })).toBeHidden();
   await menu.click();
   await page.locator('h1').click();
-  await expect(page.getByRole('link', { name: 'Create league', exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Connect league', exact: true })).toBeHidden();
   await nav.getByRole('link', { name: 'Other tools' }).click();
   await expect(page.getByRole('heading', { name: 'Other tools', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Players Search rosters/ }).click();

@@ -231,3 +231,9 @@ The usability iteration retains every account/league safeguard above and keeps a
 - Verification covers profile editor behavior, failed clearing and save retry, late account responses, authenticated functions, two-account persistence and API sessions, and Codex/Claude prompt selection. Deployed Auth0 verification remains separate from mocked regression coverage.
 
 Source: [TASK-150](../../backlog/tasks/task-150%20-%20Save-private-writing-instructions-on-each-user-profile.md).
+
+### TASK-160 — Connection wording and lifecycle action grouping
+
+Connect league consistently describes linking an existing Sleeper or ESPN league; provider validation, account-scoped setup recovery and return navigation are unchanged. Archive/restore and permanent deletion remain visible in a separate labeled section, with the existing typed-name deletion confirmation and owner checks preserved.
+
+Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).

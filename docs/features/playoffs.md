@@ -199,3 +199,9 @@ Source: [TASK-146](../../backlog/tasks/task-146%20-%20Apply-the-Manager-Explorer
 ## TASK-146 usability iteration — October 14, 2026
 
 The usability iteration adds truthful win/seed frequency histograms by counting outcomes from the same trials, without extra random draws or changes to seeded forecast probabilities. Optional distribution fields preserve saved-forecast compatibility; unavailable legacy frequencies stay unavailable. The selected path persists through every forecast and Advanced view; all rounds/rules/coverage/metrics/exact weekly values, diagnostics, cancellation and CSV/replay JSON remain. See [UI regression guidance](../ui-testing.md).
+
+### TASK-160 — Mobile forecast details and assumptions disclosure
+
+Inline selected-team navigation retains forecast view, histogram mode, cutoff and team selection. The assumptions/projection-coverage disclosure uses the shared reduced-motion-aware spring while retaining all mounted evidence and its existing independent open state during outside interaction. Forecast calculations, worker behavior, uncertainty disclosures and CSV/replay exports remain unchanged.
+
+Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).

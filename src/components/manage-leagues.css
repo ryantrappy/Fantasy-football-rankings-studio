@@ -1,0 +1,25 @@
+/* Lifecycle actions stay visible, apart from everyday connection editing. */
+.league-lifecycle {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #dce2ee;
+}
+.league-lifecycle .league-lifecycle-help {
+  max-width: 64ch;
+  margin-top: 6px;
+  color: #526078;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.league-lifecycle > button + button {
+  margin-left: 10px;
+}
+@media (max-width: 480px) {
+  .league-lifecycle > button {
+    display: block;
+    width: 100%;
+  }
+  .league-lifecycle > button + button {
+    margin-left: 0;
+  }
+}

@@ -9,7 +9,7 @@ const views = [
   ['playoffs', 'Playoff simulation'],
   ['profile', 'Your profile'],
   ['manage', 'Manage leagues'],
-  ['create', 'Create a league.'],
+  ['create', 'Connect league'],
   ['espn', 'ESPN settings'],
 ];
 for (const width of [1280, 390]) {

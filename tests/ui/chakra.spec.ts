@@ -74,7 +74,7 @@ test('league creation retains labels, platform selection, and submission', async
   await expect(espnRadio).toBeChecked();
   await page.getByLabel(/League ID/).fill('123456');
   await page.getByLabel(/Display name/).fill('Sunday League');
-  await page.getByRole('button', { name: 'Create league', exact: true }).click();
+  await page.getByRole('button', { name: 'Connect league', exact: true }).click();
   await expect(page).toHaveTitle('League created');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });

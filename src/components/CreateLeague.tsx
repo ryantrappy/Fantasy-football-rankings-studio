@@ -85,7 +85,7 @@ export function CreateLeague({
   return (
     <Box className="create-page">
       <PageHeading
-        title="Create a league."
+        title="Connect league"
         eyebrow="A new season of opinions"
         description="Bring your league into the studio. We’ll take care of the teams."
       >
@@ -95,7 +95,7 @@ export function CreateLeague({
       </PageHeading>
       {restored && (
         <Text as="output" className="notice insights-notice">
-          Your league details were restored. Create the league when you’re ready.
+          Your league details were restored. Connect the league when you’re ready.
         </Text>
       )}
       <Box className="create-workspace">
@@ -244,7 +244,7 @@ export function CreateLeague({
                 Cancel
               </Button>
               <Button colorPalette="indigo" variant="solid" type="submit" disabled={busy}>
-                {busy ? 'Connecting league…' : 'Create league'}
+                {busy ? 'Connecting league…' : 'Connect league'}
                 {!busy && <Icon name="arrow" />}
               </Button>
             </Flex>

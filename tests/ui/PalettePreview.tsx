@@ -3,7 +3,7 @@ import { CreateLeague } from '../../src/components/CreateLeague';
 import { LeagueSummary } from '../../src/components/LeagueSummary';
 import { api } from './fixture';
 
-// Exercise the same asChild composition used by the router's Create league link.
+// Exercise the same asChild composition used by the router's Connect league link.
 export function PalettePreview() {
   return (
     <>
@@ -22,7 +22,7 @@ export function PalettePreview() {
         <Text>Fantasy Power Rankings</Text>
       </Flex>
       <Button asChild colorPalette="indigo">
-        <a href="?mode=create">Create league</a>
+        <a href="?mode=create">Connect league</a>
       </Button>
       <CreateLeague api={api} onCreated={() => {}} onCancel={() => {}} />
       <LeagueSummary records={[]} />

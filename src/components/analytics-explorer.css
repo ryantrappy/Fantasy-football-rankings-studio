@@ -476,3 +476,57 @@
     font-size: 12px;
   }
 }
+
+.analytics-detail-navigation {
+  display: none;
+}
+.season-team-inspector,
+.forecast-path-inspector {
+  scroll-margin-top: 80px;
+}
+.season-team-inspector:focus-visible,
+.forecast-path-inspector:focus-visible {
+  outline: 3px solid #3949ab;
+  outline-offset: -3px;
+}
+@media (max-width: 960px) {
+  .analytics-detail-navigation {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid #c8d0e3;
+    border-radius: 6px;
+    background: #fff;
+    color: #3949ab;
+    font-size: 13px;
+    text-align: left;
+  }
+  aside > .analytics-detail-navigation {
+    margin-bottom: 16px;
+  }
+  .forecast-detail-navigation {
+    margin: 16px 20px 0;
+  }
+}
+.analytics-explorer .forecast-method-trigger {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #3949ab;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.forecast-method-trigger::before {
+  content: '▸';
+  margin-right: 8px;
+}
+.forecast-method-trigger[aria-expanded='true']::before {
+  content: '▾';
+}

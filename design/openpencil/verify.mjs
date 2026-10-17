@@ -3,7 +3,8 @@ import { readFile, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
-const file = new URL('current-app.fig', import.meta.url).pathname;
+const dirUrl = new URL(process.env.DESIGN_OUTPUT_DIR || './', import.meta.url);
+const file = new URL(process.env.DESIGN_FILE_NAME || 'current-app.fig', dirUrl).pathname;
 const cli = ['--yes', '@open-pencil/cli@0.16.0'];
 function run(args) {
   return execFileSync('npx', [...cli, ...args], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
@@ -18,10 +19,11 @@ const pages = JSON.parse(
   ]),
 );
 assert.equal(pages.length, 2);
-const captures = JSON.parse(await readFile(new URL('screens.json', import.meta.url), 'utf8'));
-assert.equal(captures.length, 24);
+const captures = JSON.parse(await readFile(new URL('screens.json', dirUrl), 'utf8'));
+const expectedFrames = Number(process.env.DESIGN_EXPECTED_FRAMES || 24);
+assert.equal(captures.length, expectedFrames);
 for (const page of pages) {
-  assert.equal(page.frames.length, 12);
+  assert.equal(page.frames.length, expectedFrames / 2);
   assert(page.frames.every((f) => f.texts > 10));
   assert(page.frames.some((f) => f.vectors > 0));
   for (const frame of page.frames)
@@ -79,5 +81,5 @@ for (const page of pages)
     console.log(`Rendered ${frame.name}`);
   }
 console.log(
-  `Verified 24 editable screen frames, native save/reopen, and strict-font PNG exports: ${dir}`,
+  `Verified ${captures.length} editable screen frames, native save/reopen, and strict-font PNG exports: ${dir}`,
 );

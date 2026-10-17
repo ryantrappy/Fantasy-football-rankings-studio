@@ -189,3 +189,9 @@ Source: [TASK-150](../../backlog/tasks/task-150%20-%20Save-private-writing-instr
 - Verified by export-theme browser checks at 1440px and 390px, existing Classic original/compact PNG baselines, and preference persistence/isolation/storage-failure unit tests.
 
 Source: [TASK-147](../../backlog/tasks/task-147%20-%20Allow-choosing-classic-or-new-rankings-export-theme.md).
+
+### TASK-160 — Readable mobile rows and editor return navigation
+
+Mobile focused rows give team identity and take previews room above the existing drag/arrow controls. Explicit Edit take actions and Return to team list navigation retain selected-team focus, edited prose, order, undo and the Edit all takes workflow. Existing team-name selection remains available. Original/compact PNG markup and all Classic/New export options are unchanged.
+
+Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).

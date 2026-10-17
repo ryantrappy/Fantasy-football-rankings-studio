@@ -102,9 +102,9 @@ jobs:
           cache: npm
       - name: Install exactly from lockfile
         run: npm ci --engine-strict
-      - name: Install Playwright diagnostic runtime
+      - name: Refresh Chrome and diagnostic runtime
         if: runner.os == 'macOS'
-        run: npx playwright install ffmpeg
+        run: npx playwright install --force chrome ffmpeg
       - name: Install Chrome and diagnostic runtime
         if: runner.os == 'Linux'
         run: npx playwright install --with-deps chrome ffmpeg
@@ -161,8 +161,8 @@ jobs:
           cache: npm
       - name: Install exactly from lockfile
         run: npm ci --engine-strict
-      - name: Install Playwright diagnostic runtime
-        run: npx playwright install ffmpeg
+      - name: Refresh Chrome and diagnostic runtime
+        run: npx playwright install --force chrome ffmpeg
       - name: Record browser runtime
         run: |
           node --input-type=module <<'NODE'

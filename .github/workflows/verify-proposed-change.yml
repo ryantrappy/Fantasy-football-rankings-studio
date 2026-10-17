@@ -5,9 +5,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser-runner:
+        description: Functional runner (macOS runs the unchanged full-suite control)
+        type: choice
+        options: [ubuntu-latest, macos-latest]
+        default: ubuntu-latest
 
 concurrency:
-  group: verify-${{ github.workflow }}-${{ github.ref }}
+  group: verify-${{ github.workflow }}-${{ github.ref }}-${{ inputs.browser-runner || 'ubuntu-latest' }}
   cancel-in-progress: true
 
 permissions:
@@ -74,7 +80,7 @@ jobs:
 
   browser:
     name: Browser checks (${{ matrix.shard }}/4)
-    runs-on: macos-latest
+    runs-on: ${{ inputs.browser-runner || 'ubuntu-latest' }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -84,6 +90,7 @@ jobs:
     env:
       CI: true
       BROWSER_SHARD: ${{ matrix.shard }}
+      UI_SUITE: ${{ inputs.browser-runner == 'macos-latest' && 'all' || 'functional' }}
       PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/results.json
     steps:
       - name: Check out repository
@@ -96,7 +103,22 @@ jobs:
       - name: Install exactly from lockfile
         run: npm ci --engine-strict
       - name: Install Playwright diagnostic runtime
+        if: runner.os == 'macOS'
         run: npx playwright install ffmpeg
+      - name: Install Chrome and diagnostic runtime
+        if: runner.os == 'Linux'
+        run: npx playwright install --with-deps chrome ffmpeg
+      - name: Record browser runtime
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+          import { writeFile } from 'node:fs/promises';
+          const browser = await chromium.launch({ channel: 'chrome' });
+          const runtime = { node: process.version, platform: process.platform, arch: process.arch, chrome: browser.version() };
+          console.log(JSON.stringify(runtime));
+          await writeFile('runner-runtime.json', JSON.stringify(runtime, null, 2));
+          await browser.close();
+          NODE
       - name: Run deterministic Chrome browser checks
         run: npm run test:ui -- --project=ui --no-deps --workers=1 --reporter=line,html,json
       - name: Retain browser timings and outcomes
@@ -104,7 +126,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-results-${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/results.json
+          path: |
+            test-results/results.json
+            runner-runtime.json
           if-no-files-found: error
           retention-days: 14
       - name: Retain browser failure diagnostics
@@ -118,16 +142,72 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  exports:
+    name: macOS PNG baselines
+    if: inputs.browser-runner != 'macos-latest'
+    runs-on: macos-latest
+    timeout-minutes: 10
+    env:
+      CI: true
+      UI_SUITE: exports
+      PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/results.json
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Use project Node version
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install exactly from lockfile
+        run: npm ci --engine-strict
+      - name: Install Playwright diagnostic runtime
+        run: npx playwright install ffmpeg
+      - name: Record browser runtime
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+          import { writeFile } from 'node:fs/promises';
+          const browser = await chromium.launch({ channel: 'chrome' });
+          const runtime = { node: process.version, platform: process.platform, arch: process.arch, chrome: browser.version() };
+          console.log(JSON.stringify(runtime));
+          await writeFile('runner-runtime.json', JSON.stringify(runtime, null, 2));
+          await browser.close();
+          NODE
+      - name: Compare canonical PNG baselines
+        run: npm run test:ui -- --project=ui --no-deps --workers=1 --reporter=line,html,json
+      - name: Retain PNG outcomes and timings
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-results/results.json
+            runner-runtime.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain PNG failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   verify:
     name: All required checks
     if: ${{ always() }}
-    needs: [quality, forecast-performance, browser]
+    needs: [quality, forecast-performance, browser, exports]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Require every test job to succeed
         env:
           RESULTS: ${{ toJSON(needs) }}
+          BROWSER_RUNNER: ${{ inputs.browser-runner || 'ubuntu-latest' }}
         run: |
           node <<'NODE'
           const results = JSON.parse(process.env.RESULTS);
@@ -136,4 +216,8 @@ jobs:
             console.log(`${job}: ${result}`);
             if (result !== 'success') process.exitCode = 1;
           }
+          const exportsExpected = process.env.BROWSER_RUNNER === 'macos-latest' ? 'skipped' : 'success';
+          const exportsResult = results.exports?.result;
+          console.log(`exports: ${exportsResult} (expected ${exportsExpected})`);
+          if (exportsResult !== exportsExpected) process.exitCode = 1;
           NODE

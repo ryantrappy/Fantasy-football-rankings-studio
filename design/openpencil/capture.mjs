@@ -1,7 +1,7 @@
 // Run from the application root with the deterministic UI fixture server running.
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
-const out = new URL('./', import.meta.url);
+const out = new URL(process.env.DESIGN_OUTPUT_DIR || './', import.meta.url);
 const base = process.env.DESIGN_BASE_URL || 'http://127.0.0.1:3107';
 const screens = [
   ['Rankings studio', '?mode=workspace-editor'],
@@ -25,7 +25,11 @@ for (const [size, width, height] of [
   ['Mobile', 390, 844],
 ]) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
-  for (const [title, query] of screens) {
+  for (const [title, query] of screens.filter(
+    ([title]) =>
+      !process.env.DESIGN_SCREEN_TITLES ||
+      process.env.DESIGN_SCREEN_TITLES.split('|').includes(title),
+  )) {
     const url = `${base}/tests/ui/${query}`;
     await page.goto(url);
     await page.waitForFunction(() => document.querySelector('#root')?.textContent.length > 30);

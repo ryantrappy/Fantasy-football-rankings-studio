@@ -63,8 +63,8 @@ test('primary links and buttons retain contrast in normal, hover, and focus stat
   await page.goto('/tests/ui/?mode=palette');
   await page.addStyleTag({ content: '* { transition: none !important; }' });
   for (const control of [
-    page.getByRole('link', { name: 'Create league', exact: true }),
-    page.getByRole('button', { name: 'Create league', exact: true }),
+    page.getByRole('link', { name: 'Connect league', exact: true }),
+    page.getByRole('button', { name: 'Connect league', exact: true }),
   ]) {
     await expect(control).toBeVisible();
     expect(await contrast(control)).toBeGreaterThanOrEqual(4.5);
@@ -84,7 +84,7 @@ test('keyboard focus is visible against light content and the dark header', asyn
   await page.keyboard.press('Tab');
   const brand = page.getByRole('link', { name: 'POWER / RANK' });
   await expect(brand).toBeFocused();
-  for (const target of [brand, page.getByRole('link', { name: 'Create league', exact: true })]) {
+  for (const target of [brand, page.getByRole('link', { name: 'Connect league', exact: true })]) {
     if (target !== brand) await page.keyboard.press('Tab');
     await expect(target).toBeFocused();
     await expect(target).toHaveCSS('outline-style', 'solid');

@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useSessionStatus } from '../auth/session';
 import { AppNavigation } from './AppNavigation';
 import { ToolsBreadcrumb } from './OtherToolsPage';
+import { PersistentDisclosure } from './DisclosureMotion';
 
 const HeaderTarget = createContext<HTMLElement | null | undefined>(undefined);
 
@@ -18,24 +19,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
   const [controls, setControls] = useState<HTMLDivElement | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const session = useSessionStatus();
-  const menu = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    const dismiss = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) menu.current?.removeAttribute('open');
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && menu.current?.open) {
-        menu.current.removeAttribute('open');
-        menu.current.querySelector('summary')?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', dismiss);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', dismiss);
-      document.removeEventListener('keydown', escape);
-    };
-  }, []);
+  const locationKey = useRouterState({ select: (state) => state.location.href });
   const live = pathname === '/live';
   return (
     <HeaderTarget.Provider value={controls}>
@@ -53,41 +37,27 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
             </Link>
             <AppNavigation shared={shared} />
             {!shared && (
-              <details className="profile-menu" ref={menu}>
-                <summary aria-label="Profile menu">
-                  Profile <span aria-hidden="true">☰</span>
-                </summary>
-                <div className="profile-menu-items">
-                  <Link
-                    to="/profile"
-                    search={{ returnTo: undefined }}
-                    onClick={(event) =>
-                      event.currentTarget.closest('details')?.removeAttribute('open')
-                    }
-                  >
-                    Edit profile
-                  </Link>
-                  <Link
-                    to="/leagues/new"
-                    onClick={(event) =>
-                      event.currentTarget.closest('details')?.removeAttribute('open')
-                    }
-                  >
-                    Create league
-                  </Link>
-                  <Link
-                    to="/leagues/manage"
-                    onClick={(event) =>
-                      event.currentTarget.closest('details')?.removeAttribute('open')
-                    }
-                  >
-                    Manage leagues
-                  </Link>
-                  <button type="button" onClick={session.signOut}>
-                    Sign out
-                  </button>
-                </div>
-              </details>
+              <PersistentDisclosure
+                className="profile-menu"
+                contentClassName="profile-menu-items"
+                accessibleLabel="Profile menu"
+                label={
+                  <>
+                    Profile <span aria-hidden="true">☰</span>
+                  </>
+                }
+                closeKey={locationKey}
+                closeOnAction
+              >
+                <Link to="/profile" search={{ returnTo: undefined }}>
+                  Edit profile
+                </Link>
+                <Link to="/leagues/new">Connect league</Link>
+                <Link to="/leagues/manage">Manage leagues</Link>
+                <button type="button" onClick={session.signOut}>
+                  Sign out
+                </button>
+              </PersistentDisclosure>
             )}
           </div>
           <div className="workspace-selectors" ref={setControls} />

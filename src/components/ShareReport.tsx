@@ -2,10 +2,11 @@ import { ApiContext } from '../auth/session';
 import { ReportSharing } from './ReportSharing';
 import { logClientError } from '../logging';
 import { Box, Button, Input, Text } from '@chakra-ui/react';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useState } from 'react';
 import { errorMessage } from '../api/client';
 import type { SnapshotInput } from '../report-snapshot';
 import { normalizeLeagueId } from './report-search';
+import { PersistentDisclosure } from './DisclosureMotion';
 
 export function ShareReport({
   path,
@@ -29,26 +30,6 @@ export function ShareReport({
   const [fallback, setFallback] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const disclosure = useRef<HTMLDetailsElement>(null);
-  useEffect(() => {
-    if (!compact) return;
-    const dismiss = (event: PointerEvent) => {
-      if (!disclosure.current?.contains(event.target as Node))
-        disclosure.current?.removeAttribute('open');
-    };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && disclosure.current?.open) {
-        disclosure.current.removeAttribute('open');
-        disclosure.current.querySelector('summary')?.focus();
-      }
-    };
-    document.addEventListener('pointerdown', dismiss);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', dismiss);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [compact]);
   const canonicalSearch = { ...search, leagueId: normalizeLeagueId(search.leagueId) };
   const query = new URLSearchParams({ leagueId: canonicalSearch.leagueId });
   if (canonicalSearch.year !== undefined) query.set('year', String(canonicalSearch.year));
@@ -131,10 +112,14 @@ export function ShareReport({
     </Box>
   );
   return compact ? (
-    <details className="share-report-menu" ref={disclosure}>
-      <summary>Share report</summary>
-      <div className="share-report-menu-content">{content}</div>
-    </details>
+    <PersistentDisclosure
+      className="share-report-menu"
+      contentClassName="share-report-menu-content"
+      label="Share report"
+      closeKey={`${path}:${query}:${snapshotHref ?? ''}`}
+    >
+      {content}
+    </PersistentDisclosure>
   ) : (
     content
   );

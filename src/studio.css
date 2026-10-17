@@ -99,7 +99,7 @@
 .workspace-header :focus-visible {
   outline-color: #f1bd81;
 }
-.profile-menu summary {
+.profile-menu > .disclosure-trigger {
   border-color: #8191aa;
   background: #ffffff0a;
 }

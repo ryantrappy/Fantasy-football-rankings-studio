@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildTableCsv, DataTable, ReportExportScope, type DataColumn } from './DataTable';
 
@@ -199,4 +199,59 @@ it('downloads the currently sorted and limited rows with report context', async 
   expect(csv.indexOf('Team 3')).toBeLessThan(csv.indexOf('Team 2'));
   expect(csv).not.toContain('Team 10');
   expect(csv).toContain('League,Test league');
+});
+
+it('marks numeric columns and keeps cells aligned when an earlier coverage column is hidden', () => {
+  render(
+    <DataTable
+      label="Coverage alignment"
+      data={entries}
+      getRowId={(row) => row.id}
+      columns={[
+        {
+          id: 'hidden',
+          header: 'Coverage',
+          value: () => 'Complete',
+          cell: () => 'Complete',
+          coverageComplete: () => true,
+        },
+        ...columns,
+      ]}
+    />,
+  );
+  expect(screen.getByRole('columnheader', { name: 'Points' })).toHaveClass('table-numeric');
+  const row = screen.getByRole('rowheader', { name: 'Team 10' }).closest('tr')!;
+  expect(within(row).getByRole('cell', { name: '100 pts' })).toHaveClass('table-numeric');
+  expect(within(row).getByRole('rowheader')).toHaveTextContent('Team 10');
+});
+
+it('shows an overflow cue only when the table scroll viewport overflows', () => {
+  let resize = () => {};
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const { container } = render(
+    <DataTable label="Scores" data={entries} columns={columns} getRowId={(row) => row.id} />,
+  );
+  expect(screen.queryByText('Scroll horizontally to see all columns')).not.toBeInTheDocument();
+  Object.defineProperty(screen.getByRole('table'), 'scrollWidth', {
+    value: 900,
+    configurable: true,
+  });
+  Object.defineProperty(container, 'clientWidth', { value: 350, configurable: true });
+  act(() => resize());
+  expect(screen.getByText('Scroll horizontally to see all columns')).toBeVisible();
+  expect(screen.getByRole('table')).toHaveAccessibleDescription(
+    'Scroll horizontally to see all columns',
+  );
+  Object.defineProperty(container, 'clientWidth', { value: 1000 });
+  act(() => resize());
+  expect(screen.queryByText('Scroll horizontally to see all columns')).not.toBeInTheDocument();
 });

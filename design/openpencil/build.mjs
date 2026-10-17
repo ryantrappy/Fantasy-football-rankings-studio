@@ -3,7 +3,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-const dir = new URL('./', import.meta.url);
+const dir = new URL(process.env.DESIGN_OUTPUT_DIR || './', import.meta.url);
+const fileName = process.env.DESIGN_FILE_NAME || 'current-app.fig';
+const pageLabel = process.env.DESIGN_PAGE_LABEL || 'current app';
 const screens = JSON.parse(await readFile(new URL('screens.json', dir), 'utf8'));
 const seed = join(tmpdir(), 'fantasy-openpencil-seed.fig');
 const html = join(tmpdir(), 'fantasy-openpencil-seed.html');
@@ -18,9 +20,9 @@ function paint(css) {
   return [{ type: 'SOLID', color: { r: parts[0]/255, g: parts[1]/255, b: parts[2]/255 }, opacity: parts[3] ?? 1 }];
 }
 for (const child of [...figma.currentPage.children]) child.remove();
-figma.currentPage.name = 'Desktop · current app';
+figma.currentPage.name = ${JSON.stringify('Desktop · ' + pageLabel)};
 const desktop = figma.currentPage;
-const mobile = figma.createPage(); mobile.name = 'Mobile · current app';
+const mobile = figma.createPage(); mobile.name = ${JSON.stringify('Mobile · ' + pageLabel)};
 const summaries = [];
 for (const size of ['Desktop', 'Mobile']) {
   figma.currentPage = size === 'Desktop' ? desktop : mobile;
@@ -90,14 +92,14 @@ return summaries;
 `;
 const result = execFileSync(
   'npx',
-  [...cli, 'eval', seed, '--stdin', '-o', new URL('current-app.fig', dir).pathname, '--json'],
+  [...cli, 'eval', seed, '--stdin', '-o', new URL(fileName, dir).pathname, '--json'],
   { input: script, maxBuffer: 10 * 1024 * 1024 },
 );
 console.log(result.toString());
 const frames = execFileSync('npx', [
   ...cli,
   'eval',
-  new URL('current-app.fig', dir).pathname,
+  new URL(fileName, dir).pathname,
   '-c',
   'return figma.root.children.map(p=>({page:p.name,frames:p.children.map(f=>({name:f.name,id:f.id,layers:f.children.length}))}));',
   '--json',

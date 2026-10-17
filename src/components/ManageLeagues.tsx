@@ -1,3 +1,4 @@
+import './manage-leagues.css';
 import { PageHeading } from './PageHeading';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { Box, Button, Flex, Heading, Input, Text } from '@chakra-ui/react';
@@ -294,100 +295,114 @@ export function ManageLeagues({ api }: { api: LeagueApi }) {
                   </Flex>
                 </Box>
               )}
-              <Button
-                mt={3}
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  setError('');
-                  try {
-                    await api.management!.archive(league.leagueId, !archived);
-                    setNotice(`${league.leagueName} ${archived ? 'restored' : 'archived'}.`);
-                    setRetry((v) => v + 1);
-                  } catch (e) {
-                    logClientError('leagues.archive', e);
-                    setError('Could not update the league. Try again.');
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
+              <section
+                className="league-lifecycle"
+                aria-label={`${league.leagueName} archive and deletion`}
               >
-                {archived ? 'Restore league' : 'Archive league'}
-              </Button>
-              {deleting === league.leagueId ? (
-                <Box
-                  as="form"
-                  mt={4}
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    if (deleteConfirmation !== league.leagueName) {
-                      setNameError(`Type ${league.leagueName} to confirm deletion.`);
-                      return;
-                    }
+                <Heading as="h3" size="sm">
+                  Archive or delete
+                </Heading>
+                <Text className="league-lifecycle-help">
+                  Archive to keep rankings and shared reports. Permanent deletion removes this
+                  workspace’s local data.
+                </Text>
+                <Button
+                  mt={3}
+                  variant="outline"
+                  disabled={busy}
+                  onClick={async () => {
                     setBusy(true);
-                    setNameError('');
+                    setError('');
                     try {
-                      await api.management!.delete(league.leagueId);
-                      setNotice(`${league.leagueName} and its local data were deleted.`);
+                      await api.management!.archive(league.leagueId, !archived);
+                      setNotice(`${league.leagueName} ${archived ? 'restored' : 'archived'}.`);
                       setRetry((v) => v + 1);
-                      setDeleting('');
                     } catch (e) {
-                      logClientError('leagues.delete', e);
-                      setNameError('Could not delete the league. Try again.');
+                      logClientError('leagues.archive', e);
+                      setError('Could not update the league. Try again.');
                     } finally {
                       setBusy(false);
                     }
                   }}
                 >
-                  <Text fontWeight="bold">Delete this workspace and its local rankings?</Text>
-                  <Text fontSize="sm">
-                    This cannot delete the league at {league.leagueType === 0 ? 'Sleeper' : 'ESPN'}.
-                  </Text>
-                  <label htmlFor={`delete-${league.leagueId}`}>
-                    Type {league.leagueName} to confirm
-                  </label>
-                  <Input
-                    id={`delete-${league.leagueId}`}
-                    value={deleteConfirmation}
-                    onChange={(event) => {
-                      setDeleteConfirmation(event.target.value);
+                  {archived ? 'Restore league' : 'Archive league'}
+                </Button>
+                {deleting === league.leagueId ? (
+                  <Box
+                    as="form"
+                    mt={4}
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      if (deleteConfirmation !== league.leagueName) {
+                        setNameError(`Type ${league.leagueName} to confirm deletion.`);
+                        return;
+                      }
+                      setBusy(true);
                       setNameError('');
-                    }}
-                  />
-                  {nameError && <Text role="alert">{nameError}</Text>}
-                  <Flex gap={2} flexWrap="wrap" mt={3}>
-                    <Button type="submit" colorPalette="red" disabled={busy}>
-                      Delete league permanently
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => {
+                      try {
+                        await api.management!.delete(league.leagueId);
+                        setNotice(`${league.leagueName} and its local data were deleted.`);
+                        setRetry((v) => v + 1);
                         setDeleting('');
+                      } catch (e) {
+                        logClientError('leagues.delete', e);
+                        setNameError('Could not delete the league. Try again.');
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    <Text fontWeight="bold">Delete this workspace and its local rankings?</Text>
+                    <Text fontSize="sm">
+                      This cannot delete the league at{' '}
+                      {league.leagueType === 0 ? 'Sleeper' : 'ESPN'}.
+                    </Text>
+                    <label htmlFor={`delete-${league.leagueId}`}>
+                      Type {league.leagueName} to confirm
+                    </label>
+                    <Input
+                      id={`delete-${league.leagueId}`}
+                      value={deleteConfirmation}
+                      onChange={(event) => {
+                        setDeleteConfirmation(event.target.value);
                         setNameError('');
                       }}
-                    >
-                      Cancel
-                    </Button>
-                  </Flex>
-                </Box>
-              ) : (
-                <Button
-                  mt={2}
-                  variant="outline"
-                  colorPalette="red"
-                  disabled={busy}
-                  onClick={() => {
-                    setDeleting(league.leagueId);
-                    setDeleteConfirmation('');
-                    setNameError('');
-                    setNotice('');
-                  }}
-                >
-                  Delete league
-                </Button>
-              )}
+                    />
+                    {nameError && <Text role="alert">{nameError}</Text>}
+                    <Flex gap={2} flexWrap="wrap" mt={3}>
+                      <Button type="submit" colorPalette="red" disabled={busy}>
+                        Delete league permanently
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => {
+                          setDeleting('');
+                          setNameError('');
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </Flex>
+                  </Box>
+                ) : (
+                  <Button
+                    mt={2}
+                    variant="outline"
+                    colorPalette="red"
+                    disabled={busy}
+                    onClick={() => {
+                      setDeleting(league.leagueId);
+                      setDeleteConfirmation('');
+                      setNameError('');
+                      setNotice('');
+                    }}
+                  >
+                    Delete league
+                  </Button>
+                )}
+              </section>
             </Box>
           ))
         ) : (

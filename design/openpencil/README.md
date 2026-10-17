@@ -13,6 +13,8 @@ The **Desktop · current app** and **Mobile · current app** pages each contain 
 
 These use deterministic example teams and accounts from maintained browser tests, captured October 15, 2026. They contain no production account data or credentials. Browser references in [reference/](reference/) show the exact captured appearance and source content. `screens.json` records measured geometry, computed colors, text and fixture URLs; `frames.json` records the saved native file's frame IDs.
 
+The separate [UI refinement proposal](ui-refinement/README.md) contains paired desktop/mobile frames for the current refinement, with its own references and regeneration command. It does not replace this baseline.
+
 ## Make a future mockup
 
 1. Use Save As to make a proposal copy of `current-app.fig` before editing.

@@ -91,15 +91,18 @@ it('keeps snapshot caveats and owner revocation reachable in the compact sharing
     </Provider>,
   );
   const summary = screen.getByText('Share report', { exact: true });
-  const details = summary.closest('details')!;
-  expect(details.open).toBe(false);
+  expect(summary).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(summary);
   await screen.findByRole('button', { name: 'Disable public reports' });
-  expect(screen.getByText(/including private ESPN data.*expire after 10 days/)).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByText(/including private ESPN data.*expire after 10 days/)).toBeVisible(),
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Disable public reports' }));
   await waitFor(() => expect(reportSharing.set).toHaveBeenCalledWith('123', false));
-  expect(await screen.findByRole('button', { name: 'Enable public reports' })).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Enable public reports' })).toBeVisible(),
+  );
   fireEvent.keyDown(document, { key: 'Escape' });
-  expect(details.open).toBe(false);
+  expect(summary).toHaveAttribute('aria-expanded', 'false');
   expect(summary).toHaveFocus();
 });

@@ -1,4 +1,14 @@
-import { createContext, useContext, useId, useMemo, type ReactNode } from 'react';
+import './data-table.css';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {
   createColumnHelper,
   createSortedRowModel,
@@ -116,6 +126,23 @@ export function DataTable<T extends object>({
   children?: ReactNode;
   limit?: number;
 }) {
+  const tableElement = useRef<HTMLTableElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const element = tableElement.current;
+    const viewport = element?.parentElement;
+    if (!element || !viewport) return;
+    const measure = () => setOverflows(element.scrollWidth > viewport.clientWidth + 1);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(element);
+    observer?.observe(viewport);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, []);
   const exportScope = useContext(ReportExportContext);
   const descriptionId = useId();
   const visibleColumns = useMemo(
@@ -125,6 +152,18 @@ export function DataTable<T extends object>({
           !column.coverageComplete || !data.length || !data.every(column.coverageComplete),
       ),
     [columns, data],
+  );
+  const numericColumns = new Set(
+    visibleColumns
+      .filter((column) => {
+        const values = data.map(column.value).filter((value) => value != null);
+        return (
+          !column.rowHeader &&
+          values.length > 0 &&
+          values.every((value) => typeof value === 'number')
+        );
+      })
+      .map((column) => column.id),
   );
   const definitions = useMemo(() => {
     const helper = createColumnHelper<typeof features, T>();
@@ -172,7 +211,18 @@ export function DataTable<T extends object>({
           Download {label} CSV
         </button>
       )}
-      <table className={className} aria-label={label}>
+      {overflows && (
+        <p className="table-overflow-cue" id={`${descriptionId}-overflow`}>
+          Scroll horizontally to see all columns
+        </p>
+      )}
+      <table
+        ref={tableElement}
+        className={className}
+        aria-label={label}
+        data-horizontal-overflow={overflows}
+        aria-describedby={overflows ? `${descriptionId}-overflow` : undefined}
+      >
         {children}
         <thead>
           {table.getHeaderGroups().map((group) => (
@@ -186,7 +236,7 @@ export function DataTable<T extends object>({
                   <th
                     key={header.id}
                     scope="col"
-                    className="sortable-column-header"
+                    className={`sortable-column-header${numericColumns.has(header.column.id) ? ' table-numeric' : ''}${visibleColumns.find((column) => column.id === header.column.id)?.rowHeader ? ' table-identity' : ''}`}
                     title={headerTooltip}
                     onClick={header.column.getToggleSortingHandler()}
                     aria-sort={
@@ -228,13 +278,18 @@ export function DataTable<T extends object>({
           {visibleRows.map((row) => (
             <tr key={row.id}>
               {row.getAllCells().map((cell, index) => {
-                const column = columns[index];
+                const column = visibleColumns[index];
                 const Cell = column.rowHeader ? 'th' : 'td';
                 return (
                   <Cell
                     key={cell.id}
                     scope={column.rowHeader ? 'row' : undefined}
-                    className={column.className}
+                    className={[
+                      column.className,
+                      numericColumns.has(column.id) ? 'table-numeric' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
                   >
                     <table.FlexRender cell={cell} />
                   </Cell>

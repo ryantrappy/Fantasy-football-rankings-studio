@@ -138,6 +138,9 @@ it('discloses weekly coverage and removes current lineup assumptions at an older
     '3 of 14 team-weeks',
   );
   expect(screen.getByText(/later weeks use their own provider estimates/)).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Forecast assumptions and projection coverage' }),
+  );
   fireEvent.click(screen.getByText('Weekly lineup projection coverage'));
   const table = screen.getByRole('table', { name: 'Weekly lineup projection coverage' });
   expect(table.querySelectorAll('tbody tr')).toHaveLength(7);

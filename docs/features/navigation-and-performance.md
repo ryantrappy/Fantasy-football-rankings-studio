@@ -138,3 +138,12 @@ The screenshot follow-up aligns workspace control typography, flat borders, atta
 - Strict browser timing retains the 50 ms maximum input gap, long-task detection and completion-tail measurement. Worker response/yield and cooperative cancellation regressions complement existing client queue/termination checks.
 
 Source: [TASK-155](../../backlog/tasks/task-155%20-%20Bound-forecast-worker-computation-between-browser-scheduling-yields.md).
+
+### TASK-160 — Mobile usability and restrained disclosure motion
+
+- Mobile Live navigation occupies its own header row without overlapping content. Mobile league selectors show their full context; navigation, disclosure and icon touch targets have at least 44 px interaction areas.
+- Profile navigation dismisses on route/search changes, browser history and same-route actions. Light surfaces use indigo focus rings and navy surfaces use peach; Escape restores trigger focus.
+- Shared disclosure motion uses short, critically damped translations and opacity feedback. Reduced motion changes state immediately; closing content is inert and hidden from assistive technology immediately, rapid reopening remains usable, and mounted form state is retained.
+- See [UI refinement review](../ui-review/ui-refinement/README.md) for before/after evidence and [UI regression guidance](../ui-testing.md) for verification. No route-wide remounts or ranking-export restyling are introduced.
+
+Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).

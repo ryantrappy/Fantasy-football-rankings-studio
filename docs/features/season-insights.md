@@ -143,3 +143,9 @@ Source: [TASK-146](../../backlog/tasks/task-146%20-%20Apply-the-Manager-Explorer
 ## TASK-146 usability iteration — October 14, 2026
 
 The usability iteration keeps a real selected-team inspector across all seven focused views without changing the active view on selection. Semantic four-tier positional ranks/points return. Following TASK-149 feedback, the stacked chart rounds its bounds from the real positive and negative stack extents in the selected mode, rather than imposing a 2200-point minimum; a 718-point maximum ends at 800. Zero-only data uses a 0–1 fallback, unavailable values remain unavailable, and totals have room outside the bars. Every exact weekly column, coverage denominator, chart/mode, schedule opponent, manager/former-manager control, move/source evidence and CSV remains. Selected-team CSV context is explicit. See [UI regression guidance](../ui-testing.md).
+
+### TASK-160 — Inline mobile detail navigation and table cues
+
+View selected team details and Return to season view move focus and restore the originating page position without replacing the report, active view, selected team, filters or table scroll. Shared data tables show a horizontal-scroll cue only while overflowing, retain identity columns while scrolling, and align numeric evidence consistently. Coverage-hidden columns retain correct row-header and cell metadata; all evidence columns and CSVs remain available.
+
+Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).

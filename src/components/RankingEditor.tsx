@@ -55,6 +55,7 @@ export const RankingEditor = forwardRef<
   const [teamSelection, setTeamSelection] = useState({ scope: '', teamId: '' });
   const tools = useRef<HTMLDetailsElement>(null);
   const teamDetail = useRef<HTMLElement>(null);
+  const teamButtons = useRef(new Map<string, HTMLButtonElement>());
   const [exporting, setExporting] = useState<'original' | 'compact' | null>(null);
   const [exportError, setExportError] = useState('');
   const [announcement, setAnnouncement] = useState('');
@@ -668,6 +669,10 @@ export const RankingEditor = forwardRef<
                       <button
                         type="button"
                         className="ranking-team-select"
+                        ref={(node) => {
+                          if (node) teamButtons.current.set(team.teamId, node);
+                          else teamButtons.current.delete(team.teamId);
+                        }}
                         aria-pressed={selectedTeam.teamId === team.teamId}
                         onClick={() => {
                           setTeamSelection({ scope: rankingScope, teamId: team.teamId });
@@ -709,6 +714,20 @@ export const RankingEditor = forwardRef<
                               'No commentary yet — select row to write or generate a suggestion.'}
                           </span>
                         </span>
+                      )}
+                      {editingMode === 'focused' && (
+                        <button
+                          type="button"
+                          className="ranking-edit-take"
+                          aria-label={`Edit take for ${team.teamName}`}
+                          onClick={() => {
+                            setTeamSelection({ scope: rankingScope, teamId: team.teamId });
+                            teamDetail.current?.scrollIntoView({ block: 'start' });
+                            teamDetail.current?.focus({ preventScroll: true });
+                          }}
+                        >
+                          Edit take
+                        </button>
                       )}
                     </Box>
                     <Flex gap={1} className="reorder-controls">
@@ -755,6 +774,17 @@ export const RankingEditor = forwardRef<
             className="ranking-team-detail"
             aria-label="Selected team take"
           >
+            <button
+              type="button"
+              className="ranking-return-list"
+              onClick={() => {
+                const button = teamButtons.current.get(selectedTeam.teamId);
+                button?.scrollIntoView({ block: 'center' });
+                button?.focus({ preventScroll: true });
+              }}
+            >
+              Return to team list
+            </button>
             <div className="ranking-detail-stepper">
               <p className="ranking-detail-context">
                 Writing for rank {ranking.teams.indexOf(selectedTeam) + 1}

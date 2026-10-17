@@ -1,3 +1,4 @@
+import { useInlineDetailNavigation } from './useInlineDetailNavigation';
 import './analytics-explorer.css';
 import { InfoTooltip } from './InfoTooltip';
 import { SeasonStrength } from './SeasonStrength';
@@ -53,6 +54,7 @@ export function InsightsPage({
   playoff?: boolean;
   initialLeague?: League | null;
 }) {
+  const { detailId, detail, trigger, openDetail, returnToReport } = useInlineDetailNavigation();
   const api = useInsightsApi();
   const privateApi = useContext(ApiContext);
   const [managed, setManaged] = useState<{
@@ -423,6 +425,17 @@ export function InsightsPage({
                       ? `${selectedTeam.teamName}: ${number(selectedTeam.average)} points / week`
                       : `${data.teams.length} teams · ${leader?.teamName || 'No scoring leader yet'}`}
                   </Text>
+                  {inspectedTeam && (
+                    <button
+                      type="button"
+                      className="analytics-detail-navigation"
+                      ref={trigger}
+                      aria-controls={detailId}
+                      onClick={openDetail}
+                    >
+                      View selected team details
+                    </button>
+                  )}
                   <Box as="details" className="analytics-explorer-summary">
                     <summary>League summary</summary>
                     <Text>
@@ -1141,7 +1154,20 @@ export function InsightsPage({
                     </Box>
                   </Box>
                   {inspectedTeam && (
-                    <aside className="season-team-inspector" aria-label="Selected team inspector">
+                    <aside
+                      className="season-team-inspector"
+                      aria-label="Selected team inspector"
+                      id={detailId}
+                      ref={detail}
+                      tabIndex={-1}
+                    >
+                      <button
+                        type="button"
+                        className="analytics-detail-navigation"
+                        onClick={returnToReport}
+                      >
+                        Return to season view
+                      </button>
                       <Text fontSize="xs" color="fg.muted">
                         Selected team inspector
                       </Text>

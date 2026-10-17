@@ -269,8 +269,8 @@ test('authenticated visitors can navigate to league creation and return', async 
   await screen.findByRole('heading', { name: 'Create your first league' });
   expect(screen.getByText('/leagues/')).toBeInTheDocument();
   expect(screen.getByText('leagueId')).toBeInTheDocument();
-  await userEvent.click(screen.getAllByRole('link', { name: 'Create league' })[0]);
-  expect(await screen.findByRole('heading', { name: 'Create a league.' })).toBeInTheDocument();
+  await userEvent.click(screen.getAllByRole('link', { name: 'Connect league' })[0]);
+  expect(await screen.findByRole('heading', { name: 'Connect league' })).toBeInTheDocument();
   expect(screen.getByText(/immediately after \/leagues\//)).toBeInTheDocument();
   await userEvent.click(screen.getByLabelText('ESPN', { exact: true }));
   expect(screen.getByRole('note')).toHaveTextContent(
@@ -287,7 +287,7 @@ test('ESPN settings restores an in-progress league and completion clears it', as
   auth.isAuthenticated = true;
   auth.user = { sub: 'owner-a' };
   const router = await openPage('/leagues/new');
-  await screen.findByRole('heading', { name: 'Create a league.' });
+  await screen.findByRole('heading', { name: 'Connect league' });
   await user.click(screen.getByLabelText('ESPN', { exact: true }));
   await user.type(screen.getByLabelText(/League ID/), '00123');
   await user.type(screen.getByLabelText(/Display name/), 'Private league');
@@ -300,13 +300,13 @@ test('ESPN settings restores an in-progress league and completion clears it', as
   expect(router.state.location.search.returnTo).toBe('/leagues/new');
   await user.click(screen.getByRole('button', { name: 'Continue without credentials' }));
 
-  await screen.findByRole('heading', { name: 'Create a league.' });
+  await screen.findByRole('heading', { name: 'Connect league' });
   expect(screen.getByRole('status')).toHaveTextContent('league details were restored');
   expect(screen.getByRole('radio', { name: 'ESPN' })).toBeChecked();
   expect(screen.getByLabelText(/League ID/)).toHaveValue('00123');
   expect(screen.getByLabelText(/Display name/)).toHaveValue('Private league');
   expect(screen.getByLabelText('Season')).toHaveValue(2025);
-  await user.click(screen.getByRole('button', { name: 'Create league' }));
+  await user.click(screen.getByRole('button', { name: 'Connect league' }));
   await screen.findByRole('heading', { name: 'Rankings studio' });
   expect(readLeagueSetupDraft('owner-a')).toBeNull();
 });
@@ -384,7 +384,7 @@ test('successful first-league creation opens its guided editor', async () => {
   vi.mocked(privateFunctions.createLeague).mockResolvedValue({ ok: true, data: league });
   const router = await openPage('/leagues/new');
   await userEvent.type(await screen.findByLabelText(/League ID/), '123');
-  await userEvent.click(screen.getByRole('button', { name: 'Create league' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Connect league' }));
   const welcome = await screen.findByRole('heading', { name: 'Your league is ready' });
   expect(welcome.closest('output')).toHaveTextContent(
     'Set the team order and write each take. Changes save as you work',
@@ -996,9 +996,9 @@ test('first-login ESPN setup returns to the requested internal route after skipp
   });
   const router = await openPage('/leagues/new');
   await screen.findByRole('heading', { name: 'Connect your ESPN account' });
-  expect(screen.queryByRole('heading', { name: 'Create a league.' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Connect league' })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Skip for now' }));
-  await screen.findByRole('heading', { name: 'Create a league.' });
+  await screen.findByRole('heading', { name: 'Connect league' });
   expect(router.state.location.pathname).toBe('/leagues/new');
   expect(privateFunctions.skipEspnSetup).toHaveBeenCalledWith({
     headers: { Authorization: 'Bearer test-token' },

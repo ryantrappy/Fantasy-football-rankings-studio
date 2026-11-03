@@ -12,6 +12,9 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
         position: player.position ?? source.playerPositions?.[player.playerId],
       })),
     }));
+  const scoresByWeekAndTeam = new Map(
+    scores.map((score) => [`${score.week}:${score.teamId}`, score]),
+  );
   const moves = [...source.moves].sort(
     (a, b) => a.timestamp - b.timestamp || a.id.localeCompare(b.id),
   );
@@ -107,6 +110,28 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
   }
   const teams = source.teams.map((team) => {
     const rows = scores.filter((s) => s.teamId === team.teamId);
+    const headToHeadRecord = { wins: 0, losses: 0, ties: 0 };
+    const medianRecord = { wins: 0, losses: 0, ties: 0 };
+    for (const row of rows) {
+      const weeklyScores = scores.filter((score) => score.week === row.week);
+      const sortedScores = weeklyScores.map((score) => score.actual).sort((a, b) => a - b);
+      const middle = Math.floor(sortedScores.length / 2);
+      const median =
+        sortedScores.length % 2
+          ? sortedScores[middle]
+          : (sortedScores[middle - 1] + sortedScores[middle]) / 2;
+      if (row.actual > median) medianRecord.wins++;
+      else if (row.actual < median) medianRecord.losses++;
+      else medianRecord.ties++;
+
+      const opponent = row.opponentTeamId
+        ? scoresByWeekAndTeam.get(`${row.week}:${row.opponentTeamId}`)
+        : undefined;
+      if (!opponent || opponent.opponentTeamId !== team.teamId) continue;
+      if (row.actual > opponent.actual) headToHeadRecord.wins++;
+      else if (row.actual < opponent.actual) headToHeadRecord.losses++;
+      else headToHeadRecord.ties++;
+    }
     const projections = rows.filter((s) => s.projected !== null);
     const lineupRows = rows.filter((s) => s.bestLineup);
     const teamTrades = trades.filter((t) => t.teamId === team.teamId);
@@ -126,15 +151,9 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
           )
         : null,
       beatProjection: projections.filter((r) => r.actual > r.projected!).length,
-      aboveMedian: rows.filter((r) => {
-        const all = scores
-          .filter((s) => s.week === r.week)
-          .map((s) => s.actual)
-          .sort((a, b) => a - b);
-        const middle = Math.floor(all.length / 2);
-        const median = all.length % 2 ? all[middle] : (all[middle - 1] + all[middle]) / 2;
-        return r.actual > median;
-      }).length,
+      aboveMedian: medianRecord.wins,
+      headToHeadRecord,
+      medianRecord,
       bestLineupPoints: round(lineupRows.reduce((sum, r) => sum + r.bestLineup!.points, 0)),
       lineupWeeks: lineupRows.length,
       correctStarts: lineupRows.reduce((sum, r) => sum + r.bestLineup!.correctStarts, 0),

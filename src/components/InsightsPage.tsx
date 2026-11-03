@@ -31,10 +31,11 @@ import { useInsightsApi } from '../auth/InsightsAccess';
 import { errorMessage } from '../api/client';
 import { defaultSeason } from '../util/rankings';
 import type { League } from '../types';
-import type { SeasonInsights } from '../insights';
+import type { ScoreWeek, SeasonInsights } from '../insights';
 import { LeagueSummary, ScheduleLuck } from './LeagueSummary';
 import { summarizeLeague, visibleManagers } from '../league-summary';
 import { ScoreTrend } from './ScoreTrend';
+import { ProjectionLuck } from './ProjectionLuck';
 import { reportFreshnessLabel } from './report-freshness';
 
 const number = (value: number | null) =>
@@ -43,6 +44,37 @@ const signed = (value: number | null) =>
   value === null ? '—' : `${value > 0 ? '+' : ''}${number(value)}`;
 const accuracy = (correctStarts: number, slots: number) =>
   slots ? (correctStarts / slots) * 100 : null;
+function recordFromScores(scores: ScoreWeek[], teamId: string, againstMedian: boolean) {
+  const record = { wins: 0, losses: 0, ties: 0 };
+  const rows = scores.filter((score) => score.teamId === teamId);
+  for (const row of rows) {
+    let opponentScore: number | undefined;
+    if (againstMedian) {
+      const weeklyScores = scores
+        .filter((score) => score.week === row.week)
+        .map((score) => score.actual)
+        .sort((a, b) => a - b);
+      const middle = Math.floor(weeklyScores.length / 2);
+      opponentScore =
+        weeklyScores.length % 2
+          ? weeklyScores[middle]
+          : (weeklyScores[middle - 1] + weeklyScores[middle]) / 2;
+    } else {
+      const opponent = scores.find(
+        (score) =>
+          score.week === row.week &&
+          score.teamId === row.opponentTeamId &&
+          score.opponentTeamId === teamId,
+      );
+      opponentScore = opponent?.actual;
+    }
+    if (opponentScore === undefined) continue;
+    if (row.actual > opponentScore) record.wins++;
+    else if (row.actual < opponentScore) record.losses++;
+    else record.ties++;
+  }
+  return record;
+}
 export function InsightsPage({
   search,
   navigate,
@@ -78,6 +110,7 @@ export function InsightsPage({
   const [reload, setReload] = useState(0);
   const [teamId, setTeamId] = useState('');
   const [view, setView] = useState('Team scoring');
+  const [projectionLuckOpened, setProjectionLuckOpened] = useState(false);
   const [pickupTeam, setPickupTeam] = useState('');
   const [allPickups, setAllPickups] = useState(false);
   const [includeFormer, setIncludeFormer] = useState(false);
@@ -454,6 +487,7 @@ export function InsightsPage({
                   {[
                     'Team scoring',
                     'Weekly trends',
+                    'Projection luck',
                     'Roster strength',
                     'Remaining schedule',
                     'Manager report card',
@@ -464,7 +498,10 @@ export function InsightsPage({
                       key={name}
                       variant="plain"
                       aria-pressed={view === name}
-                      onClick={() => setView(name)}
+                      onClick={() => {
+                        setView(name);
+                        if (name === 'Projection luck') setProjectionLuckOpened(true);
+                      }}
                     >
                       {name}
                     </Button>
@@ -472,6 +509,19 @@ export function InsightsPage({
                 </nav>
                 <div className="season-insights-split">
                   <Box className="analytics-explorer-content">
+                    <div hidden={view !== 'Projection luck'}>
+                      {projectionLuckOpened && (
+                        <ProjectionLuck
+                          key={reportScope}
+                          data={data}
+                          teamId={teamId}
+                          league={
+                            leagues.find((l) => l.leagueId === leagueId)?.leagueName || leagueId
+                          }
+                          year={year}
+                        />
+                      )}
+                    </div>
                     <div hidden={view !== 'Team scoring'}>
                       <Box
                         as="section"
@@ -548,6 +598,51 @@ export function InsightsPage({
                                     {t.aboveMedian} / {t.weeks}
                                   </>
                                 ),
+                              },
+                              {
+                                id: 'record',
+                                header: 'Real record',
+                                headerTooltip:
+                                  'W–L–T from completed weeks with reciprocal recorded opponent IDs. Weeks without a validated opponent are omitted.',
+                                value: (t) => {
+                                  const record =
+                                    t.headToHeadRecord ||
+                                    recordFromScores(data.scores, t.teamId, false);
+                                  return record.wins + record.ties * 0.5;
+                                },
+                                exportValue: (t) => {
+                                  const { wins, losses, ties } =
+                                    t.headToHeadRecord ||
+                                    recordFromScores(data.scores, t.teamId, false);
+                                  return wins + losses + ties ? `${wins}-${losses}-${ties}` : null;
+                                },
+                                cell: (t) => {
+                                  const { wins, losses, ties } =
+                                    t.headToHeadRecord ||
+                                    recordFromScores(data.scores, t.teamId, false);
+                                  return wins + losses + ties ? `${wins}–${losses}–${ties}` : '—';
+                                },
+                              },
+                              {
+                                id: 'medianRecord',
+                                header: 'Against median',
+                                headerTooltip:
+                                  'W–L–T against the league median for each observed completed week. A score equal to the median is a tie.',
+                                value: (t) => {
+                                  const record =
+                                    t.medianRecord || recordFromScores(data.scores, t.teamId, true);
+                                  return record.wins + record.ties * 0.5;
+                                },
+                                exportValue: (t) => {
+                                  const { wins, losses, ties } =
+                                    t.medianRecord || recordFromScores(data.scores, t.teamId, true);
+                                  return wins + losses + ties ? `${wins}-${losses}-${ties}` : null;
+                                },
+                                cell: (t) => {
+                                  const { wins, losses, ties } =
+                                    t.medianRecord || recordFromScores(data.scores, t.teamId, true);
+                                  return wins + losses + ties ? `${wins}–${losses}–${ties}` : '—';
+                                },
                               },
                               {
                                 id: '4',

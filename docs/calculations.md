@@ -28,25 +28,85 @@ A game qualifies only with reciprocal opponent IDs and a full league score set.
 Provider adapters omit opponent IDs for playoffs and byes. No eligible games
 means an unavailable value, not zero. History sums credits and games first.
 
+## Projection performance luck
+
+Season Insights → **Projection luck** compares player scoring with historical weekly
+forecasts and replays each eligible recorded matchup exactly **100 times**. This is
+separate from schedule luck, which continues to compare actual scores with random
+league opponents.
+
+- Player difference = actual starter points − that player's weekly projection.
+- For a week being replayed, collect forecast errors only from earlier completed
+  weeks of the selected league/season/reporting horizon. Sample variance is
+  `sum((error − mean error)²) / (observations − 1)`, in points squared.
+- Use the player's own errors when at least two observations exist. Otherwise use
+  earlier same-position starter errors from this league with at least two
+  observations. The player table discloses the basis and sample size. Neither
+  current-week nor later outcomes affect that week's variance. Variance measures
+  variability, not persistent bias or mean squared error: identical errors have
+  zero variance even if every error is large.
+- In each trial draw every actual starter independently from a normal distribution
+  with mean equal to that week's projection and the estimated error variance.
+  Sum starters, round each team-week to two decimals, then sum the published weeks
+  of a multiweek matchup. Negative and zero values remain valid. Lineups are fixed,
+  so this does not optimize bench choices or model injuries and correlations.
+- Simulated win credit = `(replay wins + 0.5 × replay ties) / 100`.
+  Real credit = 1 for a win, 0.5 for a tie, 0 for a loss.
+  Extra wins = real credit − simulated credit, summed across covered matchups.
+  Integer half-win counts retain exact complementary credits, including 0.005
+  increments. For example, winning a game with 30 wins and no ties in 100 replays
+  gives `1 − 0.30 = +0.70` extra wins. Positive indicates favorable results
+  relative to projections, not proof of a causal luck effect.
+- Team scoring and opponent differences average actual minus projected points
+  over exactly those successfully replayed matchups. A multiweek period contributes
+  one combined score and outcome. Season summaries stay season-wide while the
+  week selector filters exact matchup and player tables. CSVs retain active team,
+  week, league, season, coverage and retrospective-projection context.
+
+Only reciprocal recorded regular-season opponents and verified playoff games are
+included. ESPN's published matchup-period weeks preserve multiweek regular-season
+boundaries; missing boundaries are excluded rather than inferred from repeated
+opponents. Byes, unknown opponents, ambiguous duplicate team-weeks, incomplete or
+unreconciled starter scores, missing projections and insufficient prior variance
+remain unavailable. A coverage column counts successfully replayed versus verified
+matchups, with a separate count of observed weeks without a verified matchup.
+The first week normally has no prior variance. Two-observation estimates are
+especially uncertain. Deterministic matchup-specific random streams keep the same
+inputs repeatable and independent of selection or input ordering. With only 100
+trials, sampling uncertainty near 50% is roughly ±10 percentage points at 95%,
+separate from model error; these are not calibrated win probabilities.
+
+ESPN uses historical player projection stats matching the selected season, scoring
+week and weekly split. Sleeper uses its undocumented season/week projection
+endpoint and the selected season's league scoring settings. Both are retrospective
+provider reads and may have been revised; they are **not independently archived
+pre-kickoff snapshots**. Raw player projections, their source text and published
+matchup weeks survive saved report snapshots. Older snapshots without these
+inputs remain readable but do not fabricate projections or replay results.
+
 ## Scoring
 
-| Display                          | Calculation / denominator                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------ |
-| Avg. points                      | Total observed points / observed weeks                                               |
-| Best week                        | Maximum observed points                                                              |
-| Above median                     | Count of weeks strictly above the weekly league median / observed weeks              |
-| Avg. vs. median                  | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks  |
-| Best week vs. median             | Week with the highest relative median percentage, not necessarily the highest points |
-| All-play win rate                | `100 × (wins + half ties) / comparisons` against every other observed team each week |
-| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections                    |
-| Beat projection                  | Strictly positive differences / projected weeks                                      |
+| Display                          | Calculation / denominator                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Avg. points                      | Total observed points / observed weeks                                                     |
+| Best week                        | Maximum observed points                                                                    |
+| Above median                     | Count of weeks strictly above the weekly league median / observed weeks                    |
+| Against median record            | Weekly W–L–T against the league median, including ties with the median                     |
+| Real record                      | Weekly W–L–T against reciprocal recorded head-to-head opponents; unavailable without games |
+| Avg. vs. median                  | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks        |
+| Best week vs. median             | Week with the highest relative median percentage, not necessarily the highest points       |
+| All-play win rate                | `100 × (wins + half ties) / comparisons` against every other observed team each week       |
+| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections                          |
+| Beat projection                  | Strictly positive differences / projected weeks                                            |
 
 The median is the middle sorted score, or the average of the two middle scores.
-The team's own score participates in the league median. Scoring includes all
+The team's own score participates in the league median. Median records and scoring include all
 observed completed weeks, including playoffs; partial league sets may contribute
 to median/all-play values but never to schedule luck. A zero score is valid.
-Missing projections remain unavailable. Sleeper supplies no historical projections;
-ESPN sums available starting-lineup projections, excluding bench and IR.
+Missing projections remain unavailable. Sleeper's existing scoring trends retain
+their unavailable historical team projection; the separate projection luck view
+uses available player forecasts from its undocumented weekly endpoint. ESPN sums
+available starting-lineup projections, excluding bench and IR.
 
 ## Trade grades
 

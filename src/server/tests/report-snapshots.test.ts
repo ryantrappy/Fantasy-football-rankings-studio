@@ -72,7 +72,11 @@ it('stores independent snapshots and reads them without provider calls or creden
   };
   delete original.records[1].data.reportingStartWeek;
   delete original.records[1].data.playerIdentities;
-  original.records[0].data.scores[0].starters = [{ playerId: '7', points: 100, position: 'QB' }];
+  original.records[0].data.scores[0].starters = [
+    { playerId: '7', points: 100, position: 'QB', projected: 95 },
+  ];
+  original.records[0].data.scores[0].projectionSource = 'Historical weekly ESPN projection';
+  original.records[0].data.scores[0].matchupWeeks = [1];
   original.records[0].data.forecastSchedule = [{ week: 2, homeTeamId: '1', awayTeamId: '2' }];
   original.records[0].data.regularSeasonSchedule = {
     endWeek: 3,
@@ -155,8 +159,13 @@ it('stores independent snapshots and reads them without provider calls or creden
     original.records[0].data.regularSeasonSchedule,
   );
   expect(saved.records[0].data.scores[0].starters).toEqual([
-    { playerId: '7', points: 100, position: 'QB' },
+    { playerId: '7', points: 100, position: 'QB', projected: 95 },
   ]);
+  expect(saved.records[0].data.scores[0].projectionSource).toBe(
+    'Historical weekly ESPN projection',
+  );
+  expect(saved.records[0].data.scores[0].matchupWeeks).toEqual([1]);
+  expect(saved.records[1].data.scores[0].projectionSource).toBeUndefined();
   expect(saved.records[0].data.playoffProjection?.positionPoints).toEqual(
     original.records[0].data.playoffProjection?.positionPoints,
   );

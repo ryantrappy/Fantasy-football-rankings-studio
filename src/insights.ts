@@ -34,10 +34,12 @@ export interface ScoreWeek {
   week: number;
   actual: number;
   projected: number | null;
+  projectionSource?: string;
+  matchupWeeks?: number[];
   opponentTeamId?: string | null;
   lineupAvailable?: boolean;
   rosterComplete?: boolean;
-  starters: { playerId: string; points: number; position?: string }[];
+  starters: { playerId: string; points: number; position?: string; projected?: number | null }[];
   players?: { playerId: string; points: number }[];
   bestLineup?: {
     points: number;
@@ -174,6 +176,8 @@ export interface SeasonInsights {
     projectionDelta: number | null;
     beatProjection: number;
     aboveMedian: number;
+    headToHeadRecord?: { wins: number; losses: number; ties: number };
+    medianRecord?: { wins: number; losses: number; ties: number };
     bestLineupPoints: number;
     lineupWeeks: number;
     correctStarts: number;

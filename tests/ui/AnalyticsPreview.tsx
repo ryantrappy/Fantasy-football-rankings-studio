@@ -72,6 +72,24 @@ const league = {
   leagueType: 0,
   seasonId: 2026,
 };
+// Explicit opt-in evidence for projection replay browser checks; existing
+// analytics fixtures and their scoring/export expectations remain unchanged.
+const projectionLuckData = calculateInsights({
+  ...analyticsData,
+  moves: analyticsData.moves ?? [],
+  scores: analyticsData.scores.map((score) => ({
+    ...score,
+    actual: score.starters.reduce((sum, player) => sum + player.points, 0),
+    starters: score.starters.map((player) => ({
+      ...player,
+      projected: player.points - (score.week % 2 ? 2 : -2),
+    })),
+    projectionSource: 'Historical weekly provider forecasts; browser fixture.',
+  })),
+  playerNames: { '1-RB': 'Breece Hall', '2-RB': 'James Cook' },
+  notes: [],
+  draftPickTrades: 0,
+});
 const api = {
   listLeagues: async () => [league],
   getLeague: async () => league,
@@ -81,7 +99,11 @@ const api = {
     activeManagerKeys: ['1', '2', '3'],
   }),
   getInsights: async (_id: string, year: number) =>
-    year === 2026 ? analyticsData : calibrationApi.getInsights(_id, year),
+    year === 2026
+      ? new URLSearchParams(location.search).has('projection-luck')
+        ? projectionLuckData
+        : analyticsData
+      : calibrationApi.getInsights(_id, year),
   managedTeam: { get: async () => ({ teamId: '1', needsReselection: false }) },
   dispose: () => {},
 };

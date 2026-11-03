@@ -14,6 +14,7 @@ import { espnPlayoffSettings, sleeperPlayoffSettings } from './playoff-settings'
 import { calculateInsights } from './calculate';
 import { archivePlayoffForecast } from './archive.server';
 import { cachedFutureProjection } from './projection-cache.server';
+import { historicalSleeperProjections } from './historical-projections.server';
 import { providerRequest } from '../providers/request-limit';
 import { mapConcurrent } from '../../util/map-concurrent';
 import {
@@ -233,16 +234,29 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   const [weekly, transactions] = await Promise.all([
     mapWeeks(
       weeksThrough(completedWeek).filter((week) => week >= (reportingStartWeek ?? 1)),
-      async (week) => ({
-        week,
-        rows: await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`),
-      }),
+      async (week) => {
+        const rows = await provider.get<SleeperScore[]>(`${season.league_id}/matchups/${week}`);
+        let projections = new Map<string, number>();
+        let projectionUnavailable = false;
+        if (
+          Object.keys(season.scoring_settings ?? {}).length &&
+          rows.some((row) => row.starters?.some((id) => id !== '0'))
+        ) {
+          try {
+            projections = await historicalSleeperProjections(year, week, season.scoring_settings!);
+          } catch (error) {
+            logServerError('insights.sleeperHistoricalProjections', error, 502);
+            projectionUnavailable = true;
+          }
+        }
+        return { week, rows, projections, projectionUnavailable };
+      },
     ),
     mapWeeks(weeksThrough(Math.min(18, completedWeek + 1)), (week) =>
       provider.get<SleeperTransaction[]>(`${season.league_id}/transactions/${week}`),
     ),
   ]);
-  const scores: ScoreWeek[] = weekly.flatMap(({ week, rows }) =>
+  const scores: ScoreWeek[] = weekly.flatMap(({ week, rows, projections }) =>
     rows.map((r) => ({
       teamId: String(r.roster_id),
       opponentTeamId:
@@ -257,6 +271,9 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
       week,
       actual: r.custom_points ?? r.points,
       projected: null,
+      projectionSource: projections.size
+        ? 'Sleeper historical weekly projections, scored with this season’s league settings; retrieved retrospectively, not independently archived pre-kickoff.'
+        : undefined,
       players: Object.entries(r.players_points || {})
         .filter(([, points]) => Number.isFinite(points))
         .map(([playerId, points]) => ({ playerId, points })),
@@ -275,6 +292,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
         .filter((id) => id !== '0')
         .map((playerId) => ({
           playerId,
+          ...(projections.has(playerId) ? { projected: projections.get(playerId)! } : {}),
           points:
             r.players_points?.[playerId] ??
             r.starters_points?.[(r.starters || []).indexOf(playerId)] ??
@@ -287,6 +305,14 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
   let playoffProjection: InsightsSource['playoffProjection'];
   let forecastContext: InsightsSource['forecastContext'];
   const partialFailures: NonNullable<InsightsSource['partialFailures']> = [];
+  const missingProjectionWeeks = weekly
+    .filter(({ projectionUnavailable }) => projectionUnavailable)
+    .map(({ week }) => week);
+  if (missingProjectionWeeks.length)
+    partialFailures.push({
+      section: 'Projection luck',
+      message: `Historical Sleeper projections could not be retrieved for weeks ${missingProjectionWeeks.join(', ')}; affected player projections and matchup replays remain unavailable.`,
+    });
   if (
     Number(state.season) === year &&
     state.season_type === 'regular' &&
@@ -546,7 +572,7 @@ async function loadSleeper(league: League, year: number): Promise<InsightsSource
     partialFailures,
     notes: [
       ...resultNotes,
-      'Sleeper’s documented API does not provide historical lineup projections. Scoring trends show actual points and league-median results instead. Positional comparisons use Sleeper’s current primary-position catalog.',
+      'Sleeper’s documented API does not provide historical lineup projections. Projection luck uses available season/week-specific forecasts from Sleeper’s undocumented projection endpoint, scored with the selected season’s league settings. These retrospective reads may reflect provider revisions and are not independently archived pre-kickoff snapshots. Scoring trends continue to show actual points and league-median results. Positional comparisons use Sleeper’s current primary-position catalog.',
     ],
   };
 }
@@ -705,6 +731,7 @@ async function loadEspn(
   const scores: ScoreWeek[] = [];
   for (const { week, data } of weekly) {
     const opponents = new Map<number, string>();
+    const matchupWeeks = new Map<number, number[]>();
     for (const matchup of data.schedule || []) {
       const { home, away } = matchup;
       if (
@@ -714,6 +741,15 @@ async function loadEspn(
       ) {
         opponents.set(home.teamId, String(away.teamId));
         opponents.set(away.teamId, String(home.teamId));
+        const settings = meta.settings?.scheduleSettings;
+        const published = settings?.matchupPeriods?.[String(matchup.matchupPeriodId)];
+        const weeks = published?.includes(week)
+          ? [...published].sort((a, b) => a - b)
+          : settings?.matchupPeriodLength === 1
+            ? [week]
+            : [];
+        matchupWeeks.set(home.teamId, weeks);
+        matchupWeeks.set(away.teamId, weeks);
       }
     }
     const sides = new Map<number, EspnSide>();
@@ -743,6 +779,7 @@ async function loadEspn(
       scores.push({
         teamId: String(side.teamId),
         opponentTeamId: opponents.get(side.teamId) ?? null,
+        matchupWeeks: matchupWeeks.get(side.teamId),
         week,
         actual: side.pointsByScoringPeriod![week],
         lineupAvailable:
@@ -752,9 +789,11 @@ async function loadEspn(
           .filter((e) => e.playerId != null && Number.isFinite(stat(e, 0)))
           .map((e) => ({ playerId: String(e.playerId), points: stat(e, 0)! })),
         projected:
-          lineup.length && projections.every((p) => p != null)
+          lineup.length && projections.every((p) => Number.isFinite(p))
             ? projections.reduce<number>((sum, p) => sum + p!, 0)
             : null,
+        projectionSource:
+          'ESPN historical weekly projections for this season and scoring period; retrieved retrospectively, not independently archived pre-kickoff.',
         rosterComplete:
           !!side.rosterForCurrentScoringPeriod &&
           entries.length > 0 &&
@@ -772,6 +811,7 @@ async function loadEspn(
           .map((e) => ({
             playerId: String(e.playerId),
             points: stat(e, 0)!,
+            projected: Number.isFinite(stat(e, 1)) ? stat(e, 1)! : null,
             position: playerPositions[String(e.playerId)],
           })),
       });

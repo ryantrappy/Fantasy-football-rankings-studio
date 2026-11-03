@@ -6,6 +6,7 @@ Read only when this area or a shared dependency is affected. Start at the [featu
 
 - **Optimize legal lineups from starters AND bench.** The user explicitly asks that projections not simply use the current starting lineup, so bye weeks and replacements are considered. Preserve legal slot eligibility, availability/locks, actual versus projected semantics, historical best-lineup scores, missed points, and weighted sit/start accuracy (TASK-49–TASK-52, TASK-80, TASK-91, TASK-134).
 - **Explain the numbers and limits.** Luck and other metrics need definitions, denominators, coverage and worked context. Keep regular-season versus final placement separate. Missing values are unavailable, not invented zeros; legitimate zero/negative points remain valid (TASK-4, TASK-5, TASK-40, TASK-112, TASK-113).
+- Team scoring shows real head-to-head W–L–T records, using only reciprocal recorded opponents, beside weekly W–L–T records against the league median. Older saved reports derive both records from their retained weekly scores; missing head-to-head coverage stays unavailable.
 
 ## Related areas and verification
 
@@ -20,6 +21,16 @@ Useful references/checks (starting points, not a substitute for inspecting affec
 ## Feature contracts
 
 Stable IDs trace to the original backlog. Criteria are requirements, not evidence that today’s code or deployment was tested. Load source requests/history only to resolve a specific detail. Later completed corrections refine earlier implementation details.
+
+### TASK-161 — Projection performance luck
+
+- Season Insights adds Projection luck alongside the existing views. Retain independent schedule luck, all existing evidence, actual starting lineups, selected-team state and team/week-aware CSVs. The week selector filters matchup/player details while team totals remain season-wide.
+- Preserve finite same-season/week historical player forecasts for ESPN and Sleeper, including zero/negative values, source disclosures and snapshot round trips. Retrospective provider forecasts may be revised and must never be described as immutable pre-kickoff captures. Legacy saved reports keep unavailable inputs unavailable.
+- Each eligible matchup receives exactly 100 deterministic independent-player normal draws centered on its weekly projections. Error sample variance uses earlier weeks only, preferring at least two player observations, otherwise at least two earlier same-position starter observations; show basis/sample counts and missing reasons. Variance measures variability, not projection bias, and the model makes no calibration claim.
+- Replay reciprocal recorded regular-season matchups and verified playoff games, aggregating published multiweek periods as one outcome. Exclude byes, unknown opponents/boundaries, duplicate team-weeks, incomplete or unreconciled scores, missing projections and insufficient history. Coverage and unmatched weeks remain explicit.
+- Real/simulated credits and own/opponent average scoring differences use identical successfully replayed matchups; ties receive half credit and exact complementary totals are retained. Disclose coarse 100-trial sampling uncertainty and independent-player/fixed-lineup limitations. See [calculations](../calculations.md).
+
+Source: [TASK-161](../../backlog/tasks/task-161%20-%20Measure-projection-performance-luck-with-100-historical-matchup-replays.md).
 
 ### TASK-4 — Improve documentation of how calculations are done
 

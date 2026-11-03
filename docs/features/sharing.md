@@ -69,6 +69,7 @@ Source: [TASK-45](../../backlog/tasks/task-45%20-%20Reuse-public-league-data-for
 - The viewer identifies when the snapshot was saved, keeps report views inside the saved seasons, and provides actionable errors for unavailable links or failed saves.
 - Tests cover persistence, isolation, public rendering and sharing; documentation describes snapshot behavior.
 - Snapshots expire 10 days after creation, are denied immediately after expiration, and are automatically deleted even when the application was offline at the expiration time.
+- TASK-161 retains optional historical starter projections, their retrospective source text and published matchup weeks in snapshots. Projection luck can replay saved inputs without provider access; older snapshots remain readable with unavailable projection/replay values.
 
 Source: [TASK-54](../../backlog/tasks/task-54%20-%20ESPN-sharing-snapshot.md).
 

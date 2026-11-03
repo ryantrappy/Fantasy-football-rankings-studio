@@ -12,6 +12,68 @@ vi.mock('./projection-cache.server', () => ({
 }));
 afterEach(() => vi.restoreAllMocks());
 const teams = [{ teamId: '1', teamName: 'One', managerName: 'A', wins: 0, loss: 0, ties: 0 }];
+it.each([true, false])(
+  'retains ESPN multiweek matchup boundaries only when published (%s)',
+  async (published) => {
+    vi.spyOn(EspnProvider.prototype, 'getTeams').mockResolvedValue([
+      ...teams,
+      { ...teams[0], teamId: '2' },
+    ]);
+    vi.spyOn(EspnProvider.prototype, 'get').mockImplementation(
+      async (_id, _year, views, week): Promise<any> => {
+        if (views.includes('mSettings'))
+          return {
+            id: 123,
+            status: { latestScoringPeriod: 3, finalScoringPeriod: 2 },
+            settings: {
+              scheduleSettings: {
+                matchupPeriodCount: 1,
+                matchupPeriodLength: 2,
+                playoffTeamCount: 2,
+                matchupPeriods: published ? { '1': [1, 2] } : undefined,
+              },
+            },
+          };
+        if (views.includes('mTransactions2')) return { id: 123, transactions: [] };
+        const side = (teamId: number) => ({
+          teamId,
+          pointsByScoringPeriod: { [week!]: 10 },
+          rosterForCurrentScoringPeriod: {
+            entries: [
+              {
+                playerId: teamId,
+                lineupSlotId: 2,
+                playerPoolEntry: {
+                  player: {
+                    id: teamId,
+                    defaultPositionId: 2,
+                    stats: [0, 1].map((statSourceId) => ({
+                      seasonId: 2025,
+                      scoringPeriodId: week,
+                      statSourceId,
+                      statSplitTypeId: 1,
+                      appliedTotal: 10,
+                    })),
+                  },
+                },
+              },
+            ],
+          },
+        });
+        return {
+          id: 123,
+          schedule: [{ matchupPeriodId: 1, playoffTierType: 'NONE', home: side(1), away: side(2) }],
+        };
+      },
+    );
+    const result = await loadInsightsSource(
+      { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: 2025 },
+      2025,
+    );
+    expect(result.scores).toHaveLength(4);
+    for (const score of result.scores) expect(score.matchupWeeks).toEqual(published ? [1, 2] : []);
+  },
+);
 it('loads historical ESPN playoff labels without requiring current managers', async () => {
   const historicalTeams = Array.from({ length: 8 }, (_, i) => ({
     ...teams[0],
@@ -179,9 +241,11 @@ it('uses ESPN weekly scores and starter projections, excluding bench, wrong seas
   expect(result.scores[1]).toMatchObject({
     actual: 10,
     projected: 15,
-    starters: [{ playerId: '7', points: 10, position: 'RB' }],
+    starters: [{ playerId: '7', points: 10, projected: 15, position: 'RB' }],
   });
   expect(result.scores[0].projected).toBeNull();
+  expect(result.scores[0].starters).toEqual([]);
+  expect(result.scores[1].projectionSource).toContain('retrieved retrospectively');
   expect(result.pickups).toHaveLength(1);
   expect(result.pickups[0]).toMatchObject({ points: 10, starts: 1 });
   expect(result.playoffSettings).toMatchObject({ regularSeasonEnd: 10, playoffTeams: 4 });
@@ -247,6 +311,135 @@ it.each([1, 2, 3])(
     expect(read.mock.calls.map(([path]) => path)).not.toContain('123/matchups/3');
   },
 );
+it.each([false, true])(
+  'attaches historical Sleeper forecasts to actual starters without replacing unavailable values (outage: %s)',
+  async (outage) => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const read = vi.mocked(axios.get).mockImplementation(async (url): Promise<any> => {
+      const path = String(url);
+      if (path.includes('/state/nfl'))
+        return { data: { season: '2026', leg: 1, season_type: 'regular' } };
+      if (path.endsWith('/projections/nfl/2025/1'))
+        return {
+          data: [
+            { player_id: 'a', stats: { rush_yd: 100 } },
+            { player_id: 'zero', stats: { rush_yd: 0 } },
+            { player_id: 'negative', stats: { rush_yd: -20 } },
+            { player_id: 'bench', stats: { rush_yd: 900 } },
+          ],
+        };
+      if (path.endsWith('/projections/nfl/2025/2')) {
+        if (outage) throw new Error('Historical forecast temporarily unavailable');
+        return { data: [{ player_id: 'a', stats: { unrelated_stat: 10 } }] };
+      }
+      return { data: {} };
+    });
+    vi.spyOn(SleeperProvider.prototype, 'resolveSeason').mockResolvedValue({
+      league_id: '123',
+      name: 'League',
+      season: '2025',
+      total_rosters: 1,
+      settings: { last_scored_leg: 2 },
+      scoring_settings: { rush_yd: 0.1 },
+    });
+    vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
+    const providerRead = vi
+      .spyOn(SleeperProvider.prototype, 'get')
+      .mockImplementation(async (path): Promise<any> =>
+        path.includes('/matchups/')
+          ? [
+              {
+                roster_id: 1,
+                points: 20,
+                starters: ['a', 'zero', 'negative', 'missing'],
+                players_points: { a: 15, zero: 2, negative: 3, missing: 0, bench: 40 },
+              },
+            ]
+          : [],
+      );
+    const result = await loadInsightsSource(
+      { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2025 },
+      2025,
+    );
+    expect(result.scores[0].starters).toEqual([
+      { playerId: 'a', points: 15, projected: 10 },
+      { playerId: 'zero', points: 2, projected: 0 },
+      { playerId: 'negative', points: 3, projected: -2 },
+      { playerId: 'missing', points: 0 },
+    ]);
+    expect(result.scores[0].projected).toBeNull();
+    expect(result.scores[0].projectionSource).toContain('not independently archived pre-kickoff');
+    expect(result.scores[1].starters.every((player) => player.projected === undefined)).toBe(true);
+    expect(result.scores[1].actual).toBe(20);
+    expect(result.partialFailures?.some((failure) => failure.section === 'Projection luck')).toBe(
+      outage,
+    );
+    expect(
+      read.mock.calls.filter(([url]) => String(url).includes('/projections/')).map(([url]) => url),
+    ).toEqual([
+      'https://api.sleeper.app/projections/nfl/2025/1',
+      'https://api.sleeper.app/projections/nfl/2025/2',
+    ]);
+    expect(providerRead.mock.calls.map(([path]) => path)).not.toContain('123/rosters');
+  },
+);
+
+it('preserves ESPN zero/negative player forecasts and rejects wrong period, split, season and nonfinite values', async () => {
+  vi.spyOn(EspnProvider.prototype, 'getTeams').mockResolvedValue(teams);
+  const projection = (appliedTotal: number) => ({
+    seasonId: 2025,
+    scoringPeriodId: 1,
+    statSourceId: 1,
+    statSplitTypeId: 1,
+    appliedTotal,
+  });
+  const wrong = [
+    { ...projection(999), seasonId: 2024 },
+    { ...projection(999), scoringPeriodId: 2 },
+    { ...projection(999), statSplitTypeId: 0 },
+  ];
+  vi.spyOn(EspnProvider.prototype, 'get').mockImplementation(
+    async (_id, _year, views): Promise<any> => {
+      if (views.includes('mSettings'))
+        return { id: 123, status: { latestScoringPeriod: 2, finalScoringPeriod: 1 } };
+      if (views.includes('mTransactions2')) return { id: 123, transactions: [] };
+      return {
+        id: 123,
+        schedule: [
+          {
+            home: {
+              teamId: 1,
+              pointsByScoringPeriod: { 1: 10 },
+              rosterForCurrentScoringPeriod: {
+                entries: [0, -2, undefined, Infinity].map((points, index) => ({
+                  playerId: index + 1,
+                  lineupSlotId: 2,
+                  playerPoolEntry: {
+                    player: {
+                      id: index + 1,
+                      stats: [
+                        { ...projection(3), statSourceId: 0 },
+                        ...wrong,
+                        ...(points === undefined ? [] : [projection(points)]),
+                      ],
+                    },
+                  },
+                })),
+              },
+            },
+          },
+        ],
+      };
+    },
+  );
+  const result = await loadInsightsSource(
+    { leagueId: '123', leagueName: 'League', leagueType: 1, seasonId: 2025 },
+    2025,
+  );
+  expect(result.scores[0].starters.map((player) => player.projected)).toEqual([0, -2, null, null]);
+  expect(result.scores[0].projected).toBeNull();
+});
+
 it('keeps insights available when current Sleeper projections fail', async () => {
   const year = defaultSeason();
   vi.spyOn(console, 'error').mockImplementation(() => undefined);

@@ -8,7 +8,12 @@ const num = z.number();
 const count = z.number().int().nonnegative();
 const year = z.number().int().min(2000).max(2100);
 const strings = z.array(text).max(10000);
-const player = z.object({ playerId: text, points: num, position: text.optional() });
+const player = z.object({
+  playerId: text,
+  points: num,
+  position: text.optional(),
+  projected: num.nullable().optional(),
+});
 const weeklyProjection = z.object({
   unavailablePlayers: count.optional(),
   uncertainPlayers: count.optional(),
@@ -155,6 +160,8 @@ const season: z.ZodType<SeasonInsights> = z.object({
         projectionDelta: num.nullable(),
         beatProjection: count,
         aboveMedian: count,
+        headToHeadRecord: z.object({ wins: count, losses: count, ties: count }).optional(),
+        medianRecord: z.object({ wins: count, losses: count, ties: count }).optional(),
         bestLineupPoints: num,
         lineupWeeks: count,
         correctStarts: count,
@@ -174,6 +181,8 @@ const season: z.ZodType<SeasonInsights> = z.object({
         week: num,
         actual: num,
         projected: num.nullable(),
+        projectionSource: text.optional(),
+        matchupWeeks: z.array(count.min(1).max(18)).max(18).optional(),
         opponentTeamId: text.nullable().optional(),
         lineupAvailable: z.boolean().optional(),
         rosterComplete: z.boolean().optional(),

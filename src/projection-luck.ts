@@ -70,9 +70,26 @@ export function projectionLuck(data: SeasonInsights) {
   const byKey = new Map(unique.map((s) => [key(s), s]));
   const playerHistory = new Map<string, Moments>();
   const positionHistory = new Map<string, Moments>();
+  const leagueHistory = new Map<string, Moments>();
   const models = new Map<string, TeamWeek>();
   const players: PlayerPerformance[] = [];
   const weeks = [...new Set(unique.map((s) => s.week))];
+  const varianceFor = (own: Moments | undefined, group: Moments | undefined, all: Moments | undefined) => {
+    const history =
+      own && own.n >= 2
+        ? own
+        : group && group.n >= 2
+          ? group
+          : all && all.n >= 1
+            ? all
+            : undefined;
+    if (!history) return { variance: null as number | null, samples: own?.n ?? group?.n ?? all?.n ?? 0, basis: null as const };
+    return {
+      variance: history.n > 1 ? Math.max(0, history.m2 / (history.n - 1)) : 0,
+      samples: history.n,
+      basis: history === own ? ('player' as const) : history === group ? ('position' as const) : null,
+    };
+  };
   for (const week of weeks) {
     const weekly = unique.filter((s) => s.week === week);
     // Build every model before observing this week's outcomes: even another
@@ -83,7 +100,8 @@ export function projectionLuck(data: SeasonInsights) {
         const own = playerHistory.get(p.playerId);
         const position = p.position ?? data.playerIdentities?.[p.playerId]?.position;
         const group = position ? positionHistory.get(position) : undefined;
-        const history = own && own.n >= 2 ? own : group && group.n >= 2 ? group : undefined;
+        const all = leagueHistory.get('__league__');
+        const history = varianceFor(own, group, all);
         return {
           teamId: score.teamId,
           week,
@@ -92,9 +110,9 @@ export function projectionLuck(data: SeasonInsights) {
           actual: finite(p.points) ? p.points : null,
           projected: finite(p.projected) ? p.projected : null,
           difference: finite(p.projected) && finite(p.points) ? p.points - p.projected : null,
-          variance: history ? Math.max(0, history.m2 / (history.n - 1)) : null,
-          samples: history?.n ?? own?.n ?? 0,
-          basis: history ? (history === own ? 'player' : 'position') : null,
+          variance: history.variance,
+          samples: history.samples,
+          basis: history.basis,
         };
       });
       // Ambiguous duplicate player rows cannot supply trustworthy player evidence.
@@ -113,9 +131,7 @@ export function projectionLuck(data: SeasonInsights) {
         ? 'Incomplete starter scores or weekly player projections.'
         : !reconciles
           ? 'Starter points do not reconcile with the recorded team score (possible override).'
-          : rows.some((p) => p.variance === null)
-            ? 'Insufficient earlier-week player or same-position variance history (minimum 2 observations).'
-            : undefined;
+          : undefined;
       models.set(key(score), {
         teamId: score.teamId,
         actual: score.actual,
@@ -135,6 +151,7 @@ export function projectionLuck(data: SeasonInsights) {
         if (!finite(p.projected) || !finite(p.points)) continue;
         const residual = p.points - p.projected;
         observe(playerHistory, p.playerId, residual);
+        observe(leagueHistory, '__league__', residual);
         const position = p.position ?? data.playerIdentities?.[p.playerId]?.position;
         if (position) observe(positionHistory, position, residual);
       }

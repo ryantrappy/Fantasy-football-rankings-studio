@@ -32,8 +32,8 @@ it('uses earlier player residuals, replays each eligible pair exactly 100 times 
   const result = projectionLuck(report());
   expect(MATCHUP_REPLAYS).toBe(100);
   expect(result.matchups).toHaveLength(3);
-  expect(result.matchups[0]).toMatchObject({ wins: null, homeExpectedWin: null });
-  expect(result.matchups[0].reason).toContain('Insufficient');
+  expect(result.matchups[0]).toMatchObject({ wins: 0, homeExpectedWin: 0.5 });
+  expect(result.matchups[0].reason).toBeUndefined();
   expect(result.players.find((p) => p.playerId === 'a' && p.week === 3)).toMatchObject({
     variance: 8,
     samples: 2,

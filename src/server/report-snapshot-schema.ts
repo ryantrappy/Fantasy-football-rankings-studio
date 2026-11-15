@@ -162,6 +162,14 @@ const season: z.ZodType<SeasonInsights> = z.object({
         aboveMedian: count,
         headToHeadRecord: z.object({ wins: count, losses: count, ties: count }).optional(),
         medianRecord: z.object({ wins: count, losses: count, ties: count }).optional(),
+        // Halves from ties, so these are numbers rather than counts; defaulted
+        // so snapshots saved before this change still parse (10-day expiry).
+        actualWins: num.default(0),
+        actualLosses: num.default(0),
+        medianWins: num.default(0),
+        medianLosses: num.default(0),
+        combinedWins: num.default(0),
+        combinedLosses: num.default(0),
         bestLineupPoints: num,
         lineupWeeks: count,
         correctStarts: count,

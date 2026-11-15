@@ -44,6 +44,7 @@ const signed = (value: number | null) =>
   value === null ? '—' : `${value > 0 ? '+' : ''}${number(value)}`;
 const accuracy = (correctStarts: number, slots: number) =>
   slots ? (correctStarts / slots) * 100 : null;
+const formatRecord = (wins: number, losses: number) => `${number(wins)}–${number(losses)}`;
 function recordFromScores(scores: ScoreWeek[], teamId: string, againstMedian: boolean) {
   const record = { wins: 0, losses: 0, ties: 0 };
   const rows = scores.filter((score) => score.teamId === teamId);
@@ -643,6 +644,24 @@ export function InsightsPage({
                                     t.medianRecord || recordFromScores(data.scores, t.teamId, true);
                                   return wins + losses + ties ? `${wins}–${losses}–${ties}` : '—';
                                 },
+                              },
+                              {
+                                id: 'combinedRecord',
+                                header: 'Combined record',
+                                headerTooltip:
+                                  'Combined record: actual head-to-head wins plus wins against the weekly league median. A tie counts as half a win and half a loss in each part.',
+                                value: (t) => t.combinedWins,
+                                exportValue: (t) =>
+                                  `${formatRecord(t.combinedWins, t.combinedLosses)} (${formatRecord(t.actualWins, t.actualLosses)} actual · ${formatRecord(t.medianWins, t.medianLosses)} vs median)`,
+                                cell: (t) => (
+                                  <>
+                                    {formatRecord(t.combinedWins, t.combinedLosses)}
+                                    <small>
+                                      ({formatRecord(t.actualWins, t.actualLosses)} actual ·{' '}
+                                      {formatRecord(t.medianWins, t.medianLosses)} vs median)
+                                    </small>
+                                  </>
+                                ),
                               },
                               {
                                 id: '4',

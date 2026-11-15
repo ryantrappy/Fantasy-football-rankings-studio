@@ -101,6 +101,41 @@ it('starts with focused team scoring and preserves exact weekly evidence and tea
   expect(screen.getByText('No completed pickups returned for this selection.')).toBeVisible();
 }, 15_000);
 
+it('shows the combined record column and sorts Team scoring by combined wins', async () => {
+  api.listLeagues.mockResolvedValue([
+    { leagueId: 'one', leagueName: 'League', leagueType: 0, seasonId: 2026 },
+  ]);
+  api.getLeagueSeasons.mockResolvedValue({ activeManagerKeys: [], activeSeason: 2026 });
+  api.getInsights.mockResolvedValue(strengthData);
+  render(
+    <ChakraProvider value={defaultSystem}>
+      <InsightsPage search={{ leagueId: 'one', year: 2026 }} navigate={vi.fn()} />
+    </ChakraProvider>,
+  );
+  const scoring = await screen.findByRole('table', { name: 'Team scoring' });
+  const header = within(scoring).getByRole('columnheader', { name: /Combined record/ });
+  expect(header).toHaveAttribute('title', expect.stringContaining('weekly league median'));
+  const rows = () => within(scoring).getAllByRole('row').slice(1);
+  const rowNames = () =>
+    within(scoring)
+      .getAllByRole('rowheader')
+      .map((row) => row.textContent);
+  // strengthData has no head-to-head links, so the split is all vs-median:
+  // the top scorers are 4–0 against the median, the bottom two 0–4.
+  expect(rows()[0].textContent).toContain('4–0');
+  expect(rows()[0].textContent).toContain('0–0 actual');
+  expect(rows()[0].textContent).toContain('4–0 vs median');
+  expect(rows()[3].textContent).toContain('0–4');
+  fireEvent.click(within(header).getByRole('button'));
+  expect(header).toHaveAttribute('aria-sort', 'ascending');
+  expect(rowNames()[0]).toContain('Fourth & Long');
+  expect(rowNames()[3]).toContain('The Underdogs');
+  fireEvent.click(within(header).getByRole('button'));
+  expect(header).toHaveAttribute('aria-sort', 'descending');
+  expect(rowNames()[0]).toContain('End Zone Experts');
+  expect(rowNames()[3]).toContain('Sunday Stunners');
+});
+
 it('clears charts and managed-team identity while a new league report is pending', async () => {
   api.listLeagues.mockResolvedValue(
     ['one', 'two'].map((leagueId) => ({

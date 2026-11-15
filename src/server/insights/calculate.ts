@@ -132,6 +132,13 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
       else if (row.actual < opponent.actual) headToHeadRecord.losses++;
       else headToHeadRecord.ties++;
     }
+    // Combined record reuses the two records above: a tie counts as half a
+    // win and half a loss in each part, so wins + losses always equals games
+    // played in that part.
+    const actualWins = headToHeadRecord.wins + headToHeadRecord.ties * 0.5;
+    const actualLosses = headToHeadRecord.losses + headToHeadRecord.ties * 0.5;
+    const medianWins = medianRecord.wins + medianRecord.ties * 0.5;
+    const medianLosses = medianRecord.losses + medianRecord.ties * 0.5;
     const projections = rows.filter((s) => s.projected !== null);
     const lineupRows = rows.filter((s) => s.bestLineup);
     const teamTrades = trades.filter((t) => t.teamId === team.teamId);
@@ -154,6 +161,12 @@ export function calculateInsights(source: InsightsSource): SeasonInsights {
       aboveMedian: medianRecord.wins,
       headToHeadRecord,
       medianRecord,
+      actualWins,
+      actualLosses,
+      medianWins,
+      medianLosses,
+      combinedWins: actualWins + medianWins,
+      combinedLosses: actualLosses + medianLosses,
       bestLineupPoints: round(lineupRows.reduce((sum, r) => sum + r.bestLineup!.points, 0)),
       lineupWeeks: lineupRows.length,
       correctStarts: lineupRows.reduce((sum, r) => sum + r.bestLineup!.correctStarts, 0),

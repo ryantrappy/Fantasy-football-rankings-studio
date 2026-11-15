@@ -1,4 +1,5 @@
 import './data-table.css';
+import { logClientError } from '../logging';
 import {
   createContext,
   useContext,
@@ -106,6 +107,35 @@ function downloadCsv(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Copy the live table's computed styles onto the detached clone. Scoped rules
+ * such as `.history-explorer .insight-table` only match inside their
+ * ancestor, so without this the clone renders with fallback fonts and padding
+ * and lays out wider than the on-screen table.
+ */
+function copyComputedStyles(source: Element, target: Element) {
+  const view = source.ownerDocument.defaultView || window;
+  const sources = [source, ...source.querySelectorAll('*')];
+  const targets = [target, ...target.querySelectorAll('*')];
+  sources.forEach((node, index) => {
+    const cloneNode = targets[index] as HTMLElement | undefined;
+    if (!cloneNode) return;
+    const computed = view.getComputedStyle(node);
+    if (computed.cssText) {
+      cloneNode.style.cssText = computed.cssText;
+    } else {
+      for (let i = 0; i < computed.length; i++) {
+        const property = computed[i];
+        cloneNode.style.setProperty(
+          property,
+          computed.getPropertyValue(property),
+          computed.getPropertyPriority(property),
+        );
+      }
+    }
+  });
+}
+
 /** Values drive sorting; cell formatting never affects numeric order. */
 export function DataTable<T extends object>({
   data,
@@ -145,6 +175,56 @@ export function DataTable<T extends object>({
   }, []);
   const exportScope = useContext(ReportExportContext);
   const descriptionId = useId();
+  const [exportingImage, setExportingImage] = useState(false);
+  const [imageExportError, setImageExportError] = useState('');
+
+  /** PNG export mirrors RankingEditor's download(): clone, strip sort controls, toPng. */
+  async function downloadPng() {
+    const table = tableElement.current;
+    if (!table || exportingImage || !exportScope) return;
+    setExportingImage(true);
+    setImageExportError('');
+    const exportHost = document.createElement('div');
+    exportHost.setAttribute('aria-hidden', 'true');
+    exportHost.style.cssText = 'position:fixed;left:-100000px;top:0;pointer-events:none';
+    try {
+      await document.fonts?.ready;
+      const { toPng } = await import('html-to-image');
+      const canvas = table.cloneNode(true) as HTMLTableElement;
+      copyComputedStyles(table, canvas);
+      // Capture the full table width, not just the slice visible inside the
+      // horizontally scrolling .insight-table-wrap.
+      const fullWidth = table.scrollWidth || table.getBoundingClientRect().width;
+      canvas.style.width = `${fullWidth}px`;
+      canvas.style.maxWidth = 'none';
+      // Export header labels without the interactive table's sorting controls.
+      canvas.querySelectorAll('.table-sort-indicator').forEach((indicator) => indicator.remove());
+      canvas.querySelectorAll('.table-sort-button').forEach((button) => {
+        button.replaceWith(document.createTextNode(button.textContent || ''));
+      });
+      exportHost.appendChild(canvas);
+      document.body.appendChild(exportHost);
+      const image = await toPng(canvas, {
+        pixelRatio: 1,
+        backgroundColor: '#f8f8f2',
+        style: { zoom: '1' },
+      });
+      const link = document.createElement('a');
+      link.download = `fantasy-rankings-${safeFilenamePart(label)}-${safeFilenamePart(exportScope.filenameContext)}.png`;
+      link.href = image;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      logClientError('DataTable', error);
+      setImageExportError(
+        `Image export failed: ${error instanceof Error ? error.message : 'Something went wrong. Please try again.'}`,
+      );
+    } finally {
+      exportHost.remove();
+      setExportingImage(false);
+    }
+  }
   const visibleColumns = useMemo(
     () =>
       columns.filter(
@@ -193,23 +273,38 @@ export function DataTable<T extends object>({
   return (
     <>
       {exportScope && (
-        <button
-          type="button"
-          className="table-export-button"
-          onClick={() =>
-            downloadCsv(
-              `fantasy-rankings-${safeFilenamePart(label)}-${safeFilenamePart(exportScope.filenameContext)}.csv`,
-              buildTableCsv({
-                label,
-                context: exportScope.context,
-                columns,
-                rows: visibleRows.map((row) => row.original),
-              }),
-            )
-          }
-        >
-          Download {label} CSV
-        </button>
+        <div className="table-export-actions">
+          <button
+            type="button"
+            className="table-export-button"
+            onClick={() =>
+              downloadCsv(
+                `fantasy-rankings-${safeFilenamePart(label)}-${safeFilenamePart(exportScope.filenameContext)}.csv`,
+                buildTableCsv({
+                  label,
+                  context: exportScope.context,
+                  columns,
+                  rows: visibleRows.map((row) => row.original),
+                }),
+              )
+            }
+          >
+            Download {label} CSV
+          </button>
+          <button
+            type="button"
+            className="table-export-button"
+            onClick={() => void downloadPng()}
+            disabled={exportingImage}
+          >
+            {exportingImage ? 'Exporting image…' : `Download ${label} PNG`}
+          </button>
+        </div>
+      )}
+      {imageExportError && (
+        <p role="alert" className="table-export-error">
+          {imageExportError}
+        </p>
       )}
       {overflows && (
         <p className="table-overflow-cue" id={`${descriptionId}-overflow`}>

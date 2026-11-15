@@ -104,6 +104,111 @@ it('uses a strict league-median comparison including ties and negative points', 
   );
   expect(result.teams.map((t) => t.aboveMedian)).toEqual([2, 0]);
 });
+it('combines actual head-to-head and vs-median records across completed weeks', () => {
+  const fourTeam = (scores: ScoreWeek[]): InsightsSource => ({
+    ...source([]),
+    teams: ['1', '2', '3', '4'].map((teamId) => ({
+      teamId,
+      teamName: `Team ${teamId}`,
+      managerName: `Manager ${teamId}`,
+    })),
+    scores,
+  });
+  const game = (teamId: string, week: number, actual: number, opponentTeamId: string) => ({
+    ...score(teamId, week, actual),
+    opponentTeamId,
+  });
+  const result = calculateInsights(
+    fourTeam([
+      game('1', 1, 120, '2'),
+      game('2', 1, 100, '1'),
+      game('3', 1, 90, '4'),
+      game('4', 1, 80, '3'),
+      game('1', 2, 90, '2'),
+      game('2', 2, 110, '1'),
+      game('3', 2, 100, '4'),
+      game('4', 2, 70, '3'),
+    ]),
+  );
+  expect(result.teams.map((t) => [t.actualWins, t.actualLosses])).toEqual([
+    [1, 1],
+    [1, 1],
+    [2, 0],
+    [0, 2],
+  ]);
+  expect(result.teams.map((t) => [t.medianWins, t.medianLosses])).toEqual([
+    [1, 1],
+    [2, 0],
+    [1, 1],
+    [0, 2],
+  ]);
+  expect(result.teams.map((t) => [t.combinedWins, t.combinedLosses])).toEqual([
+    [2, 2],
+    [3, 1],
+    [3, 1],
+    [0, 4],
+  ]);
+});
+it('counts a tied week as half a win and half a loss in both record parts', () => {
+  const result = calculateInsights(
+    source([
+      { ...score('1', 1, 100), opponentTeamId: '2' },
+      { ...score('2', 1, 100), opponentTeamId: '1' },
+    ]),
+  );
+  expect(result.teams.map((t) => t.aboveMedian)).toEqual([0, 0]);
+  expect(result.teams.map((t) => [t.actualWins, t.actualLosses])).toEqual([
+    [0.5, 0.5],
+    [0.5, 0.5],
+  ]);
+  expect(result.teams.map((t) => [t.medianWins, t.medianLosses])).toEqual([
+    [0.5, 0.5],
+    [0.5, 0.5],
+  ]);
+  expect(result.teams.map((t) => [t.combinedWins, t.combinedLosses])).toEqual([
+    [1, 1],
+    [1, 1],
+  ]);
+});
+it('ignores head-to-head games without a reciprocal opponent link', () => {
+  const result = calculateInsights(
+    source([
+      { ...score('1', 1, 120), opponentTeamId: '2' },
+      score('2', 1, 100),
+      { ...score('1', 2, 90), opponentTeamId: '2' },
+      { ...score('2', 2, 110), opponentTeamId: '3' },
+    ]),
+  );
+  expect(result.teams.map((t) => [t.actualWins, t.actualLosses])).toEqual([
+    [0, 0],
+    [0, 0],
+  ]);
+  expect(result.teams.map((t) => [t.medianWins, t.medianLosses])).toEqual([
+    [1, 1],
+    [1, 1],
+  ]);
+  expect(result.teams.map((t) => [t.combinedWins, t.combinedLosses])).toEqual([
+    [1, 1],
+    [1, 1],
+  ]);
+});
+it('gives a team with no completed weeks a zero combined record', () => {
+  const result = calculateInsights(source([score('1', 5, 100)]));
+  expect(result.teams.map((t) => t.weeks)).toEqual([0, 0]);
+  expect(
+    result.teams.map((t) => [
+      t.actualWins,
+      t.actualLosses,
+      t.medianWins,
+      t.medianLosses,
+      t.combinedWins,
+      t.combinedLosses,
+    ]),
+  ).toEqual([
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+  ]);
+});
 it('credits pickups only after acquisition and before the next move, without double counting reacquisition', () => {
   const moves: PlayerMove[] = [
     { id: 'a', week: 1, timestamp: 1, type: 'pickup', playerId: 'p', from: null, to: '1' },

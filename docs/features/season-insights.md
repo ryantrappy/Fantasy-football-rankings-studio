@@ -61,6 +61,12 @@ Source: [TASK-28](../../backlog/tasks/task-28%20-%20Compare-two-managers-over-se
 
 Source: [TASK-29](../../backlog/tasks/task-29%20-%20Download-report-tables-as-CSV.md).
 
+### TASK-148 — Download report tables as PNG images
+
+- Every Season Insights and League History table offers a PNG download beside its CSV download, implemented once in the shared table component so all twelve tables are covered.
+- Exported images capture the table's full width, including columns hidden behind horizontal scrolling, and show plain header text instead of the interactive sort controls.
+- Image files use the same `fantasy-rankings-{table}-{league}-{season}.png` naming as the CSV exports.
+
 ### TASK-40 — Average regular season placement as well as end of season placement in separate columns
 
 - League History calculates regular-season placement only after the configured regular season is complete and complete league scoring data is available.
@@ -141,6 +147,21 @@ Source: [TASK-156](../../backlog/tasks/task-156%20-%20Ability-to-filter-the-Comp
 - Tests cover missing opening weeks, legitimate late starts, missing intermediate weeks, no completed weeks, snapshot round trips and UI coverage labels; formulas are updated.
 
 Source: [TASK-113](../../backlog/tasks/task-113%20-%20Preserve-the-configured-season-start-when-measuring-completed-position-coverage.md).
+
+### TASK-149 — Add a combined record to Team scoring
+
+- Team scoring shows a Combined record column after the Real record and
+  Against median columns: the actual head-to-head record plus the record
+  against the weekly league median, with the split shown (for example
+  `12–5 (7–3 actual · 5–2 vs median)`).
+- A head-to-head week counts only with reciprocal opponent IDs; a vs-median week
+  is a win above the weekly median, a loss below it, and a tie on it. A tie
+  counts as half a win and half a loss in each part, so wins plus losses always
+  equals games played in that part.
+- The column sorts by combined wins and its CSV export carries the same
+  combined record and split. Teams with no completed weeks show `0–0`.
+- Snapshot payloads saved before this change still parse, defaulting the new
+  record fields to zero (snapshots expire after 10 days).
 
 ### TASK-146 — Focused season analytics
 

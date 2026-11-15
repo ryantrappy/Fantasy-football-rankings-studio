@@ -86,21 +86,25 @@ inputs remain readable but do not fabricate projections or replay results.
 
 ## Scoring
 
-| Display                          | Calculation / denominator                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------ |
-| Avg. points                      | Total observed points / observed weeks                                                     |
-| Best week                        | Maximum observed points                                                                    |
-| Above median                     | Count of weeks strictly above the weekly league median / observed weeks                    |
-| Against median record            | Weekly W–L–T against the league median, including ties with the median                     |
-| Real record                      | Weekly W–L–T against reciprocal recorded head-to-head opponents; unavailable without games |
-| Avg. vs. median                  | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks        |
-| Best week vs. median             | Week with the highest relative median percentage, not necessarily the highest points       |
-| All-play win rate                | `100 × (wins + half ties) / comparisons` against every other observed team each week       |
-| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections                          |
-| Beat projection                  | Strictly positive differences / projected weeks                                            |
+| Display                          | Calculation / denominator                                                                                                                                                   |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Avg. points                      | Total observed points / observed weeks                                                                                                                                      |
+| Best week                        | Maximum observed points                                                                                                                                                     |
+| Above median                     | Count of weeks strictly above the weekly league median / observed weeks                                                                                                     |
+| Against median record            | Weekly W–L–T against the league median, including ties with the median                                                                                                      |
+| Real record                      | Weekly W–L–T against reciprocal recorded head-to-head opponents; unavailable without games                                                                                  |
+| Combined record                  | Head-to-head record plus record against the weekly league median; each part is wins–losses over observed weeks, and a tie counts as half a win and half a loss in each part |
+| Avg. vs. median                  | Mean of `100 × (score − weekly median) / weekly median`; only positive-median weeks                                                                                         |
+| Best week vs. median             | Week with the highest relative median percentage, not necessarily the highest points                                                                                        |
+| All-play win rate                | `100 × (wins + half ties) / comparisons` against every other observed team each week                                                                                        |
+| Difference / Avg. vs. projection | Actual minus projection; average only over weeks with projections                                                                                                           |
+| Beat projection                  | Strictly positive differences / projected weeks                                                                                                                             |
 
 The median is the middle sorted score, or the average of the two middle scores.
-The team's own score participates in the league median. Median records and scoring include all
+The team's own score participates in the league median. The combined record adds
+the actual head-to-head record (a week counts only with reciprocal opponent IDs,
+as in schedule luck) to the record against the weekly league median (a win above
+it, a loss below it, a tie on it). Median records and scoring include all
 observed completed weeks, including playoffs; partial league sets may contribute
 to median/all-play values but never to schedule luck. A zero score is valid.
 Missing projections remain unavailable. Sleeper's existing scoring trends retain

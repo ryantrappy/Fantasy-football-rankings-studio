@@ -504,6 +504,21 @@ header :focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
+.table-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+.table-export-actions .table-export-button {
+  margin: 0;
+}
+.table-export-error {
+  margin: 0 0 0.75rem;
+  color: #8f2929;
+  text-align: right;
+}
 .table-sort-button:hover {
   text-decoration: underline;
 }

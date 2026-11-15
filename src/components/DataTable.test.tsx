@@ -2,6 +2,11 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { buildTableCsv, DataTable, ReportExportScope, type DataColumn } from './DataTable';
 
+vi.mock('html-to-image', () => ({ toPng: vi.fn() }));
+import { toPng } from 'html-to-image';
+
+const toPngMock = vi.mocked(toPng);
+
 type Entry = { id: string; name: string; score: number | null };
 const entries: Entry[] = [
   { id: 'a', name: 'Team 10', score: 100 },
@@ -254,4 +259,85 @@ it('shows an overflow cue only when the table scroll viewport overflows', () => 
   Object.defineProperty(container, 'clientWidth', { value: 1000 });
   act(() => resize());
   expect(screen.queryByText('Scroll horizontally to see all columns')).not.toBeInTheDocument();
+});
+
+function renderExportableTable() {
+  return render(
+    <ReportExportScope
+      value={{ context: { League: 'Test league', Season: 2025 }, filenameContext: '123-2025' }}
+    >
+      <DataTable
+        data={entries}
+        columns={columns}
+        getRowId={(row) => row.id}
+        label="Scores"
+        limit={2}
+        initialSorting={[{ id: 'score', desc: true }]}
+      />
+    </ReportExportScope>,
+  );
+}
+
+function captureAnchorDownload() {
+  const captured = { download: '', href: '' };
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+    this: HTMLAnchorElement,
+  ) {
+    captured.download = this.download;
+    captured.href = this.href;
+  });
+  return captured;
+}
+
+it('offers a PNG download beside the CSV download only inside an export scope', () => {
+  const view = renderExportableTable();
+  expect(screen.getByRole('button', { name: 'Download Scores CSV' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Download Scores PNG' })).toBeInTheDocument();
+  view.rerender(
+    <DataTable data={entries} columns={columns} getRowId={(row) => row.id} label="Scores" />,
+  );
+  expect(screen.queryByRole('button', { name: 'Download Scores PNG' })).not.toBeInTheDocument();
+});
+
+it('downloads the table as a PNG with the report filename', async () => {
+  const user = userEvent.setup();
+  toPngMock.mockResolvedValue('data:image/png;base64,abc');
+  const captured = captureAnchorDownload();
+  renderExportableTable();
+  await user.click(screen.getByRole('button', { name: 'Download Scores PNG' }));
+  expect(toPngMock).toHaveBeenCalledTimes(1);
+  expect(captured.download).toBe('fantasy-rankings-scores-123-2025.png');
+  expect(captured.href).toBe('data:image/png;base64,abc');
+});
+
+it('exports the full table width with plain header text instead of sort controls', async () => {
+  const user = userEvent.setup();
+  toPngMock.mockResolvedValue('data:image/png;base64,abc');
+  captureAnchorDownload();
+  renderExportableTable();
+  const table = screen.getByRole('table');
+  // The table can be wider than its scrolling wrapper; the image must cover it all.
+  Object.defineProperty(table, 'scrollWidth', { value: 1200, configurable: true });
+  await user.click(screen.getByRole('button', { name: 'Download Scores PNG' }));
+  const [canvas, options] = toPngMock.mock.calls[0];
+  expect(canvas).toBeInstanceOf(HTMLTableElement);
+  expect(canvas).not.toBe(table);
+  expect(canvas).toHaveStyle({ width: '1200px' });
+  expect(canvas.querySelectorAll('.table-sort-indicator')).toHaveLength(0);
+  expect(canvas.querySelectorAll('.table-sort-button')).toHaveLength(0);
+  expect(canvas.textContent).toContain('Points');
+  expect(canvas.textContent).toContain('Team 2');
+  expect(options).toMatchObject({ pixelRatio: 1, backgroundColor: '#f8f8f2' });
+});
+
+it('shows an error instead of crashing when the PNG export fails', async () => {
+  const user = userEvent.setup();
+  toPngMock.mockRejectedValueOnce(new Error('canvas unavailable'));
+  renderExportableTable();
+  const button = screen.getByRole('button', { name: 'Download Scores PNG' });
+  await user.click(button);
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Image export failed: canvas unavailable',
+  );
+  expect(button).toBeEnabled();
 });

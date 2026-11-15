@@ -178,6 +178,12 @@ export interface SeasonInsights {
     aboveMedian: number;
     headToHeadRecord?: { wins: number; losses: number; ties: number };
     medianRecord?: { wins: number; losses: number; ties: number };
+    actualWins: number;
+    actualLosses: number;
+    medianWins: number;
+    medianLosses: number;
+    combinedWins: number;
+    combinedLosses: number;
     bestLineupPoints: number;
     lineupWeeks: number;
     correctStarts: number;

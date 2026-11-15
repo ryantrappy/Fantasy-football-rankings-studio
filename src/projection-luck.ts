@@ -74,20 +74,24 @@ export function projectionLuck(data: SeasonInsights) {
   const models = new Map<string, TeamWeek>();
   const players: PlayerPerformance[] = [];
   const weeks = [...new Set(unique.map((s) => s.week))];
-  const varianceFor = (own: Moments | undefined, group: Moments | undefined, all: Moments | undefined) => {
+  const varianceFor = (
+    own: Moments | undefined,
+    group: Moments | undefined,
+    all: Moments | undefined,
+  ) => {
     const history =
-      own && own.n >= 2
-        ? own
-        : group && group.n >= 2
-          ? group
-          : all && all.n >= 1
-            ? all
-            : undefined;
-    if (!history) return { variance: null as number | null, samples: own?.n ?? group?.n ?? all?.n ?? 0, basis: null as const };
+      own && own.n >= 2 ? own : group && group.n >= 2 ? group : all && all.n >= 1 ? all : undefined;
+    if (!history)
+      return {
+        variance: null as number | null,
+        samples: own?.n ?? group?.n ?? all?.n ?? 0,
+        basis: null,
+      };
     return {
       variance: history.n > 1 ? Math.max(0, history.m2 / (history.n - 1)) : 0,
       samples: history.n,
-      basis: history === own ? ('player' as const) : history === group ? ('position' as const) : null,
+      basis:
+        history === own ? ('player' as const) : history === group ? ('position' as const) : null,
     };
   };
   for (const week of weeks) {

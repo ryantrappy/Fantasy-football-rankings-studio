@@ -13,6 +13,26 @@ export interface PlayoffSettings {
   playoffTeams: number;
   rules?: PlayoffRules;
 }
+export interface FixedOutcome {
+  week: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  winnerTeamId: string;
+}
+export interface PlayoffLeverageOutcome {
+  winnerTeamId: string;
+  chances: { teamId: string; playoff: number }[];
+}
+export interface PlayoffLeverage {
+  week: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  outcomes: PlayoffLeverageOutcome[];
+}
+export interface ForecastOptions {
+  fixedOutcomes?: FixedOutcome[];
+  leverage?: boolean;
+}
 export interface PlayoffForecast {
   schedule: { knownWeeks: number; remainingWeeks: number };
   throughWeek: number;
@@ -47,6 +67,7 @@ export interface PlayoffForecast {
     }[];
   };
   reason?: string;
+  leverage?: PlayoffLeverage[];
 }
 // Reproducible model estimates, not provider playoff-clinch declarations.
 function* simulatePlayoffs(
@@ -55,6 +76,7 @@ function* simulatePlayoffs(
   cutoff: number,
   simulations = 20000,
   scoreModel: 'historical' | 'equal-strength' = 'historical',
+  options: ForecastOptions = {},
 ): Generator<void, PlayoffForecast> {
   const throughWeek = Math.max(
     0,
@@ -189,6 +211,32 @@ function* simulatePlayoffs(
     meetings = teams.map(() => teams.map(() => 0)),
     headToHead = teams.map(() => teams.map(() => 0)),
     points = histories.map((h) => h.reduce((sum, s) => sum + s.actual, 0));
+  // Fixed outcomes override only the win/loss of a fixture; scores are still
+  // drawn so points and points-against distributions stay intact. They are
+  // deliberately excluded from the RNG seed below, so a conditional run shares
+  // its random stream with the base forecast and differences are attributable
+  // to the fixed results alone.
+  const fixedByFixture = new Map<string, string>();
+  for (const outcome of options.fixedOutcomes ?? []) {
+    if (
+      Number.isInteger(outcome.week) &&
+      outcome.week > throughWeek &&
+      outcome.week <= settings.regularSeasonEnd &&
+      (outcome.winnerTeamId === outcome.homeTeamId || outcome.winnerTeamId === outcome.awayTeamId)
+    )
+      fixedByFixture.set(
+        `${outcome.week}|${outcome.homeTeamId}|${outcome.awayTeamId}`,
+        outcome.winnerTeamId,
+      );
+  }
+  const leverageRequested = options.leverage === true;
+  const hasFixed = fixedByFixture.size > 0;
+  // fixtureKey -> winnerTeamId -> per-team {trials, qualified} counts.
+  const leverageCounts = new Map<string, Map<string, { trials: number; qualified: number }[]>>();
+  const leverageFixtures = new Map<
+    string,
+    { week: number; homeTeamId: string; awayTeamId: string }
+  >();
   for (let i = 0; i < teams.length; i++)
     for (const s of histories[i]) {
       const j = byId.get(s.opponentTeamId || '');
@@ -261,9 +309,15 @@ function* simulatePlayoffs(
       pa = [...against],
       games = meetings.map((row) => [...row]),
       h2h = headToHead.map((row) => [...row]);
+    // The leverage/fixed-outcome bookkeeping stays out of the hot path: with no
+    // options the trial loop below is exactly the original one.
+    const trialFixtures: { key: string; winner: number }[] | undefined = leverageRequested
+      ? []
+      : undefined;
     for (let week = throughWeek + 1; week <= settings.regularSeasonEnd; week++) {
       // Use known opponent identities; missing weeks remain a neutral schedule scenario.
       const order = scheduled.get(week) || shuffle(teams.map((_, i) => i));
+      const known = scheduled.has(week);
       for (let k = 0; k < order.length; k += 2) {
         const a = order[k],
           b = order[k + 1],
@@ -273,13 +327,37 @@ function* simulatePlayoffs(
         p[b] += sb;
         pa[a] += sb;
         pa[b] += sa;
-        const result = sa > sb ? 1 : sa === sb ? 0.5 : 0;
+        const fixtureKey =
+          hasFixed || leverageRequested ? `${week}|${teams[a].teamId}|${teams[b].teamId}` : '';
+        const fixedWinner = hasFixed
+          ? (fixedByFixture.get(fixtureKey) ??
+            fixedByFixture.get(`${week}|${teams[b].teamId}|${teams[a].teamId}`))
+          : undefined;
+        const result =
+          fixedWinner === teams[a].teamId
+            ? 1
+            : fixedWinner === teams[b].teamId
+              ? 0
+              : sa > sb
+                ? 1
+                : sa === sb
+                  ? 0.5
+                  : 0;
         w[a] += result;
         w[b] += 1 - result;
         games[a][b]++;
         games[b][a]++;
         h2h[a][b] += result;
         h2h[b][a] += 1 - result;
+        if (leverageRequested && known && !fixedWinner) {
+          if (!leverageFixtures.has(fixtureKey))
+            leverageFixtures.set(fixtureKey, {
+              week,
+              homeTeamId: teams[a].teamId,
+              awayTeamId: teams[b].teamId,
+            });
+          trialFixtures!.push({ key: fixtureKey, winner: result >= 0.5 ? a : b });
+        }
       }
     }
     w.forEach((wins, i) => {
@@ -300,6 +378,26 @@ function* simulatePlayoffs(
       seedCounts[i][0]--;
       seedCounts[i][index + 1]++;
     });
+    if (leverageRequested) {
+      const qualified = new Set(seeds);
+      for (const { key, winner } of trialFixtures!) {
+        let byWinner = leverageCounts.get(key);
+        if (!byWinner) {
+          byWinner = new Map();
+          leverageCounts.set(key, byWinner);
+        }
+        const winnerTeamId = teams[winner].teamId;
+        let cells = byWinner.get(winnerTeamId);
+        if (!cells) {
+          cells = teams.map(() => ({ trials: 0, qualified: 0 }));
+          byWinner.set(winnerTeamId, cells);
+        }
+        for (let i = 0; i < teams.length; i++) {
+          cells[i].trials++;
+          if (qualified.has(i)) cells[i].qualified++;
+        }
+      }
+    }
     let playoffRound = 0;
     const game = (a: number, b: number) => {
       const weeks = settings.rules?.roundWeeks[playoffRound] ?? [
@@ -350,6 +448,28 @@ function* simulatePlayoffs(
     // Keep the same random stream and accumulators across interactive batches.
     if ((trial + 1) % 10 === 0) yield;
   }
+  const leverage: PlayoffLeverage[] | undefined = leverageRequested
+    ? [...leverageCounts.entries()]
+        .map(([key, byWinner]) => {
+          const fixture = leverageFixtures.get(key)!;
+          return {
+            ...fixture,
+            outcomes: [...byWinner.entries()].map(([winnerTeamId, cells]) => ({
+              winnerTeamId,
+              chances: cells.map((cell, i) => ({
+                teamId: teams[i].teamId,
+                playoff: cell.trials > 0 ? cell.qualified / cell.trials : 0,
+              })),
+            })),
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.week - b.week ||
+            a.homeTeamId.localeCompare(b.homeTeamId) ||
+            a.awayTeamId.localeCompare(b.awayTeamId),
+        )
+    : undefined;
   return {
     schedule: {
       knownWeeks: scheduled.size,
@@ -362,6 +482,7 @@ function* simulatePlayoffs(
       scoreModel === 'historical' ? validateHistoricalForecast(data, throughWeek) : undefined,
     rounds,
     projection,
+    leverage,
     rows: counts.map((r, index) => ({
       ...r,
       projectedWins: r.projectedWins / simulations,
@@ -382,8 +503,9 @@ export function forecastPlayoffs(
   cutoff: number,
   simulations = 20000,
   scoreModel: 'historical' | 'equal-strength' = 'historical',
+  options: ForecastOptions = {},
 ): PlayoffForecast {
-  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel);
+  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel, options);
   let step = iterator.next();
   while (!step.done) step = iterator.next();
   return step.value;
@@ -411,15 +533,24 @@ export async function forecastPlayoffsAsync(
   signal?: AbortSignal,
   simulations = 20000,
   scoreModel: 'historical' | 'equal-strength' = 'historical',
+  options: ForecastOptions = {},
 ): Promise<PlayoffForecast> {
   signal?.throwIfAborted();
   const result = await requestForecastInWorker(
-    { data, settings, cutoff, simulations, scoreModel },
+    { data, settings, cutoff, simulations, scoreModel, ...options },
     signal,
   );
   signal?.throwIfAborted();
   if (result) return result;
-  return forecastPlayoffsCooperatively(data, settings, cutoff, signal, simulations, scoreModel);
+  return forecastPlayoffsCooperatively(
+    data,
+    settings,
+    cutoff,
+    signal,
+    simulations,
+    scoreModel,
+    options,
+  );
 }
 
 // Workers also yield: an uninterrupted CPU-bound worker can starve input timers
@@ -431,9 +562,10 @@ export async function forecastPlayoffsCooperatively(
   signal?: AbortSignal,
   simulations = 20000,
   scoreModel: 'historical' | 'equal-strength' = 'historical',
+  options: ForecastOptions = {},
 ): Promise<PlayoffForecast> {
   signal?.throwIfAborted();
-  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel);
+  const iterator = simulatePlayoffs(data, settings, cutoff, simulations, scoreModel, options);
   for (;;) {
     await pause(signal);
     signal?.throwIfAborted();

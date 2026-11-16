@@ -5,6 +5,7 @@ import { InsightsAccess } from '../auth/InsightsAccess';
 import { snapshotInsightsApi } from '../api/snapshot-insights';
 import type { ReportSnapshot, SnapshotView } from '../report-snapshot';
 import { InsightsPage } from './InsightsPage';
+import { PlayoffPathsPage } from './PlayoffPaths';
 import { HistoryPage } from './HistoryPage';
 import { Icon } from './Icon';
 
@@ -48,6 +49,25 @@ function InteractiveSnapshotReport({ report }: { report: ReportSnapshot }) {
       setView('insights');
     },
   };
+  // A snapshot saved from Path to the Playoffs opens only the simulator: no
+  // tabs to the other saved views from that link.
+  if (view === 'playoff-paths')
+    return (
+      <InsightsAccess publicApi={api}>
+        <Text role="note" my={4}>
+          Saved report snapshot · {new Date(report.savedAt).toLocaleString()}. Includes seasons{' '}
+          {snapshot.years.join(', ')}. This link always shows the saved data; live refresh is
+          disabled. Expires {new Date(report.expiresAt).toLocaleString()}.
+        </Text>
+        <PlayoffPathsPage
+          shared
+          snapshot={snapshot}
+          initialLeague={report.league}
+          search={{ leagueId: report.league.leagueId, year }}
+          navigate={navigateSeason}
+        />
+      </InsightsAccess>
+    );
   return (
     <InsightsAccess publicApi={api}>
       <Text role="note" my={4}>

@@ -1,5 +1,5 @@
 import type { SeasonInsights } from './insights';
-import type { PlayoffForecast, PlayoffSettings } from './playoff-forecast';
+import type { FixedOutcome, PlayoffForecast, PlayoffSettings } from './playoff-forecast';
 
 export interface ForecastWorkerInput {
   data: SeasonInsights;
@@ -7,6 +7,8 @@ export interface ForecastWorkerInput {
   cutoff: number;
   simulations: number;
   scoreModel: 'historical' | 'equal-strength';
+  fixedOutcomes?: FixedOutcome[];
+  leverage?: boolean;
 }
 
 export type ForecastWorkerResponse =

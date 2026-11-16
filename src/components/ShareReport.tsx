@@ -17,7 +17,7 @@ export function ShareReport({
   disabled = false,
   compact = false,
 }: {
-  path: '/insights' | '/history' | '/playoffs';
+  path: '/insights' | '/history' | '/playoffs' | '/playoff-paths';
   search: { leagueId: string; year?: number; years?: number[] };
   snapshotData?: SnapshotInput;
   espn?: boolean;

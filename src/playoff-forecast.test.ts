@@ -1,4 +1,4 @@
-import { forecastPlayoffs } from './playoff-forecast';
+import { forecastPlayoffs, forecastPlayoffsAsync } from './playoff-forecast';
 import type { SeasonInsights } from './insights';
 import type { PlayoffRules } from './playoff-rules';
 import * as statistics from './forecast-statistics';
@@ -420,4 +420,148 @@ it('retains fractional win totals and exact configured seed counts including six
     });
   const tied = forecastPlayoffs(data, { regularSeasonEnd: 4, playoffTeams: 6 }, 4, 200);
   expect(tied.rows[0].winDistribution).toEqual([{ wins: 3.5, count: 200 }]);
+});
+
+const pathsFixture = () => {
+  const data = fixture(4);
+  data.forecastSchedule = [
+    { week: 5, homeTeamId: '0', awayTeamId: '1' },
+    { week: 5, homeTeamId: '2', awayTeamId: '3' },
+    { week: 6, homeTeamId: '0', awayTeamId: '3' },
+    { week: 6, homeTeamId: '1', awayTeamId: '2' },
+  ];
+  return data;
+};
+
+it('fixed outcomes determine win totals exactly', () => {
+  fixedStrengths();
+  const data = pathsFixture();
+  const fixed = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    {
+      fixedOutcomes: [
+        { week: 5, homeTeamId: '0', awayTeamId: '1', winnerTeamId: '0' },
+        { week: 5, homeTeamId: '2', awayTeamId: '3', winnerTeamId: '2' },
+        { week: 6, homeTeamId: '0', awayTeamId: '3', winnerTeamId: '0' },
+        { week: 6, homeTeamId: '1', awayTeamId: '2', winnerTeamId: '1' },
+      ],
+    },
+  );
+  // Every team starts 2-2 (four tied weeks); the fixed results give 4, 3, 3, 2 wins.
+  expect(fixed.rows.map((r) => r.projectedWins)).toEqual([4, 3, 3, 2]);
+  expect(fixed.rows[0].playoff).toBe(1);
+  expect(fixed.rows[3].playoff).toBe(0);
+  expect(fixed.rows[1].playoff + fixed.rows[2].playoff).toBeCloseTo(1, 8);
+});
+
+it('a single fixed outcome changes only that game', () => {
+  fixedStrengths();
+  const data = pathsFixture();
+  const single = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    {
+      fixedOutcomes: [{ week: 5, homeTeamId: '0', awayTeamId: '1', winnerTeamId: '0' }],
+    },
+  );
+  // Team 0: 2 completed wins + 1 fixed + ~0.5 simulated; team 1: 2 + 0 + ~0.5.
+  expect(single.rows[0].projectedWins).toBeCloseTo(3.5, 1);
+  expect(single.rows[1].projectedWins).toBeCloseTo(2.5, 1);
+});
+
+it('ignores fixed outcomes with a winner outside the fixture', () => {
+  fixedStrengths();
+  const data = pathsFixture();
+  const base = forecastPlayoffs(data, { regularSeasonEnd: 6, playoffTeams: 2 }, 4, 2000);
+  const bogus = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    {
+      fixedOutcomes: [{ week: 5, homeTeamId: '0', awayTeamId: '1', winnerTeamId: '2' }],
+    },
+  );
+  // Fixed outcomes do not enter the RNG seed, so an ignored outcome leaves the
+  // shared random stream — and the result — identical to the base forecast.
+  expect(bogus.rows.map((r) => r.projectedWins)).toEqual(base.rows.map((r) => r.projectedWins));
+  expect(bogus.rows.map((r) => r.playoff)).toEqual(base.rows.map((r) => r.playoff));
+});
+
+it('returns per-fixture conditional playoff chances when leverage is requested', () => {
+  fixedStrengths();
+  const data = pathsFixture();
+  const result = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    { leverage: true },
+  );
+  expect(result.leverage).toHaveLength(4);
+  const opener = result.leverage!.find((f) => f.week === 5 && f.homeTeamId === '0')!;
+  expect(opener.outcomes.map((o) => o.winnerTeamId).sort()).toEqual(['0', '1']);
+  for (const outcome of opener.outcomes)
+    for (const chance of outcome.chances) expect(chance.playoff).toBeGreaterThanOrEqual(0);
+  const homeWin = opener.outcomes.find((o) => o.winnerTeamId === '0')!;
+  const awayWin = opener.outcomes.find((o) => o.winnerTeamId === '1')!;
+  const chanceFor = (outcome: typeof homeWin, teamId: string) =>
+    outcome.chances.find((c) => c.teamId === teamId)!.playoff;
+  expect(chanceFor(homeWin, '0')).toBeGreaterThan(chanceFor(awayWin, '0'));
+  expect(chanceFor(awayWin, '1')).toBeGreaterThan(chanceFor(homeWin, '1'));
+  // Leverage is off by default and fixed fixtures are excluded from it.
+  const base = forecastPlayoffs(data, { regularSeasonEnd: 6, playoffTeams: 2 }, 4, 2000);
+  expect(base.leverage).toBeUndefined();
+  const fixed = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    {
+      fixedOutcomes: [{ week: 5, homeTeamId: '0', awayTeamId: '1', winnerTeamId: '0' }],
+      leverage: true,
+    },
+  );
+  expect(fixed.leverage).toHaveLength(3);
+  expect(fixed.leverage!.some((f) => f.week === 5 && f.homeTeamId === '0')).toBe(false);
+});
+
+it('async conditional forecast matches the synchronous one', async () => {
+  fixedStrengths();
+  const data = pathsFixture();
+  const options = {
+    fixedOutcomes: [{ week: 5, homeTeamId: '0', awayTeamId: '1', winnerTeamId: '0' }],
+    leverage: true,
+  };
+  const sync = forecastPlayoffs(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    2000,
+    'historical',
+    options,
+  );
+  const asyncResult = await forecastPlayoffsAsync(
+    data,
+    { regularSeasonEnd: 6, playoffTeams: 2 },
+    4,
+    undefined,
+    2000,
+    'historical',
+    options,
+  );
+  expect(asyncResult.rows.map((r) => r.projectedWins)).toEqual(
+    sync.rows.map((r) => r.projectedWins),
+  );
+  expect(asyncResult.leverage).toHaveLength(3);
 });

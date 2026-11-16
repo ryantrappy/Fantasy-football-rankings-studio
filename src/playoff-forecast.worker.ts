@@ -13,6 +13,7 @@ self.onmessage = async ({ data }: MessageEvent<ForecastWorkerInput & { id: numbe
         undefined,
         data.simulations,
         data.scoreModel,
+        { fixedOutcomes: data.fixedOutcomes, leverage: data.leverage },
       ),
     };
   } catch (error) {

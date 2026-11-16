@@ -17,6 +17,7 @@ const paths = {
     'M8 3h8v6a4 4 0 0 1-8 0V3z M8 5H4v2a4 4 0 0 0 4 4 M16 5h4v2a4 4 0 0 1-4 4 M12 13v6 M8 21h8 M9 19h6',
   archive: 'M4 8h16v13H4z M3 3h18v5H3z M9 12h6',
   edit: 'M16 3l5 5-12 12H4v-5L16 3z M13 6l5 5',
+  route: 'M6 19a3 3 0 1 0 0.01 0 M18 5a3 3 0 1 0 0.01 0 M6 16c6 0 6-8 12-8',
 } as const;
 
 export function Icon({ name, size = 20 }: { name: keyof typeof paths; size?: number }) {

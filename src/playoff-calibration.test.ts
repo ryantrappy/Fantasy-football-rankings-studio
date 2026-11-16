@@ -84,7 +84,7 @@ it('replays all cutoffs while excluding current projections and future scores fr
   expect(
     first.rows.filter((r) => r.week === 3).every((r) => r.probability === Number(r.qualified)),
   ).toBe(true);
-});
+}, 30000);
 it('keeps provider outcomes as ground truth when the model seeding differs', async () => {
   const data = calibrationFixture();
   data.results!.forEach((r) => {

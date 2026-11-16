@@ -145,11 +145,22 @@
 .history-explorer.history-analytics .history-rivalry-toolbar .history-explorer-toolbar {
   display: contents;
 }
-.history-explorer.history-analytics .history-competition-table-with-toolbar > .table-export-button {
+.history-explorer.history-analytics .history-competition-table-with-toolbar > .table-export-button,
+.history-explorer.history-analytics
+  .history-competition-table-with-toolbar
+  > .table-export-actions
+  > .table-export-button {
   margin: 0;
   min-height: 38px;
   max-width: 100%;
   font-size: 12px;
+}
+/* The export buttons live in a .table-export-actions wrapper; keep the wrapper
+   itself margin-free so it adds no height beyond the flex gap. */
+.history-explorer.history-analytics
+  .history-competition-table-with-toolbar
+  > .table-export-actions {
+  margin: 0;
 }
 .history-competition-table-with-toolbar > table {
   flex: 0 0 100%;
@@ -398,13 +409,17 @@ article.history-explorer-wrapped-preview details.history-wrapped-coverage > summ
   border: 1px solid #dce2ee;
   border-radius: 6px;
 }
-.history-matchup-heatmap-scroll > .table-export-button {
+.history-matchup-heatmap-scroll > .table-export-button,
+.history-matchup-heatmap-scroll > .table-export-actions {
   position: sticky;
   left: 8px;
   margin: 8px;
   max-width: calc(100% - 16px);
   white-space: normal;
   background: #ffffff;
+}
+.history-matchup-heatmap-scroll > .table-export-actions {
+  width: fit-content;
 }
 .history-explorer.history-analytics .history-matchup-heatmap {
   border-collapse: separate;
@@ -536,6 +551,10 @@ article.history-explorer-wrapped-preview details.history-wrapped-coverage > summ
   }
   .history-explorer.history-analytics
     .history-competition-table-with-toolbar
+    > .table-export-button,
+  .history-explorer.history-analytics
+    .history-competition-table-with-toolbar
+    > .table-export-actions
     > .table-export-button {
     align-self: flex-start;
     min-height: 44px;

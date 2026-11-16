@@ -461,12 +461,29 @@
     display: flex;
     align-items: center;
     min-height: 36px;
-    padding-right: 270px;
+    padding-right: 400px;
   }
   .analytics-heading-export-table > .table-export-button {
     position: absolute;
     top: 0;
     right: 0;
+    min-height: 36px;
+    margin: 0;
+    padding: 7px 10px;
+    border: 1px solid #dce2ee;
+    background: #f3f5fb;
+    color: #17223b;
+    font-size: 12px;
+  }
+  /* The export buttons live in a .table-export-actions wrapper; position the
+     wrapper beside the heading and style its buttons like the single button. */
+  .analytics-heading-export-table > .table-export-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+  }
+  .analytics-heading-export-table > .table-export-actions > .table-export-button {
     min-height: 36px;
     margin: 0;
     padding: 7px 10px;

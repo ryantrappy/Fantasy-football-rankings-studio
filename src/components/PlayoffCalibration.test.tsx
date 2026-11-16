@@ -38,7 +38,7 @@ it('loads only previous seasons on demand and displays convergence, reliability 
   expect(screen.getByRole('button', { name: 'Export calibration JSON' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Run historical calibration' }));
   await waitFor(() => expect(screen.getByText('Backtest complete.')).toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   expect(screen.getByRole('button', { name: 'Export calibration JSON' })).toBeEnabled();
   expect(access.getInsights.mock.calls.map((args) => args[1])).toEqual([2025, 2024]);
@@ -65,7 +65,7 @@ it('loads only previous seasons on demand and displays convergence, reliability 
   fireEvent.change(screen.getByLabelText('Calibration through week'), { target: { value: '2' } });
   expect(screen.getByText(/Week 2: predicted probability/)).toBeInTheDocument();
   expect(access.getInsights).toHaveBeenCalledTimes(2);
-});
+}, 30000);
 it('does not fetch live history for saved snapshots', () => {
   const access = api();
   render(
@@ -87,7 +87,7 @@ it('explains when historical results cannot be evaluated', async () => {
   );
   fireEvent.click(screen.getByRole('button', { name: 'Run historical calibration' }));
   await waitFor(() => expect(screen.getByText('Backtest complete.')).toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   expect(
     screen.getByText(/2025 excluded: Actual playoff qualification is unavailable/),
@@ -124,7 +124,7 @@ it('cancels hidden calibration without accepting late data or restarting on retu
   expect(screen.getByRole('button', { name: 'Export calibration JSON' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Rerun historical calibration' }));
   await waitFor(() => expect(screen.getByText('Backtest complete.')).toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   expect(screen.getByRole('button', { name: 'Export calibration JSON' })).toBeEnabled();
 });

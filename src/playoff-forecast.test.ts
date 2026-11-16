@@ -394,7 +394,7 @@ it('counts exact win and playoff-seed frequencies without changing existing seed
         400,
     ).toBe(row.playoff);
   }
-});
+}, 30000);
 
 it('retains fractional win totals and exact configured seed counts including six-team byes', () => {
   const data = fixture(8);

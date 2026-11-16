@@ -56,7 +56,13 @@ it('shows team and player evidence, orients matchups to the selected team and ex
     within(screen.getByRole('table', { name: 'Projection luck by team' })).getAllByRole('row'),
   ).toHaveLength(3);
   expect(screen.getByText(/may have been revised/)).toBeVisible();
-  expect(screen.getAllByText(/Insufficient earlier-week/)).toHaveLength(1);
+  // The week-1 matchup now replays with zero spread instead of reporting
+  // insufficient variance history, so both teams have full verified coverage
+  // and the old reason text is gone.
+  expect(screen.queryByText(/Insufficient earlier-week/)).not.toBeInTheDocument();
+  expect(
+    within(screen.getByRole('table', { name: 'Projection luck by team' })).getAllByText('3 / 3'),
+  ).toHaveLength(2);
   const playerTable = screen.getByRole('table', { name: 'Player projection variance' });
   for (const heading of [
     'Weekly projection',

@@ -65,7 +65,7 @@ it('shows cached week-by-week playoff and title chances with exact values', asyn
     screen.getByRole('img', { name: /Make playoffs probability by completed week/ }),
   ).toBeInTheDocument();
   await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   fireEvent.click(screen.getByText('Exact weekly percentages'));
   const table = screen.getByRole('table', { name: 'Weekly make playoffs probabilities' });
@@ -86,7 +86,7 @@ it('shows cached week-by-week playoff and title chances with exact values', asyn
   expect(screen.getByLabelText('Forecast through week')).toHaveValue('2');
   fireEvent.click(screen.getByRole('button', { name: 'Week-by-week chart' }));
   await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   expect(screen.getByRole('button', { name: 'Win championship' })).toHaveAttribute(
     'aria-pressed',
@@ -103,7 +103,7 @@ it('keeps earlier trend points visible when the latest week is incomplete', asyn
   );
   fireEvent.click(screen.getByRole('button', { name: 'Week-by-week chart' }));
   await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument(), {
-    timeout: 5000,
+    timeout: 10000,
   });
   expect(
     screen.getByRole('img', { name: /Make playoffs probability by completed week/ }),

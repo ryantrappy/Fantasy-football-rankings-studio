@@ -94,7 +94,7 @@ it('offers account editing and sign out through the profile disclosure', () => {
   expect(signOut).toHaveBeenCalledTimes(1);
 });
 
-it('keeps exactly seven main destinations and all account destinations reachable in Live', () => {
+it('keeps exactly eight main destinations and all account destinations reachable in Live', () => {
   pathname = '/live';
   render(
     <Provider>
@@ -114,6 +114,7 @@ it('keeps exactly seven main destinations and all account destinations reachable
     'Live matchups',
     'Season insights',
     'Playoff simulator',
+    'Playoff paths',
     'League history',
     'Other tools',
   ]);

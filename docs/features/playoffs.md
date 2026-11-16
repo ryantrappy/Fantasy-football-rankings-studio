@@ -205,3 +205,14 @@ The usability iteration adds truthful win/seed frequency histograms by counting 
 Inline selected-team navigation retains forecast view, histogram mode, cutoff and team selection. The assumptions/projection-coverage disclosure uses the shared reduced-motion-aware spring while retaining all mounted evidence and its existing independent open state during outside interaction. Forecast calculations, worker behavior, uncertainty disclosures and CSV/replay exports remain unchanged.
 
 Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).
+
+### TASK-162 — Add a Path to the Playoffs simulator as its own nav item
+
+- A clearly labeled Playoff paths nav item (authenticated and shared) presents the conditional simulator; it is not a tab inside Playoff simulator or Season insights, and the existing forecast, calibration, and exports are unchanged.
+- Locking in results for remaining games re-runs the forecast with those wins fixed. Fixed outcomes override only the win/loss of a fixture; scores are still drawn so points and points-against tiebreakers stay simulated, and fixed outcomes are excluded from the RNG seed so a conditional run shares the base forecast's random stream.
+- Per-game leverage comes from the same run: for each unfixed remaining fixture, the selected team playoff chance under each possible winner, ranked by swing. Fixed fixtures are excluded from leverage.
+- Prefill from projections is manual only: a button fills unpicked games with the higher projected weekly team points winner and never runs on load; games without both projections, or with tied projections, stay unset and are disclosed.
+- A shared link opens only the simulator: the shared route and the playoff-paths snapshot view render the simulator alone, with no navigation to other reports.
+- The simulator defaults to the saved managed team where available, with a team picker; shared viewers default to the best current record.
+
+Source: [TASK-162](../../backlog/tasks/task-162%20-%20Add-a-Path-to-the-Playoffs-simulator-as-its-own-nav-item.md).

@@ -11,6 +11,9 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
   const leagueId = search.leagueId || '';
   const year = search.year || search.years?.[0] || defaultSeason();
   const toolsActive = ['/tools', '/players', '/trades'].includes(pathname);
+  // A shared Path to the Playoffs link opens only the simulator: no links to
+  // the other shared reports from that page.
+  const pathsOnly = pathname === '/shared/playoff-paths';
   useEffect(() => {
     const nav = navigation.current;
     const active = nav?.querySelector<HTMLElement>(
@@ -56,36 +59,51 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
           </ChakraLink>
         </>
       )}
+      {!pathsOnly && (
+        <>
+          <ChakraLink asChild>
+            <Link
+              to={shared ? '/shared/insights' : '/insights'}
+              activeOptions={{ includeSearch: false }}
+              search={{ leagueId, year }}
+            >
+              <Icon name="chart" size={16} /> Season insights
+            </Link>
+          </ChakraLink>
+          <ChakraLink asChild>
+            <Link
+              to={shared ? '/shared/playoffs' : '/playoffs'}
+              activeOptions={{ includeSearch: false }}
+              search={{ leagueId, year }}
+            >
+              <Icon name="trophy" size={16} /> Playoff simulator
+            </Link>
+          </ChakraLink>
+        </>
+      )}
       <ChakraLink asChild>
         <Link
-          to={shared ? '/shared/insights' : '/insights'}
+          to={shared ? '/shared/playoff-paths' : '/playoff-paths'}
           activeOptions={{ includeSearch: false }}
           search={{ leagueId, year }}
         >
-          <Icon name="chart" size={16} /> Season insights
+          <Icon name="route" size={16} /> Playoff paths
         </Link>
       </ChakraLink>
-      <ChakraLink asChild>
-        <Link
-          to={shared ? '/shared/playoffs' : '/playoffs'}
-          activeOptions={{ includeSearch: false }}
-          search={{ leagueId, year }}
-        >
-          <Icon name="trophy" size={16} /> Playoff simulator
-        </Link>
-      </ChakraLink>
-      <ChakraLink asChild>
-        <Link
-          to={shared ? '/shared/history' : '/history'}
-          activeOptions={{ includeSearch: false }}
-          search={{
-            leagueId,
-            years: search.years ?? (shared && search.year ? [search.year] : undefined),
-          }}
-        >
-          <Icon name="archive" size={16} /> League history
-        </Link>
-      </ChakraLink>
+      {!pathsOnly && (
+        <ChakraLink asChild>
+          <Link
+            to={shared ? '/shared/history' : '/history'}
+            activeOptions={{ includeSearch: false }}
+            search={{
+              leagueId,
+              years: search.years ?? (shared && search.year ? [search.year] : undefined),
+            }}
+          >
+            <Icon name="archive" size={16} /> League history
+          </Link>
+        </ChakraLink>
+      )}
       {!shared && (
         <ChakraLink asChild>
           <Link

@@ -1,7 +1,7 @@
 import type { SeasonRecord } from './league-summary';
 import type { League } from './types';
 
-export type SnapshotView = 'insights' | 'history' | 'playoffs' | 'wrapped';
+export type SnapshotView = 'insights' | 'history' | 'playoffs' | 'wrapped' | 'playoff-paths';
 export interface SnapshotInput {
   wrapped?: import('./history/personalities/wrapped').WrappedRecap;
   leagueId: string;

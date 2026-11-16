@@ -32,8 +32,16 @@ it('uses earlier player residuals, replays each eligible pair exactly 100 times 
   const result = projectionLuck(report());
   expect(MATCHUP_REPLAYS).toBe(100);
   expect(result.matchups).toHaveLength(3);
-  expect(result.matchups[0]).toMatchObject({ wins: null, homeExpectedWin: null });
-  expect(result.matchups[0].reason).toContain('Insufficient');
+  expect(result.matchups[0]).toMatchObject({ wins: 0, homeExpectedWin: 0.5 });
+  expect(result.matchups[0].reason).toBeUndefined();
+  // Week 1 has no earlier-week history at all, so its players carry null
+  // variance and every draw lands exactly on the projected points: all 100
+  // replays tie, which is why the matchup above is 0 wins at 0.5 expected.
+  expect(result.players.find((p) => p.playerId === 'a' && p.week === 1)).toMatchObject({
+    variance: null,
+    samples: 0,
+    basis: null,
+  });
   expect(result.players.find((p) => p.playerId === 'a' && p.week === 3)).toMatchObject({
     variance: 8,
     samples: 2,
@@ -49,11 +57,13 @@ it('uses earlier player residuals, replays each eligible pair exactly 100 times 
     expect(matchup.wins! + matchup.losses! + matchup.ties!).toBe(100);
     expect(matchup.homeExpectedWin).toBe((matchup.wins! + matchup.ties! / 2) / 100);
   }
-  expect(result.teams.map((t) => t.measured)).toEqual([2, 2]);
-  expect(result.teams.reduce((sum, t) => sum + t.expectedWins!, 0)).toBeCloseTo(2);
+  // The week-1 matchup now replays too (see above), so all three matchups
+  // are measured and the win-credit and difference totals cover weeks 1–3.
+  expect(result.teams.map((t) => t.measured)).toEqual([3, 3]);
+  expect(result.teams.reduce((sum, t) => sum + t.expectedWins!, 0)).toBeCloseTo(3);
   expect(result.teams.reduce((sum, t) => sum + t.extraWins!, 0)).toBeCloseTo(0);
-  expect(result.teams[0].difference).toBe(6);
-  expect(result.teams[0].opponentDifference).toBe(-3.5);
+  expect(result.teams[0].difference).toBe(3.33);
+  expect(result.teams[0].opponentDifference).toBe(-1.67);
 });
 
 it('never lets this week, future outcomes, input order or team-level projections affect earlier variance and draws', () => {
@@ -117,7 +127,9 @@ it.each(['missing', 'nonfinite', 'lineup', 'override', 'duplicate-starter'])(
     const result = projectionLuck(data);
     expect(result.matchups[2].homeExpectedWin).toBeNull();
     expect(result.matchups[2].reason).toBeTruthy();
-    expect(result.teams[0].measured).toBe(1);
+    // The week-1 matchup still replays (zero-spread draws at the projected
+    // points), so the team has two measured matchups even with week 3 out.
+    expect(result.teams[0].measured).toBe(2);
     expect(result.teams[0].games).toBe(3);
   },
 );
@@ -132,7 +144,14 @@ it('excludes duplicate team-weeks and duplicate-starter calibration without inve
   const clean = report();
   clean.scores[0].starters.push({ ...clean.scores[0].starters[0], points: 1000000 });
   result = projectionLuck(clean);
-  expect(result.players.find((p) => p.playerId === 'a' && p.week === 2)?.variance).toBeNull();
+  // The duplicated week-1 row is still never observed, but the league-history
+  // fallback pools team b's legitimate week-1 residual, so the variance is 0
+  // from a single league observation rather than null.
+  expect(result.players.find((p) => p.playerId === 'a' && p.week === 2)).toMatchObject({
+    variance: 0,
+    samples: 1,
+    basis: null,
+  });
   expect(result.players.find((p) => p.playerId === 'a' && p.week === 3)).toMatchObject({
     basis: 'position',
     samples: 3,
@@ -148,17 +167,36 @@ it('excludes byes and nonreciprocal opponents and discloses unmatched weeks', ()
   expect(result.teams[0]).toMatchObject({ games: 1, unmatchedWeeks: 2 });
 });
 
-it('does not borrow another position or use observations before the reporting start', () => {
+it('uses league history across positions but never observations before the reporting start', () => {
   const data = report();
   data.reportingStartWeek = 3;
   const result = projectionLuck(data);
   expect(result.matchups).toHaveLength(1);
-  expect(result.matchups[0].homeExpectedWin).toBeNull();
+  // No earlier weeks exist in the report, so the only matchup replays with
+  // zero spread at the projected points instead of borrowing history.
+  expect(result.matchups[0]).toMatchObject({ wins: 0, ties: 100, homeExpectedWin: 0.5 });
+  expect(result.matchups[0].reason).toBeUndefined();
+  for (const playerId of ['a', 'b']) {
+    expect(result.players.find((p) => p.playerId === playerId && p.week === 3)).toMatchObject({
+      variance: null,
+      samples: 0,
+      basis: null,
+    });
+  }
   const other = report();
   other.scores.forEach((s) => {
     s.starters[0].position = s.teamId === 'a' ? 'RB' : 'QB';
   });
-  expect(projectionLuck(other).matchups[1].homeExpectedWin).toBeNull();
+  const crossPosition = projectionLuck(other);
+  // The league-history fallback pools every position: a one-observation player
+  // gets the two-observation league variance (basis null) instead of nothing.
+  expect(crossPosition.players.find((p) => p.playerId === 'a' && p.week === 2)).toMatchObject({
+    variance: 8,
+    samples: 2,
+    basis: null,
+  });
+  expect(crossPosition.matchups[1]).toMatchObject({ wins: 52, ties: 0, homeExpectedWin: 0.52 });
+  expect(crossPosition.teams.map((t) => t.measured)).toEqual([3, 3]);
 });
 
 it('counts a published multiweek matchup once and a verified playoff matchup without reciprocal weekly IDs', () => {

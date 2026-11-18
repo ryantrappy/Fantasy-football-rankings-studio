@@ -107,10 +107,12 @@ as in schedule luck) to the record against the weekly league median (a win above
 it, a loss below it, a tie on it). Median records and scoring include all
 observed completed weeks, including playoffs; partial league sets may contribute
 to median/all-play values but never to schedule luck. A zero score is valid.
-Missing projections remain unavailable. Sleeper's existing scoring trends retain
-their unavailable historical team projection; the separate projection luck view
-uses available player forecasts from its undocumented weekly endpoint. ESPN sums
-available starting-lineup projections, excluding bench and IR.
+Sleeper sums the same retrospective weekly forecasts used by Projection luck for
+the players who actually started. A team-week needs at least one starter and a
+projection for every occupied starting slot. Empty slots and bench players are
+excluded. Zero and negative forecasts count when supplied. Weeks with missing
+forecasts are excluded from both projection comparisons. ESPN sums available
+starting-lineup projections, excluding bench and IR.
 
 ## Trade grades
 

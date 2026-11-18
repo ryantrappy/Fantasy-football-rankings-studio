@@ -22,6 +22,13 @@ Useful references/checks (starting points, not a substitute for inspecting affec
 
 Stable IDs trace to the original backlog. Criteria are requirements, not evidence that today’s code or deployment was tested. Load source requests/history only to resolve a specific detail. Later completed corrections refine earlier implementation details.
 
+### TASK-163 — Sleeper season scoring projection comparisons
+
+- Completed Sleeper team weeks sum the exact-week, league-scored retrospective projections for actual starters when every occupied starting slot has a forecast. Empty lineups and weeks with missing starter projections stay unavailable. Preserve explicit zero and negative forecasts, and exclude bench players and unfilled slots.
+- Weekly scoring trends, Avg. vs. projection and Beat projection use these totals. Season comparisons include only weeks with a team projection.
+
+Source: [TASK-163](../../backlog/tasks/task-163%20-%20Populate-Sleeper-season-scoring-projection-comparisons.md).
+
 ### TASK-161 — Projection performance luck
 
 - Season Insights adds Projection luck alongside the existing views. Retain independent schedule luck, all existing evidence, actual starting lineups, selected-team state and team/week-aware CSVs. The week selector filters matchup/player details while team totals remain season-wide.

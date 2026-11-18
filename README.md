@@ -440,12 +440,12 @@ are not zero-filled; the UI shows the actual baseline and compared weeks. Only r
 snapshots are observed; unrostered players may be unavailable. Sleeper positions come
 from its current player catalog; ESPN uses each historical box score's primary position.
 
-Sleeper uses linked historical seasons and the league's last scored week. Its
-[documented API](https://docs.sleeper.com/) does not supply historical projections;
-that section shows actual points and median comparisons. For the active season's
-immediate next week, the playoff simulator can score Sleeper's undocumented player
-projection feed with the league's scoring settings. ESPN reads saved lineup
-projections and weekly box scores. The simulator chooses each team’s highest total
+Sleeper uses linked historical seasons and the league's last scored week. Season
+Insights scores retrospective forecasts from Sleeper's undocumented weekly
+projection feed with that season's league settings. It sums forecasts for the
+actual starters when every occupied slot has a projection. The playoff simulator
+also uses the feed for upcoming weeks. ESPN reads saved lineup projections and
+weekly box scores. The simulator chooses each team’s highest total
 legal projected lineup from current starters and bench players, so an eligible bench
 player can replace a player on bye; IR players are excluded. Missing projections stay
 missing. Only completed weeks are included, so a new season has an explicit empty

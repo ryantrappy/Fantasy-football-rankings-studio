@@ -312,14 +312,14 @@ it.each([1, 2, 3])(
   },
 );
 it.each([false, true])(
-  'attaches historical Sleeper forecasts to actual starters without replacing unavailable values (outage: %s)',
+  'compares completed Sleeper scores against forecasts for fully covered starting lineups (outage: %s)',
   async (outage) => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const read = vi.mocked(axios.get).mockImplementation(async (url): Promise<any> => {
       const path = String(url);
       if (path.includes('/state/nfl'))
         return { data: { season: '2026', leg: 1, season_type: 'regular' } };
-      if (path.endsWith('/projections/nfl/2025/1'))
+      if (/\/projections\/nfl\/2025\/[134]$/.test(path))
         return {
           data: [
             { player_id: 'a', stats: { rush_yd: 100 } },
@@ -339,46 +339,62 @@ it.each([false, true])(
       name: 'League',
       season: '2025',
       total_rosters: 1,
-      settings: { last_scored_leg: 2 },
+      settings: { last_scored_leg: 5 },
       scoring_settings: { rush_yd: 0.1 },
     });
     vi.spyOn(SleeperProvider.prototype, 'getTeams').mockResolvedValue(teams);
     const providerRead = vi
       .spyOn(SleeperProvider.prototype, 'get')
-      .mockImplementation(async (path): Promise<any> =>
-        path.includes('/matchups/')
-          ? [
-              {
-                roster_id: 1,
-                points: 20,
-                starters: ['a', 'zero', 'negative', 'missing'],
-                players_points: { a: 15, zero: 2, negative: 3, missing: 0, bench: 40 },
-              },
-            ]
-          : [],
-      );
-    const result = await loadInsightsSource(
+      .mockImplementation(async (path): Promise<any> => {
+        if (!path.includes('/matchups/')) return [];
+        const week = Number(path.split('/').at(-1));
+        const starters = [
+          ['a', 'zero', 'negative', 'missing'],
+          ['a', 'zero', 'negative', 'missing'],
+          ['a', 'zero', 'negative', '0'],
+          ['zero'],
+          ['0'],
+        ][week - 1];
+        return [
+          {
+            roster_id: 1,
+            points: week < 4 ? 20 : 0,
+            starters,
+            players_points:
+              week < 4 ? { a: 15, zero: 2, negative: 3, missing: 0, bench: 40 } : { zero: 0 },
+          },
+        ];
+      });
+    const result = await loadInsights(
       { leagueId: '123', leagueName: 'League', leagueType: 0, seasonId: 2025 },
       2025,
     );
-    expect(result.scores[0].starters).toEqual([
+    expect(result.scores[0].starters).toMatchObject([
       { playerId: 'a', points: 15, projected: 10 },
       { playerId: 'zero', points: 2, projected: 0 },
       { playerId: 'negative', points: 3, projected: -2 },
       { playerId: 'missing', points: 0 },
     ]);
-    expect(result.scores[0].projected).toBeNull();
+    expect(result.scores[0].starters[3].projected).toBeUndefined();
+    expect(result.scores.map((score) => score.projected)).toEqual([null, null, 8, 0, null]);
+    expect(result.teams[0]).toMatchObject({
+      projectedWeeks: 2,
+      projectionDelta: 6,
+      beatProjection: 1,
+    });
     expect(result.scores[0].projectionSource).toContain('not independently archived pre-kickoff');
     expect(result.scores[1].starters.every((player) => player.projected === undefined)).toBe(true);
     expect(result.scores[1].actual).toBe(20);
-    expect(result.partialFailures?.some((failure) => failure.section === 'Projection luck')).toBe(
-      outage,
-    );
+    expect(
+      result.partialFailures?.some((failure) => failure.section === 'Historical projections'),
+    ).toBe(outage);
     expect(
       read.mock.calls.filter(([url]) => String(url).includes('/projections/')).map(([url]) => url),
     ).toEqual([
       'https://api.sleeper.app/projections/nfl/2025/1',
       'https://api.sleeper.app/projections/nfl/2025/2',
+      'https://api.sleeper.app/projections/nfl/2025/3',
+      'https://api.sleeper.app/projections/nfl/2025/4',
     ]);
     expect(providerRead.mock.calls.map(([path]) => path)).not.toContain('123/rosters');
   },

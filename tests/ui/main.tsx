@@ -28,6 +28,7 @@ import { StudioPreview } from './StudioPreview';
 import { PlayersPreview } from './PlayersPreview';
 import { TradePreview } from './TradePreview';
 import { CalibrationPreview } from './CalibrationPreview';
+import { PlayoffPathsPreview } from './PlayoffPathsPreview';
 const mode = new URLSearchParams(location.search).get('mode');
 function PreviewApp() {
   if (mode?.startsWith('workspace-'))
@@ -91,6 +92,8 @@ function PreviewApp() {
           />
         ) : mode === 'calibration' ? (
           <CalibrationPreview />
+        ) : mode === 'playoff-paths' ? (
+          <PlayoffPathsPreview />
         ) : mode === 'playoffs' ? (
           <PlayoffForecast data={playoffData} />
         ) : mode === 'season-summary' ? (

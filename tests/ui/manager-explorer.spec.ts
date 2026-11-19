@@ -48,7 +48,7 @@ for (const width of [1440, 390]) {
   });
 }
 
-test('seven destinations, contextual tools and account dismissal work with a keyboard', async ({
+test('eight destinations, contextual tools and account dismissal work with a keyboard', async ({
   page,
 }) => {
   await page.goto('/tests/ui/?mode=workspace-overview');
@@ -59,6 +59,7 @@ test('seven destinations, contextual tools and account dismissal work with a key
     'Live matchups',
     'Season insights',
     'Playoff simulator',
+    'Playoff paths',
     'League history',
     'Other tools',
   ]);

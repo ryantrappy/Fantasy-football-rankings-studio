@@ -6,6 +6,7 @@ import {
   type ForecastValidation,
 } from './forecast-statistics';
 import { playoffRulesReason, seedPlayoffTeams, type PlayoffRules } from './playoff-rules';
+import { playoffClinch, type PlayoffClinch } from './playoff-clinch';
 import { requestForecastInWorker } from './playoff-forecast-worker-client';
 export const PLAYOFF_FORECAST_MODEL_VERSION = 'joint-posterior-weekly-lineup-v1';
 export interface PlayoffSettings {
@@ -32,6 +33,7 @@ export interface PlayoffLeverage {
 export interface ForecastOptions {
   fixedOutcomes?: FixedOutcome[];
   leverage?: boolean;
+  includeClinch?: boolean;
 }
 export interface PlayoffForecast {
   schedule: { knownWeeks: number; remainingWeeks: number };
@@ -45,6 +47,7 @@ export interface PlayoffForecast {
     teamName: string;
     projectedWins: number;
     playoff: number;
+    clinch?: PlayoffClinch;
     bye: number;
     advance: number[];
     // Exact counts from the same trials. Optional for compatibility with saved forecasts.
@@ -448,6 +451,22 @@ function* simulatePlayoffs(
     // Keep the same random stream and accumulators across interactive batches.
     if ((trial + 1) % 10 === 0) yield;
   }
+  const remainingWeeks = settings.regularSeasonEnd - throughWeek;
+  const fixtures: [number, number][] = [];
+  for (const order of scheduled.values())
+    for (let i = 0; i < order.length; i += 2) fixtures.push([order[i], order[i + 1]]);
+  const clinch = options.includeClinch
+    ? yield* playoffClinch(
+        teams.map((team) => team.teamId),
+        size,
+        { wins, points, against, meetings, headToHead },
+        settings.rules,
+        scheduled.size === remainingWeeks &&
+          histories.every((history) => history.length === throughWeek)
+          ? fixtures
+          : undefined,
+      )
+    : undefined;
   const leverage: PlayoffLeverage[] | undefined = leverageRequested
     ? [...leverageCounts.entries()]
         .map(([key, byWinner]) => {
@@ -488,6 +507,7 @@ function* simulatePlayoffs(
       projectedWins: r.projectedWins / simulations,
       playoff: r.playoff / simulations,
       bye: r.bye / simulations,
+      ...(clinch && { clinch: clinch[index] }),
       advance: r.advance.map((n) => n / simulations),
       winDistribution: [...winCounts[index]]
         .sort(([a], [b]) => a - b)

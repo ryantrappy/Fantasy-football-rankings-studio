@@ -24,6 +24,53 @@ export interface StandingsState {
   headToHead: number[][];
 }
 
+export function bestSeedingCandidates(
+  pool: number[],
+  state: StandingsState,
+  divisions: (string | undefined)[],
+  tiebreakers: SeedingTiebreaker[],
+  scoresFinal = true,
+): number[] {
+  const bestWins = Math.max(...pool.map((j) => state.wins[j]));
+  let tied = pool.filter((i) => state.wins[i] === bestWins);
+  for (const rule of tiebreakers) {
+    if (tied.length < 2) break;
+    let values: number[];
+    if (rule === 'head-to-head') {
+      const counts = tied.flatMap((i) =>
+        tied.filter((j) => j !== i).map((j) => state.meetings[i][j]),
+      );
+      // All tied teams must have met each other equally often, with at least one game.
+      if (!counts[0] || counts.some((n) => n !== counts[0])) continue;
+      values = tied.map((i) => tied.reduce((sum, j) => sum + state.headToHead[i][j], 0));
+    } else if (rule === 'division-record') {
+      if (!divisions[tied[0]] || tied.some((i) => divisions[i] !== divisions[tied[0]])) continue;
+      const games = tied.map((i) =>
+        divisions.reduce(
+          (sum, _, j) =>
+            sum + (i !== j && divisions[j] === divisions[i] ? state.meetings[i][j] : 0),
+          0,
+        ),
+      );
+      if (games.some((n) => n === 0)) continue;
+      values = tied.map(
+        (i, k) =>
+          divisions.reduce(
+            (sum, _, j) =>
+              sum + (i !== j && divisions[j] === divisions[i] ? state.headToHead[i][j] : 0),
+            0,
+          ) / games[k],
+      );
+    } else {
+      if (!scoresFinal) break;
+      values = tied.map((i) => (rule === 'points-for' ? state.points[i] : state.against[i]));
+    }
+    const best = Math.max(...values);
+    tied = tied.filter((_, k) => values[k] === best);
+  }
+  return tied;
+}
+
 // Resolve one seed at a time. Recompute head-to-head on the remaining tied cohort,
 // rather than using a pairwise sort comparator (which can be non-transitive).
 export function seedPlayoffTeams(
@@ -34,43 +81,11 @@ export function seedPlayoffTeams(
   randomTie: number[],
 ): number[] {
   const divisions = teamIds.map((id) => rules?.divisionByTeam[id]);
-  const pick = (pool: number[]) => {
-    const bestWins = Math.max(...pool.map((j) => state.wins[j]));
-    let tied = pool.filter((i) => state.wins[i] === bestWins);
-    for (const rule of rules?.tiebreakers ?? ['points-for']) {
-      if (tied.length < 2) break;
-      let values: number[];
-      if (rule === 'head-to-head') {
-        const counts = tied.flatMap((i) =>
-          tied.filter((j) => j !== i).map((j) => state.meetings[i][j]),
-        );
-        // All tied teams must have met each other equally often, with at least one game.
-        if (!counts[0] || counts.some((n) => n !== counts[0])) continue;
-        values = tied.map((i) => tied.reduce((sum, j) => sum + state.headToHead[i][j], 0));
-      } else if (rule === 'division-record') {
-        if (!divisions[tied[0]] || tied.some((i) => divisions[i] !== divisions[tied[0]])) continue;
-        const games = tied.map((i) =>
-          teamIds.reduce(
-            (sum, _, j) =>
-              sum + (i !== j && divisions[j] === divisions[i] ? state.meetings[i][j] : 0),
-            0,
-          ),
-        );
-        if (games.some((n) => n === 0)) continue;
-        values = tied.map(
-          (i, k) =>
-            teamIds.reduce(
-              (sum, _, j) =>
-                sum + (i !== j && divisions[j] === divisions[i] ? state.headToHead[i][j] : 0),
-              0,
-            ) / games[k],
-        );
-      } else values = tied.map((i) => (rule === 'points-for' ? state.points[i] : state.against[i]));
-      const best = Math.max(...values);
-      tied = tied.filter((_, k) => values[k] === best);
-    }
-    return tied.reduce((best, i) => (randomTie[i] > randomTie[best] ? i : best));
-  };
+  const tiebreakers = rules?.tiebreakers ?? ['points-for'];
+  const pick = (pool: number[]) =>
+    bestSeedingCandidates(pool, state, divisions, tiebreakers).reduce((best, i) =>
+      randomTie[i] > randomTie[best] ? i : best,
+    );
   const order = (pool: number[], count: number) => {
     const result: number[] = [];
     while (pool.length && result.length < count) {

@@ -40,7 +40,7 @@ it('caches each weekly cutoff and excludes current projections from older weeks'
   expect(second).not.toBe(first);
   const fresh = structuredClone(data);
   expect(await requestPlayoffForecast(fresh, settings, 2)).toEqual(
-    forecastPlayoffs(fresh, settings, 2),
+    forecastPlayoffs(fresh, settings, 2, undefined, undefined, { includeClinch: true }),
   );
   const result = peekPlayoffForecast(fresh, settings, 2);
   expect(await requestPlayoffForecast(fresh, settings, 2)).toBe(result);

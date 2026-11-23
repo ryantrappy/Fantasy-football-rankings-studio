@@ -40,7 +40,9 @@ export async function requestPlayoffForecast(
   const cutoff = cutoffFor(data, settings, week);
   const saved = cache.weeks.get(cutoff);
   if (saved) return saved;
-  const result = await forecastPlayoffsAsync(data, settings, cutoff, signal);
+  const result = await forecastPlayoffsAsync(data, settings, cutoff, signal, undefined, undefined, {
+    includeClinch: true,
+  });
   signal?.throwIfAborted();
   cache.weeks.set(cutoff, result);
   return result;
@@ -58,7 +60,9 @@ export function cachedPlayoffForecast(
   );
   let forecast = cache.weeks.get(cutoff);
   if (!forecast) {
-    forecast = forecastPlayoffs(data, settings, cutoff);
+    forecast = forecastPlayoffs(data, settings, cutoff, undefined, undefined, {
+      includeClinch: true,
+    });
     cache.weeks.set(cutoff, forecast);
   }
   return forecast;

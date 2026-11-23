@@ -126,7 +126,7 @@ Source: [TASK-110](../../backlog/tasks/task-110%20-%20Suggest-possible-trades-fo
 
 ### TASK-112 — Keep unusable Sleeper live projections unavailable instead of zero
 
-- A native projection with no finite stat applicable to the selected league scoring remains unavailable rather than becoming a zero forecast.
+- A native projection with no finite stat applicable to the selected league scoring remains unavailable. A confirmed NFL bye independently establishes a zero-point Sleeper projection.
 - Legitimate zero and negative projections remain numeric, while missing scoring settings, nonfinite inputs and unusable dictionaries do not claim covered projection data.
 - Live, Players, lineup advice and trade analysis consistently disclose missing projection coverage; a valid optional cross-source estimate may still be used with its actual provenance.
 - Provider regression tests reproduce the irrelevant-stat case and verify real zero, negative, missing and valid cross-source cases; calculation documentation explains the coverage rule.

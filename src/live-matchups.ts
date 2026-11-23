@@ -56,6 +56,7 @@ export interface LivePlayer {
     points: number;
     capturedAt: string;
     scope?: 'shared-stats';
+    basis?: 'confirmed-bye';
   }[];
   projectionIdentity?: ProjectionIdentity;
   projectionMethod?: 'mean' | 'partial-mean' | 'native' | 'single-source';

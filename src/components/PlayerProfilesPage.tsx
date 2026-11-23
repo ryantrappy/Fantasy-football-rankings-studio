@@ -603,6 +603,7 @@ export function PlayerProfilesPage({
                             <td key={player.key}>
                               {points(estimate?.points)}
                               {estimate?.scope === 'shared-stats' && ' · Shared stats'}
+                              {estimate?.basis === 'confirmed-bye' && ' · Confirmed bye'}
                             </td>
                           );
                         })}
@@ -814,7 +815,8 @@ export function PlayerProfilesPage({
                             <Text mt={2} key={source.provider}>
                               {source.provider}
                               {source.scope === 'shared-stats' ? ' shared stats' : ''}:{' '}
-                              {source.points.toFixed(2)} · player ID {source.playerId} · fetched{' '}
+                              {source.points.toFixed(2)} · player ID {source.playerId} ·{' '}
+                              {source.basis === 'confirmed-bye' ? 'bye checked' : 'fetched'}{' '}
                               {source.capturedAt}
                             </Text>
                           ))}

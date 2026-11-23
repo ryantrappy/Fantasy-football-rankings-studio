@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   projections: vi.fn(),
   catalog: vi.fn(),
   espn: vi.fn(),
+  schedule: vi.fn(),
 }));
 vi.mock('axios', () => ({
   default: {
@@ -25,7 +26,7 @@ vi.mock('../providers/sleeper.provider', () => ({
 vi.mock('../insights/load.server', () => ({ sleeperNames: mocks.catalog }));
 vi.mock('../live-projections.server', () => ({
   sleeperLiveProjections: mocks.projections,
-  nflSchedule: async () => new Map(),
+  nflSchedule: mocks.schedule,
   nflRemaining: async () => new Map([['BUF', 1]]),
 }));
 import { adviseLineup } from '../../lineup-advisor';
@@ -67,6 +68,7 @@ beforeEach(async () => {
     espnIds: {},
   });
   mocks.espn.mockRejectedValue(new Error('Optional source unavailable'));
+  mocks.schedule.mockResolvedValue(new Map());
 });
 
 it.each([
@@ -150,3 +152,36 @@ it('uses a valid optional source with its actual provenance when the native dict
     { provider: 'ESPN', playerId: '901', points: 7, capturedAt: expect.any(String) },
   ]);
 });
+
+it.each([undefined, { adp_dd_ppr: 21 }, { rush_yd: 100 }])(
+  'uses a confirmed bye as a sourced Sleeper zero even when feed stats are %j',
+  async (stats) => {
+    const capturedAt = '2026-10-07T00:00:00Z';
+    mocks.catalog.mockResolvedValue({
+      names: { s1: 'One RB', s2: 'Two RB' },
+      positions: { s1: 'RB', s2: 'RB' },
+      availability: {},
+      teams: { s1: 'BUF', s2: 'DET' },
+      espnIds: { s1: '901', s2: '902' },
+    });
+    mocks.schedule.mockResolvedValue(
+      new Map([['BUF', { status: 'bye', source: 'ESPN NFL scoreboard', capturedAt }]]),
+    );
+    mocks.projections.mockResolvedValue([
+      ...(stats ? [{ player_id: 's1', stats }] : []),
+      { player_id: 's2', stats: { adp_dd_ppr: 12 } },
+    ]);
+    const [matchup] = (await load(league)).matchups;
+    expect(matchup.home.players[0]).toMatchObject({
+      bye: true,
+      projectedPoints: 0,
+      projectionMethod: 'native',
+      projectionIdentity: { source: 'Sleeper catalog' },
+      projectionSources: [
+        { provider: 'Sleeper', playerId: 's1', points: 0, capturedAt, basis: 'confirmed-bye' },
+      ],
+    });
+    expect(matchup.away?.players[0].projectedPoints).toBeUndefined();
+    expect(mocks.espn.mock.calls.some(([url]) => url.includes('/players/901'))).toBe(false);
+  },
+);

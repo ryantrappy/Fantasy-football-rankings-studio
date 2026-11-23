@@ -145,6 +145,7 @@ export async function enrichPlayerProjections(
       const position = player?.position ?? '';
       if (!link || link === 'ambiguous' || catalog?.positions[link.sleeperId] !== position)
         return [];
+      if (native === 'Sleeper' && player?.nflSchedule?.status === 'bye') return [];
       const rules = rulesFor(position);
       if (rules.unsupported.length) return [];
       // Preserve the request budget for candidates that can actually be blended.
@@ -170,6 +171,30 @@ export async function enrichPlayerProjections(
       }),
     );
   return players.map((player) => {
+    const link = links.get(player.id);
+    if (native === 'Sleeper' && player.nflSchedule?.status === 'bye') {
+      const identity =
+        link && link !== 'ambiguous' && catalog?.positions[link.sleeperId] === player.position
+          ? link.identity
+          : undefined;
+      return {
+        ...combinePlayerProjection(
+          { ...player, projectedPoints: 0 },
+          native,
+          [
+            {
+              provider: 'Sleeper',
+              playerId: player.id,
+              points: 0,
+              capturedAt: player.nflSchedule.capturedAt,
+              basis: 'confirmed-bye',
+            },
+          ],
+          'Confirmed NFL bye. The NFL schedule sets the Sleeper projection to zero.',
+        ),
+        projectionIdentity: identity,
+      };
+    }
     if (!['QB', 'RB', 'WR', 'TE'].includes(player.position ?? ''))
       return combinePlayerProjection(
         player,
@@ -177,7 +202,6 @@ export async function enrichPlayerProjections(
         [],
         'Cross-source scoring is available for QB, RB, WR and TE. Native projection retained when available.',
       );
-    const link = links.get(player.id);
     if (!link || link === 'ambiguous')
       return combinePlayerProjection(
         player,

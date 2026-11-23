@@ -181,3 +181,12 @@ The usability iteration keeps a real selected-team inspector across all seven fo
 View selected team details and Return to season view move focus and restore the originating page position without replacing the report, active view, selected team, filters or table scroll. Shared data tables show a horizontal-scroll cue only while overflowing, retain identity columns while scrolling, and align numeric evidence consistently. Coverage-hidden columns retain correct row-header and cell metadata; all evidence columns and CSVs remain available.
 
 Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-usability-and-add-restrained-disclosure-motion.md).
+
+### TASK-166 — Bootstrap season simulator
+
+- The authenticated Season simulator is available in Other tools and preserves the league and selected scoring season in the URL. Existing playoff and league simulations use their own models.
+- The standalone bootstrap engine uses provider-scored, completed regular-season player weeks from the selected league season and current roster ownership and eligibility. Weekly scores are sampled with replacement from neighboring observed positional ranks. Players without individual history use the lowest available peers at their position, and missing coverage is disclosed.
+- Runs reproduce identical outcomes for identical inputs and seeds. Users can select randomized round-robin matchups or a complete same-season provider schedule and choose between best-ball and modeled lineup efficiency. Season standings include mean wins, all-play rate, points and finishes, with team distributions and a paired single-player removal comparison.
+- The worker supports cancellation and has a cooperative browser fallback. Simulated standings use head-to-head wins then total points. The tool does not apply provider playoffs, future roster moves, injury forecasts, or waiver additions.
+
+Method reference: [ffsimulator](https://github.com/ffverse/ffsimulator). Task: [TASK-166](../../backlog/tasks/task-166%20-%20Add-a-bootstrap-season-simulator-to-Other-tools.md).

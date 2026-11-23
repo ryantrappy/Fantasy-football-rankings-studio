@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useSessionStatus } from '../auth/session';
 import { AppNavigation } from './AppNavigation';
-import { ToolsBreadcrumb } from './OtherToolsPage';
+import { isOtherToolsPath, ToolsBreadcrumb } from './OtherToolsPage';
 import { PersistentDisclosure } from './DisclosureMotion';
 
 const HeaderTarget = createContext<HTMLElement | null | undefined>(undefined);
@@ -71,9 +71,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
               : 'workspace-main studio-surface'
           }
         >
-          {['/tools', '/players', '/trades'].includes(pathname) && (
-            <ToolsBreadcrumb pathname={pathname} />
-          )}
+          {isOtherToolsPath(pathname) && <ToolsBreadcrumb pathname={pathname} />}
           {children}
         </main>
       </div>

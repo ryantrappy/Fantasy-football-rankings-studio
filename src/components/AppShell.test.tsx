@@ -259,3 +259,29 @@ it('dismisses on same-path search changes and prevents focus remaining in the cl
   expect(trigger).toHaveFocus();
   routeSearch = { leagueId: '123', year: 2026 };
 });
+
+it('keeps the season simulator in Other tools and carries league context in the switcher', () => {
+  pathname = '/season-simulator';
+  routeSearch = { leagueId: '123', year: 2026 };
+  render(
+    <Provider>
+      <AppShell>
+        <div>Simulator route</div>
+      </AppShell>
+    </Provider>,
+  );
+  const main = screen.getByRole('navigation', { name: 'Main navigation' });
+  expect(within(main).getByRole('link', { name: 'Other tools' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  const switcher = screen.getByRole('navigation', { name: 'Other tools quick switcher' });
+  expect(within(switcher).getByRole('link', { name: 'Season simulator' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  expect(within(switcher).getByRole('link', { name: 'Trade analyzer' })).toHaveAttribute(
+    'data-search',
+    JSON.stringify(routeSearch),
+  );
+});

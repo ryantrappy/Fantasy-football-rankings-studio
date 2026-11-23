@@ -3,6 +3,7 @@ import { Link, useRouterState, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { defaultSeason } from '../util/rankings';
 import { Icon } from './Icon';
+import { isOtherToolsPath } from './OtherToolsPage';
 
 export function AppNavigation({ shared = false }: { shared?: boolean }) {
   const search = useSearch({ strict: false });
@@ -10,7 +11,7 @@ export function AppNavigation({ shared = false }: { shared?: boolean }) {
   const navigation = useRef<HTMLDivElement>(null);
   const leagueId = search.leagueId || '';
   const year = search.year || search.years?.[0] || defaultSeason();
-  const toolsActive = ['/tools', '/players', '/trades'].includes(pathname);
+  const toolsActive = isOtherToolsPath(pathname);
   // A shared Path to the Playoffs link opens only the simulator: no links to
   // the other shared reports from that page.
   const pathsOnly = pathname === '/shared/playoff-paths';

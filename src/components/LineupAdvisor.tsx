@@ -1,3 +1,4 @@
+import { projectionText } from '../projection-source';
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Named overflow sections must be focusable for keyboard table scrolling. */
 import './decision-explorer.css';
 import { Box, Heading, Text } from '@chakra-ui/react';
@@ -105,7 +106,7 @@ export function LineupAdvisor({
                       : 'Unlocked'}
                   {player.availability ? ` · ${player.availability}` : ''}
                 </td>
-                <td>{player.projectedPoints?.toFixed(2) ?? 'Unavailable'}</td>
+                <td>{projectionText(player.projectedPoints, player.projectionSubtotal)}</td>
               </tr>
             ))}
           </tbody>
@@ -149,10 +150,9 @@ export function LineupAdvisor({
                     {excluded.includes(player.id) ? ' · Excluded from scenario' : ''}
                   </td>
                   <td>
-                    {player.projectedPoints?.toFixed(2) ?? 'Unavailable'} ·{' '}
-                    {player.projectionMethod === 'partial-mean'
-                      ? 'shared-stat blend'
-                      : (player.projectionMethod ?? 'native')}
+                    {projectionText(player.projectedPoints, player.projectionSubtotal)}
+                    {player.projectionMethod &&
+                      ` · ${player.projectionMethod === 'partial-mean' ? 'shared-stat blend' : player.projectionMethod}`}
                     {player.projectionSources?.map((source) => (
                       <div key={source.provider}>
                         {source.provider}

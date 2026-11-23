@@ -218,7 +218,9 @@ it('compares matched provider stats with known native-only scoring and retains t
     config,
   );
   expect(withoutNative.projectedPoints).toBeUndefined();
-  expect(mocks.get).not.toHaveBeenCalled();
+  expect(withoutNative.projectionSources).toContainEqual(
+    expect.objectContaining({ provider: 'ESPN', scope: 'shared-stats' }),
+  );
 
   // Shared Sleeper points are 15 and the native total includes 2 extra points.
   const [player] = await api.enrichPlayerProjections(

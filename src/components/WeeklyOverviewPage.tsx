@@ -5,6 +5,8 @@ import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 import { Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useApi } from '../auth/session';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { matchupProjections, waiverProjections } from '../projection-source';
 import { loadWeeklyOverview, type WeeklyOverviewRow } from '../weekly-overview';
 import { RosterRiskAlerts } from './RosterRiskAlerts';
 import { WaiverAdvisor } from './WaiverAdvisor';
@@ -26,6 +28,7 @@ export function WeeklyOverviewPage() {
 
 function WeeklyOverviewWorkspace() {
   const api = useApi();
+  const source = useProjectionSource();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000);
@@ -150,25 +153,33 @@ function WeeklyOverviewWorkspace() {
       >
         {busy && rows.length === 0 && <LoadingSkeleton label="Loading overview…" />}
         {rows.map((row) => {
+          const matchup =
+            row.matchup &&
+            matchupProjections(
+              row.matchup,
+              source,
+              row.league.leagueType === 0 ? 'Sleeper' : 'ESPN',
+              row.rosterCapturedAt,
+            );
           const selected = row.selection?.teams.find(
             (team) => team.teamId === row.selection?.teamId,
           );
-          const myTeam =
-            row.matchup?.home.teamId === selected?.teamId ? row.matchup?.home : row.matchup?.away;
+          const myTeam = matchup?.home.teamId === selected?.teamId ? matchup?.home : matchup?.away;
           const opponent =
-            row.matchup?.home.teamId === selected?.teamId ? row.matchup?.away : row.matchup?.home;
-          const homeEstimate = row.matchup ? winProbability(row.matchup) : null;
+            matchup?.home.teamId === selected?.teamId ? matchup?.away : matchup?.home;
+          const homeEstimate = matchup ? winProbability(matchup) : null;
           const estimate =
             homeEstimate === null
               ? null
-              : myTeam === row.matchup?.home
+              : myTeam === matchup?.home
                 ? homeEstimate
                 : 100 - homeEstimate;
           const excluded = exclusions.api === api ? (exclusions.values[poolKey(row)] ?? []) : [];
           const advice = myTeam
             ? adviseLineup(myTeam.players, row.lineupSlots, excluded)
             : undefined;
-          const pool = pools[poolKey(row)];
+          const rawPool = pools[poolKey(row)];
+          const pool = rawPool && waiverProjections(rawPool, source);
           const capturedAt = pool ? new Date(pool.capturedAt).getTime() : NaN;
           const poolFresh =
             Number.isFinite(capturedAt) &&
@@ -212,6 +223,7 @@ function WeeklyOverviewWorkspace() {
               <Text className="overview-context">
                 {row.league.leagueType === 0 ? 'Sleeper' : 'ESPN'} · {row.league.seasonId} ·{' '}
                 {row.week === null ? 'Week unavailable' : `Week ${row.week}`}
+                {source !== 'Combined' && ` · ${source} only projections`}
               </Text>
               {row.rosterCapturedAt && (
                 <Text fontSize="xs" color="fg.muted">
@@ -229,13 +241,13 @@ function WeeklyOverviewWorkspace() {
                       <Heading as="h3" size="md">
                         {selected.teamName}
                       </Heading>
-                      <strong>{row.matchup ? (myTeam?.score?.toFixed(2) ?? '—') : '—'}</strong>
+                      <strong>{matchup ? (myTeam?.score?.toFixed(2) ?? '—') : '—'}</strong>
                     </div>
                     <span>vs.</span>
                     <div>
                       <Text fontSize="xs">Opponent</Text>
                       <Heading as="h3" size="md">
-                        {row.matchup ? (opponent?.name ?? 'Bye week') : 'Matchup unavailable'}
+                        {matchup ? (opponent?.name ?? 'Bye week') : 'Matchup unavailable'}
                       </Heading>
                       <strong>{opponent?.score?.toFixed(2) ?? '—'}</strong>
                     </div>
@@ -329,7 +341,7 @@ function WeeklyOverviewWorkspace() {
                       </summary>
                       <WaiverAdvisor
                         key={`${row.league.leagueId}:${row.league.seasonId}:${refresh}`}
-                        loadedPool={pool}
+                        loadedPool={rawPool}
                         onPoolChange={(next) =>
                           setWaiverSnapshot((previous) => {
                             if (previous?.api !== api || previous.rows !== rows) return previous;

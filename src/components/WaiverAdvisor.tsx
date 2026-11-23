@@ -3,6 +3,8 @@ import { Box, Button, Text } from '@chakra-ui/react';
 import { useState } from 'react';
 import type { LeagueApi } from '../types';
 import { PlayerProfileLink } from './PlayerProfileLink';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { projectionText, waiverProjections } from '../projection-source';
 import { recommendedDrop, waiverImpact, type WaiverPool } from '../waivers';
 export function WaiverAdvisor({
   api,
@@ -18,7 +20,9 @@ export function WaiverAdvisor({
   onPoolChange?: (pool: WaiverPool | undefined) => void;
 }) {
   const [localPool, setPool] = useState<WaiverPool>();
-  const pool = loadedPool ?? localPool;
+  const source = useProjectionSource();
+  const rawPool = loadedPool ?? localPool;
+  const pool = rawPool && waiverProjections(rawPool, source);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [position, setPosition] = useState(''),
@@ -101,7 +105,11 @@ export function WaiverAdvisor({
                       .map((player) => (
                         <option key={player.id} value={player.id}>
                           {player.name} · {player.position} ·{' '}
-                          {player.projectedPoints?.toFixed(2) ?? 'Projection unavailable'}
+                          {projectionText(
+                            player.projectedPoints,
+                            player.projectionSubtotal,
+                            'Projection unavailable',
+                          )}
                           {player.bye ? ' · Bye' : ''}
                           {player.availability ? ` · ${player.availability}` : ''}
                         </option>

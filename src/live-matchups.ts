@@ -50,6 +50,8 @@ export interface LivePlayer {
   points: number | null;
   starter: boolean;
   projectedPoints?: number;
+  nativeProjection?: { provider: 'ESPN' | 'Sleeper'; points: number };
+  projectionSubtotal?: number;
   projectionSources?: {
     provider: 'ESPN' | 'Sleeper';
     playerId: string;

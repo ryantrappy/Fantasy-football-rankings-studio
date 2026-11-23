@@ -148,17 +148,17 @@ export async function enrichPlayerProjections(
       if (native === 'Sleeper' && player?.nflSchedule?.status === 'bye') return [];
       const rules = rulesFor(position);
       if (rules.unsupported.length) return [];
-      // Preserve the request budget for candidates that can actually be blended.
-      if (
-        rules.nativeOnly?.length &&
-        (!Number.isFinite(player?.projectedPoints) ||
-          duplicateRows.has(link.sleeperId) ||
-          scoreProjection(rows.get(link.sleeperId), rules, position) === undefined)
-      )
-        return [];
-      return [link.espnId];
+      // Prefer complete blends. Use the remaining budget for partial ESPN-only views.
+      const blendable =
+        !rules.nativeOnly?.length ||
+        (Number.isFinite(player?.projectedPoints) &&
+          !duplicateRows.has(link.sleeperId) &&
+          scoreProjection(rows.get(link.sleeperId), rules, position) !== undefined);
+      return [{ espnId: link.espnId, blendable }];
     })
-    .slice(0, 120);
+    .sort((a, b) => Number(b.blendable) - Number(a.blendable))
+    .slice(0, 120)
+    .map(({ espnId }) => espnId);
   const deadline = Date.now() + 8000;
   for (let offset = 0; offset < requested.length && Date.now() < deadline; offset += 6)
     await Promise.all(
@@ -303,6 +303,7 @@ export async function enrichLiveProjections(
       const projection = byId.get(player.id)!;
       Object.assign(player, {
         projectedPoints: projection.projectedPoints,
+        nativeProjection: projection.nativeProjection,
         projectionSources: projection.projectionSources,
         projectionIdentity: projection.projectionIdentity,
         projectionMethod: projection.projectionMethod,

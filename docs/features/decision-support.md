@@ -198,3 +198,11 @@ Source: [TASK-167](../../backlog/tasks/task-167%20-%20Add-DynastyProcess-player-
 - Test additive and partial blends, missing inputs, unsupported rules, and the real-roster coverage available from the providers.
 
 Source: [TASK-169](../../backlog/tasks/task-169%20-%20Compare-Sleeper-and-ESPN-projections-under-custom-scoring.md). Rules: [Sleeper scoring options](https://support.sleeper.com/en/articles/3998131-what-scoring-options-are-available).
+
+### TASK-170 — Live projection source selector
+
+- Profile offers Combined, Sleeper only, and ESPN only in an authenticated workspace. Combined is the default. The browser stores the setting per account and switching uses the current snapshot, preserving selected players, teams, and hypothetical scenarios.
+- Live matchups, Weekly overview, Player Profiles, lineup advice, trades, and waiver calculations read the same source choice. Single-provider modes use the selected provider's available points. Points covering only shared stats are labeled partial and cannot serve as complete estimates. Verified NFL byes are zero in every view, with the schedule as provenance.
+- Source selection applies to live decision data. The historical replay and independent season and playoff simulation models keep their established inputs.
+
+Source: [TASK-170](../../backlog/tasks/task-170%20-%20Add-a-live-projection-source-selector-for-Sleeper-ESPN-and-Combined.md).

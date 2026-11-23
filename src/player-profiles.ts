@@ -8,6 +8,7 @@ export interface PlayerProfile {
   position?: string;
   observed: Record<number, number>;
   projection?: number;
+  projectionSubtotal?: number;
   projectionWeek?: number;
   ownership: string;
   availability?: string | null;
@@ -91,6 +92,7 @@ function assign(profile: PlayerProfile, player: LivePlayer, week?: number, captu
   profile.name = player.name;
   profile.position = player.position ?? profile.position;
   profile.projection = Number.isFinite(player.projectedPoints) ? player.projectedPoints : undefined;
+  profile.projectionSubtotal = player.projectionSubtotal;
   profile.projectionWeek = week;
   profile.availability = player.availability;
   profile.bye = player.bye;

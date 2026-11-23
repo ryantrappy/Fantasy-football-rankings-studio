@@ -125,6 +125,8 @@ export function combinePlayerProjection(
   const espn = usable.find((source) => source.provider === 'ESPN');
   const sleeper = usable.find((source) => source.provider === 'Sleeper');
   const nativePoints = Number.isFinite(player.projectedPoints) ? player.projectedPoints : undefined;
+  const nativeProjection =
+    nativePoints === undefined ? undefined : { provider: native, points: nativePoints };
   const spread = espn && sleeper ? Math.abs(espn.points - sleeper.points) : undefined;
   if (sharedOnly) {
     const nativeShared = native === 'Sleeper' ? sleeper?.points : espn?.points;
@@ -139,6 +141,7 @@ export function combinePlayerProjection(
     const scope = `Shared stat points use this league’s scoring. Native-only categories: ${nativeOnly.join(', ')}.`;
     return {
       ...player,
+      nativeProjection,
       projectedPoints: blended ? adjusted : nativePoints,
       projectionSources: usable.map((source) => ({ ...source, scope: 'shared-stats' })),
       projectionMethod: blended
@@ -155,6 +158,7 @@ export function combinePlayerProjection(
   const mean = espn && sleeper ? (espn.points + sleeper.points) / 2 : undefined;
   return {
     ...player,
+    nativeProjection,
     projectedPoints: mean ?? nativePoints ?? usable[0]?.points,
     projectionSources: usable,
     projectionMethod:

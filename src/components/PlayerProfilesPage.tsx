@@ -16,6 +16,8 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../auth/session';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { leagueProjections, projectionText, waiverProjections } from '../projection-source';
 import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
 import type { LiveLeague } from '../live-matchups';
@@ -35,6 +37,7 @@ export function PlayerProfilesPage({
   onContextChange?: (context: { leagueId: string; year: number; playerId?: string }) => void;
 }) {
   const api = useApi();
+  const sourcePreference = useProjectionSource();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leagueId, setLeagueId] = useState(search.leagueId ?? '');
   const [year, setYear] = useState(search.year ?? defaultSeason());
@@ -190,7 +193,13 @@ export function PlayerProfilesPage({
   }
   const league = leagues.find((row) => row.leagueId === leagueId);
   const provider = league?.leagueType === 1 ? 'ESPN' : 'Sleeper';
-  const profiles = playerProfiles(provider, year, report, live, pool);
+  const profiles = playerProfiles(
+    provider,
+    year,
+    report,
+    live && leagueProjections(live, sourcePreference),
+    pool && waiverProjections(pool, sourcePreference),
+  );
   const positions = [...new Set(profiles.map((player) => player.position ?? 'Unknown'))].sort();
   const shown = profiles.filter(
     (player) =>
@@ -429,7 +438,8 @@ export function PlayerProfilesPage({
                       {player.position ?? 'Unknown position'} · {player.ownership}
                     </Text>
                     <Text fontSize="xs" color="fg.muted" mt={1}>
-                      ID {player.id} · Proj. {points(player.projection)}
+                      ID {player.id} · Proj.{' '}
+                      {projectionText(player.projection, player.projectionSubtotal)}
                     </Text>
                   </Box>
                 </Box>
@@ -584,10 +594,15 @@ export function PlayerProfilesPage({
                       })}
                     </tr>
                     <tr>
-                      <th scope="row">Current projection · combined where comparable</th>
+                      <th scope="row">
+                        Current projection ·{' '}
+                        {sourcePreference === 'Combined'
+                          ? 'combined where comparable'
+                          : `${sourcePreference} only`}
+                      </th>
                       {chosen.map((player) => (
                         <td key={player.key}>
-                          {points(player.projection)}
+                          {projectionText(player.projection, player.projectionSubtotal)}
                           {player.projectionWeek ? ` · Week ${player.projectionWeek}` : ''}
                         </td>
                       ))}
@@ -718,7 +733,7 @@ export function PlayerProfilesPage({
                         </Text>
                         <Flex align="baseline" gap={2} wrap="wrap" mt={1}>
                           <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
-                            {points(player.projection)}
+                            {projectionText(player.projection, player.projectionSubtotal)}
                           </Text>
                           <Text fontSize="sm" color="fg.muted">
                             points

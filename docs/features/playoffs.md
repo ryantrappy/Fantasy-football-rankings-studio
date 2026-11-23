@@ -216,3 +216,11 @@ Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-us
 - The simulator defaults to the saved managed team where available, with a team picker; shared viewers default to the best current record.
 
 Source: [TASK-162](../../backlog/tasks/task-162%20-%20Add-a-Path-to-the-Playoffs-simulator-as-its-own-nav-item.md).
+
+### TASK-165 — Show playoff clinch magic numbers in playoff projections
+
+- The forecast shows each team's fewest additional outright regular-season wins that guarantee qualification at the selected cutoff. It also shows Clinched, Needs help, Eliminated, or Unavailable. The calculation uses completed results and the real remaining matchups, including possible ties.
+- Qualification uses season-specific divisions and provider seeding tiebreakers. Future scoring tiebreakers are treated as unresolved. A forecast probability of 100% or 0% alone establishes neither a clinch nor an elimination.
+- Incomplete results, future fixtures, unsupported rules, or a scenario search that reaches its work limit can make a magic number unavailable. The search yields cooperatively and leaves forecast probabilities unchanged.
+
+Source: [TASK-165](../../backlog/tasks/task-165%20-%20Show-playoff-clinch-magic-numbers-in-playoff-projections.md).

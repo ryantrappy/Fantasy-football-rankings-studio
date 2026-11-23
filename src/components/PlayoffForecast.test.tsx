@@ -51,6 +51,52 @@ it('shows cutoff-controlled probabilities and the scenario limitations', async (
   fireEvent.click(screen.getByRole('button', { name: 'Advanced' }));
   expect(screen.getByText(/No eligible held-out games yet/)).toBeVisible();
 });
+it('displays a proven magic number beside the playoff odds and updates for the cutoff', async () => {
+  const data = forecastData();
+  data.teams = [
+    ...data.teams,
+    { ...data.teams[0], teamId: '3', teamName: 'Gamma' },
+    { ...data.teams[1], teamId: '4', teamName: 'Delta' },
+  ];
+  data.scores = data.scores.flatMap((score) => [
+    score,
+    {
+      ...score,
+      teamId: score.teamId === '1' ? '3' : '4',
+      opponentTeamId: score.teamId === '1' ? '4' : '3',
+    },
+  ]);
+  data.playoffSettings = {
+    regularSeasonEnd: 5,
+    playoffTeams: 2,
+    rules: {
+      provider: 'Sleeper',
+      season: 2026,
+      tiebreakers: ['points-for'],
+      divisionByTeam: {},
+      divisionWinnersFirst: false,
+      roundWeeks: [[6]],
+      reseed: false,
+    },
+  };
+  data.forecastSchedule = [
+    { week: 5, homeTeamId: '1', awayTeamId: '2' },
+    { week: 5, homeTeamId: '3', awayTeamId: '4' },
+  ];
+  render(
+    <Provider>
+      <PlayoffForecast data={data} />
+    </Provider>,
+  );
+  const table = await screen.findByRole('table', { name: 'Playoff probabilities' });
+  expect(within(table).getByRole('columnheader', { name: 'Magic number' })).toBeVisible();
+  expect(within(table).getByRole('row', { name: /Alpha.*Clinched/ })).toBeVisible();
+  expect(within(table).getByRole('row', { name: /Beta.*Eliminated/ })).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText('Forecast through week'), { target: { value: '3' } });
+  expect(await screen.findByRole('row', { name: /Alpha.*Unavailable/ })).toBeVisible();
+});
+
 it('shows cached week-by-week playoff and title chances with exact values', async () => {
   render(
     <Provider>

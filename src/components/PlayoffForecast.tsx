@@ -9,6 +9,23 @@ import { usePlayoffForecast } from '../hooks/usePlayoffForecast';
 import { DataTable } from './DataTable';
 import { PlayoffTimeline } from './PlayoffTimeline';
 import { describePlayoffRules } from '../playoff-rules';
+import type { PlayoffClinch } from '../playoff-clinch';
+
+function clinchLabel(clinch?: PlayoffClinch) {
+  switch (clinch?.status) {
+    case 'wins-needed':
+      return `${clinch.wins} ${clinch.wins === 1 ? 'win' : 'wins'}`;
+    case 'clinched':
+      return 'Clinched';
+    case 'needs-help':
+      return 'Needs help';
+    case 'eliminated':
+      return 'Eliminated';
+    default:
+      return 'Unavailable';
+  }
+}
+
 export function PlayoffForecast({
   data,
   advanced,
@@ -307,6 +324,19 @@ export function PlayoffForecast({
                   />
                 ) : (
                   <>
+                    <Text fontSize="xs" color="fg.muted" mb={3}>
+                      Magic number is the number of additional wins that guarantees a playoff spot.
+                      It updates as results become final. Needs help means winning out still leaves
+                      the team dependent on other results or tiebreakers.
+                    </Text>
+                    {forecast.rows.some(
+                      (row) => (row.clinch?.status ?? 'unavailable') === 'unavailable',
+                    ) && (
+                      <Text fontSize="xs" color="fg.muted" mb={3}>
+                        A magic number is unavailable when the schedule, results or rules are
+                        incomplete, or the remaining scenarios are too numerous to verify.
+                      </Text>
+                    )}
                     {displayMode === 'histogram' && (
                       <>
                         <Text fontSize="xs" mb={3}>
@@ -332,7 +362,8 @@ export function PlayoffForecast({
                               </button>
                               <Text fontSize="xs" my={2}>
                                 {row.projectedWins.toFixed(1)} projected wins ·{' '}
-                                {percent(row.playoff)} make playoffs
+                                {percent(row.playoff)} make playoffs · Magic number{' '}
+                                {clinchLabel(row.clinch)}
                               </Text>
                               {row.winDistribution?.length ? (
                                 <>
@@ -478,6 +509,12 @@ export function PlayoffForecast({
                             header: 'Make playoffs',
                             value: (r) => r.playoff,
                             cell: (r) => percent(r.playoff),
+                          },
+                          {
+                            id: 'magic-number',
+                            header: 'Magic number',
+                            value: (r) => clinchLabel(r.clinch),
+                            cell: (r) => clinchLabel(r.clinch),
                           },
                           ...(settings!.playoffTeams === 6
                             ? [

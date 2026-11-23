@@ -9,6 +9,7 @@ export interface ForecastWorkerInput {
   scoreModel: 'historical' | 'equal-strength';
   fixedOutcomes?: FixedOutcome[];
   leverage?: boolean;
+  includeClinch?: boolean;
 }
 
 export type ForecastWorkerResponse =

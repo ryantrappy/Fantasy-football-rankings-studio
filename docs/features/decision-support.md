@@ -181,3 +181,12 @@ The existing public scoreboard request supplies both remaining-time and schedule
 Verification: focused cache/provider/component tests cover confirmed versus placeholder dates, explicit byes and unknown teams, provider outages, changed kickoff refreshes, and DST/date conversion. Live browser regressions retain the compact board check and exercise kickoff evidence, source freshness, complete dense desktop/phone rosters, independent scrolling and bounded horizontal layout. See [UI regression guidance](../ui-testing.md).
 
 TASK-153 aligns compact Live matchup button names with the complete visible home/away scores, score order, managed stars and bye/missing-score evidence under the upgraded accessibility checker. Highlight/remove actions, the four-matchup limit, selections and density remain unchanged.
+
+### TASK-167 — DynastyProcess projection identity crosswalk
+
+- The Sleeper catalog supplies primary ESPN–Sleeper player links. Additional links from DynastyProcess may fill gaps only when both external IDs identify one unique pair and neither ID conflicts with a catalog claim. Names never establish identity.
+- The server reads the published CSV by its file revision, shares cached reads across leagues, and falls back to native data when the snapshot is unavailable or stale. Projection identity provenance includes the external revision and publication date separately from each projection provider's fetch time.
+- A verified ID link does not make a scoring rule or stat feed compatible. The existing position checks, native fallbacks, supported-stat scope and ESPN request cap continue to apply under either league provider.
+- The regression suite covers both directions, duplicate and conflicting links, stale snapshots and scoring fallback. A read-only Week 11 sample linked 138 eligible offensive players, including 95 new DynastyProcess links. The sample's custom rules prevented score blending.
+
+Source: [TASK-167](../../backlog/tasks/task-167%20-%20Add-DynastyProcess-player-IDs-as-a-cross-provider-projection-input.md). Data: [DynastyProcess](https://github.com/dynastyprocess/data).

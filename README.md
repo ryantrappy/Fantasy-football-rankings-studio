@@ -1022,7 +1022,9 @@ substituted with zero. Published single-week periods and byes remain supported.
 
 ### ESPN + Sleeper player projections
 
-Current live rosters in **either league type** now use both public player feeds when a unique Sleeper `espn_id` cross-reference and comparable raw weekly stats are available. No second-provider league or account is needed. The mean of the two league-scored projections feeds lineup and trade scenarios; the top 30 native-projected Sleeper waiver candidates also receive a comparison. League ownership, roster slots, injuries and game locks stay tied to your registered league.
+Current live rosters in **either league type** use both public player feeds when a unique ESPN–Sleeper ID link and comparable raw weekly stats are available. No second-provider league or account is needed. The mean of the two league-scored projections feeds lineup and trade scenarios; the top 30 native-projected Sleeper waiver candidates also receive a comparison. League ownership, roster slots, injuries and game locks stay tied to your registered league.
+
+The Sleeper catalog provides the primary ID links. Missing links can use a one-to-one match from the [DynastyProcess player-ID database](https://github.com/dynastyprocess/data/blob/master/files/db_playerids.csv). The server fetches the CSV at its latest file revision, caches the parsed IDs for 24 hours, and excludes snapshots older than 45 days. A failed refresh may reuse the last snapshot while it is still fresh. Conflicting or ambiguous fallback IDs are excluded. Identity provenance is tracked independently of scoring coverage, and Player Profiles show the source and snapshot date when a DynastyProcess link was used. DynastyProcess publishes the source database under [GPL-3.0](https://github.com/dynastyprocess/data/blob/master/LICENSE).
 
 Player profiles show each source's player ID, points, fetch time and absolute disagreement. The equal-weight mean is a transparent starting estimate, **not a demonstrated accuracy improvement**; disagreement is not a confidence interval. This does not replace historical scoring records or playoff forecast inputs.
 

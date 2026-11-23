@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only';
 import axios from 'axios';
-import type { LivePlayer, LiveLeague } from '../live-matchups';
+import type { LivePlayer, LiveLeague, ProjectionIdentity } from '../live-matchups';
 import {
   combinePlayerProjection,
   espnStatIds,
@@ -9,6 +9,10 @@ import {
 } from '../combined-projections';
 import { sleeperNames } from './insights/load.server';
 import { sleeperLiveProjections } from './live-projections.server';
+import {
+  loadDynastyProcessPlayerIds,
+  type DynastyProcessSnapshot,
+} from './dynastyprocess-player-ids.server';
 
 interface EspnProjectionPlayer {
   id: number;
@@ -61,6 +65,36 @@ export function uniquePlayerLinks(links: Record<string, string>) {
     [...reverse].filter(([, ids]) => ids.length === 1).map(([espnId, ids]) => [espnId, ids[0]]),
   );
 }
+type PlayerLink = { sleeperId: string; espnId: string; identity: ProjectionIdentity };
+type LinkResult = PlayerLink | 'ambiguous' | undefined;
+
+function externalLink(
+  id: string,
+  native: 'Sleeper' | 'ESPN',
+  catalogLinks: Map<string, string>,
+  claimedEspn: Set<string>,
+  snapshot?: DynastyProcessSnapshot,
+): LinkResult {
+  if (!snapshot) return undefined;
+  const primary = native === 'Sleeper' ? snapshot.bySleeper : snapshot.byEspn;
+  const inverse = native === 'Sleeper' ? snapshot.byEspn : snapshot.bySleeper;
+  const matches = primary.get(id);
+  if (!matches?.size) return undefined;
+  const other = matches.values().next().value!;
+  if (matches.size !== 1 || inverse.get(other)?.size !== 1) return 'ambiguous';
+  const [sleeperId, espnId] = native === 'Sleeper' ? [id, other] : [other, id];
+  if (catalogLinks.has(sleeperId) || claimedEspn.has(espnId)) return 'ambiguous';
+  return {
+    sleeperId,
+    espnId,
+    identity: {
+      source: 'DynastyProcess',
+      revision: snapshot.revision,
+      updatedAt: snapshot.updatedAt,
+    },
+  };
+}
+
 export async function enrichPlayerProjections(
   players: LivePlayer[],
   native: 'Sleeper' | 'ESPN',
@@ -72,8 +106,9 @@ export async function enrichPlayerProjections(
     sleeperNames().catch(() => undefined),
     sleeperLiveProjections(year, week).catch(() => undefined),
   ]);
-  const links = catalog?.espnIds ?? {},
-    reverse = uniquePlayerLinks(links);
+  const catalogLinks = new Map(Object.entries(catalog?.espnIds ?? {}));
+  const claimedEspn = new Set(catalogLinks.values());
+  const reverse = uniquePlayerLinks(catalog?.espnIds ?? {});
   const rows = new Map<string, Record<string, number>>();
   const duplicateRows = new Set<string>();
   for (const row of sleeper ?? [])
@@ -81,20 +116,38 @@ export async function enrichPlayerProjections(
       if (rows.has(row.player_id)) duplicateRows.add(row.player_id);
       rows.set(row.player_id, row.stats);
     }
-  const eligible = [
-    ...new Map(
-      players
-        .filter((player) => ['QB', 'RB', 'WR', 'TE'].includes(player.position ?? ''))
-        .map((player) => [player.id, player]),
-    ).values(),
-  ];
+  const eligible = new Map(
+    players
+      .filter((player) => ['QB', 'RB', 'WR', 'TE'].includes(player.position ?? ''))
+      .map((player) => [player.id, player]),
+  );
+  const links = new Map<string, LinkResult>();
+  const unresolved: LivePlayer[] = [];
+  for (const player of eligible.values()) {
+    const espnId = native === 'ESPN' ? player.id : catalogLinks.get(player.id);
+    const sleeperId = espnId ? reverse.get(espnId) : undefined;
+    if (espnId && sleeperId && (native === 'ESPN' || sleeperId === player.id))
+      links.set(player.id, { sleeperId, espnId, identity: { source: 'Sleeper catalog' } });
+    else if (native === 'Sleeper' ? catalogLinks.has(player.id) : claimedEspn.has(player.id))
+      links.set(player.id, 'ambiguous');
+    else unresolved.push(player);
+  }
+  if (catalog && unresolved.length) {
+    const snapshot = await loadDynastyProcessPlayerIds();
+    for (const player of unresolved)
+      links.set(player.id, externalLink(player.id, native, catalogLinks, claimedEspn, snapshot));
+  }
   const espnResults = new Map<string, Awaited<ReturnType<typeof espnPlayer>>>();
-  // Bound each league request; excess players retain the native estimate.
-  const requested = eligible
-    .flatMap((player) => {
-      const espnId = native === 'ESPN' ? player.id : links[player.id];
-      const sleeperId = espnId ? reverse.get(espnId) : undefined;
-      return espnId && sleeperId && (native === 'ESPN' || sleeperId === player.id) ? [espnId] : [];
+  // Keep existing catalog matches first under the shared request cap.
+  const requested = [...links.entries()]
+    .flatMap(([id, link]) => {
+      const position = eligible.get(id)?.position ?? '';
+      return link &&
+        link !== 'ambiguous' &&
+        catalog?.positions[link.sleeperId] === position &&
+        !rulesFor(position).unsupported.length
+        ? [link.espnId]
+        : [];
     })
     .slice(0, 120);
   const deadline = Date.now() + 8000;
@@ -109,15 +162,24 @@ export async function enrichPlayerProjections(
       }),
     );
   return players.map((player) => {
-    const espnId = native === 'ESPN' ? player.id : links[player.id];
-    const sleeperId = espnId ? reverse.get(espnId) : undefined;
-    if (!sleeperId || (native === 'Sleeper' && sleeperId !== player.id))
+    if (!['QB', 'RB', 'WR', 'TE'].includes(player.position ?? ''))
       return combinePlayerProjection(
         player,
         native,
         [],
-        'No unique ESPN/Sleeper ID mapping. Native projection retained; no name matching is used.',
+        'Cross-source scoring is available for QB, RB, WR and TE. Native projection retained when available.',
       );
+    const link = links.get(player.id);
+    if (!link || link === 'ambiguous')
+      return combinePlayerProjection(
+        player,
+        native,
+        [],
+        link === 'ambiguous'
+          ? 'No unique ESPN/Sleeper ID mapping. Conflicting or duplicate IDs were excluded.'
+          : 'No unique ESPN/Sleeper ID mapping. Native projection retained; no name matching is used.',
+      );
+    const { sleeperId, espnId, identity } = link;
     const position = player.position ?? '',
       rules = rulesFor(position);
     if (catalog?.positions[sleeperId] !== position)
@@ -169,7 +231,7 @@ export async function enrichPlayerProjections(
         capturedAt:
           sleeper?.find((row) => row.player_id === sleeperId)?.capturedAt ?? 'Unavailable',
       });
-    return combinePlayerProjection(
+    const combined = combinePlayerProjection(
       player,
       native,
       sources,
@@ -177,6 +239,14 @@ export async function enrichPlayerProjections(
         ? `Cross-source scoring unsupported: ${rules.unsupported.join(', ')}. Native projection retained.`
         : 'Matching weekly raw projection is missing, invalid or unavailable. Native projection retained when available.',
     );
+    return {
+      ...combined,
+      projectionIdentity: identity,
+      projectionNote:
+        identity.source === 'DynastyProcess'
+          ? `${combined.projectionNote} Player IDs matched via DynastyProcess (snapshot ${identity.updatedAt.slice(0, 10)}).`
+          : combined.projectionNote,
+    };
   });
 }
 export async function enrichLiveProjections(
@@ -201,6 +271,7 @@ export async function enrichLiveProjections(
       Object.assign(player, {
         projectedPoints: projection.projectedPoints,
         projectionSources: projection.projectionSources,
+        projectionIdentity: projection.projectionIdentity,
         projectionMethod: projection.projectionMethod,
         projectionSpread: projection.projectionSpread,
         projectionNote: projection.projectionNote,

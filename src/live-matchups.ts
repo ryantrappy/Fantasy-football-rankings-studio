@@ -32,6 +32,10 @@ export function kickoffLabel(schedule: NflSchedule | undefined, timeZone: string
   }).format(new Date(schedule.kickoffAt))}`;
 }
 
+export type ProjectionIdentity =
+  | { source: 'Sleeper catalog' }
+  | { source: 'DynastyProcess'; revision: string; updatedAt: string };
+
 export interface LivePlayer {
   id: string;
   name: string;
@@ -52,6 +56,7 @@ export interface LivePlayer {
     points: number;
     capturedAt: string;
   }[];
+  projectionIdentity?: ProjectionIdentity;
   projectionMethod?: 'mean' | 'native' | 'single-source';
   projectionSpread?: number;
   projectionNote?: string;

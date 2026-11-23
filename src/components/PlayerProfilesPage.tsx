@@ -16,6 +16,8 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useApi } from '../auth/session';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { leagueProjections, projectionText, waiverProjections } from '../projection-source';
 import type { League } from '../types';
 import type { SeasonInsights } from '../insights';
 import type { LiveLeague } from '../live-matchups';
@@ -35,6 +37,7 @@ export function PlayerProfilesPage({
   onContextChange?: (context: { leagueId: string; year: number; playerId?: string }) => void;
 }) {
   const api = useApi();
+  const sourcePreference = useProjectionSource();
   const [leagues, setLeagues] = useState<League[]>([]);
   const [leagueId, setLeagueId] = useState(search.leagueId ?? '');
   const [year, setYear] = useState(search.year ?? defaultSeason());
@@ -190,7 +193,13 @@ export function PlayerProfilesPage({
   }
   const league = leagues.find((row) => row.leagueId === leagueId);
   const provider = league?.leagueType === 1 ? 'ESPN' : 'Sleeper';
-  const profiles = playerProfiles(provider, year, report, live, pool);
+  const profiles = playerProfiles(
+    provider,
+    year,
+    report,
+    live && leagueProjections(live, sourcePreference),
+    pool && waiverProjections(pool, sourcePreference),
+  );
   const positions = [...new Set(profiles.map((player) => player.position ?? 'Unknown'))].sort();
   const shown = profiles.filter(
     (player) =>
@@ -429,7 +438,8 @@ export function PlayerProfilesPage({
                       {player.position ?? 'Unknown position'} · {player.ownership}
                     </Text>
                     <Text fontSize="xs" color="fg.muted" mt={1}>
-                      ID {player.id} · Proj. {points(player.projection)}
+                      ID {player.id} · Proj.{' '}
+                      {projectionText(player.projection, player.projectionSubtotal)}
                     </Text>
                   </Box>
                 </Box>
@@ -584,10 +594,15 @@ export function PlayerProfilesPage({
                       })}
                     </tr>
                     <tr>
-                      <th scope="row">Current projection · combined where comparable</th>
+                      <th scope="row">
+                        Current projection ·{' '}
+                        {sourcePreference === 'Combined'
+                          ? 'combined where comparable'
+                          : `${sourcePreference} only`}
+                      </th>
                       {chosen.map((player) => (
                         <td key={player.key}>
-                          {points(player.projection)}
+                          {projectionText(player.projection, player.projectionSubtotal)}
                           {player.projectionWeek ? ` · Week ${player.projectionWeek}` : ''}
                         </td>
                       ))}
@@ -595,14 +610,18 @@ export function PlayerProfilesPage({
                     {(['Sleeper', 'ESPN'] as const).map((source) => (
                       <tr key={source}>
                         <th scope="row">{source} projection</th>
-                        {chosen.map((player) => (
-                          <td key={player.key}>
-                            {points(
-                              player.projectionSources?.find((entry) => entry.provider === source)
-                                ?.points,
-                            )}
-                          </td>
-                        ))}
+                        {chosen.map((player) => {
+                          const estimate = player.projectionSources?.find(
+                            (entry) => entry.provider === source,
+                          );
+                          return (
+                            <td key={player.key}>
+                              {points(estimate?.points)}
+                              {estimate?.scope === 'shared-stats' && ' · Shared stats'}
+                              {estimate?.basis === 'confirmed-bye' && ' · Confirmed bye'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                     <tr>
@@ -714,7 +733,7 @@ export function PlayerProfilesPage({
                         </Text>
                         <Flex align="baseline" gap={2} wrap="wrap" mt={1}>
                           <Text fontSize="2xl" fontWeight="bold" color="indigo.fg">
-                            {points(player.projection)}
+                            {projectionText(player.projection, player.projectionSubtotal)}
                           </Text>
                           <Text fontSize="sm" color="fg.muted">
                             points
@@ -722,7 +741,12 @@ export function PlayerProfilesPage({
                         </Flex>
                         {player.projectionSpread !== undefined && (
                           <Text fontSize="xs" color="fg.muted" mt={2}>
-                            Source disagreement: {player.projectionSpread.toFixed(2)} points
+                            {player.projectionSources?.some(
+                              (source) => source.scope === 'shared-stats',
+                            )
+                              ? 'Shared-stat disagreement'
+                              : 'Source disagreement'}
+                            : {player.projectionSpread.toFixed(2)} points
                           </Text>
                         )}
                       </Box>
@@ -804,8 +828,11 @@ export function PlayerProfilesPage({
                           </Text>
                           {player.projectionSources?.map((source) => (
                             <Text mt={2} key={source.provider}>
-                              {source.provider}: {source.points.toFixed(2)} · player ID{' '}
-                              {source.playerId} · fetched {source.capturedAt}
+                              {source.provider}
+                              {source.scope === 'shared-stats' ? ' shared stats' : ''}:{' '}
+                              {source.points.toFixed(2)} · player ID {source.playerId} ·{' '}
+                              {source.basis === 'confirmed-bye' ? 'bye checked' : 'fetched'}{' '}
+                              {source.capturedAt}
                             </Text>
                           ))}
                           {player.projectionNote && <Text mt={2}>{player.projectionNote}</Text>}

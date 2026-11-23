@@ -32,6 +32,10 @@ export function kickoffLabel(schedule: NflSchedule | undefined, timeZone: string
   }).format(new Date(schedule.kickoffAt))}`;
 }
 
+export type ProjectionIdentity =
+  | { source: 'Sleeper catalog' }
+  | { source: 'DynastyProcess'; revision: string; updatedAt: string };
+
 export interface LivePlayer {
   id: string;
   name: string;
@@ -46,13 +50,18 @@ export interface LivePlayer {
   points: number | null;
   starter: boolean;
   projectedPoints?: number;
+  nativeProjection?: { provider: 'ESPN' | 'Sleeper'; points: number };
+  projectionSubtotal?: number;
   projectionSources?: {
     provider: 'ESPN' | 'Sleeper';
     playerId: string;
     points: number;
     capturedAt: string;
+    scope?: 'shared-stats';
+    basis?: 'confirmed-bye';
   }[];
-  projectionMethod?: 'mean' | 'native' | 'single-source';
+  projectionIdentity?: ProjectionIdentity;
+  projectionMethod?: 'mean' | 'partial-mean' | 'native' | 'single-source';
   projectionSpread?: number;
   projectionNote?: string;
   remainingFraction?: number;

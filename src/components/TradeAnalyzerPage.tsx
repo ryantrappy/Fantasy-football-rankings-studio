@@ -15,6 +15,8 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import type { League } from '../types';
 import { useApi } from '../auth/session';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { leagueProjections, projectionText } from '../projection-source';
 import type { LiveLeague, LiveTeam } from '../live-matchups';
 import { PlayerProfileLink } from './PlayerProfileLink';
 import { evaluateTrade } from '../trade-analysis';
@@ -416,7 +418,7 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
                         </Box>
                         <Box textAlign="right" flexShrink={0}>
                           <Text fontWeight="semibold" fontSize="sm">
-                            {points(player.projectedPoints)}
+                            {projectionText(player.projectedPoints, player.projectionSubtotal)}
                           </Text>
                           <Text fontSize="xs">
                             <PlayerProfileLink
@@ -505,7 +507,11 @@ function Proposal({ league, refresh }: { league: LiveLeague; refresh: boolean })
                                   >
                                     {player.name}
                                   </PlayerProfileLink>{' '}
-                                  · {points(player.projectedPoints)}
+                                  ·{' '}
+                                  {projectionText(
+                                    player.projectedPoints,
+                                    player.projectionSubtotal,
+                                  )}
                                 </Text>
                               ))}
                             </div>
@@ -574,6 +580,7 @@ function TradeWorkspace({
   search: StudioSearch;
   onContextChange?: (context: { leagueId: string; year: number }) => void;
 }) {
+  const source = useProjectionSource();
   const [loaded, setLoaded] = useState<{ api: typeof api; leagues: League[] }>();
   const [scope, setScope] = useState<{ leagueId: string; year: number }>();
   useEffect(() => {
@@ -674,13 +681,14 @@ function TradeWorkspace({
     // Metadata reloads do not require another roster read for the same scope.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [api, scope?.leagueId, scope?.year, ownedLeague?.seasonId, retry]);
-  const selected =
+  const loadedLeague =
     ownedLeague &&
     snapshot?.api === api &&
     snapshot.league.leagueId === scope?.leagueId &&
     snapshot.league.season === scope?.year
       ? snapshot.league
       : undefined;
+  const selected = loadedLeague && leagueProjections(loadedLeague, source);
   return (
     <Box className="decision-explorer decision-explorer-trades" maxW="1400px" mx="auto">
       <PageHeading
@@ -737,6 +745,7 @@ function TradeWorkspace({
               {selected && (
                 <Text fontSize="sm" color="fg.muted" pb={2}>
                   {selected.provider} · {selected.season} · Week {selected.week}
+                  {source !== 'Combined' && ` · ${source} only projections`}
                 </Text>
               )}
             </Flex>

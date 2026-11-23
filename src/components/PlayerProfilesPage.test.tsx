@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { Provider } from './ui/provider';
 import { ApiContext } from '../auth/session';
 import { PlayerProfilesPage } from './PlayerProfilesPage';
+import { ProjectionSourceControl, ProjectionSourceProvider } from './ProjectionSourceControl';
 import type { WaiverPool } from '../waivers';
 
 function makeApi() {
@@ -323,4 +324,63 @@ it('reports selected context for cross-tool navigation and restores incoming rou
   await waitFor(() => expect(screen.getByLabelText('Player league')).toHaveValue('20'));
   expect(screen.getByLabelText('Player season')).toHaveValue(2025);
   expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();
+});
+
+it('labels partial-blend provider values as shared scoring stats', async () => {
+  const api = makeApi();
+  const live = await api.getLiveLeague('10');
+  const player = live?.matchups[0].home.players[0];
+  if (!player?.projectionSources) throw new Error('Missing fixture projections.');
+  Object.assign(player, {
+    projectionSources: player.projectionSources.map((source) => ({
+      ...source,
+      scope: 'shared-stats',
+    })),
+    projectionNote: 'Native-only categories: 100–199 receiving-yard bonus.',
+  });
+  api.getLiveLeague.mockResolvedValue(live);
+  setup(api, { leagueId: '10', year: 2026, playerId: 'a' });
+  const profile = await screen.findByRole('region', { name: 'Alpha profile' });
+  expect(within(profile).getByText('Shared-stat disagreement: 4.00 points')).toBeVisible();
+  fireEvent.click(within(profile).getByText('Identity & data sources'));
+  expect(within(profile).getByText(/ESPN shared stats: 14.00 · player ID 90/)).toBeVisible();
+  expect(
+    within(profile).getByText(/Native-only categories: 100–199 receiving-yard bonus/),
+  ).toBeVisible();
+});
+
+it('switches providers on an already loaded player without losing the selection', async () => {
+  const api = makeApi();
+  const fixture = await api.getLiveLeague('10');
+  const player = fixture?.matchups[0].home.players[0];
+  if (!fixture || !player?.projectionSources) throw new Error('Missing fixture projections.');
+  Object.assign(player, {
+    projectionMethod: 'partial-mean',
+    nativeProjection: { provider: 'Sleeper', points: 11 },
+    projectionSources: player.projectionSources.map((source) => ({
+      ...source,
+      scope: 'shared-stats',
+    })),
+  });
+  api.getLiveLeague.mockResolvedValue(fixture);
+  render(
+    <Provider>
+      <ApiContext value={api as never}>
+        <ProjectionSourceProvider>
+          <ProjectionSourceControl />
+          <PlayerProfilesPage search={{ leagueId: '10', year: 2026, playerId: 'a' }} />
+        </ProjectionSourceProvider>
+      </ApiContext>
+    </Provider>,
+  );
+  const profile = await screen.findByRole('region', { name: 'Alpha profile' });
+  expect(profile).toHaveTextContent('Week 5 projection12.00');
+  const selector = screen.getByRole('combobox', { name: 'Projection source' });
+  fireEvent.change(selector, { target: { value: 'ESPN' } });
+  expect(profile).toHaveTextContent('14.00 (partial)');
+  fireEvent.change(selector, { target: { value: 'Sleeper' } });
+  expect(profile).toHaveTextContent('Week 5 projection11.00');
+  fireEvent.change(selector, { target: { value: 'Combined' } });
+  expect(profile).toHaveTextContent('Week 5 projection12.00');
+  expect(api.getLiveLeague).toHaveBeenCalledTimes(2); // fixture read and the single page request
 });

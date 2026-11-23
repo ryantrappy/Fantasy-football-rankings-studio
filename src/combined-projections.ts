@@ -35,9 +35,17 @@ export const espnStatIds: Record<string, number> = {
   fum: 68,
   fum_lost: 72,
 };
+const nativeOnlySleeperScoring: Record<string, string> = {
+  bonus_rec_yd_100: '100–199 receiving-yard bonus',
+  bonus_rec_yd_200: '200+ receiving-yard bonus',
+  fum_rec: 'fumble recoveries',
+  fum_rec_td: 'fumble-recovery touchdowns',
+};
+
 export interface ProjectionRules {
   weights: Record<string, number>;
   unsupported: string[];
+  nativeOnly?: string[];
 }
 export interface EspnScoringItem {
   statId: number;
@@ -46,10 +54,13 @@ export interface EspnScoringItem {
 }
 export function sleeperProjectionRules(scoring: Record<string, number>): ProjectionRules {
   const weights: Record<string, number> = {},
-    unsupported: string[] = [];
+    unsupported: string[] = [],
+    nativeOnly: string[] = [];
   for (const [key, value] of Object.entries(scoring)) {
     if (!value) continue;
-    if (key in espnStatIds && Number.isFinite(value)) weights[key] = value;
+    if (Object.hasOwn(espnStatIds, key) && Number.isFinite(value)) weights[key] = value;
+    else if (Object.hasOwn(nativeOnlySleeperScoring, key) && Number.isFinite(value))
+      nativeOnly.push(nativeOnlySleeperScoring[key]);
     // Kicker and team/individual-defense scoring does not apply to this offensive slice.
     else if (
       !/^(fg|xp|pts_allow|yds_allow|def|idp|sack|int$|ff$|fr$|safe$|blk_kick$|tkl|pass_def|st_)/.test(
@@ -58,7 +69,7 @@ export function sleeperProjectionRules(scoring: Record<string, number>): Project
     )
       unsupported.push(key);
   }
-  return { weights, unsupported };
+  return { weights, unsupported, ...(nativeOnly.length && { nativeOnly }) };
 }
 export function espnProjectionRules(
   items: EspnScoringItem[] | undefined,
@@ -96,7 +107,7 @@ export function scoreProjection(
   let points = 0;
   for (const [key, weight] of Object.entries(rules.weights)) {
     // Both feeds use sparse stat dictionaries: omitted non-primary events are zero.
-    const value = stats[key] ?? 0;
+    const value = Object.hasOwn(stats, key) ? stats[key] : 0;
     if (!Number.isFinite(value)) return undefined;
     points += value * weight;
   }
@@ -107,24 +118,56 @@ export function combinePlayerProjection(
   native: 'ESPN' | 'Sleeper',
   sources: NonNullable<LivePlayer['projectionSources']>,
   note?: string,
+  nativeOnly: readonly string[] = [],
 ): LivePlayer {
   const usable = sources.filter((source) => Number.isFinite(source.points));
-  const mean = usable.length === 2;
-  const fallback = Number.isFinite(player.projectedPoints)
-    ? player.projectedPoints
-    : usable[0]?.points;
+  const sharedOnly = nativeOnly.length > 0;
+  const espn = usable.find((source) => source.provider === 'ESPN');
+  const sleeper = usable.find((source) => source.provider === 'Sleeper');
+  const nativePoints = Number.isFinite(player.projectedPoints) ? player.projectedPoints : undefined;
+  const nativeProjection =
+    nativePoints === undefined ? undefined : { provider: native, points: nativePoints };
+  const spread = espn && sleeper ? Math.abs(espn.points - sleeper.points) : undefined;
+  if (sharedOnly) {
+    const nativeShared = native === 'Sleeper' ? sleeper?.points : espn?.points;
+    const otherShared = native === 'Sleeper' ? espn?.points : sleeper?.points;
+    // Change the shared portion of the native total by half the provider difference.
+    // This retains any native scoring outside the shared stat set exactly once.
+    const adjusted =
+      nativePoints !== undefined && nativeShared !== undefined && otherShared !== undefined
+        ? nativePoints + (otherShared - nativeShared) / 2
+        : undefined;
+    const blended = adjusted !== undefined && Number.isFinite(adjusted);
+    const scope = `Shared stat points use this league’s scoring. Native-only categories: ${nativeOnly.join(', ')}.`;
+    return {
+      ...player,
+      nativeProjection,
+      projectedPoints: blended ? adjusted : nativePoints,
+      projectionSources: usable.map((source) => ({ ...source, scope: 'shared-stats' })),
+      projectionMethod: blended
+        ? 'partial-mean'
+        : nativePoints === undefined
+          ? undefined
+          : 'native',
+      projectionSpread: spread,
+      projectionNote: blended
+        ? `Equal-weight blend of shared stats plus any points Sleeper already included for native-only scoring. ${scope}`
+        : `A partial blend requires both shared projections and a native total. ${scope}`,
+    };
+  }
+  const mean = espn && sleeper ? (espn.points + sleeper.points) / 2 : undefined;
   return {
     ...player,
-    projectedPoints: mean ? (usable[0].points + usable[1].points) / 2 : fallback,
+    nativeProjection,
+    projectedPoints: mean ?? nativePoints ?? usable[0]?.points,
     projectionSources: usable,
-    projectionMethod: mean
-      ? 'mean'
-      : Number.isFinite(player.projectedPoints)
-        ? 'native'
-        : 'single-source',
-    projectionSpread: mean ? Math.abs(usable[0].points - usable[1].points) : undefined,
-    projectionNote: mean
-      ? 'Equal-weight ESPN/Sleeper mean, scored with this league’s rules. Source spread is disagreement, not a confidence interval; accuracy improvement is unverified.'
-      : (note ?? `${native} projection retained; comparable dual-source coverage is unavailable.`),
+    projectionMethod:
+      mean !== undefined ? 'mean' : nativePoints !== undefined ? 'native' : 'single-source',
+    projectionSpread: spread,
+    projectionNote:
+      mean !== undefined
+        ? 'Equal-weight ESPN/Sleeper mean, scored with this league’s rules. Source spread is disagreement, not a confidence interval; accuracy improvement is unverified.'
+        : (note ??
+          `${native} projection retained; comparable dual-source coverage is unavailable.`),
   };
 }

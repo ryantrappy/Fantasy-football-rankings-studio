@@ -126,7 +126,7 @@ Source: [TASK-110](../../backlog/tasks/task-110%20-%20Suggest-possible-trades-fo
 
 ### TASK-112 — Keep unusable Sleeper live projections unavailable instead of zero
 
-- A native projection with no finite stat applicable to the selected league scoring remains unavailable rather than becoming a zero forecast.
+- A native projection with no finite stat applicable to the selected league scoring remains unavailable. A confirmed NFL bye independently establishes a zero-point Sleeper projection.
 - Legitimate zero and negative projections remain numeric, while missing scoring settings, nonfinite inputs and unusable dictionaries do not claim covered projection data.
 - Live, Players, lineup advice and trade analysis consistently disclose missing projection coverage; a valid optional cross-source estimate may still be used with its actual provenance.
 - Provider regression tests reproduce the irrelevant-stat case and verify real zero, negative, missing and valid cross-source cases; calculation documentation explains the coverage rule.
@@ -181,3 +181,28 @@ The existing public scoreboard request supplies both remaining-time and schedule
 Verification: focused cache/provider/component tests cover confirmed versus placeholder dates, explicit byes and unknown teams, provider outages, changed kickoff refreshes, and DST/date conversion. Live browser regressions retain the compact board check and exercise kickoff evidence, source freshness, complete dense desktop/phone rosters, independent scrolling and bounded horizontal layout. See [UI regression guidance](../ui-testing.md).
 
 TASK-153 aligns compact Live matchup button names with the complete visible home/away scores, score order, managed stars and bye/missing-score evidence under the upgraded accessibility checker. Highlight/remove actions, the four-matchup limit, selections and density remain unchanged.
+
+### TASK-167 — DynastyProcess projection identity crosswalk
+
+- The Sleeper catalog supplies primary ESPN–Sleeper player links. Additional links from DynastyProcess may fill gaps only when both external IDs identify one unique pair and neither ID conflicts with a catalog claim. Names never establish identity.
+- The server reads the published CSV by its file revision, shares cached reads across leagues, and falls back to native data when the snapshot is unavailable or stale. Projection identity provenance includes the external revision and publication date separately from each projection provider's fetch time.
+- A verified ID link does not make a scoring rule or stat feed compatible. The existing position checks, native fallbacks, supported-stat scope and ESPN request cap continue to apply under either league provider.
+- The regression suite covers both directions, duplicate and conflicting links, stale snapshots and scoring fallback. A read-only Week 11 sample linked 138 eligible offensive players, including 95 new DynastyProcess links. The sample's custom rules prevented score blending.
+
+Source: [TASK-167](../../backlog/tasks/task-167%20-%20Add-DynastyProcess-player-IDs-as-a-cross-provider-projection-input.md). Data: [DynastyProcess](https://github.com/dynastyprocess/data).
+
+### TASK-169 — Compare projections under custom Sleeper scoring
+
+- Matched Sleeper and ESPN weekly projections use identical shared-stat weights when the known native-only receiving-yard bands or fumble-recovery rules are configured. A partial blend requires two valid shared-stat projections and a finite native total, then retains the portion of Sleeper's total outside the shared scoring weights.
+- Player Profiles, lineup explanations, and trade suggestions label shared-stat values. Threshold bonuses are never inferred from average projected yards. Fallbacks preserve native values, position/period checks, and scoring coverage.
+- Test additive and partial blends, missing inputs, unsupported rules, and the real-roster coverage available from the providers.
+
+Source: [TASK-169](../../backlog/tasks/task-169%20-%20Compare-Sleeper-and-ESPN-projections-under-custom-scoring.md). Rules: [Sleeper scoring options](https://support.sleeper.com/en/articles/3998131-what-scoring-options-are-available).
+
+### TASK-170 — Live projection source selector
+
+- Profile offers Combined, Sleeper only, and ESPN only in an authenticated workspace. Combined is the default. The browser stores the setting per account and switching uses the current snapshot, preserving selected players, teams, and hypothetical scenarios.
+- Live matchups, Weekly overview, Player Profiles, lineup advice, trades, and waiver calculations read the same source choice. Single-provider modes use the selected provider's available points. Points covering only shared stats are labeled partial and cannot serve as complete estimates. Verified NFL byes are zero in every view, with the schedule as provenance.
+- Source selection applies to live decision data. The historical replay and independent season and playoff simulation models keep their established inputs.
+
+Source: [TASK-170](../../backlog/tasks/task-170%20-%20Add-a-live-projection-source-selector-for-Sleeper-ESPN-and-Combined.md).

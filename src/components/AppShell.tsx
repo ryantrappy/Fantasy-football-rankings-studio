@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useRouterState } from '@tanstack/react-router';
-import { useSessionStatus } from '../auth/session';
+import { ApiContext, useSessionStatus } from '../auth/session';
 import { AppNavigation } from './AppNavigation';
 import { isOtherToolsPath, ToolsBreadcrumb } from './OtherToolsPage';
 import { PersistentDisclosure } from './DisclosureMotion';
+import { ProjectionSourceControl, ProjectionSourceProvider } from './ProjectionSourceControl';
 
 const HeaderTarget = createContext<HTMLElement | null | undefined>(undefined);
 
@@ -15,7 +16,16 @@ export function HeaderControls({ children }: { children: ReactNode }) {
   return target ? createPortal(children, target) : null;
 }
 
-export function AppShell({ children, shared = false }: { children: ReactNode; shared?: boolean }) {
+export function AppShell(props: { children: ReactNode; shared?: boolean }) {
+  const subject = useContext(ApiContext)?.subject;
+  return (
+    <ProjectionSourceProvider key={subject} subject={subject}>
+      <WorkspaceShell {...props} />
+    </ProjectionSourceProvider>
+  );
+}
+
+function WorkspaceShell({ children, shared = false }: { children: ReactNode; shared?: boolean }) {
   const [controls, setControls] = useState<HTMLDivElement | null>(null);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const session = useSessionStatus();
@@ -54,6 +64,7 @@ export function AppShell({ children, shared = false }: { children: ReactNode; sh
                 </Link>
                 <Link to="/leagues/new">Connect league</Link>
                 <Link to="/leagues/manage">Manage leagues</Link>
+                <ProjectionSourceControl />
                 <button type="button" onClick={session.signOut}>
                   Sign out
                 </button>

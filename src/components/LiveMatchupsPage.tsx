@@ -14,6 +14,8 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useApi } from '../auth/session';
+import { useProjectionSource } from './ProjectionSourceControl';
+import { leagueProjections } from '../projection-source';
 import { errorMessage } from '../api/client';
 import {
   alignedPlayers,
@@ -301,7 +303,9 @@ export function LiveMatchupsPage({
 }) {
   const api = useApi();
   const timeZone = useUserTimezone();
-  const [leagues, setLeagues] = useState<LiveLeague[]>([]);
+  const source = useProjectionSource();
+  const [loadedLeagues, setLeagues] = useState<LiveLeague[]>([]);
+  const leagues = loadedLeagues.map((league) => leagueProjections(league, source));
   const [selected, setSelected] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -480,6 +484,7 @@ export function LiveMatchupsPage({
           </Text>
           <Text fontSize="10px" color="fg.muted" mb={2}>
             NFL kickoffs: {timeZone}
+            {source !== 'Combined' && ` · ${source} only projections`}
           </Text>
           <details className="live-schedule-sources">
             <summary>NFL schedule sources</summary>

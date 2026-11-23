@@ -198,3 +198,44 @@ it('reports additional matching coverage even when league scoring prevents blend
   expect(player.projectionNote).toContain('scoring unsupported');
   expect(mocks.get).not.toHaveBeenCalled();
 });
+
+it('compares matched provider stats with known native-only scoring and retains the native remainder', async () => {
+  const config = () =>
+    sleeperProjectionRules({
+      rush_yd: 0.1,
+      rec_yd: 0.1,
+      rec: 1,
+      bonus_rec_yd_100: 2,
+      bonus_rec_yd_200: 5,
+      fum_rec: 2,
+      fum_rec_td: 6,
+    });
+  const [withoutNative] = await api.enrichPlayerProjections(
+    [{ ...roster('s1')[0], projectedPoints: undefined }],
+    'Sleeper',
+    2026,
+    4,
+    config,
+  );
+  expect(withoutNative.projectedPoints).toBeUndefined();
+  expect(mocks.get).not.toHaveBeenCalled();
+
+  // Shared Sleeper points are 15 and the native total includes 2 extra points.
+  const [player] = await api.enrichPlayerProjections(
+    [{ ...roster('s1')[0], projectedPoints: 17 }],
+    'Sleeper',
+    2026,
+    4,
+    config,
+  );
+  expect(player).toMatchObject({
+    projectedPoints: 16.5,
+    projectionMethod: 'partial-mean',
+    projectionIdentity: { source: 'Sleeper catalog' },
+  });
+  expect(player.projectionSources?.map(({ points, scope }) => [points, scope])).toEqual([
+    [14, 'shared-stats'],
+    [15, 'shared-stats'],
+  ]);
+  expect(player.projectionNote).toContain('fumble recoveries');
+});

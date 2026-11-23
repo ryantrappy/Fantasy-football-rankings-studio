@@ -80,3 +80,51 @@ it('uses combined estimates in the lineup decision and explains their provenance
   expect(result.difference).toBe(4);
   expect(result.notices.join(' ')).toContain('equal-weight ESPN/Sleeper');
 });
+
+it('changes only the shared part of a Sleeper projection with native-only scoring', () => {
+  const rules = sleeperProjectionRules({
+    rec_yd: 0.1,
+    rec: 1,
+    bonus_rec_yd_100: 2,
+    bonus_rec_yd_200: 5,
+    fum_rec: 2,
+    fum_rec_td: 6,
+  });
+  expect(rules.unsupported).toEqual([]);
+  // The average yardage alone does not award either receiving-yard bonus.
+  expect(scoreProjection({ rec_yd: 150, rec: 5 }, rules, 'WR')).toBe(20);
+  expect(scoreProjection({ rec_yd: 150, rec: 5, rec_td: Number.NaN }, rules, 'WR')).toBe(20);
+  expect(rules.nativeOnly).toHaveLength(4);
+  const player = { id: '1', name: 'Receiver', starter: true, points: null, projectedPoints: 22 };
+  const sources = [
+    { provider: 'ESPN' as const, playerId: '2', points: 16, capturedAt: 'now' },
+    { provider: 'Sleeper' as const, playerId: '1', points: 20, capturedAt: 'now' },
+  ];
+  const blended = combinePlayerProjection(player, 'Sleeper', sources, undefined, rules.nativeOnly);
+  expect(blended).toMatchObject({
+    projectedPoints: 20,
+    projectionMethod: 'partial-mean',
+    projectionSpread: 4,
+  });
+  expect(blended.projectionSources?.map((source) => source.scope)).toEqual([
+    'shared-stats',
+    'shared-stats',
+  ]);
+  expect(blended.projectionNote).toContain('100–199 receiving-yard bonus');
+
+  const missing = combinePlayerProjection(
+    { ...player, projectedPoints: undefined },
+    'Sleeper',
+    sources,
+    undefined,
+    rules.nativeOnly,
+  );
+  expect(missing.projectedPoints).toBeUndefined();
+  expect(missing.projectionNote).toContain('requires both shared projections and a native total');
+  expect(
+    combinePlayerProjection(player, 'Sleeper', sources.slice(0, 1), undefined, rules.nativeOnly),
+  ).toMatchObject({
+    projectedPoints: 22,
+    projectionMethod: 'native',
+  });
+});

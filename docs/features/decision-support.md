@@ -190,3 +190,11 @@ TASK-153 aligns compact Live matchup button names with the complete visible home
 - The regression suite covers both directions, duplicate and conflicting links, stale snapshots and scoring fallback. A read-only Week 11 sample linked 138 eligible offensive players, including 95 new DynastyProcess links. The sample's custom rules prevented score blending.
 
 Source: [TASK-167](../../backlog/tasks/task-167%20-%20Add-DynastyProcess-player-IDs-as-a-cross-provider-projection-input.md). Data: [DynastyProcess](https://github.com/dynastyprocess/data).
+
+### TASK-169 — Compare projections under custom Sleeper scoring
+
+- Matched Sleeper and ESPN weekly projections use identical shared-stat weights when the known native-only receiving-yard bands or fumble-recovery rules are configured. A partial blend requires two valid shared-stat projections and a finite native total, then retains the portion of Sleeper's total outside the shared scoring weights.
+- Player Profiles, lineup explanations, and trade suggestions label shared-stat values. Threshold bonuses are never inferred from average projected yards. Fallbacks preserve native values, position/period checks, and scoring coverage.
+- Test additive and partial blends, missing inputs, unsupported rules, and the real-roster coverage available from the providers.
+
+Source: [TASK-169](../../backlog/tasks/task-169%20-%20Compare-Sleeper-and-ESPN-projections-under-custom-scoring.md). Rules: [Sleeper scoring options](https://support.sleeper.com/en/articles/3998131-what-scoring-options-are-available).

@@ -180,7 +180,10 @@ export function TradeSuggestions({
                       <Text>
                         {player.name} · {player.position} · Week {league.week}:{' '}
                         {player.projectedPoints!.toFixed(2)} points ·{' '}
-                        {player.projectionMethod ?? 'native'} projection
+                        {player.projectionMethod === 'partial-mean'
+                          ? 'shared-stat blend'
+                          : (player.projectionMethod ?? 'native')}{' '}
+                        projection
                       </Text>
                       <Text>
                         Status at snapshot: {player.availability || 'No flagged injury'} · No bye ·
@@ -189,8 +192,9 @@ export function TradeSuggestions({
                       {player.projectionSources?.length ? (
                         player.projectionSources.map((source) => (
                           <Text key={source.provider}>
-                            {source.provider}: {source.points.toFixed(2)} points · fetched{' '}
-                            {source.capturedAt}
+                            {source.provider}
+                            {source.scope === 'shared-stats' ? ' shared stats' : ''}:{' '}
+                            {source.points.toFixed(2)} points · fetched {source.capturedAt}
                           </Text>
                         ))
                       ) : (

@@ -27,7 +27,19 @@ export function adviseLineup(
     notices.push(
       `${combined} players use an equal-weight ESPN/Sleeper forecast. Other players retain available native estimates. Compare source disagreement in player profiles; accuracy improvement is unverified.`,
     );
-  if (players.some((player) => player.projectionNote && player.projectionMethod !== 'mean'))
+  const partial = players.filter((player) => player.projectionMethod === 'partial-mean').length;
+  if (partial)
+    notices.push(
+      `${partial} players blend shared ESPN/Sleeper stats and retain any Sleeper-native scoring outside the blend. See individual scoring coverage below.`,
+    );
+  if (
+    players.some(
+      (player) =>
+        player.projectionNote &&
+        player.projectionMethod !== 'mean' &&
+        player.projectionMethod !== 'partial-mean',
+    )
+  )
     notices.push(
       'Some players lack comparable cross-source data or supported scoring. Their native projection is retained when available.',
     );

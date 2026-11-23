@@ -324,3 +324,26 @@ it('reports selected context for cross-tool navigation and restores incoming rou
   expect(screen.getByLabelText('Player season')).toHaveValue(2025);
   expect(screen.getByRole('button', { name: 'Clear selection' })).toBeDisabled();
 });
+
+it('labels partial-blend provider values as shared scoring stats', async () => {
+  const api = makeApi();
+  const live = await api.getLiveLeague('10');
+  const player = live?.matchups[0].home.players[0];
+  if (!player?.projectionSources) throw new Error('Missing fixture projections.');
+  Object.assign(player, {
+    projectionSources: player.projectionSources.map((source) => ({
+      ...source,
+      scope: 'shared-stats',
+    })),
+    projectionNote: 'Native-only categories: 100–199 receiving-yard bonus.',
+  });
+  api.getLiveLeague.mockResolvedValue(live);
+  setup(api, { leagueId: '10', year: 2026, playerId: 'a' });
+  const profile = await screen.findByRole('region', { name: 'Alpha profile' });
+  expect(within(profile).getByText('Shared-stat disagreement: 4.00 points')).toBeVisible();
+  fireEvent.click(within(profile).getByText('Identity & data sources'));
+  expect(within(profile).getByText(/ESPN shared stats: 14.00 · player ID 90/)).toBeVisible();
+  expect(
+    within(profile).getByText(/Native-only categories: 100–199 receiving-yard bonus/),
+  ).toBeVisible();
+});

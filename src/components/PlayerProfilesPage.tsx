@@ -595,14 +595,17 @@ export function PlayerProfilesPage({
                     {(['Sleeper', 'ESPN'] as const).map((source) => (
                       <tr key={source}>
                         <th scope="row">{source} projection</th>
-                        {chosen.map((player) => (
-                          <td key={player.key}>
-                            {points(
-                              player.projectionSources?.find((entry) => entry.provider === source)
-                                ?.points,
-                            )}
-                          </td>
-                        ))}
+                        {chosen.map((player) => {
+                          const estimate = player.projectionSources?.find(
+                            (entry) => entry.provider === source,
+                          );
+                          return (
+                            <td key={player.key}>
+                              {points(estimate?.points)}
+                              {estimate?.scope === 'shared-stats' && ' · Shared stats'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                     <tr>
@@ -722,7 +725,12 @@ export function PlayerProfilesPage({
                         </Flex>
                         {player.projectionSpread !== undefined && (
                           <Text fontSize="xs" color="fg.muted" mt={2}>
-                            Source disagreement: {player.projectionSpread.toFixed(2)} points
+                            {player.projectionSources?.some(
+                              (source) => source.scope === 'shared-stats',
+                            )
+                              ? 'Shared-stat disagreement'
+                              : 'Source disagreement'}
+                            : {player.projectionSpread.toFixed(2)} points
                           </Text>
                         )}
                       </Box>
@@ -804,8 +812,10 @@ export function PlayerProfilesPage({
                           </Text>
                           {player.projectionSources?.map((source) => (
                             <Text mt={2} key={source.provider}>
-                              {source.provider}: {source.points.toFixed(2)} · player ID{' '}
-                              {source.playerId} · fetched {source.capturedAt}
+                              {source.provider}
+                              {source.scope === 'shared-stats' ? ' shared stats' : ''}:{' '}
+                              {source.points.toFixed(2)} · player ID {source.playerId} · fetched{' '}
+                              {source.capturedAt}
                             </Text>
                           ))}
                           {player.projectionNote && <Text mt={2}>{player.projectionNote}</Text>}

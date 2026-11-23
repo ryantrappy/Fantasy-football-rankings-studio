@@ -55,9 +55,10 @@ export interface LivePlayer {
     playerId: string;
     points: number;
     capturedAt: string;
+    scope?: 'shared-stats';
   }[];
   projectionIdentity?: ProjectionIdentity;
-  projectionMethod?: 'mean' | 'native' | 'single-source';
+  projectionMethod?: 'mean' | 'partial-mean' | 'native' | 'single-source';
   projectionSpread?: number;
   projectionNote?: string;
   remainingFraction?: number;

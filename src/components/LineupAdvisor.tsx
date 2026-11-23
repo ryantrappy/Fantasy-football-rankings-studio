@@ -150,10 +150,14 @@ export function LineupAdvisor({
                   </td>
                   <td>
                     {player.projectedPoints?.toFixed(2) ?? 'Unavailable'} ·{' '}
-                    {player.projectionMethod ?? 'native'}
+                    {player.projectionMethod === 'partial-mean'
+                      ? 'shared-stat blend'
+                      : (player.projectionMethod ?? 'native')}
                     {player.projectionSources?.map((source) => (
                       <div key={source.provider}>
-                        {source.provider}: {source.points.toFixed(2)} · {source.capturedAt}
+                        {source.provider}
+                        {source.scope === 'shared-stats' ? ' shared stats' : ''}:{' '}
+                        {source.points.toFixed(2)} · {source.capturedAt}
                       </div>
                     ))}
                     {player.projectionNote && <div>{player.projectionNote}</div>}

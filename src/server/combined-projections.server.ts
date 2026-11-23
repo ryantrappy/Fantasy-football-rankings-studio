@@ -141,13 +141,21 @@ export async function enrichPlayerProjections(
   // Keep existing catalog matches first under the shared request cap.
   const requested = [...links.entries()]
     .flatMap(([id, link]) => {
-      const position = eligible.get(id)?.position ?? '';
-      return link &&
-        link !== 'ambiguous' &&
-        catalog?.positions[link.sleeperId] === position &&
-        !rulesFor(position).unsupported.length
-        ? [link.espnId]
-        : [];
+      const player = eligible.get(id);
+      const position = player?.position ?? '';
+      if (!link || link === 'ambiguous' || catalog?.positions[link.sleeperId] !== position)
+        return [];
+      const rules = rulesFor(position);
+      if (rules.unsupported.length) return [];
+      // Preserve the request budget for candidates that can actually be blended.
+      if (
+        rules.nativeOnly?.length &&
+        (!Number.isFinite(player?.projectedPoints) ||
+          duplicateRows.has(link.sleeperId) ||
+          scoreProjection(rows.get(link.sleeperId), rules, position) === undefined)
+      )
+        return [];
+      return [link.espnId];
     })
     .slice(0, 120);
   const deadline = Date.now() + 8000;
@@ -206,7 +214,7 @@ export async function enrichPlayerProjections(
       raw &&
       Object.fromEntries(
         Object.entries(espnStatIds).flatMap(([key, id]) =>
-          Number.isFinite(raw[String(id)]) ? [[key, raw[String(id)]]] : [],
+          Object.hasOwn(raw, String(id)) ? [[key, raw[String(id)]]] : [],
         ),
       );
     const espnPoints = scoreProjection(normalized, rules, position);
@@ -238,6 +246,7 @@ export async function enrichPlayerProjections(
       rules.unsupported.length
         ? `Cross-source scoring unsupported: ${rules.unsupported.join(', ')}. Native projection retained.`
         : 'Matching weekly raw projection is missing, invalid or unavailable. Native projection retained when available.',
+      rules.unsupported.length ? undefined : rules.nativeOnly,
     );
     return {
       ...combined,

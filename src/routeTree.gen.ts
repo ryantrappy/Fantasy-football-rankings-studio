@@ -22,6 +22,7 @@ import { Route as AuthenticatedPlayersRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedPlayoffPathsRouteImport } from './routes/_authenticated.playoff-paths'
 import { Route as AuthenticatedPlayoffsRouteImport } from './routes/_authenticated.playoffs'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated.profile'
+import { Route as AuthenticatedSeasonSimulatorRouteImport } from './routes/_authenticated.season-simulator'
 import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated.tools'
 import { Route as AuthenticatedTradesRouteImport } from './routes/_authenticated.trades'
 import { Route as SharedKonzSuxRouteImport } from './routes/shared.konz-sux'
@@ -98,6 +99,12 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSeasonSimulatorRoute =
+  AuthenticatedSeasonSimulatorRouteImport.update({
+    id: '/season-simulator',
+    path: '/season-simulator',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
   id: '/tools',
   path: '/tools',
@@ -168,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/playoff-paths': typeof AuthenticatedPlayoffPathsRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/season-simulator': typeof AuthenticatedSeasonSimulatorRoute
   '/tools': typeof AuthenticatedToolsRoute
   '/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/playoff-paths': typeof AuthenticatedPlayoffPathsRoute
   '/playoffs': typeof AuthenticatedPlayoffsRoute
   '/profile': typeof AuthenticatedProfileRoute
+  '/season-simulator': typeof AuthenticatedSeasonSimulatorRoute
   '/tools': typeof AuthenticatedToolsRoute
   '/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -218,6 +227,7 @@ export interface FileRoutesById {
   '/_authenticated/playoff-paths': typeof AuthenticatedPlayoffPathsRoute
   '/_authenticated/playoffs': typeof AuthenticatedPlayoffsRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/season-simulator': typeof AuthenticatedSeasonSimulatorRoute
   '/_authenticated/tools': typeof AuthenticatedToolsRoute
   '/_authenticated/trades': typeof AuthenticatedTradesRoute
   '/shared/konz-sux': typeof SharedKonzSuxRoute
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/playoff-paths'
     | '/playoffs'
     | '/profile'
+    | '/season-simulator'
     | '/tools'
     | '/trades'
     | '/shared/konz-sux'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/playoff-paths'
     | '/playoffs'
     | '/profile'
+    | '/season-simulator'
     | '/tools'
     | '/trades'
     | '/shared/konz-sux'
@@ -294,6 +306,7 @@ export interface FileRouteTypes {
     | '/_authenticated/playoff-paths'
     | '/_authenticated/playoffs'
     | '/_authenticated/profile'
+    | '/_authenticated/season-simulator'
     | '/_authenticated/tools'
     | '/_authenticated/trades'
     | '/shared/konz-sux'
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/season-simulator': {
+      id: '/_authenticated/season-simulator'
+      path: '/season-simulator'
+      fullPath: '/season-simulator'
+      preLoaderRoute: typeof AuthenticatedSeasonSimulatorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/tools': {
       id: '/_authenticated/tools'
       path: '/tools'
@@ -500,6 +520,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPlayoffPathsRoute: typeof AuthenticatedPlayoffPathsRoute
   AuthenticatedPlayoffsRoute: typeof AuthenticatedPlayoffsRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedSeasonSimulatorRoute: typeof AuthenticatedSeasonSimulatorRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
   AuthenticatedTradesRoute: typeof AuthenticatedTradesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -517,6 +538,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPlayoffPathsRoute: AuthenticatedPlayoffPathsRoute,
   AuthenticatedPlayoffsRoute: AuthenticatedPlayoffsRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedSeasonSimulatorRoute: AuthenticatedSeasonSimulatorRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
   AuthenticatedTradesRoute: AuthenticatedTradesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,

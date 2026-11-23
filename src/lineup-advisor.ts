@@ -12,6 +12,10 @@ const aliases: Record<string, string> = {
   'IDP FLEX': 'IDP_FLEX',
   DST: 'DEF',
 };
+export function lineupSlotForLabel(label: string) {
+  return sleeperSlot(aliases[label] ?? label);
+}
+
 export function adviseLineup(
   players: LivePlayer[],
   slotLabels: string[] | undefined,
@@ -93,7 +97,7 @@ export function adviseLineup(
       if (fixed.some((entry) => entry.player.id === id)) return false;
       return player?.eligibleSlots?.length
         ? player.eligibleSlots.includes(label)
-        : Boolean(sleeperSlot(aliases[label] ?? label)?.accepts(position));
+        : Boolean(lineupSlotForLabel(label)?.accepts(position));
     },
   }));
   const proposed = bestProjectedLineup(

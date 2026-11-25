@@ -30,7 +30,7 @@ import {
   picksToFixedOutcomes,
   prefillFromProjections,
   projectedPointsForWeek,
-  rankLeverage,
+  rankLeverageByWeek,
   remainingFixtures,
 } from '../playoff-paths';
 
@@ -193,8 +193,8 @@ export function PlayoffPathsPage({
   const selectedTeam = data?.teams.find((t) => t.teamId === effectiveTeamId);
   const baseRow = base?.rows.find((r) => r.teamId === effectiveTeamId);
   const conditionalRow = conditional?.rows.find((r) => r.teamId === effectiveTeamId);
-  const leverageRows = useMemo(
-    () => rankLeverage(conditional, effectiveTeamId),
+  const leverageWeeks = useMemo(
+    () => rankLeverageByWeek(conditional, effectiveTeamId),
     [conditional, effectiveTeamId],
   );
   const pickCount = fixedOutcomes.length;
@@ -405,6 +405,7 @@ export function PlayoffPathsPage({
             <>
               <Box
                 as="section"
+                aria-labelledby="playoff-paths-game-impact"
                 className="panel insight-section"
                 bg="bg"
                 borderWidth="1px"
@@ -413,36 +414,52 @@ export function PlayoffPathsPage({
                 mt={4}
               >
                 <Flex gap={2} flexWrap="wrap" alignItems="center" justifyContent="space-between">
-                  <Heading as="h2" size="md">
+                  <Heading as="h2" id="playoff-paths-game-impact" size="md">
                     What matters most
                   </Heading>
                   <Text fontSize="sm" color="fg.muted">
-                    {selectedTeam?.teamName ?? 'This team'} · ranked by swing
+                    {selectedTeam?.teamName ?? 'This team'} · biggest playoff impact first each week
                   </Text>
                 </Flex>
-                {leverageRows.length === 0 ? (
+                {leverageWeeks.length === 0 ? (
                   <Text mt={2} fontSize="sm">
                     {pending
                       ? 'Calculating…'
-                      : Object.keys(picks).length > 0
+                      : pickCount === fixtures.length
                         ? 'Every remaining game is picked, so there is nothing left to rank — clear a pick to see what matters.'
                         : 'No remaining games to rank.'}
                   </Text>
                 ) : (
-                  <Box as="ol" mt={2} display="flex" flexDirection="column" gap={2}>
-                    {leverageRows.slice(0, 8).map((row) => (
-                      <Box as="li" key={fixtureKey(row.fixture)}>
-                        <Text fontWeight="medium">
-                          Week {row.fixture.week}: {names.get(row.fixture.homeTeamId)} vs{' '}
-                          {names.get(row.fixture.awayTeamId)}
-                        </Text>
-                        <Text fontSize="sm">
-                          If {names.get(row.fixture.homeTeamId)} wins: {percent(row.homeChance)} ·
-                          If {names.get(row.fixture.awayTeamId)} wins: {percent(row.awayChance)}
-                        </Text>
+                  leverageWeeks.map(({ week, rows }) => (
+                    <Box key={week} mt={4}>
+                      <Heading as="h3" id={`playoff-paths-impact-week-${week}`} size="sm" mb={2}>
+                        Week {week}
+                      </Heading>
+                      <Box
+                        as="ol"
+                        aria-labelledby={`playoff-paths-impact-week-${week}`}
+                        listStyleType="decimal"
+                        paddingInlineStart={5}
+                        display="flex"
+                        flexDirection="column"
+                        gap={2}
+                      >
+                        {rows.map((row) => (
+                          <Box as="li" key={fixtureKey(row.fixture)}>
+                            <Text fontWeight="medium">
+                              {names.get(row.fixture.homeTeamId)} vs{' '}
+                              {names.get(row.fixture.awayTeamId)}
+                            </Text>
+                            <Text fontSize="sm">
+                              If {names.get(row.fixture.homeTeamId)} wins: {percent(row.homeChance)}{' '}
+                              · If {names.get(row.fixture.awayTeamId)} wins:{' '}
+                              {percent(row.awayChance)}
+                            </Text>
+                          </Box>
+                        ))}
                       </Box>
-                    ))}
-                  </Box>
+                    </Box>
+                  ))
                 )}
               </Box>
 

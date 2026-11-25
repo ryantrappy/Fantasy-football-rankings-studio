@@ -210,12 +210,12 @@ Source: [TASK-160](../../backlog/tasks/task-160%20-%20Refine-mobile-workspace-us
 
 - A clearly labeled Playoff paths nav item (authenticated and shared) presents the conditional simulator; it is not a tab inside Playoff simulator or Season insights, and the existing forecast, calibration, and exports are unchanged.
 - Locking in results for remaining games re-runs the forecast with those wins fixed. Fixed outcomes override only the win/loss of a fixture; scores are still drawn so points and points-against tiebreakers stay simulated, and fixed outcomes are excluded from the RNG seed so a conditional run shares the base forecast's random stream.
-- Per-game leverage comes from the same run: for each unfixed remaining fixture, the selected team playoff chance under each possible winner, ranked by swing. Fixed fixtures are excluded from leverage.
+- Per-game leverage comes from the same run and shows the selected team's playoff chance under each possible winner. Weeks with results appear in chronological order, and every unfixed fixture with both winner scenarios is ranked within its week by the absolute swing in playoff chance. Fixed fixtures are excluded from leverage.
 - Prefill from projections is manual only: a button fills unpicked games with the higher projected weekly team points winner and never runs on load; games without both projections, or with tied projections, stay unset and are disclosed.
 - A shared link opens only the simulator: the shared route and the playoff-paths snapshot view render the simulator alone, with no navigation to other reports.
 - The simulator defaults to the saved managed team where available, with a team picker; shared viewers default to the best current record.
 
-Source: [TASK-162](../../backlog/tasks/task-162%20-%20Add-a-Path-to-the-Playoffs-simulator-as-its-own-nav-item.md).
+Source: [TASK-162](../../backlog/tasks/task-162%20-%20Add-a-Path-to-the-Playoffs-simulator-as-its-own-nav-item.md), [TASK-162.4](../../backlog/tasks/task-162.4%20-%20Rank-Playoff-Paths-games-by-week.md).
 
 ### TASK-165 — Show playoff clinch magic numbers in playoff projections
 

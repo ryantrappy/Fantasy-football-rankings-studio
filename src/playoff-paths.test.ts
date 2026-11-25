@@ -2,7 +2,7 @@ import {
   defaultTeamId,
   picksToFixedOutcomes,
   prefillFromProjections,
-  rankLeverage,
+  rankLeverageByWeek,
   remainingFixtures,
 } from './playoff-paths';
 import type { SeasonInsights } from './insights';
@@ -89,11 +89,41 @@ it('falls back to the single-week snapshot and skips ties', () => {
   expect(picks).toEqual({ '11|c|d': 'c' });
 });
 
-it('ranks leverage by swing for the selected team', () => {
+it('orders weeks chronologically and ranks each week by the selected team’s swing', () => {
   const forecast = {
     leverage: [
       {
-        week: 11,
+        week: 10,
+        homeTeamId: 'a',
+        awayTeamId: 'd',
+        outcomes: [
+          { winnerTeamId: 'a', chances: [{ teamId: 'a', playoff: 0.7 }] },
+          { winnerTeamId: 'd', chances: [{ teamId: 'a', playoff: 0.6 }] },
+        ],
+      },
+      {
+        week: 9,
+        homeTeamId: 'c',
+        awayTeamId: 'd',
+        outcomes: [
+          {
+            winnerTeamId: 'c',
+            chances: [
+              { teamId: 'a', playoff: 0.6 },
+              { teamId: 'b', playoff: 0.7 },
+            ],
+          },
+          {
+            winnerTeamId: 'd',
+            chances: [
+              { teamId: 'a', playoff: 0.6 },
+              { teamId: 'b', playoff: 0.3 },
+            ],
+          },
+        ],
+      },
+      {
+        week: 9,
         homeTeamId: 'a',
         awayTeamId: 'b',
         outcomes: [
@@ -113,34 +143,18 @@ it('ranks leverage by swing for the selected team', () => {
           },
         ],
       },
-      {
-        week: 11,
-        homeTeamId: 'c',
-        awayTeamId: 'd',
-        outcomes: [
-          {
-            winnerTeamId: 'c',
-            chances: [
-              { teamId: 'a', playoff: 0.6 },
-              { teamId: 'b', playoff: 0.4 },
-            ],
-          },
-          {
-            winnerTeamId: 'd',
-            chances: [
-              { teamId: 'a', playoff: 0.6 },
-              { teamId: 'b', playoff: 0.4 },
-            ],
-          },
-        ],
-      },
     ],
   } as PlayoffForecast;
-  const ranked = rankLeverage(forecast, 'a');
-  expect(ranked.map((r) => r.fixture.homeTeamId)).toEqual(['a', 'c']);
-  expect(ranked[0]).toMatchObject({ homeChance: 0.8, awayChance: 0.5 });
-  expect(ranked[0].swing).toBeCloseTo(0.3, 8);
-  expect(rankLeverage(undefined, 'a')).toEqual([]);
+  const ranked = rankLeverageByWeek(forecast, 'a');
+  expect(ranked.map(({ week }) => week)).toEqual([9, 10]);
+  expect(ranked[0].rows.map((r) => r.fixture.homeTeamId)).toEqual(['a', 'c']);
+  expect(ranked[0].rows[0]).toMatchObject({ homeChance: 0.8, awayChance: 0.5 });
+  expect(ranked[0].rows[0].swing).toBeCloseTo(0.3, 8);
+  expect(rankLeverageByWeek(forecast, 'b')[0].rows.map((r) => r.fixture.homeTeamId)).toEqual([
+    'c',
+    'a',
+  ]);
+  expect(rankLeverageByWeek(undefined, 'a')).toEqual([]);
 });
 
 it('defaults to the best current record', () => {

@@ -76,17 +76,16 @@ export interface LeverageRow {
   swing: number;
 }
 
-// Rank remaining fixtures by how much each outcome moves the selected team
-// playoff chance, using the conditional chances from a single leverage run.
-export function rankLeverage(forecast: PlayoffForecast | undefined, teamId: string): LeverageRow[] {
-  if (!forecast?.leverage) return [];
-  const rows: LeverageRow[] = [];
-  for (const entry of forecast.leverage) {
+// Rank the fixtures in each week by the selected team's playoff chance swing.
+export function rankLeverageByWeek(forecast: PlayoffForecast | undefined, teamId: string) {
+  const rowsByWeek = new Map<number, LeverageRow[]>();
+  for (const entry of forecast?.leverage ?? []) {
     const homeOutcome = entry.outcomes.find((o) => o.winnerTeamId === entry.homeTeamId);
     const awayOutcome = entry.outcomes.find((o) => o.winnerTeamId === entry.awayTeamId);
     if (!homeOutcome || !awayOutcome) continue;
     const homeChance = homeOutcome.chances.find((c) => c.teamId === teamId)?.playoff ?? 0;
     const awayChance = awayOutcome.chances.find((c) => c.teamId === teamId)?.playoff ?? 0;
+    const rows = rowsByWeek.get(entry.week) ?? [];
     rows.push({
       fixture: {
         week: entry.week,
@@ -97,8 +96,11 @@ export function rankLeverage(forecast: PlayoffForecast | undefined, teamId: stri
       awayChance,
       swing: Math.abs(homeChance - awayChance),
     });
+    rowsByWeek.set(entry.week, rows);
   }
-  return rows.sort((a, b) => b.swing - a.swing);
+  return [...rowsByWeek]
+    .sort(([a], [b]) => a - b)
+    .map(([week, rows]) => ({ week, rows: rows.sort((a, b) => b.swing - a.swing) }));
 }
 
 // The team with the best current combined record, used when no managed team
